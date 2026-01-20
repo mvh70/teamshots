@@ -112,50 +112,10 @@ export async function POST(request: NextRequest) {
       } catch {}
     }
 
-    // For invited team members, get user context and verify they should use team credits
+    // NEW CREDIT MODEL: Credits are tracked per person, not per team pool
+    // The check at line 75 (getTeamInviteRemainingCredits) already validates the person has sufficient credits
+    // No additional "team credits" validation needed - the person's balance IS their allocation
     const userContext = await UserService.getUserContext(teamUser?.id || invite.person.team?.adminId || '')
-    const creditSourceInfo = await CreditService.determineCreditSource(userContext)
-
-    // Invited team members should always use team credits - verify this is the case
-    if (creditSourceInfo.creditSource !== 'team') {
-      Logger.error('Credit source mismatch for team member', {
-        userId: teamUser?.id,
-        expected: 'team',
-        actual: creditSourceInfo.creditSource,
-        reason: creditSourceInfo.reason
-      })
-      return NextResponse.json(
-        { error: 'Team member should use team credits' },
-        { status: 400 }
-      )
-    }
-
-    const hasTeamCredits = await CreditService.canAffordOperation(
-      teamUser?.id || invite.person.team?.adminId || '',
-      PRICING_CONFIG.credits.perGeneration,
-      userContext
-    )
-
-    if (!hasTeamCredits) {
-      const creditSummary = await CreditService.getCreditBalanceSummary(
-        teamUser?.id || invite.person.team?.adminId || '',
-        userContext
-      )
-      const personAllocation = await getPersonCreditBalance(invite.person.id)
-
-      return NextResponse.json(
-        {
-          error: 'Insufficient team credits',
-          required: PRICING_CONFIG.credits.perGeneration,
-          available: creditSummary.team,
-          personAllocation,
-          message: personAllocation > 0
-            ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.'
-            : 'The team has insufficient credits. Contact your team admin.',
-        },
-        { status: 402 }
-      )
-    }
 
     // Prepare style settings (serialize via package adapter if provided)
     const finalPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
@@ -209,7 +169,7 @@ export async function POST(request: NextRequest) {
     const generation = await createGenerationRecord({
       personId: invite.person.id,
       styleSettings: serializedStyleSettings,
-      creditSource: 'team',
+      creditSource: 'individual', // NEW MODEL: credits always belong to person
       creditsUsed: PRICING_CONFIG.credits.perGeneration,
       contextId: contextId ?? invite.person.team?.activeContextId ?? undefined,
       provider: 'gemini',
@@ -244,7 +204,7 @@ export async function POST(request: NextRequest) {
       Logger.debug('Team member credits reserved successfully', {
         generationId: generation.id,
         transactionId: reservationResult.transactionId,
-        teamCreditsUsed: reservationResult.teamCreditsUsed
+        creditsUsed: reservationResult.individualCreditsUsed
       })
     } catch (creditError) {
       try {
@@ -268,7 +228,7 @@ export async function POST(request: NextRequest) {
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,
-      creditSource: 'team',
+      creditSource: 'individual', // NEW MODEL: credits always belong to person
       priority: 1,
     })
 

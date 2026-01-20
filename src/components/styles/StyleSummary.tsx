@@ -3,9 +3,9 @@
 import React from 'react'
 import Image from 'next/image'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
-import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { useTranslations } from 'next-intl'
-import { hasValue, isUserChoice } from '@/domain/style/elements/base/element-types'
+import { getPackageConfig } from '@/domain/style/packages'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 
 // Legacy interface for backwards compatibility - can receive either format
@@ -58,6 +58,7 @@ export interface PhotoStyleSummarySettings {
 
 interface StyleSummaryProps {
   settings?: PhotoStyleSummarySettings | null
+  packageId?: string
 }
 
 // Helper to extract value from either wrapper or legacy format
@@ -75,10 +76,14 @@ function getThumbnailUrl(key: string): string {
   return `/api/files/get?key=${encodeURIComponent(key)}`
 }
 
-export default function StyleSummary({ settings }: StyleSummaryProps) {
+export default function StyleSummary({ settings, packageId }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
   const tShotType = useTranslations('customization.photoStyle.shotType')
   const [showPoseTooltip, setShowPoseTooltip] = React.useState(false)
+
+  // Get composition categories from package config to determine which elements to show
+  const pkg = getPackageConfig(packageId)
+  const compositionCategories = pkg.compositionCategories || ['background', 'branding', 'pose']
 
   // Extract values from wrapper format (handles both new and legacy formats)
   const backgroundValue = extractValue(settings?.background)
@@ -106,10 +111,11 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
   const brandingType = isBrandingUserChoice ? 'user-choice' : brandingValue?.type
   const logoPosition = brandingValue?.position
 
-  // Style preset computed but intentionally not displayed on the summary card
+  // Only show shot type if it's in compositionCategories for this package
+  const showShotType = compositionCategories.includes('shotType')
   const shotType = isShotTypeUserChoice ? 'user-choice' : shotTypeValue?.type
-  const shotTypeConfig =
-    shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
+  const shotTypeConfig = shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
+
   const poseType = isPoseUserChoice ? 'user-choice' : poseValue?.type
 
   return (
@@ -257,7 +263,8 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
 
       {/* Style preset intentionally not displayed on summary card */}
 
-      {shotType && (
+      {/* Shot type - only shown if it's a configurable element in this package */}
+      {showShotType && shotType && (
         <div id="style-shot-type" className="flex flex-col space-y-2">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Shot type</span>

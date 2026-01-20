@@ -5,16 +5,21 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import { UserIcon } from '@heroicons/react/24/outline'
 import { getElementMetadata } from '@/domain/style/elements'
 import { isUserChoice, hasValue } from '@/domain/style/elements/base/element-types'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
+import { getWardrobeExclusions } from '@/domain/style/elements/clothing/prompt'
+import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
+import { ClothingColorsSummary } from '@/domain/style/elements/clothing-colors/Summary'
+import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+
 interface UserStyleSummaryProps {
   settings?: Partial<PhotoStyleSettings> | null
 }
 
-// User style elements in display order
+// User style elements in display order (excluding clothingColors which we handle specially)
 const USER_STYLE_ELEMENTS = [
   'clothing',
   'customClothing',
-  'clothingColors',
   'expression',
   'lighting'
 ] as const
@@ -32,6 +37,32 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   const lightingType = settings.lighting?.value?.type
   const hasClothingSettings = settings.clothing !== undefined
   const hasLighting = settings.lighting !== undefined
+
+  // Compute excluded clothing colors based on shot type and clothing style
+  // This matches the logic in PhotoStyleSettings.tsx
+  const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
+    const exclusions = new Set<ClothingColorKey>()
+
+    // Get shot type value from wrapper format { mode, value: { type } }
+    // Note: All settings go through deserializers which convert to wrapper format
+    const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
+    
+    if (shotTypeValue) {
+      const shotTypeConfig = resolveShotType(shotTypeValue)
+      if (shotTypeConfig.excludeClothingColors) {
+        shotTypeConfig.excludeClothingColors.forEach(c => exclusions.add(c as ClothingColorKey))
+      }
+    }
+
+    // Get exclusions from clothing style + detail
+    if (clothingStyle) {
+      const knownStyle = clothingStyle as KnownClothingStyle
+      const wardrobeExclusions = getWardrobeExclusions(knownStyle, clothingDetails)
+      wardrobeExclusions.forEach(c => exclusions.add(c as ClothingColorKey))
+    }
+
+    return Array.from(exclusions)
+  }, [settings.shotType, clothingStyle, clothingDetails])
 
   const getClothingPhrase = (style?: string, details?: string): string | undefined => {
     if (!style && !details) return undefined
@@ -99,24 +130,33 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
             // Fallback for elements without summary components yet
             if (elementKey === 'clothing' && hasClothingSettings) {
               return (
-                <div key="clothing" id="style-clothing-type" className="flex flex-col space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Clothing style</span>
-                  </div>
-                  <div className="ml-6 text-sm capitalize">
-                    {clothingIsUserChoice || !clothingStyle ? (
-                      <span className="inline-flex items-center gap-1.5 normal-case">
-                        <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-                        <span className="text-gray-600">User choice</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-700 font-semibold">{getClothingPhrase(clothingStyle, clothingDetails) || ''}</span>
+                <React.Fragment key="clothing">
+                  <div id="style-clothing-type" className="flex flex-col space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Clothing style</span>
+                    </div>
+                    <div className="ml-6 text-sm capitalize">
+                      {clothingIsUserChoice || !clothingStyle ? (
+                        <span className="inline-flex items-center gap-1.5 normal-case">
+                          <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
+                          <span className="text-gray-600">User choice</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-700 font-semibold">{getClothingPhrase(clothingStyle, clothingDetails) || ''}</span>
+                      )}
+                    </div>
+                    {clothingAccessories && clothingAccessories.length > 0 && (
+                      <div className="ml-6 text-sm text-gray-600 mt-1">Accessories: <span className="font-medium">{clothingAccessories.join(', ')}</span></div>
                     )}
                   </div>
-                  {clothingAccessories && clothingAccessories.length > 0 && (
-                    <div className="ml-6 text-sm text-gray-600 mt-1">Accessories: <span className="font-medium">{clothingAccessories.join(', ')}</span></div>
+                  {/* Clothing Colors - rendered right after clothing style */}
+                  {settings.clothingColors && (
+                    <ClothingColorsSummary
+                      settings={settings.clothingColors}
+                      excludeColors={excludedClothingColors}
+                    />
                   )}
-                </div>
+                </React.Fragment>
               )
             }
 

@@ -9,7 +9,7 @@ export function generateOTP(): string {
 
 export async function createOTP(email: string): Promise<string> {
   const code = generateOTP()
-  const expires = new Date(Date.now() + 5 * 60 * 1000)
+  const expires = new Date(Date.now() + 10 * 60 * 1000)
 
   await prisma.oTP.deleteMany({
     where: { email }

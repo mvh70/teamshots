@@ -83,17 +83,18 @@ export const AI_COST_CONFIG = {
       description: 'Gemini 2.5 Flash image generation via OpenRouter (assumes parity pricing)',
     } satisfies ModelConfig,
 
-    // Gemini 3 Pro Image (via REST API - not available on OpenRouter)
+    // Gemini 3 Pro Image (via REST API or OpenRouter)
+    // Pricing based on observed OpenRouter costs (~$0.14/image)
     'gemini-3-pro-image': {
       id: 'gemini-3-pro-image',
       provider: 'gemini-rest',
       pricing: {
         type: 'token',
-        inputPer1MTokens: 0.075,  // Pricing TBD - using 2.5 Flash as baseline
-        outputPer1MTokens: 0.30,
-        perImageGenerated: 0.039,
+        inputPer1MTokens: 2.0,    // Higher token cost for Gemini 3 Pro
+        outputPer1MTokens: 8.0,   // Higher output cost for Gemini 3 Pro
+        perImageGenerated: 0.10,  // ~$0.10 per image (total ~$0.14 with tokens)
       },
-      description: 'Gemini 3 Pro Image generation via REST API (aka Nano Banana 3)',
+      description: 'Gemini 3 Pro Image generation via REST API or OpenRouter',
     } satisfies ModelConfig,
 
     // Gemini 3 Pro (text model - via REST API or OpenRouter)

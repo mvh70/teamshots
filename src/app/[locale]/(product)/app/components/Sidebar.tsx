@@ -559,44 +559,48 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className={`h-24 flex px-3 py-4 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-start justify-between'}`}>
-            {!effectiveCollapsed && (
-              <Link href="/" className="flex items-center">
-                <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7" style={{ width: 'auto' }} priority />
-              </Link>
-            )}
-            {effectiveCollapsed && (
-              <Link href="/" className="flex items-center justify-center">
+          <div className="h-24 flex items-start justify-between px-3 py-4">
+            {/* Logo container - fixed dimensions, content switches with crossfade */}
+            <Link href="/" className="flex items-center h-10 min-w-[40px] relative">
+              {/* Icon logo - always rendered, fades in when collapsed */}
+              <div className={`flex items-center justify-center transition-opacity duration-300 ${
+                effectiveCollapsed ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'
+              }`}>
                 <Image src={brandLogoIcon} alt={brandName} width={40} height={40} className="h-10 w-10" priority />
-              </Link>
-            )}
-            <div className="relative group">
+              </div>
+              {/* Full logo - always rendered, fades in when expanded */}
+              <div className={`flex items-center transition-opacity duration-300 ${
+                effectiveCollapsed ? 'opacity-0 absolute pointer-events-none' : 'opacity-100'
+              }`}>
+                <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7" style={{ width: 'auto' }} priority />
+              </div>
+            </Link>
+            {/* Toggle button - only visible on mobile (desktop uses hover to expand/collapse) */}
+            <div className={`relative group flex-shrink-0 ${isMobile ? '' : 'hidden'}`}>
               <button
                 onClick={onToggle}
-                aria-label={isMobile ? (collapsed ? 'Show menu' : 'Hide sidebar') : (effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+                aria-label={collapsed ? 'Show menu' : 'Hide sidebar'}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 min-w-[40px] min-h-[40px] flex items-center justify-center"
               >
-                {/* On mobile: show hamburger when hidden, X when visible. On desktop: show chevrons */}
-                {isMobile ? (
-                  collapsed ? (
-                    <Bars3Icon className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <XMarkIcon className="h-5 w-5 text-gray-500" />
-                  )
+                {/* On mobile: show hamburger when hidden, X when visible */}
+                {collapsed ? (
+                  <Bars3Icon className="h-5 w-5 text-gray-500" />
                 ) : (
-                  effectiveCollapsed ? (
-                    <ChevronRightIcon className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
-                  )
+                  <XMarkIcon className="h-5 w-5 text-gray-500" />
                 )}
+                {/* Desktop chevrons - hidden but kept for potential future use */}
+                {/* 
+                {effectiveCollapsed ? (
+                  <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
+                )}
+                */}
               </button>
-              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                {isMobile ? (
-                  collapsed ? 'Show menu' : 'Hide sidebar'
-                ) : (
-                  effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
-                )}
+              <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'
+              }`}>
+                {collapsed ? 'Show menu' : 'Hide sidebar'}
               </span>
             </div>
           </div>
@@ -607,75 +611,81 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
               id="primary-generate-btn"
               href="/app/generate/start"
               onClick={onMenuItemClick}
-              className={`flex items-center justify-center gap-2 bg-brand-primary text-white rounded-xl px-4 py-3 font-medium hover:bg-brand-primary-hover transition-colors duration-200 min-h-[44px] ${
-                effectiveCollapsed ? 'px-3' : ''
-              }`}
+              className="flex items-center bg-brand-primary text-white rounded-xl px-3 py-3 font-medium hover:bg-brand-primary-hover transition-all duration-300 min-h-[44px]"
             >
-              <PlusIcon className="h-5 w-5" />
-              {!effectiveCollapsed && <span className="text-sm">{t('primary.generate')}</span>}
-            </Link>
-            {effectiveCollapsed && (
-              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
+              <span className="flex-shrink-0 w-5 flex items-center justify-center">
+                <PlusIcon className="h-5 w-5" />
+              </span>
+              <span 
+                className={`text-sm whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden ${
+                  effectiveCollapsed 
+                    ? 'w-0 opacity-0 ml-0' 
+                    : 'w-auto opacity-100 ml-2'
+                }`}
+              >
                 {t('primary.generate')}
               </span>
-            )}
+            </Link>
+            <span 
+              className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                effectiveCollapsed 
+                  ? 'opacity-0 group-hover:opacity-100' 
+                  : 'opacity-0 pointer-events-none'
+              }`}
+            >
+              {t('primary.generate')}
+            </span>
           </div>
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-3 py-4 min-h-0 bg-white ${effectiveCollapsed ? 'space-y-2' : ''} ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
-          {!effectiveCollapsed ? (
-            <div className="h-full overflow-x-visible space-y-2">
-              {!navReady ? null : navigation.map((item) => {
-                const Icon = item.current ? item.iconSolid : item.icon
-                return (
+        <nav className={`flex-1 px-3 py-4 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+          <div className={`h-full space-y-2 ${effectiveCollapsed ? '' : 'overflow-x-visible'}`}>
+            {!navReady ? null : navigation.map((item) => {
+              const Icon = item.current ? item.iconSolid : item.icon
+              return (
+                <div key={item.name} className="group relative overflow-visible">
                   <Link
-                    key={item.name}
                     href={item.href}
                     id={item.id}
                     onClick={onMenuItemClick}
-                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-1 ${
+                    className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 ease-in-out min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-1 ${
                       item.current
                         ? 'bg-brand-primary/10 text-brand-primary'
                         : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
                     }`}
                   >
-                    <Icon className={`h-5 w-5 mr-3 flex-shrink-0 transition-colors duration-200 ${
-                      item.current ? 'text-brand-primary' : 'text-gray-500 group-hover:text-gray-700'
-                    }`} />
-                    <span className="leading-relaxed">{item.name}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          ) : (
-            <>
-              {!navReady ? null : navigation.map((item) => {
-                const Icon = item.current ? item.iconSolid : item.icon
-                return (
-                  <div key={item.name} className="group relative overflow-visible z-[101]">
-                    <Link
-                      href={item.href}
-                      id={item.id}
-                      onClick={onMenuItemClick}
-                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out min-w-[44px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-1 ${
-                        item.current
-                          ? 'bg-brand-primary/10 text-brand-primary'
-                          : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
-                      }`}
-                    >
+                    {/* Icon - fixed width, no margin change to prevent shifting */}
+                    <span className="flex-shrink-0 w-5 flex items-center justify-center">
                       <Icon className={`h-5 w-5 transition-colors duration-200 ${
                         item.current ? 'text-brand-primary' : 'text-gray-500 group-hover:text-gray-700'
                       }`} />
-                    </Link>
-                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[10000] shadow-lg">
+                    </span>
+                    {/* Text - transitions opacity and width smoothly */}
+                    <span 
+                      className={`leading-relaxed whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden ${
+                        effectiveCollapsed 
+                          ? 'w-0 opacity-0 ml-0' 
+                          : 'w-auto opacity-100 ml-3'
+                      }`}
+                    >
                       {item.name}
                     </span>
-                  </div>
-                )
-              })}
-            </>
-          )}
+                  </Link>
+                  {/* Tooltip - only shows on hover when collapsed */}
+                  <span 
+                    className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[10000] shadow-lg ${
+                      effectiveCollapsed 
+                        ? 'opacity-0 group-hover:opacity-100' 
+                        : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    {item.name}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </nav>
 
         {/* Bottom Section - Credits and User Profile (Fixed at bottom) */}
@@ -684,10 +694,16 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
           {session?.user && (
             <div className="px-3 pb-3">
               {/* Credits Card - wraps plan badge, credits display, and upgrade button */}
-              <div className={`bg-gray-50/80 rounded-2xl border border-gray-200/60 ${effectiveCollapsed ? 'p-2' : 'p-4'}`}>
-                {/* Plan badge - inline style */}
-                {!effectiveCollapsed && planTier && (
-                  <div className="flex items-center justify-between mb-3">
+              <div className={`bg-gray-50/80 rounded-2xl border border-gray-200/60 transition-all duration-300 ${effectiveCollapsed ? 'p-2' : 'p-4'}`}>
+                {/* Plan badge - fades in/out smoothly */}
+                {planTier && (
+                  <div 
+                    className={`flex items-center justify-between transition-all duration-300 overflow-hidden ${
+                      effectiveCollapsed 
+                        ? 'h-0 opacity-0 mb-0' 
+                        : 'h-auto opacity-100 mb-3'
+                    }`}
+                  >
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Plan</span>
                     <span
                       className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -703,177 +719,198 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   </div>
                 )}
 
-                <div className={`space-y-2 ${effectiveCollapsed ? 'text-center' : ''}`}>
+                <div className="space-y-2">
                 {accountMode === 'individual' && (
-                  <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
-                    {effectiveCollapsed ? (
-                      // Collapsed view: icon above number
-                      <div className="flex flex-col items-center justify-center py-1">
+                  <div className="relative group">
+                    {/* Unified structure with crossfade between layouts */}
+                    <div className="relative min-h-[44px]">
+                      {/* Collapsed view: icon above number - fades in when collapsed */}
+                      <div className={`absolute inset-0 flex flex-col items-center justify-center py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}>
                         <CreditCardIcon className="h-4 w-4 text-gray-500" />
                         <span className="text-sm font-bold mt-0.5 text-gray-900">
                           {calculatePhotosFromCredits(credits.individual ?? 0)}
                         </span>
                       </div>
-                    ) : (
-                      // Expanded view: label + number
-                      <>
+                      {/* Expanded view: label + number - fades in when expanded */}
+                      <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                      }`}>
                         <span className="text-sm text-gray-600">
                           {t('photos.individual')}
                         </span>
                         <span className="text-lg font-bold text-gray-900">
                           {calculatePhotosFromCredits(credits.individual ?? 0)}
                         </span>
-                      </>
-                    )}
-                    {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                        {t('photos.individual')}: {calculatePhotosFromCredits(credits.individual ?? 0)}
-                      </span>
-                    )}
+                      </div>
+                    </div>
+                    {/* Tooltip */}
+                    <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                      effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}>
+                      {t('photos.individual')}: {calculatePhotosFromCredits(credits.individual ?? 0)}
+                    </span>
                   </div>
                 )}
 
                 {/* Free-plan team admin: Show personal credits (no seats purchased yet) */}
                 {accountMode === 'pro' && (!seatInfo || seatInfo.totalSeats === 0) && (
-                  <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
-                    {effectiveCollapsed ? (
-                      // Collapsed view: icon above number
-                      <div className="flex flex-col items-center justify-center py-1">
+                  <div className="relative group">
+                    <div className="relative min-h-[44px]">
+                      {/* Collapsed view */}
+                      <div className={`absolute inset-0 flex flex-col items-center justify-center py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}>
                         <CreditCardIcon className="h-4 w-4 text-gray-500" />
                         <span className="text-sm font-bold mt-0.5 text-gray-900">
                           {calculatePhotosFromCredits(credits.person ?? 0)}
                         </span>
                       </div>
-                    ) : (
-                      // Expanded view: label + number
-                      <>
+                      {/* Expanded view */}
+                      <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                      }`}>
                         <span className="text-sm text-gray-600">
                           {t('photos.individual')}
                         </span>
                         <span className="text-lg font-bold text-gray-900">
                           {calculatePhotosFromCredits(credits.person ?? 0)}
                         </span>
-                      </>
-                    )}
-                    {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                        {t('photos.individual')}: {calculatePhotosFromCredits(credits.person ?? 0)}
-                      </span>
-                    )}
+                      </div>
+                    </div>
+                    {/* Tooltip */}
+                    <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                      effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}>
+                      {t('photos.individual')}: {calculatePhotosFromCredits(credits.person ?? 0)}
+                    </span>
                   </div>
                 )}
 
                 {/* Paid team admin: Show seats + person balance */}
                 {accountMode === 'pro' && seatInfo && seatInfo.totalSeats > 0 && (
-                  <div className={`relative group ${effectiveCollapsed ? '' : 'space-y-1'}`}>
-                    {effectiveCollapsed ? (
-                      // Collapsed view: icons above numbers, stacked vertically
-                      <div className="flex flex-col items-center space-y-2 py-1">
-                        {/* Team size: icon above number */}
-                        <div className="flex flex-col items-center">
-                          <UserGroupIcon className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm font-bold mt-0.5 text-gray-900">
-                            {seatInfo.activeSeats}/{seatInfo.totalSeats}
-                          </span>
-                        </div>
-                        {/* Photo balance: icon above number */}
-                        <div className="flex flex-col items-center">
-                          <CreditCardIcon className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm font-bold mt-0.5 text-gray-900">
-                            {calculatePhotosFromCredits(credits.person ?? 0)}
-                          </span>
-                        </div>
+                  <div className="relative group space-y-1">
+                    {/* Seats row */}
+                    <div className="relative min-h-[44px]">
+                      {/* Collapsed view */}
+                      <div className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}>
+                        <UserGroupIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-bold mt-0.5 text-gray-900">
+                          {seatInfo.activeSeats}/{seatInfo.totalSeats}
+                        </span>
                       </div>
-                    ) : (
-                      // Expanded view: label + value rows
-                      <>
-                        {/* Seats row */}
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-sm text-gray-600">
-                            {t('photos.seats')}
-                          </span>
-                          <span className="text-lg font-bold text-gray-900">
-                            {seatInfo.activeSeats} / {seatInfo.totalSeats}
-                          </span>
-                        </div>
-
-                        {/* Photo balance */}
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-sm text-gray-600">
-                            {t('photos.balance')}
-                          </span>
-                          <span className="text-lg font-bold text-gray-900">
-                            {calculatePhotosFromCredits(credits.person ?? 0)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-
-                    {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                        {t('photos.seats')}: {seatInfo.activeSeats} / {seatInfo.totalSeats}
-                        <br />
-                        {t('photos.balance')}: {calculatePhotosFromCredits(credits.person ?? 0)}
-                      </span>
-                    )}
+                      {/* Expanded view */}
+                      <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                      }`}>
+                        <span className="text-sm text-gray-600">
+                          {t('photos.seats')}
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {seatInfo.activeSeats} / {seatInfo.totalSeats}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Photo balance row */}
+                    <div className="relative min-h-[44px]">
+                      {/* Collapsed view */}
+                      <div className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}>
+                        <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-bold mt-0.5 text-gray-900">
+                          {calculatePhotosFromCredits(credits.person ?? 0)}
+                        </span>
+                      </div>
+                      {/* Expanded view */}
+                      <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                        effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                      }`}>
+                        <span className="text-sm text-gray-600">
+                          {t('photos.balance')}
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {calculatePhotosFromCredits(credits.person ?? 0)}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Tooltip */}
+                    <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                      effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}>
+                      {t('photos.seats')}: {seatInfo.activeSeats} / {seatInfo.totalSeats}
+                      <br />
+                      {t('photos.balance')}: {calculatePhotosFromCredits(credits.person ?? 0)}
+                    </span>
                   </div>
                 )}
 
                 {/* Legacy credit-based Pro teams: Show team credits (excludes free-plan team admins who have totalSeats=0) */}
                 {seatInfo && !seatInfo.isSeatsModel && seatInfo.totalSeats > 0 && (
                   <>
-                    <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
-                      {effectiveCollapsed ? (
-                        // Collapsed view: icon above number
-                        <div className="flex flex-col items-center justify-center py-1">
+                    <div className="relative group">
+                      <div className="relative min-h-[44px]">
+                        {/* Collapsed view */}
+                        <div className={`absolute inset-0 flex flex-col items-center justify-center py-1 transition-opacity duration-300 ${
+                          effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                        }`}>
                           <UserGroupIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm font-bold mt-0.5 text-gray-900">
                             {calculatePhotosFromCredits(credits.team ?? 0)}
                           </span>
                         </div>
-                      ) : (
-                        // Expanded view: label + number
-                        <>
+                        {/* Expanded view */}
+                        <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                          effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                        }`}>
                           <span className="text-sm text-gray-600">
                             {t('photos.team')}
                           </span>
                           <span className="text-lg font-bold text-gray-900">
                             {calculatePhotosFromCredits(credits.team ?? 0)}
                           </span>
-                        </>
-                      )}
-                      {effectiveCollapsed && (
-                        <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                          {t('photos.team')}: {calculatePhotosFromCredits(credits.team ?? 0)}
-                        </span>
-                      )}
+                        </div>
+                      </div>
+                      {/* Tooltip */}
+                      <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                        effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}>
+                        {t('photos.team')}: {calculatePhotosFromCredits(credits.team ?? 0)}
+                      </span>
                     </div>
                     {isTeamAdmin && allocatedCredits > 0 && (
-                      <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
-                        {effectiveCollapsed ? (
-                          // Collapsed view: icon above number
-                          <div className="flex flex-col items-center justify-center py-1">
+                      <div className="relative group">
+                        <div className="relative min-h-[44px]">
+                          {/* Collapsed view */}
+                          <div className={`absolute inset-0 flex flex-col items-center justify-center py-1 transition-opacity duration-300 ${
+                            effectiveCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                          }`}>
                             <CreditCardIcon className="h-4 w-4 text-gray-500" />
                             <span className="text-sm font-bold mt-0.5 text-brand-cta">
                               {calculatePhotosFromCredits(allocatedCredits)}
                             </span>
                           </div>
-                        ) : (
-                          // Expanded view: label + number
-                          <>
+                          {/* Expanded view */}
+                          <div className={`flex items-center justify-between py-1 transition-opacity duration-300 ${
+                            effectiveCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                          }`}>
                             <span className="text-sm text-gray-600">
                               {t('photos.allocated')}
                             </span>
                             <span className="text-lg font-bold text-brand-cta">
                               {calculatePhotosFromCredits(allocatedCredits)}
                             </span>
-                          </>
-                        )}
-                        {effectiveCollapsed && (
-                          <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                            {t('photos.allocated')}: {calculatePhotosFromCredits(allocatedCredits)}
-                          </span>
-                        )}
+                          </div>
+                        </div>
+                        {/* Tooltip */}
+                        <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                          effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                        }`}>
+                          {t('photos.allocated')}: {calculatePhotosFromCredits(allocatedCredits)}
+                        </span>
                       </div>
                     )}
                   </>
@@ -883,43 +920,38 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 {accountMode === 'team_member' && null}
               </div>
 
-                {/* Buy Credits Button - inside the card */}
-                <div className={`mt-3 ${effectiveCollapsed ? 'relative group' : ''}`}>
-                  {effectiveCollapsed ? (
-                    <Link
-                      href={
-                        planTier === 'free' ? '/app/upgrade' :
-                        planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
-                        '/app/top-up'
-                      }
-                      onClick={onMenuItemClick}
-                      className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-xl transition-all duration-200 bg-brand-cta hover:bg-brand-cta-hover min-h-[40px]"
+                {/* Buy Credits Button - unified structure */}
+                <div className="mt-3 relative group">
+                  <Link
+                    href={
+                      planTier === 'free' ? '/app/upgrade' :
+                      planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
+                      '/app/top-up'
+                    }
+                    onClick={onMenuItemClick}
+                    className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 bg-brand-cta hover:bg-brand-cta-hover min-h-[40px]"
+                  >
+                    <PlusIcon className="h-4 w-4 flex-shrink-0" />
+                    <span 
+                      className={`whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden ${
+                        effectiveCollapsed 
+                          ? 'w-0 opacity-0 ml-0' 
+                          : 'w-auto opacity-100 ml-1.5'
+                      }`}
                     >
-                      <PlusIcon className="h-4 w-4" />
-                    </Link>
-                  ) : (
-                    <Link
-                      href={
-                        planTier === 'free' ? '/app/upgrade' :
-                        planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
-                        '/app/top-up'
-                      }
-                      onClick={onMenuItemClick}
-                      className="w-full inline-flex items-center justify-center px-3 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200 bg-brand-cta hover:bg-brand-cta-hover"
-                    >
-                      <PlusIcon className="h-4 w-4 mr-1.5" />
-                      {seatInfo?.isSeatsModel
-                        ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
-                        : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
-                    </Link>
-                  )}
-                  {effectiveCollapsed && (
-                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                       {seatInfo?.isSeatsModel
                         ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
                         : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
                     </span>
-                  )}
+                  </Link>
+                  {/* Tooltip */}
+                  <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                    effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+                  }`}>
+                    {seatInfo?.isSeatsModel
+                      ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
+                      : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -929,7 +961,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
           {session?.user && (
             <div className="px-3 py-3 border-t border-gray-200/60 relative">
             <div
-              className={`relative group flex items-center ${effectiveCollapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-gray-100/80 rounded-xl p-2 -mx-1 transition-colors duration-200`}
+              className="relative group flex items-center cursor-pointer hover:bg-gray-100/80 rounded-xl p-2 -mx-1 transition-all duration-300"
               onClick={() => setMenuOpen(!menuOpen)}
               data-testid="user-menu"
             >
@@ -942,21 +974,27 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 style={{ width: 'auto', height: 'auto' }}
                 unoptimized
               />
-              {!effectiveCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {session?.user?.name || session?.user?.email?.split('@')[0]}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {session?.user?.email}
-                  </p>
-                </div>
-              )}
-              {effectiveCollapsed && (
-                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
-                  {session?.user?.name || session?.user?.email}
-                </span>
-              )}
+              {/* User info - transitions smoothly */}
+              <div 
+                className={`min-w-0 transition-all duration-300 ease-in-out overflow-hidden ${
+                  effectiveCollapsed 
+                    ? 'w-0 opacity-0 ml-0' 
+                    : 'w-auto opacity-100 ml-3 flex-1'
+                }`}
+              >
+                <p className="text-sm font-medium text-gray-900 truncate whitespace-nowrap">
+                  {session?.user?.name || session?.user?.email?.split('@')[0]}
+                </p>
+                <p className="text-xs text-gray-500 truncate whitespace-nowrap">
+                  {session?.user?.email}
+                </p>
+              </div>
+              {/* Tooltip */}
+              <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
+                effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
+              }`}>
+                {session?.user?.name || session?.user?.email}
+              </span>
             </div>
             {menuOpen && (
               <div className={`absolute rounded-xl border border-gray-200 bg-white shadow-lg z-[9999] overflow-hidden ${

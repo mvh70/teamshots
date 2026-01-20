@@ -28,6 +28,7 @@ export type GenerationListItem = {
   generationType: 'personal' | 'team'
   isOriginal?: boolean
   isOwnGeneration?: boolean
+  personId?: string
   personFirstName?: string
   personUserId?: string
   jobStatus?: {
@@ -54,7 +55,7 @@ const buildImageUrl = (key: string, retryVersion: number, token?: string) => {
   return `/api/files/get?${params.toString()}`
 }
 
-export default function GenerationCard({ item, currentUserId, token }: { item: GenerationListItem; currentUserId?: string; token?: string }) {
+export default function GenerationCard({ item, currentUserId, token, onImageClick }: { item: GenerationListItem; currentUserId?: string; token?: string; onImageClick?: (src: string) => void }) {
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -509,8 +510,23 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     return null
   }
 
+  // Get the displayable image URL for lightbox
+  const getDisplayImageUrl = () => {
+    if (effectiveAcceptedKey) return buildImageUrl(effectiveAcceptedKey, afterRetryCount, token)
+    if (effectiveGeneratedKey) return buildImageUrl(effectiveGeneratedKey, afterRetryCount, token)
+    return null
+  }
+
   return (
-    <div className="relative rounded-lg border border-gray-200 bg-white">
+    <div 
+      className="relative rounded-lg border border-gray-200 bg-white cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => {
+        const imageUrl = getDisplayImageUrl()
+        if (imageUrl && onImageClick && !isIncomplete && !isFailed) {
+          onImageClick(imageUrl)
+        }
+      }}
+    >
         <div className="relative aspect-square overflow-hidden rounded-t-lg" ref={photoContainerRef}>
         {/* Image container */}
         <div

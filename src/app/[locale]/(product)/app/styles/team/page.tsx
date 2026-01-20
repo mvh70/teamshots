@@ -10,44 +10,13 @@ import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { ErrorCard } from '@/components/ui'
 
+// Settings use wrapper format: { mode: 'predefined' | 'user-choice', value?: T }
+// All settings go through deserializers which convert legacy formats to wrapper format
 interface Context {
   id: string
   name: string
-  settings?: {
-    background?: {
-      key?: string
-      prompt?: string
-      type?: string
-      color?: string
-    }
-    branding?: {
-      logoKey?: string
-      type?: string
-      position?: string
-    }
-    clothing?: {
-      style?: string
-      details?: string
-      accessories?: string[]
-      colors?: {
-        topLayer?: string
-        baseLayer?: string
-        bottom?: string
-      }
-    }
-    expression?: {
-      type?: string
-    }
-    lighting?: {
-      type?: string
-    }
-    pose?: {
-      type?: string
-    }
-    shotType?: {
-      type?: string
-    }
-  }
+  packageId?: string // Package ID for looking up compositionCategories
+  settings?: Record<string, unknown> // Use generic type since settings structure varies by package
   createdAt: string
 }
 
@@ -228,6 +197,7 @@ export default function TeamPhotoStylesPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
                 <StyleSummaryCard
                   settings={freePackageContext?.settings}
+                  packageId="freepackage"
                 />
                 <UserStyleSummary settings={freePackageContext?.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
               </div>
@@ -323,6 +293,7 @@ export default function TeamPhotoStylesPage() {
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 mb-8">
                  <StyleSummaryCard
                    settings={context.settings}
+                   packageId={context.packageId}
                  />
                  <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
                </div>

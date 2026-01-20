@@ -247,7 +247,8 @@ export default function InviteCustomizationIntroPage() {
   const hasEnoughCredits = stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
   const hasEnoughSelfies = selectedIds.length >= MIN_SELFIES_REQUIRED
   // Check if all customization steps have been visited
-  const isCustomizationComplete = customizationStepsMeta.editableSteps > 0 &&
+  // If editableSteps is 0 (admin preset everything), customization is complete
+  const isCustomizationComplete = customizationStepsMeta.editableSteps === 0 ||
     visitedSteps.length >= customizationStepsMeta.editableSteps
   const canGenerate = hasEnoughSelfies && hasEnoughCredits && isCustomizationComplete
 

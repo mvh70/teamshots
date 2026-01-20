@@ -65,7 +65,7 @@ async function composeElementContributions(
     settings: styleSettings,
     generationContext: {
       selfieS3Keys: [],
-      userId: generationContext.personId,
+      personId: generationContext.personId, // Primary identifier - invited users don't have userId
       teamId: generationContext.teamId,
       generationId: generationContext.generationId,
       preparedAssets: generationContext.preparedAssets, // Pass prepared assets from step 0
@@ -370,7 +370,7 @@ export async function executeV3Step1b(
   // Note: We constrain aspect ratio here to prevent Step 2 from having to "outpaint" or stretch
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
   try {
-    logPrompt('V3 Step 1b', composedPrompt)
+    logPrompt('V3 Step 1b', composedPrompt, generationId)
     generationResult = await generateWithGemini(
       composedPrompt,
       referenceImages,

@@ -209,6 +209,38 @@ export default function TeamPage() {
     }
   }, [showInviteForm])
 
+  // Refresh invite data when tab becomes visible (to get updated tokens if expired links were visited)
+  const lastVisibilityRefresh = useRef<number>(0)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Only refresh if:
+      // 1. Page is becoming visible
+      // 2. Team data is loaded (we have something to refresh)
+      // 3. User is team admin (they're the ones who see invite links)
+      // 4. At least 30 seconds have passed since last refresh (debounce)
+      if (
+        document.visibilityState === 'visible' &&
+        teamData &&
+        userRoles.isTeamAdmin &&
+        Date.now() - lastVisibilityRefresh.current > 30000
+      ) {
+        lastVisibilityRefresh.current = Date.now()
+        // Silently refresh invite data in the background
+        jsonFetcher<{ invites: TeamInvite[] }>('/api/team/invites')
+          .then((invitesData) => {
+            setInvites(invitesData.invites || [])
+          })
+          .catch((err) => {
+            // Silently fail - don't show error to user for background refresh
+            console.error('Background invite refresh failed:', err)
+          })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [teamData, userRoles.isTeamAdmin])
+
   // Seats-based pricing: fixed 10 photos per seat (100 credits)
   const [emailValue, setEmailValue] = useState('')
   const [firstNameValue, setFirstNameValue] = useState('')

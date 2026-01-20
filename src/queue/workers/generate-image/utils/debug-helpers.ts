@@ -41,6 +41,50 @@ export async function saveIntermediateFile(
 }
 
 /**
+ * Save all generated images for debugging (handles multiple images with suffixes)
+ * Saves images as stepName-generationId-timestamp-1.png, -2.png, etc.
+ */
+export async function saveAllIntermediateImages(
+  images: Buffer[],
+  stepName: string,
+  generationId: string,
+  debugMode: boolean,
+  debugDir = 'v3-debug'
+): Promise<void> {
+  if (!debugMode || images.length === 0) return
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const tmpDir = path.join(process.cwd(), 'tmp', debugDir)
+
+    await fs.mkdir(tmpDir, { recursive: true })
+
+    for (let i = 0; i < images.length; i++) {
+      const suffix = images.length > 1 ? `-${i + 1}` : ''
+      const filename = `${stepName}-${generationId}-${timestamp}${suffix}.png`
+      const filePath = path.join(tmpDir, filename)
+      await fs.writeFile(filePath, images[i])
+
+      Logger.info(`Saved intermediate file: ${filePath}`, {
+        step: stepName,
+        generationId,
+        filePath,
+        fileSize: images[i].length,
+        imageIndex: i + 1,
+        totalImages: images.length
+      })
+    }
+  } catch (error) {
+    Logger.warn('Failed to save intermediate files', {
+      step: stepName,
+      generationId,
+      imageCount: images.length,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
  * Log debug information about a prompt
  * Consolidates duplicate debug logging patterns
  */

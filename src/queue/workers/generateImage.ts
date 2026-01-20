@@ -46,6 +46,7 @@ import {
 } from './generate-image/s3-utils'
 import type { V3WorkflowState, PersistedImageReference } from '@/types/workflow'
 import { getWorkflowState, setWorkflowState } from './generate-image/utils/workflow-state'
+import { cacheComposite, cachedCompositeToReference, type CompositeType } from '@/lib/composite-cache'
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
@@ -56,7 +57,7 @@ const BUCKET_NAME = getS3BucketName()
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, teamId, selfieS3Keys, selfieAssetIds, selfieTypeMap, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
+    const { generationId, personId, userId, teamId, selfieS3Keys, selfieAssetIds, selfieTypeMap, demographics, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
       workflowState?: V3WorkflowState
     }
 
@@ -168,7 +169,23 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
     }
 
     const referenceFromPersisted = async (reference: PersistedImageReference) => {
-      const buffer = await downloadIntermediateAsset(reference)
+      let buffer: Buffer
+
+      // Check if this is a local cache reference (prefixed with 'local:')
+      if (reference.key.startsWith('local:')) {
+        const localPath = reference.key.slice(6) // Remove 'local:' prefix
+        const fs = await import('fs/promises')
+        try {
+          buffer = await fs.readFile(localPath)
+          Logger.debug('Loaded composite from local cache', { path: localPath })
+        } catch {
+          throw new Error(`Local cached composite missing: ${localPath}`)
+        }
+      } else {
+        // S3 reference
+        buffer = await downloadIntermediateAsset(reference)
+      }
+
       return {
         base64: buffer.toString('base64'),
         mimeType: reference.mimeType,
@@ -409,43 +426,56 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         aspectRatioFromPayload = generationPayload.aspectRatio
         aspectRatioDescription = generationPayload.aspectRatioDescription
 
-        // Persist split composites (face/body) to workflow state if available
+        // Cache split composites (face/body) locally for workflow retry support
+        // Uses local filesystem instead of S3 for instant write/read (auto-cleanup after 10 min)
         if (workflowVersion === 'v3') {
           const compositePatch: V3WorkflowState['composites'] = {
             ...(workflowState?.composites ?? {})
           }
 
-          // Persist face composite if available
+          // Cache face composite locally if available
           if (generationPayload.faceComposite) {
-            const persistedFaceComposite = await uploadIntermediateAsset(
+            const cachedFace = await cacheComposite(
               Buffer.from(generationPayload.faceComposite.base64, 'base64'),
+              generationId,
+              'face',
               {
-                fileName: `face-composite-${randomUUID()}.png`,
                 description: generationPayload.faceComposite.description,
                 mimeType: generationPayload.faceComposite.mimeType ?? 'image/png'
               }
             )
-            compositePatch.faceComposite = persistedFaceComposite
-            Logger.info('Persisted face composite to workflow state', {
+            // Store local path with 'local:' prefix to distinguish from S3 keys
+            compositePatch.faceComposite = {
+              key: `local:${cachedFace.path}`,
+              description: generationPayload.faceComposite.description,
+              mimeType: cachedFace.mimeType
+            }
+            Logger.info('Cached face composite locally', {
               generationId,
-              s3Key: persistedFaceComposite.key
+              path: cachedFace.path
             })
           }
 
-          // Persist body composite if available
+          // Cache body composite locally if available
           if (generationPayload.bodyComposite) {
-            const persistedBodyComposite = await uploadIntermediateAsset(
+            const cachedBody = await cacheComposite(
               Buffer.from(generationPayload.bodyComposite.base64, 'base64'),
+              generationId,
+              'body',
               {
-                fileName: `body-composite-${randomUUID()}.png`,
                 description: generationPayload.bodyComposite.description,
                 mimeType: generationPayload.bodyComposite.mimeType ?? 'image/png'
               }
             )
-            compositePatch.bodyComposite = persistedBodyComposite
-            Logger.info('Persisted body composite to workflow state', {
+            // Store local path with 'local:' prefix to distinguish from S3 keys
+            compositePatch.bodyComposite = {
+              key: `local:${cachedBody.path}`,
+              description: generationPayload.bodyComposite.description,
+              mimeType: cachedBody.mimeType
+            }
+            Logger.info('Cached body composite locally', {
               generationId,
-              s3Key: persistedBodyComposite.key
+              path: cachedBody.path
             })
           }
 
@@ -460,17 +490,18 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           }
         }
 
-        // Persist garment collage to workflow state if it was generated
+        // Cache garment collage locally if it was generated
         const garmentCollage = referenceImages.find((ref) =>
           ref.description?.toLowerCase().includes('garment') ||
           ref.description?.toLowerCase().includes('collage')
         )
 
         if (garmentCollage && workflowVersion === 'v3') {
-          const persistedGarmentCollage = await uploadIntermediateAsset(
+          const cachedGarment = await cacheComposite(
             Buffer.from(garmentCollage.base64, 'base64'),
+            generationId,
+            'garment',
             {
-              fileName: `garment-collage-${randomUUID()}.png`,
               description: garmentCollage.description,
               mimeType: garmentCollage.mimeType ?? 'image/png'
             }
@@ -480,16 +511,20 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             ...workflowState,
             composites: {
               ...(workflowState?.composites ?? {}),
-              garmentCollage: persistedGarmentCollage
+              garmentCollage: {
+                key: `local:${cachedGarment.path}`,
+                description: garmentCollage.description,
+                mimeType: cachedGarment.mimeType
+              }
             }
           }
 
           await persistWorkflowState(patch)
           workflowState = patch
 
-          Logger.info('[DEBUG] Persisted garment collage to workflow state', {
+          Logger.info('Cached garment collage locally', {
             generationId,
-            s3Key: persistedGarmentCollage.key
+            path: cachedGarment.path
           })
         }
       }
@@ -504,7 +539,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         })
       }
 
-      Logger.info('Generated Prompt for Gemini', { prompt: basePrompt })
+      Logger.info('Generated Prompt for Gemini\nPrompt:\n' + basePrompt)
 
       let approvedImageBuffers: Buffer[] | undefined
 
@@ -533,10 +568,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
             v3SelfieComposite = generatedComposite
 
-            const persistedComposite = await uploadIntermediateAsset(
+            // Cache selfie composite locally for retry support
+            const cachedSelfie = await cacheComposite(
               Buffer.from(generatedComposite.base64, 'base64'),
+              generationId,
+              'selfie',
               {
-                fileName: `selfie-composite-${randomUUID()}.png`,
                 description: generatedComposite.description,
                 mimeType: generatedComposite.mimeType ?? 'image/png'
               }
@@ -553,12 +590,21 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
               },
               composites: {
                 ...(workflowState?.composites ?? {}),
-                selfie: persistedComposite
+                selfie: {
+                  key: `local:${cachedSelfie.path}`,
+                  description: generatedComposite.description,
+                  mimeType: cachedSelfie.mimeType
+                }
               }
             }
 
             await persistWorkflowState(patch)
             workflowState = patch
+
+            Logger.info('Cached selfie composite locally', {
+              generationId,
+              path: cachedSelfie.path
+            })
           }
 
           // Load face composite from workflow state if available
@@ -594,6 +640,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             selfieAssetIds,
             backgroundAssetId: job.data.backgroundAssetId,
             logoAssetId: job.data.logoAssetId,
+            demographics, // Aggregated demographics from selfies
             selfieComposite: v3SelfieComposite,
             faceComposite: v3FaceComposite, // Split face composite (front_view + side_view selfies)
             bodyComposite: v3BodyComposite, // Split body composite (partial_body + full_body selfies)

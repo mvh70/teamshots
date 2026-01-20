@@ -27,6 +27,7 @@ export async function OPTIONS(req: NextRequest) {
 import { prisma } from '@/lib/prisma'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG, type PricingTier, getPricingTier } from '@/config/pricing'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { getRegenerationCount } from '@/domain/pricing'
@@ -48,6 +49,7 @@ import {
   enqueueGenerationJob,
   determineWorkflowVersion,
 } from '@/domain/generation/generation-helpers'
+import { getDemographicsFromSelfieIds, hasDemographicData } from '@/domain/selfie/selfieDemographics'
 
 
 // Request validation schema
@@ -248,7 +250,7 @@ export async function POST(request: NextRequest) {
               id: true,
               key: true,
               personId: true,
-              selfieType: true, // Include selfie type for split composite building
+              classification: true, // Include classification for split composite building
               person: { select: { userId: true, teamId: true } }
             }
           })
@@ -260,7 +262,7 @@ export async function POST(request: NextRequest) {
               id: true,
               key: true,
               personId: true,
-              selfieType: true, // Include selfie type for split composite building
+              classification: true, // Include classification for split composite building
               person: { select: { userId: true, teamId: true } }
             }
           })
@@ -273,11 +275,12 @@ export async function POST(request: NextRequest) {
     for (const s of [...foundByIds, ...foundByKeys]) {
       if (!seenIds.has(s.id)) {
         seenIds.add(s.id)
+        const classification = extractFromClassification(s.classification)
         selfies.push({
           id: s.id,
           key: s.key,
           personId: s.personId,
-          selfieType: s.selfieType || null,
+          selfieType: classification.selfieType,
           person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null }
         })
       }
@@ -294,14 +297,16 @@ export async function POST(request: NextRequest) {
       try {
         const moreSelected = await prisma.selfie.findMany({
           where: { personId: selfies[0].personId, selected: true },
-          select: { id: true, key: true, selfieType: true }
+          select: { id: true, key: true, classification: true }
         })
         if (moreSelected.length > 1) {
           const existingIds = new Set(selfies.map((s: { id: string }) => s.id))
-          type SelectedSelfie = typeof moreSelected[number];
           const additionalSelfies = moreSelected
-            .filter((s: SelectedSelfie) => !existingIds.has(s.id))
-            .map((s: SelectedSelfie) => ({ id: s.id, key: s.key, selfieType: s.selfieType, personId: selfies[0].personId, person: selfies[0].person }))
+            .filter((s) => !existingIds.has(s.id))
+            .map((s) => {
+              const c = extractFromClassification(s.classification)
+              return { id: s.id, key: s.key, selfieType: c.selfieType, personId: selfies[0].personId, person: selfies[0].person }
+            })
           selfies.push(...additionalSelfies)
         }
       } catch {}
@@ -849,6 +854,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch aggregated demographics from selfies
+    const selfieIdsForDemographics = selfies.map((s: SelfieType) => s.id)
+    let demographics
+    try {
+      demographics = await getDemographicsFromSelfieIds(selfieIdsForDemographics)
+      if (hasDemographicData(demographics)) {
+        Logger.debug('Resolved demographics for generation', {
+          generationId: generation.id,
+          demographics,
+        })
+      }
+    } catch (demographicsError) {
+      // Log error but don't fail the generation - demographics are optional
+      Logger.warn('Failed to resolve demographics, continuing without', {
+        generationId: generation.id,
+        error: demographicsError instanceof Error ? demographicsError.message : String(demographicsError),
+      })
+    }
+
     const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: primarySelfie.personId,
@@ -857,6 +881,7 @@ export async function POST(request: NextRequest) {
       selfieS3Keys: jobSelfieS3Keys,
       selfieAssetIds: selfieAssetIds.length > 0 ? selfieAssetIds : undefined,
       selfieTypeMap: Object.keys(selfieTypeMap).length > 0 ? selfieTypeMap : undefined,
+      demographics: hasDemographicData(demographics ?? {}) ? demographics : undefined,
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,

@@ -76,14 +76,23 @@ export default function ColorWheelPicker({
   const colorNameListRef = useRef<ColorName[]>([])
   const colorMapRef = useRef<Map<string, string>>(new Map())
   const colorNameDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  const lastExternalValueRef = useRef<string>('') // Track last external value to detect changes
 
-  // Initialize input with color name (only on mount and when value changes from outside)
+  // Initialize/update input when external value changes
   useEffect(() => {
-    // Only update if there's a hex and the input is empty (don't override user typing)
-    if (currentHex && !inputValue) {
-      // Use provided name or find closest semantic color name
+    if (!currentHex) return
+    
+    // Create a key from both hex and name to detect any external change
+    const externalValueKey = `${currentHex}|${currentName || ''}`
+    const valueChanged = externalValueKey !== lastExternalValueRef.current
+    
+    if (valueChanged || !inputValue) {
+      // Use saved name if user explicitly chose one (from suggestions/typing)
+      // Otherwise derive from hex (for color wheel picks)
+      // The derivation is now deterministic thanks to the tiebreaker fix in color-utils.ts
       const displayName = currentName || hexToColorName(currentHex)
       setInputValue(`${displayName} ${currentHex}`)
+      lastExternalValueRef.current = externalValueKey
     }
   }, [currentName, currentHex, inputValue])
 
@@ -281,20 +290,22 @@ export default function ColorWheelPicker({
     }
   }
 
-  // Handle color wheel change (debounce name lookup for performance)
+  // Handle color wheel change (debounce name lookup for UI display only)
   const handleColorWheelChange = (newColor: string) => {
-    // Update hex immediately
+    // Update display immediately with just hex (for responsive UI)
     setInputValue(newColor)
+    
+    // Save only the hex - name is always derived on display for consistency
     onChange({ hex: newColor })
     
-    // Debounce the expensive semantic name lookup (30k+ colors)
+    // Debounce the expensive semantic name lookup just for display feedback
     if (colorNameDebounceRef.current) {
       clearTimeout(colorNameDebounceRef.current)
     }
     colorNameDebounceRef.current = setTimeout(() => {
       const colorName = hexToColorName(newColor)
       setInputValue(`${colorName} ${newColor}`)
-      onChange({ hex: newColor, name: colorName })
+      // Don't call onChange again - hex is already saved, name is derived on display
     }, 150)
   }
 

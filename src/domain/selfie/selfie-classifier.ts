@@ -10,7 +10,11 @@
 import { Logger } from '@/lib/logger'
 import { getVertexGenerativeModel } from '@/queue/workers/generate-image/gemini'
 import { STAGE_MODEL } from '@/queue/workers/generate-image/config'
-import type { SelfieType, ClassificationResult, QualityRating } from './selfie-types'
+import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { classificationQueue } from '@/lib/classification-queue'
+import { toSelfieClassification } from './selfie-types'
+import type { SelfieType, ClassificationResult, QualityRating, Gender, AgeCategory, Ethnicity } from './selfie-types'
 
 export interface ClassificationInput {
   imageBase64: string
@@ -87,9 +91,26 @@ Evaluate how well the face/person stands out from the background:
 
 Provide brief feedback if not "good" (e.g., "hair blends with dark background", "busy background distracts from face", "similar colors make edges unclear").
 
+STEP 5: Assess DEMOGRAPHIC CHARACTERISTICS (for single-person photos only):
+
+For each demographic field, provide BOTH a value AND a confidence score (0.0 to 1.0).
+The confidence indicates how certain you are about the assessment.
+
+a) GENDER - Estimate the apparent gender:
+- value: "male", "female", "non_binary", or "unknown"
+- confidence: 0.0 to 1.0 (how certain you are)
+
+b) AGE CATEGORY - Estimate the apparent age range:
+- value: "16-20", "21-30", "31-40", "41-50", "51-60", "61-70", "70+", or "unknown"
+- confidence: 0.0 to 1.0
+
+c) ETHNICITY - Estimate the apparent ethnicity:
+- value: "caucasian", "black", "east_asian", "south_asian", "southeast_asian", "hispanic", "middle_eastern", "mixed", "other", or "unknown"
+- confidence: 0.0 to 1.0
+
 IMPORTANT: Return ONLY valid JSON in this exact format:
 
-Example with all fields:
+Example with all fields and confidence:
 {
   "selfie_type": "front_view",
   "confidence": 0.95,
@@ -98,10 +119,16 @@ Example with all fields:
   "lighting_quality": "good",
   "lighting_feedback": null,
   "background_quality": "acceptable",
-  "background_feedback": "Slightly busy background but face is clearly visible"
+  "background_feedback": "Slightly busy background but face is clearly visible",
+  "gender": "female",
+  "gender_confidence": 0.95,
+  "age_category": "31-40",
+  "age_category_confidence": 0.75,
+  "ethnicity": "caucasian",
+  "ethnicity_confidence": 0.88
 }
 
-Example with lighting issue:
+Example with lower confidence:
 {
   "selfie_type": "front_view",
   "confidence": 0.90,
@@ -110,7 +137,13 @@ Example with lighting issue:
   "lighting_quality": "poor",
   "lighting_feedback": "Strong backlight causes face to be in shadow",
   "background_quality": "good",
-  "background_feedback": null
+  "background_feedback": null,
+  "gender": "male",
+  "gender_confidence": 0.92,
+  "age_category": "21-30",
+  "age_category_confidence": 0.60,
+  "ethnicity": "east_asian",
+  "ethnicity_confidence": 0.85
 }
 
 Rules:
@@ -119,9 +152,15 @@ Rules:
 - confidence should be 0.0 to 1.0
 - lighting_quality and background_quality: must be "good", "acceptable", or "poor"
 - lighting_feedback and background_feedback: provide brief explanation if quality is not "good", otherwise null
+- gender: must be "male", "female", "non_binary", or "unknown"
+- gender_confidence: 0.0 to 1.0 (required when gender is not "unknown")
+- age_category: must be "16-20", "21-30", "31-40", "41-50", "51-60", "61-70", "70+", or "unknown"
+- age_category_confidence: 0.0 to 1.0 (required when age_category is not "unknown")
+- ethnicity: must be "caucasian", "black", "east_asian", "south_asian", "southeast_asian", "hispanic", "middle_eastern", "mixed", "other", or "unknown"
+- ethnicity_confidence: 0.0 to 1.0 (required when ethnicity is not "unknown")
 - KEY DISTINCTION for body shots: Can you see the full ROUNDED SHAPE of both shoulders (not cut off flat at frame edge)? → partial_body. Are shoulders cropped/cut off by the frame edge? → front_view/side_view
 - KEY DISTINCTION for angles: Is the head/face rotated MORE than 45 degrees to the side? → side_view. Is head rotation 45 degrees or less? → front_view
-- If person_count is 0 or more than 1, set selfie_type to "unknown", confidence to 0, and skip lighting/background assessment`
+- If person_count is 0 or more than 1, set selfie_type to "unknown", confidence to 0, and skip lighting/background/demographic assessment`
 
 /**
  * Classify a selfie image using Gemini vision API.
@@ -196,6 +235,12 @@ export async function classifySelfieType(
       reasoning: result.reasoning,
       lightingQuality: result.lightingQuality,
       backgroundQuality: result.backgroundQuality,
+      gender: result.gender,
+      genderConfidence: result.genderConfidence,
+      ageCategory: result.ageCategory,
+      ageCategoryConfidence: result.ageCategoryConfidence,
+      ethnicity: result.ethnicity,
+      ethnicityConfidence: result.ethnicityConfidence,
     })
 
     return result
@@ -249,6 +294,12 @@ function parseClassificationResponse(text: string): ClassificationResult {
       person_count: parsed.person_count,
       lighting_quality: parsed.lighting_quality,
       background_quality: parsed.background_quality,
+      gender: parsed.gender,
+      gender_confidence: parsed.gender_confidence,
+      age_category: parsed.age_category,
+      age_category_confidence: parsed.age_category_confidence,
+      ethnicity: parsed.ethnicity,
+      ethnicity_confidence: parsed.ethnicity_confidence,
     })
 
     const selfieType = normalizeSelfieType(parsed.selfie_type)
@@ -264,6 +315,14 @@ function parseClassificationResponse(text: string): ClassificationResult {
     const backgroundQuality = normalizeQualityRating(parsed.background_quality)
     const backgroundFeedback =
       typeof parsed.background_feedback === 'string' ? parsed.background_feedback : undefined
+
+    // Parse demographic characteristics with per-field confidence
+    const gender = normalizeGender(parsed.gender)
+    const genderConfidence = normalizeConfidence(parsed.gender_confidence)
+    const ageCategory = normalizeAgeCategory(parsed.age_category)
+    const ageCategoryConfidence = normalizeConfidence(parsed.age_category_confidence)
+    const ethnicity = normalizeEthnicity(parsed.ethnicity)
+    const ethnicityConfidence = normalizeConfidence(parsed.ethnicity_confidence)
 
     // Determine if selfie is proper for generation
     const { isProper, improperReason } = determineProper(
@@ -284,6 +343,12 @@ function parseClassificationResponse(text: string): ClassificationResult {
       lightingFeedback,
       backgroundQuality,
       backgroundFeedback,
+      gender,
+      genderConfidence,
+      ageCategory,
+      ageCategoryConfidence,
+      ethnicity,
+      ethnicityConfidence,
     }
   } catch (error) {
     Logger.warn('Failed to parse classification JSON', {
@@ -399,6 +464,140 @@ function normalizeQualityRating(value: unknown): QualityRating | undefined {
 }
 
 /**
+ * Normalize gender to valid Gender or undefined
+ */
+function normalizeGender(value: unknown): Gender | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+
+  switch (normalized) {
+    case 'male':
+    case 'm':
+    case 'man':
+      return 'male'
+    case 'female':
+    case 'f':
+    case 'woman':
+      return 'female'
+    case 'non_binary':
+    case 'nonbinary':
+    case 'nb':
+    case 'other':
+      return 'non_binary'
+    case 'unknown':
+      return 'unknown'
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Normalize age category to valid AgeCategory or undefined
+ */
+function normalizeAgeCategory(value: unknown): AgeCategory | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const normalized = value.trim().toLowerCase()
+
+  switch (normalized) {
+    case '16-20':
+    case '16_20':
+    case 'teenager':
+    case 'teen':
+      return '16-20'
+    case '21-30':
+    case '21_30':
+    case '20s':
+      return '21-30'
+    case '31-40':
+    case '31_40':
+    case '30s':
+      return '31-40'
+    case '41-50':
+    case '41_50':
+    case '40s':
+      return '41-50'
+    case '51-60':
+    case '51_60':
+    case '50s':
+      return '51-60'
+    case '61-70':
+    case '61_70':
+    case '60s':
+      return '61-70'
+    case '70+':
+    case '70_plus':
+    case '71+':
+    case 'elderly':
+    case 'senior':
+      return '70+'
+    case 'unknown':
+      return 'unknown'
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Normalize ethnicity to valid Ethnicity or undefined
+ */
+function normalizeEthnicity(value: unknown): Ethnicity | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+
+  switch (normalized) {
+    case 'caucasian':
+    case 'white':
+    case 'european':
+      return 'caucasian'
+    case 'black':
+    case 'african':
+    case 'african_american':
+      return 'black'
+    case 'east_asian':
+    case 'asian':
+    case 'chinese':
+    case 'japanese':
+    case 'korean':
+      return 'east_asian'
+    case 'south_asian':
+    case 'indian':
+    case 'pakistani':
+    case 'bengali':
+    case 'sri_lankan':
+      return 'south_asian'
+    case 'southeast_asian':
+    case 'thai':
+    case 'vietnamese':
+    case 'filipino':
+    case 'indonesian':
+    case 'malaysian':
+      return 'southeast_asian'
+    case 'hispanic':
+    case 'latino':
+    case 'latina':
+    case 'latin':
+      return 'hispanic'
+    case 'middle_eastern':
+    case 'arab':
+    case 'persian':
+    case 'north_african':
+      return 'middle_eastern'
+    case 'mixed':
+    case 'multiracial':
+      return 'mixed'
+    case 'other':
+      return 'other'
+    case 'unknown':
+      return 'unknown'
+    default:
+      return undefined
+  }
+}
+
+/**
  * Determine if a selfie is proper for AI headshot generation.
  * Quality assessments (lighting, background) are surfaced as feedback
  * but don't block the selfie from being used.
@@ -438,4 +637,192 @@ function determineProper(
 
   // All checks passed
   return { isProper: true }
+}
+
+// ============================================================================
+// CENTRALIZED CLASSIFICATION SERVICE
+// ============================================================================
+
+export interface ClassifyAndUpdateInput {
+  selfieId: string
+  imageBase64: string
+  mimeType: string
+}
+
+export interface ClassifyAndUpdateResult {
+  success: boolean
+  classification?: ClassificationResult
+  error?: string
+}
+
+/**
+ * Classify a selfie and update the database with results.
+ * 
+ * This is the SINGLE source of truth for classification + database updates.
+ * All routes should use this function instead of duplicating the logic.
+ * 
+ * Updates both:
+ * - The new `classification` JSON column (primary)
+ * - Legacy individual columns (for backward compatibility)
+ */
+export async function classifyAndUpdateSelfie(
+  input: ClassifyAndUpdateInput
+): Promise<ClassifyAndUpdateResult> {
+  const { selfieId, imageBase64, mimeType } = input
+
+  try {
+    Logger.info('[classifyAndUpdateSelfie] Starting classification', { selfieId })
+
+    // Run classification
+    const classification = await classifySelfieType({ imageBase64, mimeType })
+
+    // Convert to JSON format for the classification column
+    const classificationJson = toSelfieClassification(classification)
+
+    // Update database with classification JSON
+    await prisma.selfie.update({
+      where: { id: selfieId },
+      data: {
+        classification: classificationJson as unknown as Prisma.InputJsonValue,
+        // If improper, deselect the selfie
+        ...(classification.isProper === false && { selected: false }),
+      },
+    })
+
+    Logger.info('[classifyAndUpdateSelfie] Classification complete', {
+      selfieId,
+      selfieType: classification.selfieType,
+      isProper: classification.isProper,
+      personCount: classification.personCount,
+      gender: classification.gender,
+      ageCategory: classification.ageCategory,
+      ethnicity: classification.ethnicity,
+    })
+
+    return { success: true, classification }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    Logger.error('[classifyAndUpdateSelfie] Classification failed', {
+      selfieId,
+      error: errorMessage,
+    })
+
+    // Mark as null to allow retry
+    try {
+      await prisma.selfie.update({
+        where: { id: selfieId },
+        data: {
+          classification: Prisma.DbNull,
+        },
+      })
+    } catch {}
+
+    return { success: false, error: errorMessage }
+  }
+}
+
+/**
+ * Queue a selfie for classification (fire-and-forget).
+ * 
+ * Uses the global classification queue to limit concurrent requests
+ * and prevent rate limiting from the Gemini API.
+ * 
+ * @param input - Classification input with selfie ID and image data
+ * @param source - Optional source identifier for logging (e.g., 'promote', 'type-status')
+ */
+export function queueClassification(
+  input: ClassifyAndUpdateInput,
+  source: string = 'unknown'
+): void {
+  const { selfieId } = input
+
+  classificationQueue.enqueue(async () => {
+    await classifyAndUpdateSelfie(input)
+  }, selfieId).catch((error) => {
+    Logger.error('[queueClassification] Queue error', {
+      selfieId,
+      source,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  })
+
+  // Log queue status for monitoring
+  const queueStatus = classificationQueue.getStatus()
+  Logger.debug('[queueClassification] Classification queued', {
+    selfieId,
+    source,
+    queueStatus,
+  })
+}
+
+export interface QueueClassificationFromS3Input {
+  selfieId: string
+  selfieKey: string
+  bucketName: string
+  s3Client: import('@aws-sdk/client-s3').S3Client
+}
+
+/**
+ * Queue a selfie for classification by downloading from S3 first (fire-and-forget).
+ * 
+ * Use this when you have a selfie key but not the image data.
+ * 
+ * @param input - Input with selfie ID, S3 key, and S3 client
+ * @param source - Optional source identifier for logging
+ */
+export function queueClassificationFromS3(
+  input: QueueClassificationFromS3Input,
+  source: string = 'unknown'
+): void {
+  const { selfieId, selfieKey, bucketName, s3Client: s3 } = input
+
+  // Import dynamically to avoid circular dependencies
+  classificationQueue.enqueue(async () => {
+    try {
+      // Download image from S3
+      const { downloadSelfieAsBase64 } = await import('@/queue/workers/generate-image/s3-utils')
+      const imageData = await downloadSelfieAsBase64({
+        bucketName,
+        s3Client: s3,
+        key: selfieKey,
+      })
+
+      // Run classification
+      await classifyAndUpdateSelfie({
+        selfieId,
+        imageBase64: imageData.base64,
+        mimeType: imageData.mimeType,
+      })
+    } catch (error) {
+      Logger.error('[queueClassificationFromS3] Failed', {
+        selfieId,
+        source,
+        error: error instanceof Error ? error.message : String(error),
+      })
+
+      // Mark as null to allow retry
+      try {
+        await prisma.selfie.update({
+          where: { id: selfieId },
+          data: {
+            classification: Prisma.DbNull,
+          },
+        })
+      } catch {}
+    }
+  }, selfieId).catch((error) => {
+    Logger.error('[queueClassificationFromS3] Queue error', {
+      selfieId,
+      source,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  })
+
+  // Log queue status for monitoring
+  const queueStatus = classificationQueue.getStatus()
+  Logger.debug('[queueClassificationFromS3] Classification queued', {
+    selfieId,
+    source,
+    queueStatus,
+  })
 }

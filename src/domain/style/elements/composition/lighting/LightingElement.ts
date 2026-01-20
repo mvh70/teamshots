@@ -78,39 +78,27 @@ export class LightingElement extends StyleElement {
     // Note: Specific lighting details (quality, direction, color temperature, setup) are in the JSON payload
     // Only add critical quality rules that aren't obvious from the JSON structure
 
-    // Universal constraint: no visible photography equipment or light sources
-    mustFollow.push(
-      'No studio lighting equipment, softboxes, umbrellas, reflectors, lamps, light fixtures, or photography gear visible in the image'
-    )
-
     // Phase-specific quality constraints
     if (phase === 'person-generation') {
-      mustFollow.push(
-        'Lighting must be professional and flattering',
-        'Catchlights in eyes must be present and realistic',
-        'Shadow falloff must match lighting quality specification'
-      )
+      // Person-generation phase: lighting constraints are handled by:
+      // - Hard Constraint #5 in v3-step1a-person-generation.ts (no studio equipment)
+      // - Hardcoded Technical Requirement (catchlights)
+      // - Step 1a uses neutral/even lighting, not scene lighting
+      // We only contribute metadata here to avoid duplication.
     } else if (phase === 'background-generation') {
+      // Background needs lighting coherence constraint
+      mustFollow.push(
+        'No studio lighting equipment, softboxes, umbrellas, reflectors, lamps, light fixtures, or photography gear visible in the image'
+      )
       mustFollow.push(
         'Background lighting must be coherent with subject lighting direction',
         'Lighting quality must be consistent across the scene'
       )
     } else if (phase === 'composition') {
-      // CRITICAL: The person already has lighting applied from Step 1a
-      // Step 2 should PRESERVE person lighting and apply lighting to BACKGROUND only
-      mustFollow.push(
-        'PRESERVE the subject\'s existing lighting exactly - do NOT add additional light sources or brightness to the PERSON',
-        'Apply lighting effects to the BACKGROUND (falloff, shadows, ambient) based on the lighting direction',
-        'Match color temperature between subject and background via color grading',
-        'No lighting inconsistencies between subject and background'
-      )
-
-      // Composition instructions: preserve person lighting, apply background lighting
-      instructions.push(
-        'The subject already has professional lighting applied from Step 1 - preserve their lighting exactly as generated',
-        'Apply natural LIGHTING FALLOFF to the BACKGROUND: gradual falloff on the background wall/environment based on the key light direction',
-        'Cast a realistic soft shadow FROM the subject ONTO the background based on the lighting direction'
-      )
+      // Composition phase: lighting matching is handled by the hardcoded Compositing Instructions
+      // in v3-step2-final-composition.ts (Color Matching, Global Grading, Shadows sections).
+      // We only contribute metadata here to avoid duplication.
+      // The lighting JSON payload already specifies direction, quality, and color temperature.
     }
 
     // Color temperature guidance

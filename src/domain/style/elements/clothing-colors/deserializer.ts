@@ -35,7 +35,9 @@ export function deserialize(
   }
 
   if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in raw)) {
-    return userChoice()
+    // If clothingColors is not present in settings, use defaults if provided
+    // This ensures admin-preset packages don't show clothingColors as user-editable
+    return defaults || userChoice()
   }
 
   const colorsObj = rawClothingColors as Record<string, unknown>

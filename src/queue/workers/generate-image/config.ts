@@ -54,7 +54,7 @@ export const EVALUATION_CONFIG = {
 // AI Generation Parameters
 export const AI_CONFIG = {
   /** Temperature for person generation - lower for face accuracy (0.0-1.0) */
-  PERSON_GENERATION_TEMPERATURE: 0.4,
+  PERSON_GENERATION_TEMPERATURE: 0.3,
 
   /** Temperature for background generation (0.0-1.0) */
   BACKGROUND_GENERATION_TEMPERATURE: 0.5,
@@ -63,7 +63,7 @@ export const AI_CONFIG = {
   EVALUATION_TEMPERATURE: 0.2,
 
   /** Temperature for composition/refinement - lower for stable integration (0.0-1.0) */
-  REFINEMENT_TEMPERATURE: 0.3
+  REFINEMENT_TEMPERATURE: 0.2
 } as const
 
 // Progress Tracking Configuration

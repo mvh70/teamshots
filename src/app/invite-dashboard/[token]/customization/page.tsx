@@ -352,9 +352,10 @@ export default function InviteCustomizationPage() {
   const isClothingColorsEditable = useMemo(() => {
     const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
     const clothingColorsSettings = categorySettings['clothingColors'] as { type?: string; mode?: string } | undefined
-    // If no settings or mode is 'user-choice', it's editable
-    return !clothingColorsSettings ||
-      clothingColorsSettings.mode === 'user-choice' ||
+    // Only editable if settings exist AND mode is 'user-choice'
+    // If no settings, admin didn't include it, so it's NOT editable
+    if (!clothingColorsSettings) return false
+    return clothingColorsSettings.mode === 'user-choice' ||
       clothingColorsSettings.type === 'user-choice'
   }, [originalContextSettings, photoStyleSettings])
 
@@ -362,7 +363,8 @@ export default function InviteCustomizationPage() {
   const hasVisitedClothingColors = !isMobileViewport || !isClothingColorsEditable || visitedSteps.has('clothingColors')
 
   // Check if all editable steps have been visited (user has reviewed all options)
-  const allEditableStepsVisited = customizationStepsMeta.editableSteps > 0 &&
+  // If editableSteps is 0 (admin preset everything), consider all steps visited
+  const allEditableStepsVisited = customizationStepsMeta.editableSteps === 0 ||
     visitedSteps.size >= customizationStepsMeta.editableSteps
 
   // Customization is complete if either:

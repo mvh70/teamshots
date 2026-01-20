@@ -19,6 +19,7 @@ import Header from '@/app/[locale]/(product)/app/components/Header'
 import { QRPlaceholder } from '@/components/MobileHandoff'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
+import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -39,6 +40,7 @@ function SelfieSelectionPageContent() {
   const [isNavigating, startNavigateTransition] = useTransition()
   const { context: onboardingContext } = useOnboardingState()
   const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
+  const classificationQueue = useClassificationQueue()
   
   
   const uploadErrorHandler = useCallback((error: string) => {
@@ -179,7 +181,8 @@ function SelfieSelectionPageContent() {
           await loadSelected()
         }}
       />
-    )
+    ),
+    classificationQueue: classificationQueue as import('@/components/generation/selection/SelectableGrid').ClassificationQueueStatus | undefined
   }
 
   const navButtonsControls = (

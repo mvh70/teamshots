@@ -112,7 +112,7 @@ export interface ElementContext {
   // Generation context data
   generationContext: {
     selfieS3Keys: string[]
-    userId?: string
+    personId?: string // Primary identifier - invited users don't have userId
     teamId?: string
     generationId?: string
     // Assets prepared in step 0 (preparation phase)

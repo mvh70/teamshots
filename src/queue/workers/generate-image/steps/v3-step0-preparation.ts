@@ -145,7 +145,7 @@ export async function executeStep0Preparation(
     settings: styleSettings,
     generationContext: {
       selfieS3Keys,
-      userId: personId,
+      personId, // Primary identifier - invited users don't have userId
       teamId,
       generationId,
       // Pass services for elements to use

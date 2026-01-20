@@ -145,6 +145,7 @@ export interface Step7Input {
 export interface Step7Output {
   refinedBuffer: Buffer
   refinedBase64: string
+  allImageBuffers?: Buffer[] // All images returned by the model (for debugging)
 }
 
 export interface Step8Input {

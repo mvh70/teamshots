@@ -8,6 +8,7 @@ import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import { Prisma } from '@/lib/prisma'
+import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
 
 export interface JobEnqueueOptions {
   generationId: string
@@ -17,6 +18,7 @@ export interface JobEnqueueOptions {
   selfieS3Keys: string[]
   selfieAssetIds?: string[] // Asset IDs for fingerprinting and cost tracking
   selfieTypeMap?: Record<string, string> // Map of S3 key to selfie type for split composites
+  demographics?: DemographicProfile // Aggregated demographics from selfies
   prompt: string
   workflowVersion: 'v3'
   debugMode: boolean
@@ -39,6 +41,7 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
     selfieS3Keys,
     selfieAssetIds,
     selfieTypeMap,
+    demographics,
     prompt,
     workflowVersion,
     debugMode,
@@ -57,6 +60,7 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
       selfieS3Keys,
       selfieAssetIds, // Pass asset IDs for fingerprinting and cost tracking
       selfieTypeMap, // Pass selfie type map for split composite building
+      demographics, // Pass aggregated demographics from selfies
       prompt,
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL'),

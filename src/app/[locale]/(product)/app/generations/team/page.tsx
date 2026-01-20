@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -9,10 +9,10 @@ import { useSession } from 'next-auth/react'
 import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
-import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
-import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
+import { type PricingTier } from '@/config/pricing'
 import { type PlanPeriod } from '@/domain/subscription/utils'
-import { Toast, GenerationGrid } from '@/components/ui'
+import { Toast } from '@/components/ui'
+import { Lightbox } from '@/components/generations'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useDomain } from '@/contexts/DomainContext'
@@ -89,6 +89,31 @@ export default function TeamGenerationsPage() {
   /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
+  const [viewMode, setViewMode] = useState<'images' | 'folders'>('images')
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [personCounts, setPersonCounts] = useState<{ personId: string; personName: string; personUserId?: string; count: number }[]>([])
+  const [countsLoading, setCountsLoading] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; personName: string } | null>(null)
+
+  // Fetch person counts for folder view and image view headers
+  useEffect(() => {
+    const fetchCounts = async () => {
+      setCountsLoading(true)
+      try {
+        const response = await fetch('/api/generations/counts')
+        if (response.ok) {
+          const data = await response.json()
+          setPersonCounts(data.personCounts || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch person counts:', error)
+      } finally {
+        setCountsLoading(false)
+      }
+    }
+    
+    void fetchCounts()
+  }, []) // Fetch once on mount
   
   // Guard: redirect users without pro tier/team access away from team page
   // Pro subscribers can access team features even without a teamId
@@ -251,11 +276,55 @@ export default function TeamGenerationsPage() {
     return null
   }
 
-  const filteredGenerated = filterGenerated(generated)
   // Build photo style options dynamically from existing generations
-  const styleOptions = Array.from(new Set(
+  const styleOptions = useMemo(() => Array.from(new Set(
     generated.map(g => g.contextName || 'Freestyle')
-  ))
+  )), [generated])
+
+  // Filter and sort generations
+  const filteredAndSortedGenerated = useMemo(() => {
+    // First apply the standard filters (timeframe, context)
+    let filtered = filterGenerated(generated)
+    
+    // If in folder view and a person is selected, filter to that person only
+    if (viewMode === 'folders' && selectedPersonId) {
+      filtered = filtered.filter(g => g.personId === selectedPersonId)
+    }
+    
+    // Sort by person name first, then by date (newest first)
+    return filtered.sort((a, b) => {
+      const personA = a.personFirstName || 'Unknown'
+      const personB = b.personFirstName || 'Unknown'
+      
+      // First compare by person name
+      const nameCompare = personA.localeCompare(personB)
+      if (nameCompare !== 0) return nameCompare
+      
+      // Then by date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [generated, filterGenerated, viewMode, selectedPersonId])
+
+  const filteredGenerated = filteredAndSortedGenerated
+
+  // Group generations by person for image view with headers
+  const groupedByPerson = useMemo(() => {
+    const groups: { personId: string; personName: string; generations: typeof filteredGenerated }[] = []
+    let currentGroup: typeof groups[0] | null = null
+    
+    filteredGenerated.forEach(g => {
+      const personId = g.personId || 'unknown'
+      const personName = g.personFirstName || 'Unknown'
+      
+      if (!currentGroup || currentGroup.personId !== personId) {
+        currentGroup = { personId, personName, generations: [] }
+        groups.push(currentGroup)
+      }
+      currentGroup.generations.push(g)
+    })
+    
+    return groups
+  }, [filteredGenerated])
 
   // Check if user has credits
   // NEW CREDIT MODEL: All usable credits are on person
@@ -423,6 +492,42 @@ export default function TeamGenerationsPage() {
               </div>
             </div>
           )}
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 bg-white border-2 border-gray-200 rounded-lg px-3 py-1.5 shadow-sm">
+            <button
+              onClick={() => {
+                setViewMode('images')
+                setSelectedPersonId(null)
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                viewMode === 'images' 
+                  ? 'bg-brand-primary text-white' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Images
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('folders')
+                setSelectedPersonId(null)
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                viewMode === 'folders' 
+                  ? 'bg-brand-primary text-white' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              Folders
+            </button>
+          </div>
         </div>
 
       </div>
@@ -435,46 +540,140 @@ export default function TeamGenerationsPage() {
       )}
 
       {/* Content */}
-      {filteredGenerated.length ? (
-          <>
-            <GenerationGrid>
-              {filteredGenerated.map(item => (
-                <GenerationCard key={item.id} item={item} currentUserId={currentUserId} />
-              ))}
-            </GenerationGrid>
-            
-            {/* Load More Button */}
-            {pagination?.hasNextPage && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Loading...' : `Load More (${pagination.totalCount - filteredGenerated.length} remaining)`}
-                </button>
-              </div>
-            )}
-            
-            {/* Pagination Info */}
-            {pagination && (
-              <div className="text-center text-sm text-gray-600 mt-4">
-                Showing {filteredGenerated.length} of {pagination.totalCount} generations
-              </div>
-            )}
-          </>
+      {viewMode === 'folders' && !selectedPersonId ? (
+        // Folder View - Show person folders with counts from API
+        countsLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+          </div>
+        ) : personCounts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {personCounts.sort((a, b) => a.personName.localeCompare(b.personName)).map(folder => (
+              <button
+                key={folder.personId}
+                onDoubleClick={() => setSelectedPersonId(folder.personId)}
+                onClick={() => setSelectedPersonId(folder.personId)}
+                className="group bg-white rounded-lg border-2 border-gray-200 p-4 hover:border-brand-primary hover:shadow-lg transition-all duration-200 cursor-pointer text-left"
+              >
+                {/* Folder Icon */}
+                <div className="mb-3 flex justify-center">
+                  <div className="relative">
+                    <svg className="w-16 h-16 text-brand-primary group-hover:scale-105 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" />
+                    </svg>
+                    {/* Photo count badge */}
+                    <span className="absolute -top-1 -right-1 bg-brand-secondary text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">
+                      {folder.count}
+                    </span>
+                  </div>
+                </div>
+                {/* Person Name */}
+                <p className="text-sm font-medium text-gray-900 text-center truncate">
+                  {folder.personName}
+                </p>
+              </button>
+            ))}
+          </div>
         ) : (
           <div className="text-center py-16 bg-white rounded-lg border">
             <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
             <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
+            <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
           </div>
-        )}
+        )
+      ) : (
+        // Image View (or folder view with selected person)
+        <>
+          {/* Back button when viewing a person's folder */}
+          {viewMode === 'folders' && selectedPersonId && (
+            <div className="mb-4">
+              <button
+                onClick={() => setSelectedPersonId(null)}
+                className="flex items-center gap-2 text-brand-primary hover:text-brand-primary-hover font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to folders
+              </button>
+              <h2 className="text-xl font-semibold text-gray-900 mt-2">
+                {personCounts.find(f => f.personId === selectedPersonId)?.personName || 'Unknown'}&apos;s photos
+              </h2>
+            </div>
+          )}
+
+          {filteredGenerated.length > 0 ? (
+            <>
+              {/* Images grouped by person with headers */}
+              <div className="space-y-8">
+                {groupedByPerson.map(group => (
+                  <div key={group.personId}>
+                    {/* Person header */}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                      {group.personName}&apos;s photos
+                      <span className="ml-2 text-sm font-normal text-gray-500">
+                        ({personCounts.find(p => p.personId === group.personId)?.count ?? group.generations.length})
+                      </span>
+                    </h3>
+                    {/* Person's images grid */}
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                      {group.generations.map(item => (
+                        <GenerationCard 
+                          key={item.id} 
+                          item={item} 
+                          currentUserId={currentUserId}
+                          onImageClick={(src) => setLightboxImage({ src, personName: group.personName })}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Load More Button */}
+              {pagination?.hasNextPage && (
+                <div className="text-center mt-6">
+                  <button
+                    onClick={loadMore}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Loading...' : `Load More (${pagination.totalCount - filteredGenerated.length} remaining)`}
+                  </button>
+                </div>
+              )}
+              
+              {/* Pagination Info */}
+              {pagination && (
+                <div className="text-center text-sm text-gray-600 mt-4">
+                  Showing {filteredGenerated.length} of {pagination.totalCount} generations
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-16 bg-white rounded-lg border">
+              <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
+              <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
+              <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
+            </div>
+          )}
+        </>
+      )}
       {failureToast && (
         <Toast
           message={failureToast}
           type="error"
           onDismiss={() => setFailureToast(null)}
+        />
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <Lightbox 
+          src={lightboxImage.src}
+          alt={`${lightboxImage.personName}'s photo`}
+          label={`${lightboxImage.personName}'s photo`}
+          onClose={() => setLightboxImage(null)}
         />
       )}
     </div>

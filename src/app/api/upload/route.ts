@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 import { validateImageFile } from '@/lib/file-validation'
+import { queueClassification } from '@/domain/selfie/selfie-classifier'
 
 
 export const runtime = 'nodejs'
@@ -114,6 +115,13 @@ export async function POST(request: NextRequest) {
 
     // Compute sequence number after creation
     const sequenceNumber = await getSelfieSequence(person.id, selfie.id)
+
+    // Queue classification (fire-and-forget)
+    queueClassification({
+      selfieId: selfie.id,
+      imageBase64: buffer.toString('base64'),
+      mimeType: validation.mimeType,
+    }, 'upload')
 
     return NextResponse.json({
       success: true,

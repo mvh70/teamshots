@@ -79,10 +79,10 @@ export class CameraSettingsElement extends StyleElement {
 
     // Phase-specific quality constraints
     if (phase === 'person-generation') {
+      // Person-generation phase: most camera rules are specified in the JSON payload
+      // (focal_length_mm, aperture, positioning). Only add the essential quality rule.
       mustFollow.push(
-        'Subject must be in sharp focus',
-        'Apply lens compression and perspective appropriate for the focal length',
-        'Depth of field rendering must match aperture specification'
+        'Subject must be in sharp focus'
       )
     } else if (phase === 'background-generation') {
       mustFollow.push(
@@ -90,25 +90,10 @@ export class CameraSettingsElement extends StyleElement {
         'Camera perspective and height must match specified position'
       )
     } else if (phase === 'composition') {
-      // Detailed depth of field rendering based on aperture
-      const dofDescription = this.describeDepthOfField(derived.aperture)
-      mustFollow.push(
-        `Apply DEPTH OF FIELD based on the camera aperture (f/${derived.aperture.toFixed(1)}) - ${dofDescription}`,
-        'The person should be TACK SHARP while the background is SLIGHTLY SOFTER (not blurred, just gentler focus)',
-        'Depth of field must be consistent across composition',
-        'Lens character and compression must be uniform',
-        'Color temperature must match white balance setting',
-        'Camera perspective must be coherent between all elements'
-      )
-
-      // CRITICAL: Explicit depth/distance instructions
-      // The subject_to_background_ft value in the JSON needs explicit reinforcement
-      instructions.push(
-        `CRITICAL DEPTH: The subject should appear to be standing approximately ${derived.backgroundDistance} feet from the background wall/surface`,
-        `Create VISIBLE SPATIAL SEPARATION between the subject and background - this is NOT a flat backdrop but a 3D scene with ${derived.backgroundDistance} feet of depth`,
-        'The shadow from the subject should fall ONTO the background surface at an appropriate distance based on the lighting angle',
-        'Use atmospheric perspective: the background should have slightly reduced contrast and saturation compared to the sharp subject in the foreground'
-      )
+      // Composition phase: DOF and depth instructions are handled by the hardcoded
+      // "Depth & Spatial Composition" section in v3-step2-final-composition.ts.
+      // The camera JSON payload already specifies aperture, positioning, and subject_to_background_ft.
+      // We only contribute metadata here to avoid duplication.
     }
 
     // Add ISO-specific guidance

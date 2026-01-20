@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
+import type { PhotoStyleSettings } from '@/types/photo-style'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,16 @@ export async function GET(request: NextRequest) {
 
   const scope = request.nextUrl.searchParams.get('scope') || 'freePackage'
   const contextIdParam = request.nextUrl.searchParams.get('contextId')
+
+  // Helper to add shotType from package defaults to deserialized settings (for clothing color exclusions)
+  // Only inject if not already present
+  const addShotTypeFromPackage = (ui: PhotoStyleSettings, pkg: ReturnType<typeof getPackageConfig>): PhotoStyleSettings => 
+    ui.shotType 
+      ? ui 
+      : {
+          ...ui,
+          shotType: pkg.defaultSettings.shotType
+        }
 
   // If a specific contextId is provided, return that context directly (ownership checks could be added here)
   if (contextIdParam) {
@@ -28,7 +39,7 @@ export async function GET(request: NextRequest) {
     console.log('[GET /api/styles/get] final packageId:', packageId)
     const pkg = getPackageConfig(packageId)
     const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
-    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
+    return NextResponse.json({ context: { ...ctx, settings: addShotTypeFromPackage(ui, pkg) }, packageId: pkg.id })
   }
 
   if (scope === 'freePackage') {
@@ -41,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (!ctx) return NextResponse.json({ context: null, packageId: 'freepackage' })
     const pkg = getPackageConfig('freepackage')
     const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
-    const context = { ...ctx, settings: ui }
+    const context = { ...ctx, settings: addShotTypeFromPackage(ui, pkg) }
     return NextResponse.json({ context, packageId: 'freepackage' })
   }
 
@@ -56,7 +67,7 @@ export async function GET(request: NextRequest) {
     const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
     const pkg = getPackageConfig(packageId)
     const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
-    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
+    return NextResponse.json({ context: { ...ctx, settings: addShotTypeFromPackage(ui, pkg) }, packageId: pkg.id })
   }
 
   if (scope === 'pro') {
@@ -82,7 +93,7 @@ export async function GET(request: NextRequest) {
     const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
     const pkg = getPackageConfig(packageId)
     const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
-    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
+    return NextResponse.json({ context: { ...ctx, settings: addShotTypeFromPackage(ui, pkg) }, packageId: pkg.id })
   }
 
   // Unknown scope

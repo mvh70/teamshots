@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
 import { extendInviteExpiry } from '@/lib/invite-utils'
+import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
+import { s3Client, getS3BucketName } from '@/lib/s3-client'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,14 +55,7 @@ export async function GET(request: NextRequest) {
         key: true,
         createdAt: true,
         userApproved: true,
-        selfieType: true,
-        selfieTypeConfidence: true,
-        isProper: true,
-        improperReason: true,
-        lightingQuality: true,
-        lightingFeedback: true,
-        backgroundQuality: true,
-        backgroundFeedback: true
+        classification: true,
       }
     })
 
@@ -69,12 +65,13 @@ export async function GET(request: NextRequest) {
     // Transform selfies to include URLs and proper field names
     const tokenParam = `token=${encodeURIComponent(token)}`
 
-    type Selfie = typeof selfies[number];
-    const transformedSelfies = selfies.map((selfie: Selfie) => {
+    const transformedSelfies = selfies.map((selfie) => {
       const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}&${tokenParam}`
       Logger.info('Generated selfie URL', { url, key: selfie.key })
       // Check if selfie is used: either by ID or by key
       const isUsed = usedSelfieIds.has(selfie.id) || usedSelfieKeys.has(selfie.key)
+      // Extract classification fields from JSON
+      const classification = extractFromClassification(selfie.classification)
       return {
         id: selfie.id,
         key: selfie.key,
@@ -82,12 +79,12 @@ export async function GET(request: NextRequest) {
         uploadedAt: selfie.createdAt.toISOString(),
         status: selfie.userApproved ? 'approved' : 'uploaded',
         used: isUsed,
-        selfieType: selfie.selfieType,
-        selfieTypeConfidence: selfie.selfieTypeConfidence,
-        isProper: selfie.isProper,
-        improperReason: selfie.improperReason,
-        lightingQuality: selfie.lightingQuality,
-        backgroundQuality: selfie.backgroundQuality
+        selfieType: classification.selfieType,
+        selfieTypeConfidence: classification.selfieTypeConfidence,
+        isProper: classification.isProper,
+        improperReason: classification.improperReason,
+        lightingQuality: classification.lightingQuality,
+        backgroundQuality: classification.backgroundQuality
       }
     })
 
@@ -141,6 +138,14 @@ export async function POST(request: NextRequest) {
         selected: true
       }
     })
+
+    // Queue classification (fire-and-forget)
+    queueClassificationFromS3({
+      selfieId: selfie.id,
+      selfieKey: selfieKey,
+      bucketName: getS3BucketName(),
+      s3Client,
+    }, 'team-member-selfies')
 
     return NextResponse.json({ selfie })
   } catch (error) {

@@ -138,12 +138,36 @@ export async function generateWithGeminiOpenRouter(
     // Extract images from response - they can be in different formats
     let imagesData: Array<{ image_url?: { url?: string } }> = []
 
+    // Debug: Log the full response structure to understand what OpenRouter returns
+    Logger.debug('OpenRouter response structure', {
+      model: modelName,
+      hasChoices: !!data.choices,
+      choicesCount: data.choices?.length,
+      hasMessage: !!message,
+      messageKeys: message ? Object.keys(message) : [],
+      hasMessageImages: !!(message as { images?: unknown })?.images,
+      messageImagesCount: Array.isArray((message as { images?: unknown[] })?.images) 
+        ? (message as { images: unknown[] }).images.length 
+        : 0,
+      contentType: Array.isArray(message?.content) ? 'array' : typeof message?.content,
+      contentLength: Array.isArray(message?.content) ? message.content.length : 0,
+      contentTypes: Array.isArray(message?.content) 
+        ? message.content.map((c: { type?: string }) => c.type) 
+        : [],
+      usage: data.usage,
+    })
+
     if (message?.images && Array.isArray(message.images)) {
       // Some responses have images in a separate array
       imagesData = message.images
+      Logger.debug('OpenRouter: Found images in message.images array', { count: imagesData.length })
     } else if (Array.isArray(message?.content)) {
       // Some responses have images in content array
       imagesData = message.content.filter((c: { type: string }) => c.type === 'image_url')
+      Logger.debug('OpenRouter: Found images in message.content array', { 
+        totalContentItems: message.content.length,
+        imageUrlItems: imagesData.length,
+      })
     }
 
     if (!imagesData || imagesData.length === 0) {
@@ -157,6 +181,30 @@ export async function generateWithGeminiOpenRouter(
           typeof c === 'object' && c !== null && 'type' in c && c.type === 'text'
         )
         textContent = textParts.map((c) => c.text).filter(Boolean).join(' ')
+      }
+
+      // Some providers/models may return base64 image data URLs embedded in text content
+      // (e.g. markdown or raw "data:image/png;base64,..." strings). Attempt to recover.
+      if (textContent) {
+        const dataUrlMatches = Array.from(
+          textContent.matchAll(/data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g)
+        )
+        if (dataUrlMatches.length > 0) {
+          const recovered = dataUrlMatches.map((m) => {
+            const base64 = m[2]
+            return Buffer.from(base64, 'base64')
+          })
+          usage.imagesGenerated = recovered.length
+          Logger.warn('OpenRouter returned images embedded in text content; recovered via data URL parsing', {
+            model: modelName,
+            recoveredCount: recovered.length,
+          })
+          return {
+            images: recovered,
+            usage,
+            providerUsed: 'openrouter',
+          }
+        }
       }
 
       Logger.error('OpenRouter returned no images - DETAILED DEBUG', {
@@ -197,15 +245,9 @@ export async function generateWithGeminiOpenRouter(
 
     usage.imagesGenerated = buffers.length
 
-    Logger.debug('OpenRouter generation succeeded', {
-      provider: 'openrouter',
-      model: modelName,
-      imagesGenerated: buffers.length,
-      aspectRatio,
-      resolution: effectiveResolution,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      durationMs: usage.durationMs
+    Logger.info('OpenRouter: SUCCESS', {
+      images: buffers.length,
+      duration: `${Math.round((usage.durationMs || 0) / 1000)}s`
     })
 
     return {

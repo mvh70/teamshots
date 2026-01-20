@@ -1376,6 +1376,7 @@
       "deleteDisabledAria": "Eliminación deshabilitada. Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar.",
       "analyzing": "Analizando...",
+      "queued": "En cola",
       "selfieTypes": {
         "front_view": "Vista frontal",
         "side_view": "Vista lateral",
@@ -1592,7 +1593,7 @@
   "emails": {
     "otp": {
       "subject": "Tu código de verificación",
-      "body": "Tu código de verificación es: {code}\n\nEste código expira en 5 minutos."
+      "body": "Tu código de verificación es: {code}\n\nEste código expira en 10 minutos."
     },
     "magicLink": {
       "subject": "Tu enlace de inicio de sesión",

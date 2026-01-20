@@ -40,6 +40,7 @@ function mapGeneration(g: Record<string, unknown>): GenerationListItem {
     maxRegenerations: g.maxRegenerations,
     remainingRegenerations: g.remainingRegenerations,
     isOriginal: g.isOriginal,
+    personId: (g.person as Record<string, unknown>)?.id as string,
     personFirstName: (g.person as Record<string, unknown>)?.firstName as string,
     personUserId: (g.person as Record<string, unknown>)?.userId as string,
     jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
@@ -174,19 +175,26 @@ export function useGenerationFilters(initialUserFilter: string = 'me') {
   const [userFilter, setUserFilter] = useState<string>(initialUserFilter)
   const [selectedUserId, setSelectedUserId] = useState<string>('all')
 
-  const filterGenerated = (items: GenerationListItem[]) => {
+  const filterGenerated = useCallback((items: GenerationListItem[]) => {
     const now = Date.now()
     const inTimeframe = (date: string) => {
       if (timeframe === 'all') return true
       const diff = now - new Date(date).getTime()
       return timeframe === '7d' ? diff <= 7 * 86400000 : diff <= 30 * 86400000
     }
+    
+    // Normalize context name for comparison (handle null, undefined, empty string)
+    const normalizeContextName = (name: string | undefined | null): string => {
+      if (!name || name.trim() === '') return 'Freestyle'
+      return name.trim()
+    }
+    
     return items.filter(
       i =>
         inTimeframe(i.createdAt) &&
-        (context === 'all' || (i.contextName || 'Freestyle') === context)
+        (context === 'all' || normalizeContextName(i.contextName) === context)
     )
-  }
+  }, [timeframe, context])
 
   return {
     timeframe,

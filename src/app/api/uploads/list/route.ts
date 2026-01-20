@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
 
 
 export const runtime = 'nodejs'
@@ -22,15 +23,7 @@ export async function GET() {
         key: true,
         validated: true,
         createdAt: true,
-        selfieType: true,
-        selfieTypeConfidence: true,
-        personCount: true,
-        isProper: true,
-        improperReason: true,
-        lightingQuality: true,
-        lightingFeedback: true,
-        backgroundQuality: true,
-        backgroundFeedback: true,
+        classification: true,
       }
     })
 
@@ -47,38 +40,26 @@ export async function GET() {
     // Get sets of used selfie IDs and keys
     const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(person.id)
 
-    const items = uploads.map((u: {
-      id: string
-      key: string
-      validated: boolean
-      createdAt: Date
-      selfieType: string | null
-      selfieTypeConfidence: number | null
-      personCount: number | null
-      isProper: boolean | null
-      improperReason: string | null
-      lightingQuality: string | null
-      lightingFeedback: string | null
-      backgroundQuality: string | null
-      backgroundFeedback: string | null
-    }) => {
+    const items = uploads.map((u) => {
       // Check if selfie is used: either by ID or by key
       const isUsed = usedSelfieIds.has(u.id) || usedSelfieKeys.has(u.key)
+      // Extract classification fields from JSON
+      const classification = extractFromClassification(u.classification)
       return {
         id: u.id,
         uploadedKey: u.key,
         validated: u.validated,
         createdAt: u.createdAt.toISOString(),
         hasGenerations: isUsed,
-        selfieType: u.selfieType,
-        selfieTypeConfidence: u.selfieTypeConfidence,
-        personCount: u.personCount,
-        isProper: u.isProper,
-        improperReason: u.improperReason,
-        lightingQuality: u.lightingQuality,
-        lightingFeedback: u.lightingFeedback,
-        backgroundQuality: u.backgroundQuality,
-        backgroundFeedback: u.backgroundFeedback,
+        selfieType: classification.selfieType,
+        selfieTypeConfidence: classification.selfieTypeConfidence,
+        personCount: classification.personCount,
+        isProper: classification.isProper,
+        improperReason: classification.improperReason,
+        lightingQuality: classification.lightingQuality,
+        lightingFeedback: classification.lightingFeedback,
+        backgroundQuality: classification.backgroundQuality,
+        backgroundFeedback: classification.backgroundFeedback,
       }
     })
 

@@ -113,10 +113,20 @@ function colorDistance(rgb1: { r: number; g: number; b: number }, rgb2: { r: num
   )
 }
 
+// Cache for closest color lookups to ensure consistency
+const closestColorCache = new Map<string, string>()
+
 /**
  * Finds the closest color name for a hex value by calculating color distance
+ * Uses deterministic tiebreaker: shorter names preferred, then alphabetically first
  */
 function findClosestColorName(hex: string): string {
+  const normalizedHex = hex.toLowerCase()
+  
+  // Check cache first for consistency
+  const cached = closestColorCache.get(normalizedHex)
+  if (cached) return cached
+  
   const target = hexToRgb(hex)
   if (!target) return 'Unknown'
   
@@ -132,8 +142,19 @@ function findClosestColorName(hex: string): string {
     if (distance < minDistance) {
       minDistance = distance
       closestColor = color
+    } else if (distance === minDistance) {
+      // Deterministic tiebreaker for consistent results:
+      // 1. Prefer shorter names (more common/simple color names)
+      // 2. If same length, prefer alphabetically first
+      if (color.name.length < closestColor.name.length ||
+          (color.name.length === closestColor.name.length && color.name < closestColor.name)) {
+        closestColor = color
+      }
     }
   }
+  
+  // Cache the result for consistency
+  closestColorCache.set(normalizedHex, closestColor.name)
   
   return closestColor.name
 }
@@ -165,6 +186,9 @@ export function hexToColorName(hex: string): string {
   return findClosestColorName(normalizedHex)
 }
 
+// Cache for closest color with info lookups
+const closestColorInfoCache = new Map<string, { name: string; matchedHex: string }>()
+
 /**
  * Converts a hex color to a semantic color name with distance info
  * @param hex - Hex color value (e.g., "#00008B")
@@ -189,7 +213,13 @@ export function hexToColorNameWithInfo(hex: string): { name: string; matchedHex:
     }
   }
   
-  // 3. Find closest color
+  // 3. Check cache for consistency
+  const cached = closestColorInfoCache.get(normalizedHex)
+  if (cached) {
+    return { ...cached, isExact: false }
+  }
+  
+  // 4. Find closest color with deterministic tiebreaker
   const target = hexToRgb(normalizedHex)
   if (!target) return { name: 'Unknown', matchedHex: '', isExact: false }
   
@@ -204,9 +234,19 @@ export function hexToColorNameWithInfo(hex: string): { name: string; matchedHex:
     if (distance < minDistance) {
       minDistance = distance
       closestColor = color
+    } else if (distance === minDistance) {
+      // Deterministic tiebreaker: prefer shorter names, then alphabetically first
+      if (color.name.length < closestColor.name.length ||
+          (color.name.length === closestColor.name.length && color.name < closestColor.name)) {
+        closestColor = color
+      }
     }
   }
   
-  return { name: closestColor.name, matchedHex: closestColor.hex, isExact: false }
+  // Cache for consistency
+  const result = { name: closestColor.name, matchedHex: closestColor.hex }
+  closestColorInfoCache.set(normalizedHex, result)
+  
+  return { ...result, isExact: false }
 }
 

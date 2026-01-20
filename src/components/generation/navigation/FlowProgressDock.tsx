@@ -95,8 +95,9 @@ export default function FlowProgressDock({
   const hasEnoughSelfies = selfieCount >= requiredSelfies
 
   // Compute if customization is complete based on visited steps
+  // If editableSteps is 0 (admin preset everything), customization is complete
   const isCustomizationComplete = customizationStepsMeta
-    ? visitedEditableSteps.length >= customizationStepsMeta.editableSteps && customizationStepsMeta.editableSteps > 0
+    ? customizationStepsMeta.editableSteps === 0 || visitedEditableSteps.length >= customizationStepsMeta.editableSteps
     : false
 
   // Use computed value if on a non-customize page, otherwise use the passed prop

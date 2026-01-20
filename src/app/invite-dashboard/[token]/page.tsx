@@ -9,6 +9,7 @@ import { PhotoIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
+import SignUpCTA from '@/components/invite/SignUpCTA'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
@@ -427,21 +428,7 @@ export default function InviteDashboardPage() {
             </div>
           </Grid>
 
-          {/* Sign up CTA - Hidden on mobile */}
-          <div className="hidden md:block bg-white rounded-lg shadow-md border border-gray-100 p-6 md:mt-6">
-            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-              {t('signUpCta.title')}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {t('signUpCta.description')}
-            </p>
-            <button
-              onClick={() => window.location.href = 'https://www.photoshotspro.com'}
-              className="px-4 py-2 text-brand-primary border-2 border-brand-primary rounded-md text-sm font-medium transition-colors hover:bg-brand-primary hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-            >
-              {t('signUpCta.button')}
-            </button>
-          </div>
+          <SignUpCTA className="md:mt-6" />
         </div>
       </div>
     </div>

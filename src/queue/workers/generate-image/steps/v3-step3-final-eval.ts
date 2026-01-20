@@ -11,6 +11,7 @@ import {
   type ElementContext,
 } from '@/domain/style/elements/composition'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { logPrompt } from '../utils/logging'
 
 export interface V3Step3FinalInput {
   refinedBuffer: Buffer
@@ -77,7 +78,7 @@ export async function executeV3Step3(
 ): Promise<Step8Output> {
   const { refinedBuffer, refinedBase64, selfieComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt, styleSettings } = input
 
-  Logger.debug('V3 Step 3: Evaluating final refined image')
+  // Logging handled by logPrompt
 
   // Try to compose contributions from elements if feature flag is enabled
   let elementContributions: { instructions: string[], mustFollow: string[], freedom: string[] } | null = null
@@ -88,12 +89,7 @@ export async function executeV3Step3(
         personId: input.personId,
         teamId: input.teamId
       })
-      Logger.debug('V3 Step 3: Element composition succeeded', {
-        hasInstructions: elementContributions.instructions.length > 0,
-        hasMustFollow: elementContributions.mustFollow.length > 0,
-        hasFreedom: elementContributions.freedom.length > 0,
-        rulesSource: 'element-composition'
-      })
+      Logger.debug('V3 Step 3: Element composition OK')
     } catch (error) {
       Logger.error('V3 Step 3: Element composition failed, continuing with standard evaluation', {
         error: error instanceof Error ? error.message : String(error)
@@ -177,32 +173,26 @@ export async function executeV3Step3(
   const model = await getVertexGenerativeModel(modelName)
 
   const instructions = [
-    `You are evaluating the final refined image for face similarity, body framing, person prominence, and overall quality.`,
-    `Answer each question with ONLY: YES (criterion fully met), NO (criterion failed), UNCERTAIN (cannot determine)`,
+    `You are evaluating the final refined image for face similarity, characteristic preservation, person prominence, and overall quality.`,
+    `Answer each question with ONLY: YES (criterion met), NO (criterion failed), UNCERTAIN (cannot determine)`,
     '',
     'Questions:',
     '',
     '1. face_similarity',
     '   - Does the face in the final image closely match the selfie references?',
     '   - Are specific characteristics preserved (moles, freckles, scars, eye shape)?',
-    '   - Is the facial structure and features accurate?',
     '',
     '2. characteristic_preservation',
     '   - Are unique facial features maintained without beautification?',
     '   - Does the person look like themselves, not an idealized version?',
     '',
-    '3. shot_type_match: N/A (temporarily disabled)',
+    '3. person_prominence',
+    '   - Is the person the DOMINANT element in the frame (40-50%+ of image height)?',
+    '   - Is the person LARGER than background elements (banners, signs, logos)?',
     '',
-    '4. person_prominence',
-    '   - Is the person the DOMINANT element in the frame?',
-    '   - Does the person occupy at least 40-50% of the image height?',
-    '   - Is the person LARGER than background elements like banners, signs, or logos?',
-    '   - Answer NO if the person appears too small relative to the background or is dwarfed by background elements.',
-    '',
-    '5. overall_quality',
+    '4. overall_quality',
     '   - Is the image professional and high quality?',
-    '   - Are there no obvious defects or artifacts?',
-    '   - Does the composition work well overall?'
+    '   - Are there no obvious defects or artifacts?'
   ]
 
   // Add branding evaluation if applicable
@@ -232,9 +222,7 @@ export async function executeV3Step3(
       'Additional Evaluation Criteria (from element composition):',
       ...elementContributions.mustFollow.map(rule => `   - ${rule}`)
     )
-    Logger.debug('V3 Step 3: Added element composition evaluation criteria', {
-      criteriaCount: elementContributions.mustFollow.length
-    })
+    // Element criteria added
   }
 
   instructions.push(
@@ -249,16 +237,13 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "shot_type_match": "N/A",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "branding_placement": "YES",',
       '  "explanations": {',
       '    "face_similarity": "Face matches selfie characteristics",',
-      '    "shot_type_match": "Image matches medium-shot specification (head to waist)",',
-      '    "person_prominence": "Person occupies ~50% of image height and is larger than background elements",',
-      '    "branding_placement": "Logo visible and properly placed",',
-      '    ...',
+      '    "person_prominence": "Person occupies ~50% of image height",',
+      '    "branding_placement": "Logo visible and properly placed"',
       '  }',
       '}'
     )
@@ -268,27 +253,29 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "shot_type_match": "N/A",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "explanations": {',
       '    "face_similarity": "Face matches selfie characteristics",',
-      '    "shot_type_match": "Image matches medium-shot specification (head to waist)",',
-      '    "person_prominence": "Person occupies ~50% of image height and is larger than background elements",',
-      '    ...',
+      '    "person_prominence": "Person occupies ~50% of image height"',
       '  }',
       '}'
     )
   }
 
-  const parts: Part[] = [{ text: instructions.join('\n') }]
+  const evalPromptText = instructions.join('\n')
+  
+  // Log the evaluation prompt
+  logPrompt('V3 Step 3 Eval', evalPromptText, input.generationId)
+
+  const parts: Part[] = [{ text: evalPromptText }]
 
   parts.push({ text: 'Final refined image to evaluate' })
   parts.push({ inlineData: { mimeType: 'image/png', data: refinedBase64 } })
 
   // Pass selfie composite as reference
   parts.push({
-    text: selfieComposite.description || 'Selfie composite - Compare the face in the generated image against these reference selfies'
+    text: selfieComposite.description || 'Selfie composite reference'
   })
   parts.push({
     inlineData: { mimeType: selfieComposite.mimeType, data: selfieComposite.base64 }
@@ -296,21 +283,11 @@ export async function executeV3Step3(
 
   // Add logo reference if branding evaluation is needed
   if (brandingInfo && logoReference) {
-    parts.push({ text: logoReference.description || 'Reference logo for branding evaluation' })
+    parts.push({ text: logoReference.description || 'Logo reference' })
     parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
   }
 
   const contents: Content[] = [{ role: 'user', parts }]
-
-  if (debugMode) {
-    const evalPromptText = instructions.join('\n')
-    Logger.info('V3 DEBUG - Step 3 Evaluation Prompt:', {
-      step: 3,
-      evaluationType: 'final_image',
-      prompt: evalPromptText.substring(0, 10000) + (evalPromptText.length > 10000 ? '...(truncated)' : ''),
-      promptLength: evalPromptText.length
-    })
-  }
 
   let evalDurationMs = 0
   let usageMetadata: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
@@ -339,12 +316,10 @@ export async function executeV3Step3(
           evaluation.characteristic_preservation === 'NO'
         ].some(Boolean)
 
-        // Check all required criteria including shot type, prominence, and branding if applicable
-        // shot_type_match temporarily disabled - always treated as approved
+        // Check all required criteria including prominence and branding if applicable
         const baseApproved =
           evaluation.face_similarity === 'YES' &&
           evaluation.characteristic_preservation === 'YES' &&
-          (evaluation.shot_type_match === 'YES' || evaluation.shot_type_match === 'UNCERTAIN') &&
           evaluation.person_prominence === 'YES' &&
           evaluation.overall_quality === 'YES'
         
@@ -365,19 +340,14 @@ export async function executeV3Step3(
           }
         })
 
-        // Log detailed evaluation results
-        Logger.debug('V3 Step 3: Final Image Evaluation Details', {
+        // Log evaluation results
+        Logger.info('V3 Step 3: Evaluation result', {
+          status: finalStatus,
           face_similarity: evaluation.face_similarity,
           characteristic_preservation: evaluation.characteristic_preservation,
-          shot_type_match: evaluation.shot_type_match,
           person_prominence: evaluation.person_prominence,
           overall_quality: evaluation.overall_quality,
-          branding_placement: evaluation.branding_placement,
-          explanations: evaluation.explanations,
-          finalStatus,
-          autoReject,
-          baseApproved,
-          brandingApproved
+          ...(evaluation.branding_placement ? { branding_placement: evaluation.branding_placement } : {})
         })
 
         const finalReason = failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met'
@@ -397,11 +367,7 @@ export async function executeV3Step3(
               rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
               intermediateS3Key: input.intermediateS3Key,
             })
-            Logger.debug('V3 Step 3: Cost tracking with outcome recorded', {
-              generationId: input.generationId,
-              evaluationStatus: finalStatus,
-              s3Key: input.intermediateS3Key,
-            })
+            // Cost tracking logged at debug level only
           } catch (costError) {
             Logger.error('V3 Step 3: Failed to track evaluation cost', {
               error: costError instanceof Error ? costError.message : String(costError),
@@ -489,7 +455,6 @@ function parseFinalEvaluation(text: string) {
     const result: {
       face_similarity: 'YES' | 'NO' | 'UNCERTAIN'
       characteristic_preservation: 'YES' | 'NO' | 'UNCERTAIN'
-      shot_type_match: 'YES' | 'NO' | 'UNCERTAIN'
       person_prominence: 'YES' | 'NO' | 'UNCERTAIN'
       overall_quality: 'YES' | 'NO' | 'UNCERTAIN'
       branding_placement?: 'YES' | 'NO' | 'UNCERTAIN'
@@ -497,7 +462,6 @@ function parseFinalEvaluation(text: string) {
     } = {
       face_similarity: normalizeYesNoUncertain(parsed.face_similarity),
       characteristic_preservation: normalizeYesNoUncertain(parsed.characteristic_preservation),
-      shot_type_match: 'YES' as const, // Temporarily disabled - always approve
       person_prominence: normalizeYesNoUncertain(parsed.person_prominence),
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
@@ -530,22 +494,19 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   
   for (const criterion of failedCriteria) {
     if (criterion.includes('face_similarity')) {
-      suggestions.push('Improve face matching to selfie references; ensure specific characteristics are preserved')
+      suggestions.push('Improve face matching to selfie references')
     }
     if (criterion.includes('characteristic_preservation')) {
-      suggestions.push('Maintain unique facial features without beautification or idealization')
-    }
-    if (criterion.includes('shot_type_match')) {
-      suggestions.push('Adjust framing to better match the requested shot type - ensure body is cropped within the appropriate range for the shot type')
+      suggestions.push('Maintain unique facial features without beautification')
     }
     if (criterion.includes('person_prominence')) {
-      suggestions.push('Make the person LARGER in the frame - they should occupy at least 40-50% of the image height and be larger than background elements')
+      suggestions.push('Make person LARGER (40-50%+ of image height)')
     }
     if (criterion.includes('branding_placement')) {
-      suggestions.push('Ensure logo is visible and properly placed according to branding specifications')
+      suggestions.push('Ensure logo is visible and properly placed')
     }
     if (criterion.includes('overall_quality')) {
-      suggestions.push('Improve overall image quality and remove any visible defects')
+      suggestions.push('Improve image quality')
     }
   }
   

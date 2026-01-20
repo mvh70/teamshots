@@ -63,13 +63,22 @@ export function getClientBaseUrl(): string {
  * causing window.location.origin to return URLs like https://domain.com:80/
  * which breaks HTTPS connections.
  *
- * @returns Base URL without default ports (80 for http, 443 for https)
+ * @returns Base URL without default ports (80 for http, 443 for https), but keeps non-default ports like 3000
  */
 export function getCleanClientBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location
-    // Never include default ports (80 for http, 443 for https)
-    return `${protocol}//${hostname}`
+    const { protocol, hostname, port } = window.location
+    // Only strip default ports (80 for http, 443 for https)
+    // Keep non-default ports like 3000 for development
+    const isDefaultPort = 
+      (protocol === 'http:' && port === '80') ||
+      (protocol === 'https:' && port === '443') ||
+      port === '' // Empty port means default was used
+    
+    if (isDefaultPort) {
+      return `${protocol}//${hostname}`
+    }
+    return `${protocol}//${hostname}:${port}`
   }
   return Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
 }

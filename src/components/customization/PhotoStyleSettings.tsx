@@ -26,6 +26,7 @@ import {
   BackgroundSettings
 } from '@/types/photo-style'
 import { userChoice, predefined, hasValue, isUserChoice } from '@/domain/style/elements/base/element-types'
+import { normalizeColorToHex } from '@/lib/color-utils'
 
 // Dynamic imports for heavy selector components - reduces initial bundle size
 const BackgroundSelector = dynamic(() => import('@/domain/style/elements/background/BackgroundSelector'), {
@@ -233,7 +234,7 @@ export default function PhotoStyleSettings({
     const defaultColors = defaults && hasValue(defaults) ? defaults.value : undefined
     const currentColors = current && hasValue(current) ? current.value : undefined
 
-    // Fallback colors - used when colors are missing or invalid
+    // Fallback colors - used when colors are missing
     const fallbackColors = {
       topLayer: '#2C3E50', // Dark charcoal - professional jacket/blazer
       baseLayer: '#F8F9FA', // Light gray/off-white - shirt
@@ -241,26 +242,59 @@ export default function PhotoStyleSettings({
       shoes: '#2D2D2D' // Dark gray - dress shoes
     }
 
-    // Helper to check if a color is valid for CSS (hex color or ColorValue object with hex)
-    const isValidColor = (color: unknown): boolean => {
-      if (!color) return false
-      if (typeof color === 'string') return color.startsWith('#')
+    // Helper to normalize a color value to hex format
+    // Handles: hex strings, color name strings ("Dark red"), and ColorValue objects
+    type ColorType = string | { hex: string; name?: string }
+    const normalizeColor = (color: unknown): string | null => {
+      if (!color) return null
+      if (typeof color === 'string') {
+        // If already hex, return as-is
+        if (color.startsWith('#')) return color
+        // Convert color name to hex
+        const hex = normalizeColorToHex(color)
+        return hex !== '#ffffff' ? hex : color.startsWith('#') ? color : null // Only accept if conversion was successful
+      }
       if (typeof color === 'object' && color !== null && 'hex' in color) {
         const hex = (color as { hex: string }).hex
-        return typeof hex === 'string' && hex.startsWith('#')
+        return typeof hex === 'string' && hex.startsWith('#') ? hex : null
       }
-      return false
+      return null
     }
 
-    // Helper to get color with fallback for invalid colors
-    type ColorType = string | { hex: string; name?: string }
+    // Helper to get color with fallback, preserving original name for ColorValue objects
     const getValidColor = (
       key: 'topLayer' | 'baseLayer' | 'bottom' | 'shoes',
       userColor: unknown,
       defaultColor: unknown
     ): ColorType => {
-      if (userColor && isValidColor(userColor)) return userColor as ColorType
-      if (defaultColor && isValidColor(defaultColor)) return defaultColor as ColorType
+      // Try user color first
+      const userHex = normalizeColor(userColor)
+      if (userHex) {
+        // If user color was a named string, create ColorValue to preserve the name
+        if (typeof userColor === 'string' && !userColor.startsWith('#')) {
+          return { hex: userHex, name: userColor }
+        }
+        // If already a ColorValue object, return as-is
+        if (typeof userColor === 'object' && userColor !== null && 'hex' in userColor) {
+          return userColor as ColorType
+        }
+        return userHex
+      }
+      
+      // Try default color
+      const defaultHex = normalizeColor(defaultColor)
+      if (defaultHex) {
+        // If default color was a named string, create ColorValue to preserve the name
+        if (typeof defaultColor === 'string' && !defaultColor.startsWith('#')) {
+          return { hex: defaultHex, name: defaultColor }
+        }
+        // If already a ColorValue object, return as-is
+        if (typeof defaultColor === 'object' && defaultColor !== null && 'hex' in defaultColor) {
+          return defaultColor as ColorType
+        }
+        return defaultHex
+      }
+      
       return fallbackColors[key]
     }
 

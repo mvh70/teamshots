@@ -24,6 +24,10 @@ import {
   buildBodyBoundaryInstruction,
   getShotTypeIntroContext
 } from '@/domain/style/elements/shot-type/config'
+import {
+  formatDemographicsForPrompt,
+  type DemographicProfile
+} from '@/domain/selfie/selfieDemographics'
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
@@ -45,6 +49,7 @@ export interface V3Step1aInput {
   debugMode: boolean
   evaluationFeedback?: { suggestedAdjustments?: string }
   selfieAssetIds?: string[]
+  demographics?: DemographicProfile // Aggregated demographics for prompt context
   onCostTracking?: CostTrackingHandler
   referenceImages?: BaseReferenceImage[] // Pre-built reference images (e.g., garment collage from outfit1)
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset> // Assets from step 0 preparation
@@ -53,6 +58,7 @@ export interface V3Step1aInput {
 export interface V3Step1aOutput {
   imageBuffer: Buffer
   imageBase64: string
+  allImageBuffers: Buffer[] // All images returned by the model (for debugging)
   assetId?: string // Asset ID for the generated person-on-grey intermediate
   clothingLogoReference?: BaseReferenceImage // Logo used in generation (for Step 2 evaluation)
   backgroundLogoReference?: BaseReferenceImage // Logo for background/elements (for Step 3 composition)
@@ -182,7 +188,7 @@ async function composeElementContributions(
     settings: styleSettings,
     generationContext: {
       selfieS3Keys: generationContext.selfieS3Keys,
-      userId: generationContext.personId,
+      personId: generationContext.personId, // Primary identifier - invited users don't have userId
       teamId: generationContext.teamId,
       generationId: generationContext.generationId,
       preparedAssets: generationContext.preparedAssets, // Pass prepared assets from step 0
@@ -233,6 +239,7 @@ export async function executeV3Step1a(
     debugMode,
     evaluationFeedback,
     selfieAssetIds,
+    demographics, // Aggregated demographics for prompt context
     personId,
     generationId,
     onCostTracking,
@@ -448,12 +455,7 @@ export async function executeV3Step1a(
             referenceImages.push(ref as BaseReferenceImage)
           }
         }
-        Logger.info('[ElementComposition] Added element contribution reference images', {
-          generationId,
-          addedCount: elementContributions.referenceImages.length,
-          totalReferenceCount: referenceImages.length,
-          descriptions: elementContributions.referenceImages.map((r: any) => r.description?.substring(0, 60))
-        })
+        Logger.debug('[ElementComposition] Added references', { count: elementContributions.referenceImages.length })
       }
     } catch (error) {
       Logger.error('[ElementComposition] Failed to compose element contributions, falling back to provided rules', {
@@ -469,12 +471,7 @@ export async function executeV3Step1a(
   const effectiveMustFollowRules = elementContributions?.mustFollow || mustFollowRules
   const effectiveFreedomRules = elementContributions?.freedom || freedomRules
 
-  Logger.debug('[ElementComposition] Using rules', {
-    generationId,
-    source: elementContributions ? 'element-composition' : 'provided',
-    mustFollowCount: effectiveMustFollowRules.length,
-    freedomCount: effectiveFreedomRules.length,
-  })
+  // Rules source logging at debug level
 
   // Extract garment description from preparedAssets (generated in Step 0)
   let garmentAnalysisFromStep0: Record<string, unknown> | undefined
@@ -498,18 +495,7 @@ export async function executeV3Step1a(
         hasLogo: garmentDescription.hasLogo,
         logoDescription: garmentDescription.logoDescription,
       }
-      Logger.info('V3 Step 1a: Found garment description from Step 0 preparation', {
-        generationId,
-        itemCount: garmentDescription.items?.length || 0,
-        overallStyle: garmentDescription.overallStyle,
-      })
-
-      // Debug: Output in development mode
-      if (process.env.NODE_ENV === 'development') {
-        console.log('\n[DEBUG] V3 Step 1a - Garment Analysis from Step 0:')
-        console.log(JSON.stringify(garmentAnalysisFromStep0, null, 2))
-        console.log('')
-      }
+      Logger.debug('V3 Step 1a: Using garment analysis from Step 0', { items: garmentDescription.items?.length || 0 })
     }
   }
 
@@ -523,12 +509,21 @@ export async function executeV3Step1a(
     garmentAnalysis: garmentAnalysisFromStep0,
   } : undefined
 
-  // Create a simplified prompt object - include camera for perspective consistency with Step 2
+  // Create a simplified prompt object.
+  // Step 1a is an intermediate "person on grey" asset; we keep camera for perspective consistency,
+  // but use neutral/even base lighting so Step 2 can apply the final scene lighting.
   const personOnlyPrompt = {
     subject: promptObj.subject as Record<string, unknown> | undefined, // Keep subject details (clothing, pose, expression)
     framing: promptObj.framing as { shot_type?: string } | undefined, // Keep framing (shot type)
     camera: promptObj.camera as Record<string, unknown> | undefined, // Keep camera for perspective consistency (focal length, distance, angle)
-    lighting: promptObj.lighting as Record<string, unknown> | undefined, // Keep lighting for consistency with background
+    lighting: {
+      quality: 'Neutral Even Light',
+      direction: 'front',
+      setup: ['Soft even key light', 'Gentle fill'],
+      color_temperature: '5000K',
+      description: 'Neutral, even base lighting suitable for later relighting during composition.',
+      note: 'No visible studio equipment. No harsh shadows. Keep lighting clean and even on the subject.'
+    },
     wardrobe: wardrobeSection, // Wardrobe with garment analysis from Step 0
     scene: {
       background: {
@@ -544,51 +539,64 @@ export async function executeV3Step1a(
   const jsonPrompt = JSON.stringify(personOnlyPrompt, null, 2)
   
   const structuredPrompt = [
-    // Section 1: Intro & Task (Option 3: Include shot type context)
-    `You are a world-class professional photographer specializing in corporate and professional portraits. Your task is to create ${shotTypeIntroContext} from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.`,
-
-    // Section 2: Composition JSON
+    // Section 1: Intro & Task
+    `You are a world-class professional photographer creating ${shotTypeIntroContext} from the attached selfies.`,
     '',
-    'Composition JSON',
+
+    // Section 2: HARD CONSTRAINTS (Top 6 - improvement #8)
+    '**HARD CONSTRAINTS (Non-Negotiable):**',
+    '1. **Identity:** Select ONE selfie as PRIMARY face basis. Do NOT average/blend faces into a new person.',
+    '2. **Framing:** ' + (bodyBoundaryInstruction || `Frame as ${shotDescription} per JSON framing section.`),
+    '3. **Accessories:** Do NOT add accessories not visible in selfies. Do NOT remove accessories visible in selfies.',
+    '4. **Background:** Solid neutral grey (#808080) only. No gradients, props, environment, or text.',
+    '5. **Equipment:** No visible studio equipment (softboxes, umbrellas, reflectors, lights).',
+    '6. **Clothing:** If clothing overlay provided, use it as PRIMARY reference for all garment styling.',
+    '',
+
+    // Section 3: Composition JSON
+    'Scene Specifications:',
     jsonPrompt,
-
-    // Section 3: Must Follow Rules
     '',
-    'Must Follow Rules:',
-    '- Quality: Make the image as realistic as possible, with all the natural imperfections. Ensure the skin texture and hair details are high-frequency and realistic, avoiding plastic smoothness. Add realistic effects, taken from the selfies, like some hairs sticking out.',
-    '- Face selection: Select ONE selfie as the PRIMARY face basis (best match for the requested expression). Use other selfies only for supporting details. Do NOT average/blend faces into a new person.',
-    '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
-
-    // Note: Aspect ratio element already contributes detailed format rules when element composition is enabled.
-    ...(elementContributions
-      ? []
-      : [
-          `- Output dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`
-        ]),
-    ...(elementContributions
-      ? []
-      : [
-          '- Framing: Follow the shot_type and crop_points exactly as specified in the JSON framing section. Do NOT deviate from the specified framing or show body parts outside the crop boundaries.'
-        ])
   ]
 
-  // Option 2: Add explicit body boundary enforcement if available
-  if (bodyBoundaryInstruction) {
-    structuredPrompt.push(`- ${bodyBoundaryInstruction}`)
+  // Section 3.5: Demographics context (if available)
+  const demographicsPrompt = demographics ? formatDemographicsForPrompt(demographics, 'person') : undefined
+  if (demographicsPrompt) {
+    structuredPrompt.push(demographicsPrompt)
+    structuredPrompt.push('')
   }
 
-  // Add element-specific must follow rules (using effective rules from element composition or fallback)
+  // Section 4: Quality & Technical Rules
+  structuredPrompt.push('Technical Requirements:')
+  structuredPrompt.push('- Realistic skin texture and hair (high-frequency details, natural imperfections, stray hairs).')
+  structuredPrompt.push('- Neutral, even lighting (no harsh shadows). Final scene lighting applied in Step 2.')
+  structuredPrompt.push('- Catchlights in eyes must be present and realistic.')
+  if (!elementContributions) {
+    structuredPrompt.push(`- Output: ${aspectRatioConfig.width}x${aspectRatioConfig.height}px (${aspectRatioConfig.id || aspectRatio}). Fill canvas edge-to-edge.`)
+  }
+
+  // Add element-specific must follow rules (filter out redundant rules already in Hard Constraints)
   if (effectiveMustFollowRules && effectiveMustFollowRules.length > 0) {
-    for (const rule of effectiveMustFollowRules) {
+    // Filter out rules that duplicate Hard Constraints:
+    // - Body/framing rules (Hard Constraint #2)
+    // - Accessory rules (Hard Constraint #3)
+    const bodyFramingKeywords = ['body boundaries', 'must show', 'must not show', 'cut point', 'frame from', 'crop']
+    const accessoryKeywords = ['do not add accessories', 'do not remove accessories', 'not visible in selfies']
+    const nonRedundantRules = effectiveMustFollowRules.filter(rule => {
+      const lowerRule = rule.toLowerCase()
+      return !bodyFramingKeywords.some(kw => lowerRule.includes(kw)) &&
+             !accessoryKeywords.some(kw => lowerRule.includes(kw))
+    })
+    for (const rule of nonRedundantRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }
 
-  // Section 4: Freedom Rules
+  // Section 5: Freedom Rules
   structuredPrompt.push('')
-  structuredPrompt.push('Freedom Rules:')
-  structuredPrompt.push('- You are free to optimize lighting, shadows, and micro-details to ensure realistic 3D volume, texture, and natural scene integration.')
-  structuredPrompt.push('- You may adjust subtle color grading and contrast to enhance the professional appearance, provided all specifications from the JSON are maintained.')
+  structuredPrompt.push('Creative Latitude:')
+  structuredPrompt.push('- Optimize lighting/shadows for realistic 3D volume and texture.')
+  structuredPrompt.push('- Subtle color grading to enhance professional appearance.')
 
   // Add element-specific freedom rules (using effective rules from element composition or fallback)
   if (effectiveFreedomRules && effectiveFreedomRules.length > 0) {
@@ -670,33 +678,19 @@ export async function executeV3Step1a(
 
   const compositionPrompt = structuredPrompt.join('\n')
 
-  if (debugMode) {
-    logDebugPrompt('V3 Step 1a Person Generation (Grey BG)', 1, compositionPrompt)
-  }
-
-
-
-  // Log prompt and reference details before generation for debugging IMAGE_OTHER errors
-  Logger.debug('V3 Step 1a: Starting Gemini generation', {
-    generationId,
-    promptLength: compositionPrompt.length,
-    referenceCount: referenceImages.length,
-    referenceDetails: referenceImages.map((img, idx) => ({
-      index: idx,
-      hasDescription: !!img.description,
-      descriptionLength: img.description?.length || 0,
-      descriptionPreview: img.description?.substring(0, 100) || 'NO_DESCRIPTION',
-      mimeType: img.mimeType,
-      base64Length: img.base64?.length || 0,
-    })),
-    aspectRatio,
-    hasEvaluationFeedback: !!evaluationFeedback?.suggestedAdjustments,
+  // Log prompt (improvement #10) - consolidated logging
+  logPrompt('V3 Step 1a', compositionPrompt, generationId)
+  
+  // Log reference images summary
+  Logger.info('V3 Step 1a: References', {
+    count: referenceImages.length,
+    types: referenceImages.map(img => img.description?.split(' ')[0] || 'unknown').join(', ')
   })
 
   // Generate with Gemini (fixed at 1K resolution for raw asset) and track failures
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
   try {
-    logPrompt('V3 Step 1a', compositionPrompt)
+    logPrompt('V3 Step 1a', compositionPrompt, generationId)
     generationResult = await generateWithGemini(
       compositionPrompt,
       referenceImages,
@@ -740,14 +734,19 @@ export async function executeV3Step1a(
     throw new Error('V3 Step 1a: Gemini returned no images')
   }
 
-  const pngBuffer = await sharp(generationResult.images[0]).png().toBuffer()
+  // Convert all images to PNG buffers (for debugging) - use first for pipeline
+  const allPngBuffers = await Promise.all(
+    generationResult.images.map(img => sharp(img).png().toBuffer())
+  )
+  const pngBuffer = allPngBuffers[0]
 
   logStepResult('V3 Step 1a', {
     success: true,
     provider: generationResult.providerUsed,
     model: STAGE_MODEL.STEP_1A_PERSON,
     imageSize: pngBuffer.length,
-    durationMs: generationResult.usage.durationMs
+    durationMs: generationResult.usage.durationMs,
+    imagesReturned: allPngBuffers.length, // How many images the model returned
   })
 
   // Track generation cost
@@ -857,6 +856,7 @@ export async function executeV3Step1a(
   return {
     imageBuffer: pngBuffer,
     imageBase64: pngBuffer.toString('base64'),
+    allImageBuffers: allPngBuffers, // All images for debugging
     assetId: createdAssetId,
     clothingLogoReference: clothingLogoRef, // For Step 2 evaluation
     backgroundLogoReference: backgroundLogoRef, // For Step 3 composition

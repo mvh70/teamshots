@@ -190,13 +190,6 @@ function buildProviderOrder(model: ModelName): GeminiProvider[] {
   // Get model config to check which providers support this model
   const modelConfig = MODEL_CONFIG[model]
 
-  Logger.debug('Building provider order from PROVIDER_FALLBACK_ORDER', {
-    model,
-    fallbackOrder: PROVIDER_FALLBACK_ORDER,
-    credentials,
-    modelProviders: modelConfig.providers,
-  })
-
   // Build provider list following PROVIDER_FALLBACK_ORDER
   // Only include providers that have credentials AND support this model
   const providers: GeminiProvider[] = []
@@ -207,18 +200,8 @@ function buildProviderOrder(model: ModelName): GeminiProvider[] {
 
     if (hasCredentials && modelSupported) {
       providers.push(provider as GeminiProvider)
-      Logger.debug(`Added ${provider} to provider order`, { position: providers.length })
-    } else {
-      Logger.debug(`Skipped ${provider}`, { hasCredentials, modelSupported })
     }
   }
-
-  Logger.info('Provider order built', {
-    providers,
-    providerCount: providers.length,
-    model,
-    fallbackOrder: PROVIDER_FALLBACK_ORDER,
-  })
 
   return providers
 }
@@ -248,17 +231,8 @@ export async function generateWithGemini(
     )
   }
 
-  Logger.info('Gemini providers configured', {
-    providers,
-    primaryProvider: providers[0],
-    model,
-    stage: options?.stage,
-    fallbackCount: providers.length - 1,
-    hasOpenRouter: !!Env.string('OPENROUTER_API_KEY', ''),
-    hasServiceAccount: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
-    hasApiKey: !!Env.string('GOOGLE_CLOUD_API_KEY', ''),
-    hasReplicate: !!Env.string('REPLICATE_API_TOKEN', '')
-  })
+  // Only log provider config at debug level
+  Logger.debug('Gemini providers', { providers: providers.join(','), model, stage: options?.stage })
 
   // Try each provider in order, fallback on rate limit errors
   let lastError: unknown

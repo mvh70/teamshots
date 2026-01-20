@@ -8,88 +8,11 @@ import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { fileTypeFromBuffer } from 'file-type'
-import { classifySelfieType } from '@/domain/selfie/selfie-classifier'
-import { classificationQueue } from '@/lib/classification-queue'
+import { queueClassification } from '@/domain/selfie/selfie-classifier'
 
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 const BASE_DIR = path.join(process.cwd(), 'storage', 'tmp')
-
-/**
- * Run classification asynchronously and update the selfie record.
- * This function is fire-and-forget - it doesn't block the upload response.
- */
-async function runAsyncClassification(
-  selfieId: string,
-  imageBase64: string,
-  mimeType: string
-): Promise<void> {
-  try {
-    Logger.info('[uploads/promote] Starting async classification', { selfieId })
-
-    const classification = await classifySelfieType({
-      imageBase64,
-      mimeType,
-    })
-
-    // Update selfie with classification results
-    await prisma.selfie.update({
-      where: { id: selfieId },
-      data: {
-        selfieType: classification.selfieType,
-        selfieTypeConfidence: classification.confidence,
-        personCount: classification.personCount,
-        isProper: classification.isProper,
-        improperReason: classification.improperReason,
-        lightingQuality: classification.lightingQuality,
-        lightingFeedback: classification.lightingFeedback,
-        backgroundQuality: classification.backgroundQuality,
-        backgroundFeedback: classification.backgroundFeedback,
-        // If improper, deselect the selfie
-        ...(classification.isProper === false && { selected: false }),
-      },
-    })
-
-    Logger.info('[uploads/promote] Async classification complete', {
-      selfieId,
-      selfieType: classification.selfieType,
-      isProper: classification.isProper,
-      personCount: classification.personCount,
-      lightingQuality: classification.lightingQuality,
-      backgroundQuality: classification.backgroundQuality,
-    })
-  } catch (error) {
-    Logger.error('[uploads/promote] Async classification failed', {
-      selfieId,
-      error: error instanceof Error ? error.message : String(error),
-    })
-    
-    // Mark as null to allow retry or set to unknown if we want to prevent retry
-    // Using null allows the polling mechanism to retry classification
-    try {
-      await prisma.selfie.update({
-        where: { id: selfieId },
-        data: {
-          selfieType: null, // Use null instead of 'unknown' to allow retry
-          selfieTypeConfidence: null,
-          personCount: null,
-          isProper: null,
-          improperReason: null,
-          lightingQuality: null,
-          lightingFeedback: null,
-          backgroundQuality: null,
-          backgroundFeedback: null,
-        },
-      })
-      Logger.info('[uploads/promote] Marked failed classification as null for retry', { selfieId })
-    } catch (dbError) {
-      Logger.error('[uploads/promote] Failed to update selfie after classification error', {
-        selfieId,
-        dbError: dbError instanceof Error ? dbError.message : String(dbError),
-      })
-    }
-  }
-}
 
 export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
@@ -235,30 +158,13 @@ export async function POST(req: NextRequest) {
     try { await fs.unlink(filePath) } catch {}
 
     // Run classification asynchronously (fire-and-forget)
-    // Queue the classification to limit concurrent requests (max 3 at a time)
+    // Uses centralized queueClassification which handles rate limiting
     if (!selfieType) {
-      const selfieIdForClassification = selfie.id
-      
-      // Don't await - this runs in background via queue
-      classificationQueue.enqueue(async () => {
-        await runAsyncClassification(
-          selfieIdForClassification,
-          imageBase64ForClassification,
-          mimeTypeForClassification
-        )
-      }).catch((error) => {
-        Logger.error('[uploads/promote] Queue error', {
-          selfieId: selfieIdForClassification,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      })
-      
-      // Log queue status for monitoring
-      const queueStatus = classificationQueue.getStatus()
-      Logger.info('[uploads/promote] Classification queued', {
-        selfieId: selfieIdForClassification,
-        queueStatus,
-      })
+      queueClassification({
+        selfieId: selfie.id,
+        imageBase64: imageBase64ForClassification,
+        mimeType: mimeTypeForClassification,
+      }, 'promote')
     }
 
     return NextResponse.json({ key: relativeKey, selfieId: selfie.id })

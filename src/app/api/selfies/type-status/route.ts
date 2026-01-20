@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import type { SelfieTypeStatus, SelfieType } from '@/domain/selfie/selfie-types'
-import { SELFIE_TYPE_REQUIREMENTS } from '@/domain/selfie/selfie-types'
-import { classifySelfieType } from '@/domain/selfie/selfie-classifier'
-import { downloadSelfieAsBase64 } from '@/queue/workers/generate-image/s3-utils'
+import { SELFIE_TYPE_REQUIREMENTS, extractFromClassification } from '@/domain/selfie/selfie-types'
+import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
 import { s3Client, getS3BucketName } from '@/lib/s3-client'
+import { Logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -68,88 +68,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: getEmptyStatus() })
     }
 
-    // Get all selected selfies (including unclassified)
-    const selfies = await prisma.selfie.findMany({
+    // Get ALL selfies for classification (not just selected)
+    const allSelfies = await prisma.selfie.findMany({
       where: {
         personId,
-        selected: true,
       },
       select: {
         id: true,
         key: true,
-        selfieType: true,
-        selfieTypeConfidence: true,
+        selected: true,
+        classification: true,
       },
-      orderBy: { selfieTypeConfidence: 'desc' },
     })
 
-    // Classify any unclassified selfies on-demand (lazy migration)
-    const unclassifiedSelfies = selfies.filter((s) => !s.selfieType)
+    // Extract classification from each selfie
+    const selfiesWithClassification = allSelfies.map((s) => ({
+      id: s.id,
+      key: s.key,
+      selected: s.selected,
+      ...extractFromClassification(s.classification),
+    }))
+
+    // Queue classification for ALL unclassified selfies (fire-and-forget)
+    const unclassifiedSelfies = selfiesWithClassification.filter((s) => !s.selfieType)
     if (unclassifiedSelfies.length > 0) {
       const bucketName = getS3BucketName()
 
-      // Classify in parallel (max 3 at a time to avoid overloading)
-      const classifyPromises = unclassifiedSelfies.slice(0, 3).map(async (selfie) => {
-        try {
-          const imageData = await downloadSelfieAsBase64({
-            bucketName,
-            s3Client,
-            key: selfie.key,
-          })
-
-          const result = await classifySelfieType({
-            imageBase64: imageData.base64,
-            mimeType: imageData.mimeType,
-          })
-
-          // Update the database with the classification
-          await prisma.selfie.update({
-            where: { id: selfie.id },
-            data: {
-              selfieType: result.selfieType,
-              selfieTypeConfidence: result.confidence,
-              personCount: result.personCount,
-              isProper: result.isProper,
-              improperReason: result.improperReason,
-              lightingQuality: result.lightingQuality,
-              lightingFeedback: result.lightingFeedback,
-              backgroundQuality: result.backgroundQuality,
-              backgroundFeedback: result.backgroundFeedback,
-            },
-          })
-
-          // Update in-memory for status response
-          selfie.selfieType = result.selfieType
-          selfie.selfieTypeConfidence = result.confidence
-        } catch (error) {
-          console.error(`Failed to classify selfie ${selfie.id}:`, error)
-          // Mark as unknown to avoid repeated classification attempts
-          await prisma.selfie.update({
-            where: { id: selfie.id },
-            data: {
-              selfieType: 'unknown',
-              selfieTypeConfidence: 0,
-            },
-          })
-          selfie.selfieType = 'unknown'
-          selfie.selfieTypeConfidence = 0
-        }
+      Logger.info('[type-status] Queueing unclassified selfies', {
+        count: unclassifiedSelfies.length,
       })
 
-      await Promise.all(classifyPromises)
+      // Queue each selfie for classification (fire-and-forget)
+      for (const selfie of unclassifiedSelfies) {
+        queueClassificationFromS3({
+          selfieId: selfie.id,
+          selfieKey: selfie.key,
+          bucketName,
+          s3Client,
+        }, 'type-status')
+      }
     }
 
-    // Build status for each required type
-    const classifiedSelfies = selfies.filter((s) => s.selfieType && s.selfieType !== 'unknown')
+    // Build status using only SELECTED selfies (sorted by confidence)
+    const selectedSelfies = selfiesWithClassification
+      .filter((s) => s.selected)
+      .sort((a, b) => (b.selfieTypeConfidence ?? 0) - (a.selfieTypeConfidence ?? 0))
+    
+    const classifiedSelectedSelfies = selectedSelfies.filter((s) => s.selfieType && s.selfieType !== 'unknown')
     const status: SelfieTypeStatus[] = SELFIE_TYPE_REQUIREMENTS.map((req) => {
       // Find the best matching selfie for this type (highest confidence)
-      const matchingSelfie = classifiedSelfies.find((s) => s.selfieType === req.type)
+      const matchingSelfie = classifiedSelectedSelfies.find((s) => s.selfieType === req.type)
 
       return {
         type: req.type as SelfieType,
         captured: !!matchingSelfie,
         selfieId: matchingSelfie?.id,
-        confidence: matchingSelfie?.selfieTypeConfidence || undefined,
+        confidence: matchingSelfie?.selfieTypeConfidence ?? undefined,
       }
     })
 

@@ -92,11 +92,7 @@ export async function executeV3Step2(
     originalPrompt
   } = input
   
-  Logger.debug('V3 Step 2: Compositing background and refining', {
-    hasBackgroundFromStep1b: !!backgroundBuffer,
-    hasStyleSettings: !!styleSettings,
-    hasEvaluatorComments: !!evaluatorComments && evaluatorComments.length > 0
-  })
+  // Logging handled by logPrompt
   
   // Get expected dimensions from aspect ratio
   const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
@@ -143,14 +139,7 @@ export async function executeV3Step2(
         teamId: input.teamId,
         preparedAssets: input.preparedAssets
       })
-      Logger.debug('V3 Step 2: Element composition succeeded', {
-        hasInstructions: elementContributions.instructions.length > 0,
-        hasMustFollow: elementContributions.mustFollow.length > 0,
-        hasFreedom: elementContributions.freedom.length > 0,
-        hasReferenceImages: elementContributions.referenceImages.length > 0,
-        hasPayload: !!elementContributions.payload,
-        rulesSource: 'element-composition'
-      })
+      Logger.debug('V3 Step 2: Element composition OK')
 
       // Merge element contributions payload into backgroundPrompt
       if (elementContributions.payload) {
@@ -173,11 +162,6 @@ export async function executeV3Step2(
             backgroundPrompt[key] = value
           }
         }
-
-        Logger.info('V3 Step 2: Merged element payload into scene', {
-          sceneKeys: Object.keys(backgroundPrompt.scene as Record<string, unknown>),
-          generationId: input.generationId
-        })
       }
     } catch (error) {
       Logger.error('V3 Step 2: Element composition failed, falling back to extracted rules', {
@@ -222,42 +206,59 @@ export async function executeV3Step2(
   // Compose background composition prompt with branding rules, evaluator comments, and face refinement
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
 
-  // Extract subject for reference (helps AI understand intended framing/scale)
-  // CRITICAL: Exclude branding if it's on clothing (already applied in Step 1a)
+  // Extract minimal subject reference (only framing-relevant info for scale understanding)
+  // The person is already generated - we don't need full wardrobe/color details here
   let subjectReference = null
   if (promptObj.subject) {
-    const subjectCopy = { ...promptObj.subject }
-
-    // Remove branding from subject reference if position is 'clothing'
-    // The person already has the logo on their clothing from Step 1a
-    if (subjectCopy.branding?.position === 'clothing') {
-      delete subjectCopy.branding
-      Logger.debug('V3 Step 2: Removed clothing branding from subject reference', {
-        generationId: input.generationId
-      })
+    const subject = promptObj.subject as Record<string, unknown>
+    
+    // Only include pose, expression, and minimal wardrobe context (style only, not colors)
+    // This helps the model understand framing/scale without duplicating Step 1a details
+    const minimalSubject: Record<string, unknown> = {}
+    
+    if (subject.pose) {
+      minimalSubject.pose = subject.pose
+    }
+    if (subject.expression) {
+      minimalSubject.expression = subject.expression
+    }
+    if (subject.wardrobe) {
+      const wardrobe = subject.wardrobe as Record<string, unknown>
+      // Only include style info, not colors (person already generated with correct colors)
+      minimalSubject.wardrobe = {
+        style: wardrobe.style,
+        details: wardrobe.details,
+        top_layer: wardrobe.top_layer,
+        base_layer: wardrobe.base_layer,
+        notes: wardrobe.notes,
+        // Explicitly exclude: color_palette, style_key, detail_key, inherent_accessories
+      }
     }
 
-    subjectReference = JSON.stringify(subjectCopy, null, 2)
+    subjectReference = JSON.stringify(minimalSubject, null, 2)
   }
     
   // Build the structured prompt for background composition
   const structuredPrompt = [
     // Section 1: Intro & Task
-    'You are a world-class graphics professional specializing in photo realistic composition and integration. Your task is to take the person from the base image (currently on a grey background) and composite them naturally into the scene specified below, applying the camera, lighting, and rendering specifications.',
-    'The person is the primary subject and the background is the secondary subject.',
-    'The background can not be changed, it must be the same as the background specified in the scene specifications without alterations.',
-    'The person can not be changed - pose, expression, clothes, body framing, and crop points must remain EXACTLY the same.',
-    `CRITICAL: The person is already framed as ${shotType}. DO NOT reframe or change where the body is cropped. Maintain the exact crop point from the base image.`,
-    
-    // Professional Compositing Instructions
-    '**Advanced Compositing & Refinement:**',
-    '- **Edge Integration:** Ensure clean, natural edges where the subject meets the background. Do NOT add any glow, halo, aura, or brightening effect around the subject edges.',
-    '- **Color Matching:** Match the black levels, white balance, and color grading of the subject to the background environment for a cohesive look.',
-    '- **Shadows:** Cast a realistic soft shadow from the subject onto the background based on the specified lighting direction.',
-    '- **Global Grading:** Apply a final global color grade to "glue" the layers together, ensuring cohesive tone and atmosphere.',
-
-    // Section 2: Scene Specifications (NO subject - person already generated)
+    'You are a world-class graphics professional specializing in photo realistic composition and integration.',
+    'Your task is to take the person from the attached image labeled "BASE IMAGE" (currently on a grey background) and composite them naturally into the scene specified below.',
     '',
+    'The person is the primary subject and the background is the secondary subject.',
+    'The background can not be changed - it must be exactly as provided in the attached image labeled "BACKGROUND REFERENCE".',
+    'The person can not be changed - pose, expression, clothes, body framing, and crop points must remain EXACTLY the same as shown in the "BASE IMAGE".',
+    `CRITICAL: The person is already framed as ${shotType} (${shotDescription}). DO NOT reframe or change where the body is cropped. Maintain the exact crop point from the "BASE IMAGE".`,
+    '',
+    
+    // HARD CONSTRAINTS (consolidated)
+    '**HARD CONSTRAINTS (Non-Negotiable):**',
+    '1. **Use the EXACT person from "BASE IMAGE":** Copy the person pixel-perfectly. Do NOT regenerate, reinterpret, or modify the person in any way.',
+    `2. **Person Preservation:** The person's identity, pose, expression, clothing, body position, and crop point must remain EXACTLY as shown in the "BASE IMAGE". The person is already framed as ${shotType} - maintain this exact framing.`,
+    '3. **Background Content:** Do NOT change background content (objects, text, layout, logos). Preserve everything exactly as provided in "BACKGROUND REFERENCE".',
+    '4. **Allowed Adjustments:** You MAY apply color grading, lighting, shadows, and depth-of-field effects to unify the composite cohesively.',
+    '',
+
+    // Section 2: Scene Specifications
     'Scene, Camera, Lighting & Rendering Specifications:',
     jsonPrompt,
     
@@ -266,30 +267,32 @@ export async function executeV3Step2(
       '',
       'Subject Reference (FOR CONTEXT ONLY - DO NOT MODIFY THE PERSON):',
       'The following subject description is provided ONLY as a reference for understanding the intended framing, scale, and positioning.',
-      'The person in the base image is ALREADY GENERATED and must NOT be changed based on this description.',
+      'The person in the "BASE IMAGE" is ALREADY GENERATED and must NOT be changed based on this description.',
       subjectReference
     ] : []),
 
-    // Section 3: Composition Rules
+    // Section 3: Compositing Instructions
     '',
-    'Composition Rules:',
-    '- Match lighting, shadows, perspective, and scale.',
+    '**Compositing Instructions:**',
+    '- **Edge Integration:** Clean, natural edges where subject meets background. No glow, halo, or aura effects.',
+    '- **Color Matching:** Match black levels, white balance, and color grading between subject and background.',
+    '- **Shadows:** Cast realistic soft shadow from subject onto background based on lighting direction.',
+    '- **Global Grading:** Apply final color grade to unify the composite.',
     '',
-    '**CRITICAL Depth and Spatial Composition:**',
-    '- Create CLEAR SPATIAL SEPARATION using optical depth cues rather than moving the camera.',
-    '- Create ATMOSPHERIC PERSPECTIVE: The background should be slightly less saturated and have lower contrast than the sharp, vibrant subject in the foreground.',
-    '- Ensure VISIBLE AIR/SPACE between the subject and background through lighting falloff and bokeh.',
-    '- Think: "subject standing naturally in a studio" not "subject pasted onto a backdrop".',
+
+    // Section 4: Depth & Spatial Composition (consolidated - improvement #5)
+    '**Depth & Spatial Composition:**',
+    '- Create spatial separation using depth cues: atmospheric perspective (background slightly less saturated/lower contrast), lighting falloff, and shallow depth-of-field.',
+    `- Subject should appear ~${backgroundPrompt.camera && (backgroundPrompt.camera as Record<string, unknown>).positioning ? ((backgroundPrompt.camera as Record<string, unknown>).positioning as Record<string, unknown>).subject_to_background_ft || 8 : 8} feet from the background surface.`,
+    '- Apply depth-of-field based on camera aperture - subject tack sharp, background slightly softer.',
+    '',
+
+    // Section 5: Person Prominence
+    '**Person Prominence:**',
+    '- Person must be DOMINANT in frame (40-60% of image height minimum).',
+    '- Person should be visually larger than background elements.',
     ''
   ]
-
-  structuredPrompt.push(
-    '**CRITICAL Person Prominence Rules:**',
-    '- The person must be the DOMINANT element in the frame - they should occupy 40-60% of the image height at minimum.',
-    '- The person should be LARGER and more visually prominent than any background elements.',
-    '- The viewer\'s eye should immediately go to the person, not the background.',
-    ''
-  )
 
   // Add background preservation rules for branding (if applicable)
   // Uses element composition rules when available, otherwise falls back to extracted rules
@@ -323,12 +326,19 @@ export async function executeV3Step2(
     }
   }
 
-  // Add freedom rules (creative latitude)
+  // Add freedom rules (creative latitude) - but filter out conflicting background modification rules
   if (elementContributions?.freedom && elementContributions.freedom.length > 0) {
-    structuredPrompt.push('')
-    structuredPrompt.push('**Creative Freedom (Recommended Guidelines):**')
-    for (const freedom of elementContributions.freedom) {
-      structuredPrompt.push(`- ${freedom}`)
+    // Filter out rules that conflict with our hard constraints
+    const safetyFilters = ['background scale', 'background positioning', 'adjust background', 'modify background']
+    const filteredFreedom = elementContributions.freedom.filter(rule => 
+      !safetyFilters.some(filter => rule.toLowerCase().includes(filter))
+    )
+    if (filteredFreedom.length > 0) {
+      structuredPrompt.push('')
+      structuredPrompt.push('**Creative Latitude:**')
+      for (const freedom of filteredFreedom) {
+        structuredPrompt.push(`- ${freedom}`)
+      }
     }
   }
   
@@ -352,13 +362,7 @@ export async function executeV3Step2(
 
   const compositionPrompt = structuredPrompt.join('\n')
   
-  if (debugMode) {
-    Logger.info('V3 DEBUG - Step 2 Background Composition Prompt:', {
-      step: 2,
-      prompt: compositionPrompt.substring(0, 10000) + (compositionPrompt.length > 10000 ? '...(truncated)' : ''),
-      promptLength: compositionPrompt.length
-    })
-  }
+  // Debug prompt logging handled by logPrompt() below
 
   // Build format frame reference
   const formatFrame = await buildAspectRatioFormatReference({
@@ -370,7 +374,7 @@ export async function executeV3Step2(
   // Build reference images array
   const referenceImages: ReferenceImage[] = [
     {
-      description: 'BASE IMAGE - Person on grey background from previous step (with clothing branding already applied if enabled). Keep the person EXACTLY as is, including any logo on clothing. Only change the background.',
+      description: 'BASE IMAGE - This is the person you MUST use. Take this person EXACTLY as shown - same pose, same expression, same clothing, same body position, same framing. Do NOT regenerate or modify the person. Only remove the grey background and composite onto the new background.',
       base64: personBuffer.toString('base64'),
       mimeType: 'image/png'
     }
@@ -379,7 +383,7 @@ export async function executeV3Step2(
   // Add background - either from Step 1b or user's custom background
   if (backgroundBuffer) {
     referenceImages.push({
-      description: 'BACKGROUND REFERENCE - Use this image as the background, compositing the person naturally into it.',
+      description: 'BACKGROUND REFERENCE - Use this image as the background. Composite the person from "BASE IMAGE" naturally into this scene. Do NOT modify the background content.',
       base64: backgroundBuffer.toString('base64'),
       mimeType: 'image/png'
     })
@@ -413,14 +417,6 @@ export async function executeV3Step2(
             base64: base64Data,
             mimeType: mimeType
           })
-
-          Logger.info('V3 Step 2: Added element reference image', {
-            description: elementRef.description.substring(0, 50),
-            type: elementRef.type,
-            mimeType: mimeType,
-            base64Length: base64Data.length,
-            generationId: input.generationId
-          })
         } else {
           Logger.warn('V3 Step 2: Failed to parse element reference data URL', {
             urlPrefix: elementRef.url.substring(0, 50),
@@ -443,18 +439,17 @@ export async function executeV3Step2(
   }
   */
   
-  Logger.debug('V3 Step 2: Sending to Gemini', {
-    promptLength: compositionPrompt.length,
-    referenceCount: referenceImages.length,
-    hasBackgroundFromStep1b: !!backgroundBuffer,
-    hasEvaluatorComments: !!evaluatorComments && evaluatorComments.length > 0
+  // Log reference images summary
+  Logger.info('V3 Step 2: References', {
+    count: referenceImages.length,
+    types: referenceImages.map(img => img.description?.split(' ')[0] || 'unknown').join(', ')
   })
   
   // Generate with Gemini (track both success and failure for cost accounting)
   // Use low denoising strength (approx 0.25 to 0.35) to fix lighting spill and shadows
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
   try {
-    logPrompt('V3 Step 2', compositionPrompt)
+    logPrompt('V3 Step 2', compositionPrompt, input.generationId)
     generationResult = await generateWithGemini(
       compositionPrompt,
       referenceImages,
@@ -491,8 +486,11 @@ export async function executeV3Step2(
     throw new Error('V3 Step 2: Gemini returned no images')
   }
   
-  // Convert to PNG
-  const pngBuffer = await sharp(generationResult.images[0]).png().toBuffer()
+  // Convert all images to PNG buffers (for debugging) - use first for pipeline
+  const allPngBuffers = await Promise.all(
+    generationResult.images.map(img => sharp(img).png().toBuffer())
+  )
+  const pngBuffer = allPngBuffers[0]
   const base64 = pngBuffer.toString('base64')
   
   logStepResult('V3 Step 2', {
@@ -500,7 +498,8 @@ export async function executeV3Step2(
     provider: generationResult.providerUsed,
     model: STAGE_MODEL.STEP_2_COMPOSITION,
     imageSize: pngBuffer.length,
-    durationMs: generationResult.usage.durationMs
+    durationMs: generationResult.usage.durationMs,
+    imagesReturned: allPngBuffers.length, // How many images the model returned
   })
 
   // Track generation cost
@@ -517,13 +516,7 @@ export async function executeV3Step2(
         imagesGenerated: generationResult.usage.imagesGenerated,
         durationMs: generationResult.usage.durationMs,
       })
-      Logger.debug('V3 Step 2: Cost tracking recorded', {
-        generationId: input.generationId,
-        provider: generationResult.providerUsed,
-        inputTokens: generationResult.usage.inputTokens,
-        outputTokens: generationResult.usage.outputTokens,
-        imagesGenerated: generationResult.usage.imagesGenerated,
-      })
+      // Cost tracking logged at debug level only
     } catch (error) {
       Logger.error('V3 Step 2: Failed to track generation cost', {
         error: error instanceof Error ? error.message : String(error),
@@ -534,6 +527,7 @@ export async function executeV3Step2(
   
   return {
     refinedBuffer: pngBuffer,
-    refinedBase64: base64
+    refinedBase64: base64,
+    allImageBuffers: allPngBuffers, // All images for debugging
   }
 }

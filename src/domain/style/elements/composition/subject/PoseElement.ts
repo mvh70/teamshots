@@ -67,11 +67,9 @@ export class PoseElement extends StyleElement {
 
     // Note: Specific pose details (description, body_angle, head_position, arms, etc.) are in the JSON payload
     // Only add critical quality rules that aren't obvious from the JSON structure
-
-    // Add detailed instructions from pose template (e.g., "STANDING, not sitting")
-    if (poseResult.detailedInstructions) {
-      mustFollow.push(poseResult.detailedInstructions)
-    }
+    //
+    // We skip detailedInstructions (e.g., "Three-quarter slimming turn...") since they duplicate
+    // the JSON subject.pose which already contains the full pose specification.
 
     // Add pose quality constraints (mood/feeling, not technical specs)
     if (poseValue.type) {

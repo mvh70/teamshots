@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { validateMobileHandoffToken, cleanupExpiredHandoffTokens } from '@/lib/mobile-handoff'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
+import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
+import { s3Client, getS3BucketName } from '@/lib/s3-client'
 
 export const runtime = 'nodejs'
 
@@ -142,6 +144,14 @@ export async function POST(request: NextRequest) {
       personId: result.context.personId,
       userId: result.context.userId
     })
+
+    // Queue classification (fire-and-forget)
+    queueClassificationFromS3({
+      selfieId: selfie.id,
+      selfieKey: selfieKey,
+      bucketName: getS3BucketName(),
+      s3Client,
+    }, 'mobile-handoff')
 
     return NextResponse.json({ selfie })
   } catch (error) {

@@ -8,6 +8,7 @@ import { LoadingSpinner, SelfieGrid } from '@/components/ui'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
 import type { UploadResult } from '@/hooks/useUploadFlow'
+import { useDeviceCapabilities } from '@/hooks/useDeviceCapabilities'
 import dynamic from 'next/dynamic'
 import SelfieApproval from '@/components/Upload/SelfieApproval'
 
@@ -109,6 +110,7 @@ const GridItem = React.memo<{
   setLoadedSet: React.Dispatch<React.SetStateAction<Set<string>>>
   setHoveredDeleteId: React.Dispatch<React.SetStateAction<string | null>>
   t: (key: string, options?: any) => string
+  classificationQueue?: ClassificationQueueStatus
 }>(({
   item,
   isSelected,
@@ -121,7 +123,8 @@ const GridItem = React.memo<{
   onDelete,
   setLoadedSet,
   setHoveredDeleteId,
-  t
+  t,
+  classificationQueue
 }) => {
   const [retryCount, setRetryCount] = useState(0)
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -175,7 +178,15 @@ const GridItem = React.memo<{
 
   // Only compute these values, don't log every render
   const hasValidType = item.selfieType && item.selfieType !== 'unknown' && item.selfieType !== ''
-  const isAnalyzing = !item.selfieType || item.selfieType === ''
+  const needsClassification = !item.selfieType || item.selfieType === ''
+  
+  // Determine classification status: analyzing (active), queued, or pending
+  const isActivelyAnalyzing = needsClassification && classificationQueue?.activeSelfieIds?.includes(item.id)
+  const isQueued = needsClassification && classificationQueue?.queuedSelfieIds?.includes(item.id)
+  // Show "Analyzing" if active OR if needs classification but not explicitly queued
+  // Show "Queued" only if explicitly in the queued list
+  const showAnalyzing = needsClassification && (isActivelyAnalyzing || !isQueued)
+  const showQueued = needsClassification && isQueued && !isActivelyAnalyzing
 
   return (
     <div
@@ -271,7 +282,7 @@ const GridItem = React.memo<{
           </div>
         )}
         
-        {isAnalyzing && !isImproper && (
+        {showAnalyzing && !isImproper && (
           <div className="absolute bottom-2 left-2 z-10">
             <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800/80 text-white text-[10px] font-medium backdrop-blur-sm">
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -279,6 +290,17 @@ const GridItem = React.memo<{
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               {t('analyzing', { defaultValue: 'Analyzing...' })}
+            </span>
+          </div>
+        )}
+        
+        {showQueued && !isImproper && (
+          <div className="absolute bottom-2 left-2 z-10">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-600/80 text-white text-[10px] font-medium backdrop-blur-sm">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t('queued', { defaultValue: 'Queued' })}
             </span>
           </div>
         )}
@@ -372,6 +394,13 @@ export interface SelectableItem {
   backgroundQuality?: string | null
 }
 
+export interface ClassificationQueueStatus {
+  /** IDs of selfies currently being analyzed */
+  activeSelfieIds: string[]
+  /** IDs of selfies waiting in queue */
+  queuedSelfieIds: string[]
+}
+
 type SelectionMode = 
   | { mode: 'managed'; token?: string; onAfterChange?: (selectedIds: string[]) => void }
   | { mode: 'controlled'; selectedIds: Set<string>; onToggle: (id: string, selected: boolean) => void }
@@ -408,6 +437,8 @@ interface SelectableGridProps {
   className?: string
   /** Custom QR tile to show between selfies and upload tile (desktop only) */
   qrTile?: React.ReactNode
+  /** Classification queue status to distinguish "Analyzing" from "Queued" */
+  classificationQueue?: ClassificationQueueStatus
 }
 
 /**
@@ -435,9 +466,11 @@ export default function SelectableGrid({
   upload,
   showLoadingState = true,
   className = '',
-  qrTile
+  qrTile,
+  classificationQueue
 }: SelectableGridProps) {
   const t = useTranslations('selfies.gallery')
+  const { isMobile } = useDeviceCapabilities()
   
   // Internal selection state for managed mode
   const managedSelection = useSelfieSelection({
@@ -521,10 +554,11 @@ export default function SelectableGrid({
   }, [handleUploadResult])
 
   // Wrap uploadFile to capture the file for classification
-  const handleUploadFile = useCallback(async (file: File) => {
+  const handleUploadFile = useCallback(async (file: File, metadata?: { source?: 'camera' | 'ios-camera' | 'file'; objectUrl?: string; isMobile?: boolean }) => {
     setPendingFile(file)
-    return uploadFile(file)
-  }, [uploadFile])
+    // Pass metadata with isMobile for accurate captureSource tracking
+    return uploadFile(file, { ...metadata, isMobile })
+  }, [uploadFile, isMobile])
 
   const handleRetake = useCallback(() => {
     setPendingFile(null)
@@ -576,6 +610,7 @@ export default function SelectableGrid({
             setLoadedSet={setLoadedSet}
             setHoveredDeleteId={setHoveredDeleteId}
             t={t}
+            classificationQueue={classificationQueue}
           />
         )
       })}

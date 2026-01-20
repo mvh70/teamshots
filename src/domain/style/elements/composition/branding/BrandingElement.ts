@@ -646,37 +646,21 @@ export class BrandingElement extends StyleElement {
         ? ELEMENT_BRANDING_PROMPT
         : BACKGROUND_BRANDING_PROMPT
 
-    // Build instructions from config (same as contributeToBackgroundGeneration)
-    const instructions: string[] = [
-      typeof promptConfig.logo_source === 'string' ? promptConfig.logo_source : '',
-      typeof promptConfig.placement === 'string' ? promptConfig.placement : '',
-    ].filter(Boolean)
+    // Note: logo_source and placement instructions are already included in the JSON payload
+    // under scene.branding (as part of brandingResult.branding), so we don't duplicate them here.
+    // The JSON provides full context including rules, placement, and logo_source.
+    const instructions: string[] = []
 
-    // Build mustFollow rules from config, plus critical logo reproduction rules
-    const configRules = Array.isArray(promptConfig.rules)
-      ? promptConfig.rules.map((rule) => String(rule))
-      : []
-
-    // CRITICAL: Extremely strict logo reproduction rules - THE LOGO CANNOT BE CHANGED
+    // CRITICAL: Core logo reproduction rules - THE LOGO CANNOT BE CHANGED
+    // These are the essential rules that reinforce the reference image instructions.
+    // We keep these concise to avoid prompt bloat while maintaining logo integrity.
     const logoReproductionRules = [
-      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
-      'COPY the logo PIXEL-FOR-PIXEL from the reference image - this is a HARD REQUIREMENT',
-      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors, same proportions',
-      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
-      'DO NOT: change any letters, fonts, or text in the logo',
-      'DO NOT: modify colors, add effects, or change the aspect ratio',
-      'DO NOT: add elements that are not in the original logo',
-      'DO NOT: remove any elements from the original logo',
-      'If the logo has text, every single character must match EXACTLY',
-      'If the logo has icons or symbols, they must be reproduced IDENTICALLY',
-      'The logo placement can be adjusted for the scene, but the logo DESIGN is UNTOUCHABLE',
-      'Think of it as placing a STICKER - the sticker image itself cannot change',
+      'LOGO INTEGRITY: Copy the logo EXACTLY from the reference image - same letters, shapes, colors, proportions',
+      'DO NOT redesign, reinterpret, stylize, or modify the logo in any way',
+      'Think of it as placing a STICKER - the logo image itself cannot change, only its position in the scene',
     ]
 
-    const mustFollow: string[] = [
-      ...logoReproductionRules,
-      ...configRules
-    ]
+    const mustFollow: string[] = logoReproductionRules
 
     // Add logo reference image - MUST be labeled "logo" with emphatic copying instructions
     const referenceImages = [

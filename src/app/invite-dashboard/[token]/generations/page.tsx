@@ -1,14 +1,15 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { PhotoIcon } from '@heroicons/react/24/outline'
-import Link from 'next/link'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
+import SignUpCTA from '@/components/invite/SignUpCTA'
 import GenerationCard from '@/app/[locale]/(product)/app/generations/components/GenerationCard'
 import { useInvitedGenerations } from './useInvitedGenerations'
-import { GenerationGrid, ErrorBanner } from '@/components/ui'
+import { ErrorBanner } from '@/components/ui'
+import { Lightbox } from '@/components/generations'
 import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
@@ -16,6 +17,9 @@ import { useOnborda } from 'onborda'
 import { BRAND_CONFIG } from '@/config/brand'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
+import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 
 export default function GenerationsPage() {
   const params = useParams()
@@ -28,6 +32,10 @@ export default function GenerationsPage() {
   const { context: onboardingContext } = useOnboardingState()
   const onborda = useOnborda()
   const hasCheckedTourRef = useRef(false)
+  
+  // Hooks for generation flow navigation
+  const { clearFlow } = useGenerationFlowState()
+  const { selectedIds } = useSelfieSelection({ token })
   const previousCompletedCountRef = useRef(0)
   const previousPendingTourRef = useRef(false)
   const imageLoadedRef = useRef(false)
@@ -36,11 +44,29 @@ export default function GenerationsPage() {
   const [timeframe, setTimeframe] = useState<'all'|'7d'|'30d'>('all')
   const [context, setContext] = useState('all')
   
+  // Lightbox state
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  
   // Check for forceTour URL parameter
   const forceTour = searchParams?.get('forceTour') === 'true'
   
   // Get unique style options from generations
   const styleOptions = Array.from(new Set(generations.map(g => g.contextName).filter(Boolean))) as string[]
+
+  // Navigation helper: determine initial step when starting the flow
+  const handleStartFlow = useCallback(() => {
+    // Clear any existing flow flags
+    clearFlow()
+
+    // Check if user has enough selfies to skip selfie upload flow
+    if (selectedIds.length >= MIN_SELFIES_REQUIRED) {
+      // User has enough selfies, skip directly to customization-intro
+      router.push(`/invite-dashboard/${token}/customization-intro`)
+    } else {
+      // Not enough selfies, redirect to selfie-tips intro page
+      router.push(`/invite-dashboard/${token}/selfie-tips`)
+    }
+  }, [clearFlow, router, token, selectedIds.length])
   
   // Filter generations based on selected filters
   const filteredGenerations = generations.filter(gen => {
@@ -238,8 +264,8 @@ export default function GenerationsPage() {
 
                 {/* Prominent Generate Button with Cost Info */}
                 <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
-                  <Link 
-                    href={`/invite-dashboard/${token}`}
+                  <button 
+                    onClick={handleStartFlow}
                     className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
                     style={{
                       backgroundColor: BRAND_CONFIG.colors.primary,
@@ -266,7 +292,7 @@ export default function GenerationsPage() {
                       />
                     </svg>
                     {t('newGeneration')}
-                  </Link>
+                  </button>
                   
                   {/* Cost information */}
                   <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
@@ -280,15 +306,17 @@ export default function GenerationsPage() {
                 </div>
               </div>
 
-            <GenerationGrid>
+            {/* Image grid with lightbox support */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredGenerations.map((generation) => (
-                <GenerationCard
-                  key={generation.id}
-                  item={generation}
-                  token={token}
-                />
-              ))}
-            </GenerationGrid>
+                  <GenerationCard
+                    key={generation.id}
+                    item={generation}
+                    token={token}
+                    onImageClick={(src) => setLightboxImage(src)}
+                  />
+                ))}
+              </div>
               
               {filteredGenerations.length === 0 && generations.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 py-12 text-center">
@@ -306,7 +334,7 @@ export default function GenerationsPage() {
                 <p className="mt-1 text-sm text-gray-500">Upload a selfie and generate your first team photos.</p>
                 <div className="mt-6">
                   <button
-                    onClick={() => router.push(`/invite-dashboard/${token}`)}
+                    onClick={handleStartFlow}
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover shadow-md"
                   >
                     Generate Photos
@@ -316,32 +344,17 @@ export default function GenerationsPage() {
             </div>
           )}
 
-          {/* Sign up CTA - Hidden on mobile */}
-          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-              {t('signUpCta.title')}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {t('signUpCta.description')}
-            </p>
-            <button
-              onClick={() => window.location.href = 'https://www.photoshotspro.com'}
-              className="px-4 py-2 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta-ring"
-              style={{
-                backgroundColor: BRAND_CONFIG.colors.cta,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
-              }}
-            >
-              {t('signUpCta.button')}
-            </button>
-          </div>
+          <SignUpCTA />
         </div>
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <Lightbox 
+          src={lightboxImage} 
+          onClose={() => setLightboxImage(null)} 
+        />
+      )}
     </div>
   )
 }

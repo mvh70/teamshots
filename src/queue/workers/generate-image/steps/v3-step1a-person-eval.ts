@@ -7,6 +7,7 @@ import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ReferenceImage } from '../utils/reference-builder'
 import type { CostTrackingHandler } from '../workflow-v3'
+import { logPrompt } from '../utils/logging'
 
 export interface V3Step1aEvalInput {
   imageBuffer: Buffer
@@ -55,11 +56,7 @@ export async function executeV3Step1aEval(
     garmentCollageReference
   } = input
 
-  Logger.debug('V3 Step 1a Eval: Evaluating person generation (grey background)', {
-    hasClothingLogo: !!clothingLogoReference,
-    hasSelfieComposite: !!selfieComposite,
-    hasGarmentCollage: !!garmentCollageReference
-  })
+  // Logging handled by logPrompt
 
   // Parse prompt to extract shot type and wardrobe info (no longer passed as separate arg)
   const promptObj = JSON.parse(generationPrompt)
@@ -253,7 +250,12 @@ export async function executeV3Step1aEval(
     '}'
   )
 
-  const parts: Part[] = [{ text: baseInstructions.join('\n') }]
+  const evalPromptText = baseInstructions.join('\n')
+  
+  // Log the evaluation prompt (improvement #11)
+  logPrompt('V3 Step 1a Eval', evalPromptText, input.generationId)
+
+  const parts: Part[] = [{ text: evalPromptText }]
 
   // Add context about what to ignore from the prompt
   parts.push({
@@ -499,11 +501,8 @@ Generation prompt used:\n${generationPrompt}`
       ? failedCriteria.join(' | ')
       : 'All criteria met'
 
-  Logger.debug('V3 Step 1a Eval: Evaluation completed', {
-    status: finalStatus,
-    reason: finalReason.substring(0, 100),
-    uncertainCount,
-    autoReject
+  Logger.info(`V3 Step 1a Eval: ${finalStatus}`, {
+    ...(finalStatus === 'Not Approved' ? { reason: finalReason.substring(0, 80) } : {})
   })
 
   // Track evaluation cost with outcome
@@ -521,11 +520,7 @@ Generation prompt used:\n${generationPrompt}`
         rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
         intermediateS3Key: input.intermediateS3Key,
       })
-      Logger.debug('V3 Step 1a Eval: Cost tracking with outcome recorded', {
-        generationId: input.generationId,
-        evaluationStatus: finalStatus,
-        s3Key: input.intermediateS3Key,
-      })
+      // Cost tracking logged at debug level only
     } catch (costError) {
       Logger.error('V3 Step 1a Eval: Failed to track evaluation cost', {
         error: costError instanceof Error ? costError.message : String(costError),

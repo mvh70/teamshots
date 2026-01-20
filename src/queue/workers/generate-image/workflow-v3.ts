@@ -41,7 +41,7 @@ import {
   updateJobProgress,
   createProgressRetryCallback
 } from './utils/retry-handler'
-import { saveIntermediateFile } from './utils/debug-helpers'
+import { saveIntermediateFile, saveAllIntermediateImages } from './utils/debug-helpers'
 import {
   buildEvaluationFeedback,
   isApproved,
@@ -98,6 +98,7 @@ export interface V3WorkflowInput {
   selfieAssetIds?: string[] // For fingerprinting and cost tracking
   backgroundAssetId?: string // Background asset ID for fingerprinting
   logoAssetId?: string // Logo asset ID for fingerprinting
+  demographics?: import('@/domain/selfie/selfieDemographics').DemographicProfile // Aggregated demographics
   selfieComposite: ReferenceImage
   faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
   bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
@@ -226,6 +227,7 @@ async function generatePersonWithRetry({
   personId,
   teamId,
   selfieAssetIds,
+  demographics,
   onCostTracking,
   debugMode,
   stopAfterStep,
@@ -252,6 +254,7 @@ async function generatePersonWithRetry({
   personId: string
   teamId?: string
   selfieAssetIds?: string[]
+  demographics?: import('@/domain/selfie/selfieDemographics').DemographicProfile
   onCostTracking?: CostTrackingHandler
   debugMode: boolean
   stopAfterStep?: number
@@ -259,7 +262,7 @@ async function generatePersonWithRetry({
   intermediateStorage: IntermediateStorageHandlers
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
-  let step1Output: { imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; reused?: boolean } | undefined
+  let step1Output: { imageBuffer: Buffer; imageBase64: string; allImageBuffers: Buffer[]; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; reused?: boolean } | undefined
   let evaluationFeedback: EvaluationFeedback | undefined
   const evaluatorComments: string[] = []
 
@@ -267,7 +270,7 @@ async function generatePersonWithRetry({
     if (attempt === 1) {
       logStepStart('V3 Step 1a: Generating person on grey background', generationId)
     }
-    Logger.debug('V3 Step 1a: Generating person on grey background', { attempt, max: 3 })
+    if (attempt === 1) Logger.info('V3 Step 1a: Generating person')
 
     await updateJobProgress(job, PROGRESS_STEPS.V3_GENERATING_PERSON, formatProgress(getProgressMessage('v3-generating-person'), PROGRESS_STEPS.V3_GENERATING_PERSON))
 
@@ -293,6 +296,7 @@ async function generatePersonWithRetry({
           personId,
           teamId,
           selfieAssetIds,
+          demographics, // Aggregated demographics for prompt context
           onCostTracking,
           debugMode,
           evaluationFeedback,
@@ -308,7 +312,8 @@ async function generatePersonWithRetry({
     )
 
     step1Output = currentStep1Output
-    await saveIntermediateFile(step1Output.imageBuffer, 'v3-step1a-person-grey-bg', generationId, debugMode)
+    // Save all images returned by the model (for debugging multiple candidates)
+    await saveAllIntermediateImages(step1Output.allImageBuffers, 'v3-step1a-person-grey-bg', generationId, debugMode)
 
     if (stopAfterStep === 1) {
       Logger.info('V3: Stopping after Step 1a (person generation complete)', {
@@ -324,7 +329,7 @@ async function generatePersonWithRetry({
     }
     await updateJobProgress(job, PROGRESS_STEPS.V3_EVALUATING_PERSON, formatProgress({ message: 'Evaluating quality...', emoji: '🔍' }, PROGRESS_STEPS.V3_EVALUATING_PERSON))
 
-    Logger.debug('V3 Step 1a Eval: Evaluating person', { attempt })
+    // Evaluation logging handled inside executeV3Step1aEval
 
     // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
     const intermediateS3Upload = (selfieAssetIds && selfieAssetIds.length > 0)
@@ -351,10 +356,7 @@ async function generatePersonWithRetry({
           mimeType: preparedCollage.data.mimeType || 'image/png',
           description: 'Garment collage showing authorized clothing and accessories for this outfit',
         }
-        Logger.info('V3 Step 1a Eval: Using garment collage from preparedAssets', {
-          generationId,
-          base64Length: preparedCollage.data.base64.length,
-        })
+        Logger.debug('V3 Step 1a Eval: Using garment collage from preparedAssets')
       }
     }
 
@@ -707,6 +709,7 @@ export async function executeV3Workflow({
   selfieAssetIds,
   backgroundAssetId,
   logoAssetId,
+  demographics,
   selfieComposite,
   faceComposite, // Split face composite (front_view + side_view selfies)
   bodyComposite, // Split body composite (partial_body + full_body selfies)
@@ -930,6 +933,7 @@ export async function executeV3Workflow({
       personId,
       teamId,
       selfieAssetIds,
+      demographics, // Aggregated demographics for prompt context
       onCostTracking,
       debugMode,
       stopAfterStep,
@@ -1238,7 +1242,7 @@ export async function executeV3Workflow({
   logStepStart('V3 Step 2: Compositing and refining', generationId)
   await updateJobProgress(job, PROGRESS_STEPS.V3_COMPOSITING, formatProgress(getProgressMessage('v3-compositing'), PROGRESS_STEPS.V3_COMPOSITING))
 
-  Logger.debug('V3 Step 2: Compositing and refining')
+  Logger.info('V3 Step 2: Compositing')
 
   // Determine background buffer for step 2
   // For simple backgrounds (gradient, neutral) without step 1b, pass undefined so AI generates from scene specs
@@ -1277,7 +1281,8 @@ export async function executeV3Workflow({
     createProgressRetryCallback(job, PROGRESS_STEPS.V3_COMPOSITING)
   )
 
-  await saveIntermediateFile(step2Output.refinedBuffer, 'v3-step2-final-composition', generationId, debugMode)
+  // Save all images returned by the model (for debugging multiple candidates)
+  await saveAllIntermediateImages(step2Output.allImageBuffers || [step2Output.refinedBuffer], 'v3-step2-final-composition', generationId, debugMode)
 
   if (stopAfterStep === 2) {
     Logger.info('V3: Stopping after Step 2 (composition complete)', { generationId, imageSize: step2Output.refinedBuffer.length })
@@ -1288,7 +1293,7 @@ export async function executeV3Workflow({
   logStepStart('V3 Step 3: Final evaluation', generationId)
   await updateJobProgress(job, PROGRESS_STEPS.V3_FINAL_EVAL, formatProgress({ message: 'Final quality check...', emoji: '🎯' }, PROGRESS_STEPS.V3_FINAL_EVAL))
 
-  Logger.debug('V3 Step 3: Final evaluation')
+  Logger.info('V3 Step 3: Final evaluation')
 
   // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
   const step3IntermediateS3Upload = await intermediateStorage.saveBuffer(step2Output.refinedBuffer, {

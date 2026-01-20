@@ -8,6 +8,7 @@ import { Queue, type ConnectionOptions } from 'bullmq'
 import IORedis from 'ioredis'
 import { Env } from '@/lib/env'
 import type { V3WorkflowState } from '@/types/workflow'
+import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
 
 // Redis connection configuration
 const connection: ConnectionOptions = {
@@ -41,6 +42,7 @@ export interface ImageGenerationJobData {
   selfieTypeMap?: Record<string, string> // Map of S3 key to selfie type (front_view, side_view, partial_body, full_body)
   backgroundAssetId?: string // Background asset ID for fingerprinting
   logoAssetId?: string // Logo asset ID for fingerprinting
+  demographics?: DemographicProfile // Aggregated demographics from selfies (gender, age range, ethnicity)
   prompt: string
   providerOptions?: Record<string, unknown>
   creditSource: 'individual' | 'team'

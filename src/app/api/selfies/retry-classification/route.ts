@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-import { classifySelfieType } from '@/domain/selfie/selfie-classifier'
-import { downloadSelfieAsBase64 } from '@/queue/workers/generate-image/s3-utils'
+import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
 import { s3Client, getS3BucketName } from '@/lib/s3-client'
+import { classificationQueue } from '@/lib/classification-queue'
 
 export const runtime = 'nodejs'
 
@@ -39,14 +39,11 @@ export async function POST() {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
 
-    // Find selfies with null or empty string classification
+    // Find selfies with null classification JSON
     const stuckSelfies = await prisma.selfie.findMany({
       where: {
         personId: person.id,
-        OR: [
-          { selfieType: null },
-          { selfieType: '' }
-        ]
+        classification: { equals: Prisma.DbNull },
       },
       select: {
         id: true,
@@ -64,99 +61,29 @@ export async function POST() {
       })
     }
 
-    Logger.info('[retry-classification] Processing stuck selfies', {
+    Logger.info('[retry-classification] Queueing stuck selfies for classification', {
       count: stuckSelfies.length,
       userId: session.user.id,
     })
 
     const bucketName = getS3BucketName()
-    let successful = 0
-    let failed = 0
 
-    // Process selfies in batches of 3 to avoid overwhelming the API
-    const BATCH_SIZE = 3
-    for (let i = 0; i < stuckSelfies.length; i += BATCH_SIZE) {
-      const batch = stuckSelfies.slice(i, i + BATCH_SIZE)
-      
-      Logger.info('[retry-classification] Processing batch', {
-        batchIndex: Math.floor(i / BATCH_SIZE) + 1,
-        batchSize: batch.length,
-      })
-
-      // Process batch in parallel
-      const batchPromises = batch.map(async (selfie) => {
-        try {
-          // Download image
-          const imageData = await downloadSelfieAsBase64({
-            bucketName,
-            s3Client,
-            key: selfie.key,
-          })
-
-          // Classify
-          const result = await classifySelfieType({
-            imageBase64: imageData.base64,
-            mimeType: imageData.mimeType,
-          })
-
-          // Update database
-          await prisma.selfie.update({
-            where: { id: selfie.id },
-            data: {
-              selfieType: result.selfieType,
-              selfieTypeConfidence: result.confidence,
-              personCount: result.personCount,
-              isProper: result.isProper,
-              improperReason: result.improperReason,
-              lightingQuality: result.lightingQuality,
-              lightingFeedback: result.lightingFeedback,
-              backgroundQuality: result.backgroundQuality,
-              backgroundFeedback: result.backgroundFeedback,
-              ...(result.isProper === false && { selected: false }),
-            },
-          })
-
-          successful++
-          Logger.info('[retry-classification] Successfully classified', {
-            selfieId: selfie.id,
-            selfieType: result.selfieType,
-          })
-        } catch (error) {
-          failed++
-          Logger.error('[retry-classification] Failed to classify', {
-            selfieId: selfie.id,
-            error: error instanceof Error ? error.message : String(error),
-          })
-
-          // Mark as null (keep as analyzing for manual retry)
-          try {
-            await prisma.selfie.update({
-              where: { id: selfie.id },
-              data: {
-                selfieType: null,
-                selfieTypeConfidence: null,
-                personCount: null,
-                isProper: null,
-                improperReason: null,
-                lightingQuality: null,
-                lightingFeedback: null,
-                backgroundQuality: null,
-                backgroundFeedback: null,
-              },
-            })
-          } catch {}
-        }
-      })
-
-      // Wait for this batch to complete before starting the next one
-      await Promise.all(batchPromises)
+    // Queue each selfie for classification (fire-and-forget via global queue)
+    for (const selfie of stuckSelfies) {
+      queueClassificationFromS3({
+        selfieId: selfie.id,
+        selfieKey: selfie.key,
+        bucketName,
+        s3Client,
+      }, 'retry-classification')
     }
 
+    // Return immediately - classification runs in background via queue
+    const queueStatus = classificationQueue.getStatus()
     return NextResponse.json({
-      processed: stuckSelfies.length,
-      successful,
-      failed,
-      message: `Processed ${stuckSelfies.length} stuck selfies`,
+      queued: stuckSelfies.length,
+      queueStatus,
+      message: `Queued ${stuckSelfies.length} stuck selfies for classification`,
     })
   } catch (error) {
     Logger.error('[retry-classification] Endpoint error', {

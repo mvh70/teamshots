@@ -22,6 +22,7 @@ import { useTranslations } from 'next-intl'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -66,6 +67,9 @@ export default function SelfiesPage() {
 
   // Selfie type status for progress overlay
   const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
+
+  // Classification queue status to show "Analyzing" vs "Queued" states
+  const classificationQueue = useClassificationQueue({ token })
 
   // Note: Redirect logic removed - flow is now controlled by main dashboard handleStartFlow
 
@@ -223,7 +227,8 @@ export default function SelfiesPage() {
 
   // Check if all customization steps have been visited
   const hasEnoughCredits = stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
-  const isCustomizationComplete = customizationStepsMeta.editableSteps > 0 &&
+  // If editableSteps is 0 (admin preset everything), customization is complete
+  const isCustomizationComplete = customizationStepsMeta.editableSteps === 0 ||
     visitedSteps.length >= customizationStepsMeta.editableSteps
   const canGeneratePhoto = canContinue && hasEnoughCredits && isCustomizationComplete
 
@@ -392,6 +397,7 @@ export default function SelfiesPage() {
                     }}
                   />
                 }
+                classificationQueue={classificationQueue}
               />
             }
             navButtons={
@@ -559,6 +565,7 @@ export default function SelfiesPage() {
                         }}
                       />
                     }
+                    classificationQueue={classificationQueue}
                   />
                 </div>
               </div>

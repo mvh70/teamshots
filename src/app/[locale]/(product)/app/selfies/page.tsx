@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { SelectableGrid } from '@/components/generation/selection'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import React from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
@@ -11,6 +11,7 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { QRPlaceholder } from '@/components/MobileHandoff'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
+import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -20,6 +21,7 @@ function SelfiesPageContent() {
   const [error, setError] = useState<string | null>(null)
   const isMobile = useMobileViewport()
   const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
+  const classificationQueue = useClassificationQueue()
 
   const selfieManager = useSelfieManagement()
 
@@ -34,6 +36,32 @@ function SelfiesPageContent() {
     console.log('[SelfiesPage] Preloading face detection model...')
     preloadFaceDetectionModel()
   }, [])
+
+  // Track previously active/queued selfies to detect when classification completes
+  const prevQueueRef = useRef<{ active: string[]; queued: string[] }>({ active: [], queued: [] })
+  
+  // Auto-refresh when classification completes
+  useEffect(() => {
+    if (!classificationQueue) return
+    
+    const prevActive = prevQueueRef.current.active
+    const prevQueued = prevQueueRef.current.queued
+    const currentActive = classificationQueue.activeSelfieIds || []
+    const currentQueued = classificationQueue.queuedSelfieIds || []
+    
+    // Check if any selfie that was being processed is now done
+    const completedFromActive = prevActive.filter(id => !currentActive.includes(id) && !currentQueued.includes(id))
+    const completedFromQueued = prevQueued.filter(id => !currentActive.includes(id) && !currentQueued.includes(id))
+    
+    if (completedFromActive.length > 0 || completedFromQueued.length > 0) {
+      // Classification completed for some selfies - refresh the list
+      loadUploads()
+      refreshSelfieTypeStatus()
+    }
+    
+    // Update ref for next comparison
+    prevQueueRef.current = { active: currentActive, queued: currentQueued }
+  }, [classificationQueue, loadUploads, refreshSelfieTypeStatus])
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
   type UploadListItem = {
@@ -146,6 +174,7 @@ function SelfiesPageContent() {
                 }}
               />
             }
+            classificationQueue={classificationQueue}
           />
         </div>
       )}

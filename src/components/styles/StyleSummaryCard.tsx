@@ -4,9 +4,10 @@ import { PhotoIcon } from '@heroicons/react/24/outline'
 
 interface StyleSummaryCardProps {
   settings?: PhotoStyleSummarySettings | null
+  packageId?: string
 }
 
-export default function StyleSummaryCard(props: StyleSummaryCardProps) {
+export default function StyleSummaryCard({ settings, packageId }: StyleSummaryCardProps) {
   return (
     <div className="relative bg-gradient-to-br from-gray-50 via-white to-gray-50/80 rounded-2xl p-6 md:p-7 border border-gray-200/60 shadow-md shadow-gray-200/20 hover:shadow-lg hover:shadow-gray-300/30 transition-all duration-300 hover:-translate-y-0.5">
       {/* Decorative element */}
@@ -24,7 +25,7 @@ export default function StyleSummaryCard(props: StyleSummaryCardProps) {
         
         {/* Content */}
         <div className="pt-2">
-          <StyleSummary {...props} />
+          <StyleSummary settings={settings} packageId={packageId} />
         </div>
       </div>
     </div>

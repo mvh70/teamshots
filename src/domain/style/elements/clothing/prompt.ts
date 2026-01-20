@@ -312,8 +312,18 @@ export function generateWardrobePrompt({
   // Add inherent accessories from the wardrobe descriptor
   // These are accessories naturally part of this clothing style (e.g., belt for business trousers)
   // They are authorized in the evaluator and won't be rejected as "unauthorized accessories"
+  // IMPORTANT: Filter out accessories that won't be visible based on shot type
   if (descriptor.inherentAccessories && descriptor.inherentAccessories.length > 0) {
-    wardrobe.inherent_accessories = descriptor.inherentAccessories
+    // Belt is only visible if bottom garments are visible (or partially visible)
+    const beltVisible = isBottomVisible(shotType) || mayPartiallyShowBottom(shotType)
+    const visibleAccessories = descriptor.inherentAccessories.filter(acc => {
+      if (acc === 'belt') return beltVisible
+      // Other accessories (cufflinks, etc.) are always included if present
+      return true
+    })
+    if (visibleAccessories.length > 0) {
+      wardrobe.inherent_accessories = visibleAccessories
+    }
   }
 
   const colorPalette = buildColorPalette(clothingColors && hasValue(clothingColors) ? clothingColors.value : undefined, detailKey, descriptor, shotType)

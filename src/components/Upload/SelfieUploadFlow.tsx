@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
-import type { UploadResult } from '@/hooks/useUploadFlow'
+import type { UploadResult, UploadMetadata } from '@/hooks/useUploadFlow'
 import type { ClassificationResult } from '@/domain/selfie/selfie-types'
 import StickyUploadBar from './StickyUploadBar'
+import { useDeviceCapabilities } from '@/hooks/useDeviceCapabilities'
 
 // Detect if we can auto-trigger file picker (desktop with pointer device)
 function getCanAutoTrigger(): boolean {
@@ -56,6 +57,7 @@ export default function SelfieUploadFlow({
   inline = false
 }: SelfieUploadFlowProps) {
   const t = useTranslations('selfies')
+  const { isMobile } = useDeviceCapabilities()
   const [cameraKey, setCameraKey] = useState(0)
   const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera')
   // Track if user dismissed the manual upload prompt
@@ -116,7 +118,8 @@ export default function SelfieUploadFlow({
       const uploads: UploadResult[] = []
       for (const file of Array.from(files)) {
         // setPendingFile is called inside uploadFile wrapper
-        const result = await uploadFile(file)
+        // Pass metadata with isMobile for accurate captureSource tracking
+        const result = await uploadFile(file, { source: 'file', isMobile })
         if (result) {
           uploads.push(result)
           // Track the last uploaded file for classification
@@ -167,9 +170,9 @@ export default function SelfieUploadFlow({
   }, [cancelPending, onCancel])
 
   // Wrapper to track file for classification - must be defined before any early returns
-  const handleUpload = useCallback(async (file: File) => {
+  const handleUpload = useCallback(async (file: File, metadata?: UploadMetadata) => {
     setPendingFile(file)
-    return uploadFile(file)
+    return uploadFile(file, metadata)
   }, [uploadFile])
 
   if (pendingApproval) {

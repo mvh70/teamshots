@@ -27,10 +27,20 @@ export async function GET() {
     const deserializeContext = (ctx: { id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date }) => {
       const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
       const pkg = getPackageConfig(packageId)
-      const deserializedSettings = pkg.persistenceAdapter.deserialize(ctx.settings as Record<string, unknown>)
+      const deserializedSettings = pkg.persistenceAdapter.deserialize(ctx.settings as Record<string, unknown>) as Record<string, unknown>
+      
+      // Only inject shotType from package defaults if not already in settings (for clothing color exclusions)
+      const finalSettings = deserializedSettings.shotType
+        ? deserializedSettings
+        : {
+            ...deserializedSettings,
+            shotType: pkg.defaultSettings.shotType
+          }
+      
       return {
         ...ctx,
-        settings: deserializedSettings
+        packageId,
+        settings: finalSettings
       }
     }
 

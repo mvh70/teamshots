@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { transferCreditsFromTeamToPerson } from '@/domain/credits/credits'
-import { isSeatsBasedTeam } from '@/domain/pricing/seats'
+import { transferCreditsFromTeamToPerson, getPersonCreditBalance } from '@/domain/credits/credits'
+import { isSeatsBasedTeam, canAddTeamMember } from '@/domain/pricing/seats'
 import { Logger } from '@/lib/logger'
 import { enforceInviteRateLimitWithBlocking } from '@/lib/rate-limit'
 
@@ -49,11 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite has already been used' }, { status: 410 })
     }
 
-    // Check team size limits based on admin's plan tier
-    // Note: With seats-based pricing, team size is managed by seat availability
-    // VIP tier has unlimited team members
-
-    // Check if person already exists (from previous acceptance before token reset, or orphaned person with same token)
+    // Check if person already exists (from previous acceptance before token reset, or orphaned person)
     let person
     if (invite.personId && invite.person) {
       // Person already exists linked to invite - reuse it
@@ -68,21 +64,47 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Check if there's an orphaned person with this token (from a previous partial accept)
-      const existingPerson = await prisma.person.findUnique({
+      let existingPerson = await prisma.person.findUnique({
         where: { inviteToken: token }
       })
+
+      // Also check by email if not found by token - handles case where token was regenerated
+      // but person was already created with the old token
+      if (!existingPerson && invite.email) {
+        existingPerson = await prisma.person.findFirst({
+          where: {
+            email: { equals: invite.email, mode: 'insensitive' },
+            teamId: invite.teamId
+          }
+        })
+        if (existingPerson) {
+          Logger.info('Found existing person by email (token mismatch)', {
+            personId: existingPerson.id,
+            inviteId: invite.id,
+            email: invite.email
+          })
+        }
+      }
 
       if (existingPerson) {
         // Reuse existing person - this handles the case where person was created
         // but invite wasn't updated (partial failure recovery)
         person = existingPerson
-        Logger.info('Reusing existing person with matching inviteToken', {
+        Logger.info('Reusing existing person', {
           personId: person.id,
-          inviteId: invite.id
+          inviteId: invite.id,
+          foundBy: person.inviteToken === token ? 'inviteToken' : 'email'
         })
 
+        // Update the person's inviteToken to the current token
+        if (person.inviteToken !== token) {
+          await prisma.person.update({
+            where: { id: person.id },
+            data: { inviteToken: token }
+          })
+        }
+
         // Check if credits were already transferred (person has credit balance)
-        const { getPersonCreditBalance } = await import('@/domain/credits/credits')
         const existingBalance = await getPersonCreditBalance(person.id)
 
         if (existingBalance === 0) {
@@ -113,8 +135,35 @@ export async function POST(request: NextRequest) {
               }
             })
           }
+        } else {
+          Logger.info('Person already has credits, skipping transfer', {
+            personId: person.id,
+            existingBalance
+          })
         }
       } else {
+        // Before creating new person, check seat availability for seats-based teams
+        const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
+        
+        if (useSeatsModel) {
+          const seatCheck = await canAddTeamMember(invite.teamId)
+          if (!seatCheck.canAdd) {
+            Logger.warn('Invite acceptance blocked - no available seats', {
+              inviteId: invite.id,
+              teamId: invite.teamId,
+              currentSeats: seatCheck.currentSeats,
+              totalSeats: seatCheck.totalSeats,
+              reason: seatCheck.reason
+            })
+            return NextResponse.json({
+              error: seatCheck.reason || 'No available seats. Your team admin needs to purchase more seats.',
+              errorCode: 'NO_AVAILABLE_SEATS',
+              currentSeats: seatCheck.currentSeats,
+              totalSeats: seatCheck.totalSeats
+            }, { status: 400 })
+          }
+        }
+
         // Create new person record using firstName from invite
         person = await prisma.person.create({
           data: {
@@ -134,8 +183,6 @@ export async function POST(request: NextRequest) {
 
         // Transfer credits from team to person (only for new persons)
         // This is the NEW credit model: credits are actually transferred, not just marked
-        const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
-
         if (useSeatsModel) {
           // Seats model: transfer credits from team pool to person
           await transferCreditsFromTeamToPerson(
@@ -198,8 +245,13 @@ export async function POST(request: NextRequest) {
 
     // Return meaningful error messages for known cases
     if (errorMessage.includes('Insufficient team credits')) {
+      // This indicates a credit pool issue - might be a data inconsistency
+      // Log additional context for debugging
+      Logger.error('Insufficient team credits during invite acceptance', {
+        error: errorMessage
+      })
       return NextResponse.json({
-        error: 'Your team admin needs to purchase more seats before you can join.',
+        error: 'Unable to complete invite acceptance. Please contact your team admin to verify seat availability.',
         errorCode: 'INSUFFICIENT_TEAM_CREDITS'
       }, { status: 400 })
     }
