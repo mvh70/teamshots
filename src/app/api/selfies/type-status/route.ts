@@ -3,8 +3,6 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import type { SelfieTypeStatus, SelfieType } from '@/domain/selfie/selfie-types'
 import { SELFIE_TYPE_REQUIREMENTS, extractFromClassification } from '@/domain/selfie/selfie-types'
-import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
-import { s3Client, getS3BucketName } from '@/lib/s3-client'
 import { Logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
@@ -89,24 +87,35 @@ export async function GET(request: NextRequest) {
       ...extractFromClassification(s.classification),
     }))
 
-    // Queue classification for ALL unclassified selfies (fire-and-forget)
+    // Queue classification for ALL unclassified selfies (fire-and-forget with lazy imports)
     const unclassifiedSelfies = selfiesWithClassification.filter((s) => !s.selfieType)
     if (unclassifiedSelfies.length > 0) {
-      const bucketName = getS3BucketName()
-
       Logger.info('[type-status] Queueing unclassified selfies', {
         count: unclassifiedSelfies.length,
       })
 
-      // Queue each selfie for classification (fire-and-forget)
-      for (const selfie of unclassifiedSelfies) {
-        queueClassificationFromS3({
-          selfieId: selfie.id,
-          selfieKey: selfie.key,
-          bucketName,
-          s3Client,
-        }, 'type-status')
-      }
+      // Fire-and-forget async block with lazy imports to avoid cold start delays
+      void (async () => {
+        try {
+          const { queueClassificationFromS3 } = await import('@/domain/selfie/selfie-classifier')
+          const { s3Client, getS3BucketName } = await import('@/lib/s3-client')
+          const bucketName = getS3BucketName()
+
+          // Queue each selfie for classification
+          for (const selfie of unclassifiedSelfies) {
+            queueClassificationFromS3({
+              selfieId: selfie.id,
+              selfieKey: selfie.key,
+              bucketName,
+              s3Client,
+            }, 'type-status')
+          }
+        } catch (err) {
+          Logger.error('[type-status] Failed to queue classifications', {
+            error: err instanceof Error ? err.message : String(err)
+          })
+        }
+      })()
     }
 
     // Build status using only SELECTED selfies (sorted by confidence)

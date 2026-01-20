@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
-import { s3Client, getS3BucketName } from '@/lib/s3-client'
 import { classificationQueue } from '@/lib/classification-queue'
 
 export const runtime = 'nodejs'
@@ -66,17 +64,28 @@ export async function POST() {
       userId: session.user.id,
     })
 
-    const bucketName = getS3BucketName()
+    // Queue classification with lazy imports (fire-and-forget)
+    void (async () => {
+      try {
+        const { queueClassificationFromS3 } = await import('@/domain/selfie/selfie-classifier')
+        const { s3Client, getS3BucketName } = await import('@/lib/s3-client')
+        const bucketName = getS3BucketName()
 
-    // Queue each selfie for classification (fire-and-forget via global queue)
-    for (const selfie of stuckSelfies) {
-      queueClassificationFromS3({
-        selfieId: selfie.id,
-        selfieKey: selfie.key,
-        bucketName,
-        s3Client,
-      }, 'retry-classification')
-    }
+        // Queue each selfie for classification
+        for (const selfie of stuckSelfies) {
+          queueClassificationFromS3({
+            selfieId: selfie.id,
+            selfieKey: selfie.key,
+            bucketName,
+            s3Client,
+          }, 'retry-classification')
+        }
+      } catch (err) {
+        Logger.error('[retry-classification] Failed to queue classifications', {
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
+    })()
 
     // Return immediately - classification runs in background via queue
     const queueStatus = classificationQueue.getStatus()
