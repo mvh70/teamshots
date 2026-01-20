@@ -218,7 +218,7 @@ export default function PhotoUpload({
         // Add timeout handling for upload
         const uploadPromise = onUpload(file, metadata);
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 10000)
+          setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 60000)
         );
         
         const result = await Promise.race([uploadPromise, timeoutPromise]) as UploadResult | void;
@@ -358,7 +358,7 @@ export default function PhotoUpload({
           
           const uploadPromise = onUpload(file, metadata);
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 10000)
+            setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 60000)
           );
           
           const result = await Promise.race([uploadPromise, timeoutPromise]) as UploadResult | void;

@@ -314,8 +314,11 @@ export async function getHandoffTokenStatus(token: string): Promise<{
     const valid = handoffToken.expiresAt > now && handoffToken.absoluteExpiry > now
     // Device is "connected" when the token has been used (validated) from mobile
     // Note: deviceId binding was removed in commit 30db0db to fix device mismatch issues
-    // so we now rely on lastUsedAt being set instead
-    const deviceConnected = !!handoffToken.lastUsedAt
+    // We detect usage by checking if lastUsedAt differs from createdAt (lastUsedAt has @default(now()) in schema)
+    // The validate endpoint updates lastUsedAt, so if it differs from createdAt by more than 1 second, the token was used
+    const wasUsed = handoffToken.lastUsedAt && handoffToken.createdAt &&
+      (handoffToken.lastUsedAt.getTime() - handoffToken.createdAt.getTime() > 1000)
+    const deviceConnected = !!wasUsed
 
     return {
       valid,
