@@ -45,9 +45,10 @@ function extractSuggestedAdjustments(structuredEvaluation: StructuredEvaluation)
       if (key === 'no_unauthorized_accessories') {
         adjustments.push(
           '⚠️ CRITICAL FIX: DO NOT add ANY accessories (watch, pocket square, tie, jewelry, glasses, etc.) ' +
-          'that are not clearly visible in the reference selfies OR listed in the wardrobe.inherent_accessories. ' +
+          'that are not visible in AT LEAST ONE reference selfie OR listed in the wardrobe.inherent_accessories. ' +
+          'NOTE: An accessory appearing in ANY selfie (even just one) is authorized - it does not need to appear in ALL selfies. ' +
           'EXCEPTION: Belt and cufflinks may be inherent to certain clothing styles (check wardrobe.inherent_accessories in the prompt). ' +
-          'ONLY include accessories explicitly present in the selfies, garment collage, or inherent_accessories list. ' +
+          'ONLY include accessories explicitly present in at least one selfie, garment collage, or inherent_accessories list. ' +
           'If unsure whether an accessory is authorized, OMIT it entirely.'
         )
       }

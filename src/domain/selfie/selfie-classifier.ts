@@ -8,7 +8,7 @@
  */
 
 import { Logger } from '@/lib/logger'
-import { getVertexGenerativeModel } from '@/queue/workers/generate-image/gemini'
+import { generateTextWithGemini } from '@/queue/workers/generate-image/gemini'
 import { STAGE_MODEL } from '@/queue/workers/generate-image/config'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
@@ -180,53 +180,41 @@ export async function classifySelfieType(
   })
 
   try {
-    const model = await getVertexGenerativeModel(modelName)
-
-    const response = await model.generateContent({
-      contents: [
+    // Use multi-provider fallback stack for classification
+    const response = await generateTextWithGemini(
+      CLASSIFICATION_PROMPT,
+      [
         {
-          role: 'user',
-          parts: [
-            { text: CLASSIFICATION_PROMPT },
-            {
-              inlineData: {
-                mimeType: input.mimeType,
-                data: input.imageBase64,
-              },
-            },
-          ],
+          mimeType: input.mimeType,
+          base64: input.imageBase64,
+          description: 'Selfie image to classify',
         },
       ],
-      generationConfig: {
+      {
         temperature: 0.2, // Low temperature for consistent classification
-        maxOutputTokens: 2048, // Ensure response isn't truncated
-      },
-    })
+        stage: 'SELFIE_CLASSIFICATION',
+      }
+    )
 
-    const candidate = response.response.candidates?.[0]
-    const finishReason = candidate?.finishReason
-    const responseParts = candidate?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    const textPart = response.text
 
-    // Log finish reason and response details for debugging
+    // Log response details for debugging
     Logger.debug('Gemini classification response details', {
-      finishReason,
-      candidatesCount: response.response.candidates?.length ?? 0,
-      partsCount: responseParts.length,
+      provider: response.providerUsed,
       responseLength: textPart.length,
+      durationMs: response.usage.durationMs,
     })
 
     if (!textPart) {
       Logger.warn('Empty response from Gemini classification', {
-        finishReason,
-        candidatesCount: response.response.candidates?.length ?? 0,
-        partsCount: responseParts.length,
+        provider: response.providerUsed,
       })
     }
 
     const result = parseClassificationResponse(textPart)
 
     Logger.info('Selfie classified', {
+      provider: response.providerUsed,
       selfieType: result.selfieType,
       confidence: result.confidence,
       personCount: result.personCount,

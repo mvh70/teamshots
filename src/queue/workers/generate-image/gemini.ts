@@ -130,6 +130,25 @@ export interface GeminiUsageMetadata {
 }
 
 /**
+ * Usage metadata for text-only generation calls
+ */
+export interface GeminiTextUsageMetadata {
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  durationMs: number
+}
+
+/**
+ * Result of a text generation call with usage metadata
+ */
+export interface GeminiTextGenerationResult {
+  text: string
+  usage: GeminiTextUsageMetadata
+  providerUsed: 'vertex' | 'gemini-rest' | 'openrouter'
+}
+
+/**
  * Internal result type (without provider info)
  */
 interface GeminiGenerationResultInternal {
@@ -359,6 +378,287 @@ export async function generateWithGemini(
 
   // Should never reach here, but TypeScript needs it
   throw lastError || new Error('All providers failed')
+}
+
+/**
+ * Generate text response using Gemini with multi-provider fallback.
+ * Used for evaluation steps that need text-only responses (not image generation).
+ * Supports multi-modal input (text + images for evaluation).
+ */
+export async function generateTextWithGemini(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  options?: GenerationOptions
+): Promise<GeminiTextGenerationResult> {
+  // Resolve model from stage config, or use evaluation model as default
+  const model: ModelName = options?.stage
+    ? STAGE_MODEL[options.stage]
+    : 'gemini-2.5-flash' // Default to text model for evaluation
+
+  // Build provider order based on PROVIDER_FALLBACK_ORDER from config
+  // Filter out replicate since it doesn't support text-only generation
+  const allProviders = buildProviderOrder(model)
+  const providers = allProviders.filter(p => p !== 'replicate') as Exclude<GeminiProvider, 'replicate'>[]
+
+  if (providers.length === 0) {
+    throw new Error(
+      `No Gemini API credentials configured for text model "${model}". Need one of: ` +
+      'OPENROUTER_API_KEY (for OpenRouter), ' +
+      'GOOGLE_CLOUD_API_KEY (for AI Studio REST), ' +
+      'or GOOGLE_APPLICATION_CREDENTIALS (for Vertex AI)'
+    )
+  }
+
+  Logger.debug('Text generation providers', { providers: providers.join(','), model, stage: options?.stage })
+
+  // Try each provider in order, fallback on rate limit errors
+  let lastError: unknown
+  for (let i = 0; i < providers.length; i++) {
+    const provider = providers[i]
+    const isLastProvider = i === providers.length - 1
+    const providerUsed = normalizeProvider(provider) as 'vertex' | 'gemini-rest' | 'openrouter'
+
+    // Get the provider-specific model name
+    const providerModelName = getModelNameForProvider(model, provider as ModelProvider)
+    if (!providerModelName) {
+      Logger.warn(`Model ${model} not available on ${provider}, skipping`, { model, provider })
+      continue
+    }
+
+    Logger.debug(`Text gen: Attempting provider ${i + 1}/${providers.length}`, {
+      provider,
+      providerUsed,
+      model,
+      providerModelName,
+    })
+
+    try {
+      if (provider === 'vertex') {
+        const result = await generateTextWithGeminiVertex(prompt, images, providerModelName, options)
+        return { ...result, providerUsed: 'vertex' }
+      } else if (provider === 'rest') {
+        const result = await generateTextWithGeminiRestInternal(prompt, images, providerModelName, options)
+        return { ...result, providerUsed: 'gemini-rest' }
+      } else if (provider === 'openrouter') {
+        const result = await generateTextWithGeminiOpenRouterInternal(prompt, images, providerModelName, options)
+        return { ...result, providerUsed: 'openrouter' }
+      }
+    } catch (error) {
+      lastError = error
+      const rateLimited = isRateLimitError(error)
+      const serviceError = isTransientServiceError(error)
+
+      Logger.info('Text gen provider failed - checking fallback', {
+        provider,
+        model,
+        rateLimited,
+        serviceError,
+        isLastProvider,
+        errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
+      })
+
+      if ((rateLimited || serviceError) && !isLastProvider) {
+        Logger.warn(`Text gen provider ${rateLimited ? 'rate limited' : 'service error'}, falling back`, {
+          provider,
+          nextProvider: providers[i + 1],
+        })
+        continue
+      }
+
+      throw error
+    }
+  }
+
+  throw lastError || new Error('All text generation providers failed')
+}
+
+/**
+ * Generate text using Vertex AI directly
+ */
+async function generateTextWithGeminiVertex(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  modelName: string,
+  options?: GenerationOptions
+): Promise<Omit<GeminiTextGenerationResult, 'providerUsed'>> {
+  const startTime = Date.now()
+  const model = await getVertexGenerativeModel(modelName)
+
+  const parts: Part[] = [{ text: prompt }]
+  for (const image of images) {
+    if (image.description) {
+      parts.push({ text: image.description })
+    }
+    parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } })
+  }
+
+  const contents: Content[] = [{ role: 'user', parts }]
+
+  const generationConfig: { temperature?: number; topK?: number; topP?: number } = {}
+  if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
+  if (options?.topK !== undefined) generationConfig.topK = options.topK
+  if (options?.topP !== undefined) generationConfig.topP = options.topP
+
+  const response = await model.generateContent({
+    contents,
+    ...(Object.keys(generationConfig).length > 0 ? { generationConfig } : {}),
+  })
+
+  const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+  const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+  const usageMetadata = response.response.usageMetadata
+
+  return {
+    text: textPart,
+    usage: {
+      inputTokens: usageMetadata?.promptTokenCount,
+      outputTokens: usageMetadata?.candidatesTokenCount,
+      totalTokens: usageMetadata?.totalTokenCount,
+      durationMs: Date.now() - startTime,
+    },
+  }
+}
+
+/**
+ * Generate text using Gemini REST API
+ */
+async function generateTextWithGeminiRestInternal(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  modelName: string,
+  options?: GenerationOptions
+): Promise<Omit<GeminiTextGenerationResult, 'providerUsed'>> {
+  const startTime = Date.now()
+  const apiKey = Env.string('GOOGLE_CLOUD_API_KEY', '') || Env.string('GEMINI_API_KEY', '')
+  if (!apiKey) {
+    throw new Error('GOOGLE_CLOUD_API_KEY or GEMINI_API_KEY required for REST API')
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+
+  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+    { text: prompt }
+  ]
+  for (const image of images) {
+    if (image.description) {
+      parts.push({ text: image.description })
+    }
+    parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } })
+  }
+
+  const requestBody: Record<string, unknown> = {
+    contents: [{ parts }],
+  }
+
+  if (options?.temperature !== undefined || options?.topK !== undefined || options?.topP !== undefined) {
+    requestBody.generationConfig = {
+      ...(options.temperature !== undefined && { temperature: options.temperature }),
+      ...(options.topK !== undefined && { topK: options.topK }),
+      ...(options.topP !== undefined && { topP: options.topP }),
+    }
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Gemini REST API error: ${response.status} ${errorText}`)
+  }
+
+  const data = await response.json() as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number }
+  }
+
+  const textPart = data.candidates?.[0]?.content?.parts?.find(p => p.text)?.text ?? ''
+
+  return {
+    text: textPart,
+    usage: {
+      inputTokens: data.usageMetadata?.promptTokenCount,
+      outputTokens: data.usageMetadata?.candidatesTokenCount,
+      totalTokens: data.usageMetadata?.totalTokenCount,
+      durationMs: Date.now() - startTime,
+    },
+  }
+}
+
+/**
+ * Generate text using OpenRouter API
+ */
+async function generateTextWithGeminiOpenRouterInternal(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  modelName: string,
+  options?: GenerationOptions
+): Promise<Omit<GeminiTextGenerationResult, 'providerUsed'>> {
+  const startTime = Date.now()
+  const apiKey = Env.string('OPENROUTER_API_KEY', '')
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY required for OpenRouter')
+  }
+
+  // Build multimodal content
+  const content: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
+    { type: 'text', text: prompt }
+  ]
+
+  for (const image of images) {
+    if (image.description) {
+      content.push({ type: 'text', text: image.description })
+    }
+    content.push({
+      type: 'image_url',
+      image_url: { url: `data:${image.mimeType};base64,${image.base64}` }
+    })
+  }
+
+  const requestBody: Record<string, unknown> = {
+    model: modelName,
+    messages: [{ role: 'user', content }],
+    stream: false,
+  }
+
+  if (options?.temperature !== undefined) requestBody.temperature = options.temperature
+  if (options?.topP !== undefined) requestBody.top_p = options.topP
+  if (options?.topK !== undefined) requestBody.top_k = options.topK
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': Env.string('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
+      'X-Title': 'TeamShots',
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`OpenRouter API error: ${response.status} ${errorText}`)
+  }
+
+  const data = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+  }
+
+  const textContent = data.choices?.[0]?.message?.content ?? ''
+
+  return {
+    text: textContent,
+    usage: {
+      inputTokens: data.usage?.prompt_tokens,
+      outputTokens: data.usage?.completion_tokens,
+      totalTokens: data.usage?.total_tokens,
+      durationMs: Date.now() - startTime,
+    },
+  }
 }
 
 async function generateWithGeminiVertex(

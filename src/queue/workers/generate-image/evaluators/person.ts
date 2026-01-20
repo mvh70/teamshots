@@ -69,14 +69,16 @@ export async function evaluatePersonGeneration(
     '',
     '4. no_unauthorized_accessories',
     '   - Compare the reference selfies AND garment collage (if provided) to the generated image',
+    '   - IMPORTANT: If an accessory appears in AT LEAST ONE reference selfie, it is AUTHORIZED.',
+    '   - Do NOT require accessories to appear in ALL selfies - appearing in ANY selfie is sufficient authorization.',
     '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats, watch, pocket square)',
-    '     that are ABSENT from BOTH the reference selfies AND the garment collage?',
+    '     that are ABSENT from ALL of the reference selfies AND the garment collage?',
     '   - NOTE: Belt and cufflinks may be inherent to the clothing style and should not be rejected',
     '   - If a garment collage is provided, accessories visible in the collage are AUTHORIZED',
     authorizedAccessories.length > 0
       ? `   - INHERENT ACCESSORIES: The following are AUTHORIZED by the clothing style: ${authorizedAccessories.join(', ')}`
       : '   - No inherent accessories specified for this clothing style',
-    '   - Answer YES if all accessories appear in either the selfies OR the garment collage OR the inherent accessories list'
+    '   - Answer YES if all accessories in the generated image appear in AT LEAST ONE selfie OR the garment collage OR the inherent accessories list'
   ]
 
   // Add branding checks if logo is on clothing

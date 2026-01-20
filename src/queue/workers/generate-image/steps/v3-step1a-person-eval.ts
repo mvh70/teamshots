@@ -1,10 +1,9 @@
 import { Logger } from '@/lib/logger'
-import { getVertexGenerativeModel } from '../gemini'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
 import { AI_CONFIG, STAGE_MODEL } from '../config'
 import sharp from 'sharp'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ReferenceImage } from '../utils/reference-builder'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { logPrompt } from '../utils/logging'
@@ -74,10 +73,8 @@ export async function executeV3Step1aEval(
   const actualWidth = metadata.width ?? null
   const actualHeight = metadata.height ?? null
 
-  // 1. Evaluation Logic (Inlined from evaluator.ts)
+  // 1. Evaluation Logic - using multi-provider fallback stack
   const modelName = STAGE_MODEL.EVALUATION
-
-  const model = await getVertexGenerativeModel(modelName)
 
   const expectedRatio = expectedWidth / expectedHeight
   const actualRatio =
@@ -131,6 +128,8 @@ export async function executeV3Step1aEval(
     '6. no_unauthorized_accessories',
     '   - CRITICAL: Compare the reference selfies AND garment collage (if provided) CAREFULLY to the generated image',
     '   - Are there NO unauthorized accessories that are ABSENT from BOTH the reference selfies AND the garment collage?',
+    '   - IMPORTANT: If an accessory appears in AT LEAST ONE reference selfie, it is AUTHORIZED.',
+    '   - Do NOT require accessories to appear in ALL selfies - appearing in ANY selfie is sufficient authorization.',
     '   - Check specifically for:',
     '     * Jewelry: earrings, necklaces, bracelets, rings, watches, chains',
     '     * Piercings: ear piercings, nose piercings, facial piercings',
@@ -142,10 +141,10 @@ export async function executeV3Step1aEval(
     authorizedAccessories.length > 0
       ? `   - INHERENT ACCESSORIES: The following are AUTHORIZED by the clothing style and should NOT be rejected: ${authorizedAccessories.join(', ')}`
       : '   - No inherent accessories specified for this clothing style',
-    '   - Answer YES if all accessories appear in EITHER the selfies OR the garment collage OR the inherent accessories list',
-    '   - Answer NO (REJECT) only if an accessory appears in the generated image but is NOT in the selfies AND NOT in the garment collage AND NOT in the inherent accessories list',
-    '   - Answer NO (REJECT) if the person has earrings in the generated image but NO earrings in the selfies AND NO earrings in the collage',
-    '   - Answer NO (REJECT) if the person has glasses in the generated image but NO glasses in the selfies AND NO glasses in the collage',
+    '   - Answer YES if all accessories in the generated image appear in AT LEAST ONE selfie OR the garment collage OR the inherent accessories list',
+    '   - Answer NO (REJECT) only if an accessory appears in the generated image but is NOT in ANY of the selfies AND NOT in the garment collage AND NOT in the inherent accessories list',
+    '   - Answer NO (REJECT) if the person has earrings in the generated image but NO earrings in ANY of the selfies AND NO earrings in the collage',
+    '   - Answer NO (REJECT) if the person has glasses in the generated image but NO glasses in ANY of the selfies AND NO glasses in the collage',
     '   - Answer YES if no accessories are present in either the generated image or the selfies',
     '',
     '7. no_visible_reference_labels',
@@ -255,11 +254,8 @@ export async function executeV3Step1aEval(
   // Log the evaluation prompt (improvement #11)
   logPrompt('V3 Step 1a Eval', evalPromptText, input.generationId)
 
-  const parts: Part[] = [{ text: evalPromptText }]
-
-  // Add context about what to ignore from the prompt
-  parts.push({
-    text: `IMPORTANT CONTEXT FOR EVALUATION:
+  // Build the full prompt with context
+  const contextSection = `IMPORTANT CONTEXT FOR EVALUATION:
 - Step 1a generates ONLY the person on a grey background.
 - The generation prompt below may mention custom backgrounds or background/element logos.
 - IGNORE any background-related instructions - those are handled in Step 1b/Step 3.
@@ -269,79 +265,70 @@ export async function executeV3Step1aEval(
 ${clothingLogoReference ? '\n**CRITICAL**: Check the generation prompt for clothing style (business, business-casual, startup, etc.). If the style involves LAYERED CLOTHING (jackets, blazers, cardigans over shirts), be EXTRA VIGILANT about logo overflow. The logo should ONLY appear on the base layer visible beneath the outer garment.' : ''}
 
 Generation prompt used:\n${generationPrompt}`
-  })
 
-  parts.push({
-    text: `Candidate image variation`
-  })
-  parts.push({
-    inlineData: { mimeType: 'image/png', data: imageBase64 }
-  })
+  const fullPrompt = `${evalPromptText}\n\n${contextSection}\n\nCandidate image variation`
+
+  // Build reference images array for multi-modal evaluation
+  const evalImages: GeminiReferenceImage[] = [
+    { mimeType: 'image/png', base64: imageBase64, description: 'Candidate image to evaluate' }
+  ]
 
   if (selfieComposite) {
-    parts.push({
-      text:
-        selfieComposite.description ??
-        'Composite reference containing labeled selfies and brand placement guidance.'
-    })
-    parts.push({
-      inlineData: { mimeType: selfieComposite.mimeType, data: selfieComposite.base64 }
+    evalImages.push({
+      mimeType: selfieComposite.mimeType,
+      base64: selfieComposite.base64,
+      description: selfieComposite.description ?? 'Composite reference containing labeled selfies and brand placement guidance.'
     })
   }
 
   if (garmentCollageReference) {
-    parts.push({
-      text: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories for this outfit.'
-    })
-    parts.push({
-      inlineData: { mimeType: garmentCollageReference.mimeType, data: garmentCollageReference.base64 }
+    evalImages.push({
+      mimeType: garmentCollageReference.mimeType,
+      base64: garmentCollageReference.base64,
+      description: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories for this outfit.'
     })
   }
 
   if (clothingLogoReference) {
-    parts.push({
-      text: clothingLogoReference.description ?? 'Official branding/logo asset for comparison.'
-    })
-    parts.push({
-      inlineData: { mimeType: clothingLogoReference.mimeType, data: clothingLogoReference.base64 }
+    evalImages.push({
+      mimeType: clothingLogoReference.mimeType,
+      base64: clothingLogoReference.base64,
+      description: clothingLogoReference.description ?? 'Official branding/logo asset for comparison.'
     })
   }
-
-  const contents: Content[] = [
-    {
-      role: 'user',
-      parts
-    }
-  ]
 
   let rawResponse: unknown = null
   let structuredEvaluation: StructuredEvaluation | null = null
   let evalDurationMs = 0
-  let usageMetadata: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
+  let usageMetadata: { inputTokens?: number; outputTokens?: number } | undefined
+  let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
 
   const evalStartTime = Date.now()
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: {
-        temperature: AI_CONFIG.EVALUATION_TEMPERATURE
-      }
+    // Use multi-provider fallback stack for evaluation
+    const response = await generateTextWithGemini(fullPrompt, evalImages, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION',
     })
 
-    evalDurationMs = Date.now() - evalStartTime
-    usageMetadata = response.response.usageMetadata
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
-    rawResponse = textPart
-
-    if (textPart) {
-      structuredEvaluation = parseStructuredEvaluation(textPart)
+    evalDurationMs = response.usage.durationMs
+    usageMetadata = {
+      inputTokens: response.usage.inputTokens,
+      outputTokens: response.usage.outputTokens,
     }
+    providerUsed = response.providerUsed
+    rawResponse = response.text
+
+    if (response.text) {
+      structuredEvaluation = parseStructuredEvaluation(response.text)
+    }
+
+    Logger.debug('V3 Step 1a Eval: Provider used', { provider: providerUsed, model: modelName })
 
     // Note: Cost tracking moved to after evaluation status is determined
     // (see below after finalStatus is computed)
   } catch (error) {
-    const evalDurationMs = Date.now() - evalStartTime
+    evalDurationMs = Date.now() - evalStartTime
     Logger.error('Failed to run Gemini evaluation for V3 Step 1a', {
       error: error instanceof Error ? error.message : String(error)
     })
@@ -354,6 +341,7 @@ Generation prompt used:\n${generationPrompt}`
           reason: 'evaluation',
           result: 'failure',
           model: STAGE_MODEL.EVALUATION,
+          provider: providerUsed,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -379,8 +367,9 @@ Generation prompt used:\n${generationPrompt}`
           reason: 'evaluation',
           result: 'success',
           model: STAGE_MODEL.EVALUATION,
-          inputTokens: usageMetadata.promptTokenCount,
-          outputTokens: usageMetadata.candidatesTokenCount,
+          provider: providerUsed,
+          inputTokens: usageMetadata.inputTokens,
+          outputTokens: usageMetadata.outputTokens,
           durationMs: evalDurationMs,
           evaluationStatus: 'rejected',
           rejectionReason,
@@ -513,8 +502,9 @@ Generation prompt used:\n${generationPrompt}`
         reason: 'evaluation',
         result: 'success',
         model: STAGE_MODEL.EVALUATION,
-        inputTokens: usageMetadata.promptTokenCount,
-        outputTokens: usageMetadata.candidatesTokenCount,
+        provider: providerUsed,
+        inputTokens: usageMetadata.inputTokens,
+        outputTokens: usageMetadata.outputTokens,
         durationMs: evalDurationMs,
         evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
         rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,

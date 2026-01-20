@@ -1,9 +1,8 @@
 import { Logger } from '@/lib/logger'
 import type { Step8Output } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
-import { getVertexGenerativeModel } from '../gemini'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
 import { AI_CONFIG, STAGE_MODEL } from '../config'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { isFeatureEnabled } from '@/config/feature-flags'
 import {
@@ -170,8 +169,6 @@ export async function executeV3Step3(
     }
   }
   
-  const model = await getVertexGenerativeModel(modelName)
-
   const instructions = [
     `You are evaluating the final refined image for face similarity, characteristic preservation, person prominence, and overall quality.`,
     `Answer each question with ONLY: YES (criterion met), NO (criterion failed), UNCERTAIN (cannot determine)`,
@@ -268,41 +265,42 @@ export async function executeV3Step3(
   // Log the evaluation prompt
   logPrompt('V3 Step 3 Eval', evalPromptText, input.generationId)
 
-  const parts: Part[] = [{ text: evalPromptText }]
-
-  parts.push({ text: 'Final refined image to evaluate' })
-  parts.push({ inlineData: { mimeType: 'image/png', data: refinedBase64 } })
-
-  // Pass selfie composite as reference
-  parts.push({
-    text: selfieComposite.description || 'Selfie composite reference'
-  })
-  parts.push({
-    inlineData: { mimeType: selfieComposite.mimeType, data: selfieComposite.base64 }
-  })
+  // Build reference images array for multi-modal evaluation
+  const evalImages: GeminiReferenceImage[] = [
+    { mimeType: 'image/png', base64: refinedBase64, description: 'Final refined image to evaluate' },
+    { mimeType: selfieComposite.mimeType, base64: selfieComposite.base64, description: selfieComposite.description || 'Selfie composite reference' }
+  ]
 
   // Add logo reference if branding evaluation is needed
   if (brandingInfo && logoReference) {
-    parts.push({ text: logoReference.description || 'Logo reference' })
-    parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
+    evalImages.push({
+      mimeType: logoReference.mimeType,
+      base64: logoReference.base64,
+      description: logoReference.description || 'Logo reference'
+    })
   }
 
-  const contents: Content[] = [{ role: 'user', parts }]
-
   let evalDurationMs = 0
-  let usageMetadata: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
+  let usageMetadata: { inputTokens?: number; outputTokens?: number } | undefined
+  let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
 
   const evalStartTime = Date.now()
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
+    // Use multi-provider fallback stack for evaluation
+    const response = await generateTextWithGemini(evalPromptText, evalImages, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION',
     })
 
-    evalDurationMs = Date.now() - evalStartTime
-    usageMetadata = response.response.usageMetadata
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    evalDurationMs = response.usage.durationMs
+    usageMetadata = {
+      inputTokens: response.usage.inputTokens,
+      outputTokens: response.usage.outputTokens,
+    }
+    providerUsed = response.providerUsed
+    const textPart = response.text
+
+    Logger.debug('V3 Step 3 Eval: Provider used', { provider: providerUsed, model: modelName })
 
     // Note: Cost tracking moved to after evaluation status is determined
     // (see below after finalStatus is computed)
@@ -360,8 +358,9 @@ export async function executeV3Step3(
               reason: 'evaluation',
               result: 'success',
               model: STAGE_MODEL.EVALUATION,
-              inputTokens: usageMetadata.promptTokenCount,
-              outputTokens: usageMetadata.candidatesTokenCount,
+              provider: providerUsed,
+              inputTokens: usageMetadata.inputTokens,
+              outputTokens: usageMetadata.outputTokens,
               durationMs: evalDurationMs,
               evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
               rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
@@ -400,6 +399,7 @@ export async function executeV3Step3(
           reason: 'evaluation',
           result: 'failure',
           model: STAGE_MODEL.EVALUATION,
+          provider: providerUsed,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -423,8 +423,9 @@ export async function executeV3Step3(
         reason: 'evaluation',
         result: 'success',
         model: STAGE_MODEL.EVALUATION,
-        inputTokens: usageMetadata.promptTokenCount,
-        outputTokens: usageMetadata.candidatesTokenCount,
+        provider: providerUsed,
+        inputTokens: usageMetadata.inputTokens,
+        outputTokens: usageMetadata.outputTokens,
         durationMs: evalDurationMs,
         evaluationStatus: 'rejected',
         rejectionReason,

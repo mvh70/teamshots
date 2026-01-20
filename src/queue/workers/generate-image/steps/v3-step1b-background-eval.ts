@@ -1,7 +1,6 @@
 import { Logger } from '@/lib/logger'
-import { getVertexGenerativeModel } from '../gemini'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
 import { AI_CONFIG, STAGE_MODEL } from '../config'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ImageEvaluationResult } from '../evaluator'
 import type { CostTrackingHandler } from '../workflow-v3'
 
@@ -140,35 +139,39 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
   const evaluationPrompt = basePrompt + logoCriteria + responseFormat
 
   const evalStartTime = Date.now()
+  let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
   try {
     const modelName = STAGE_MODEL.EVALUATION
-    const model = await getVertexGenerativeModel(modelName)
 
-    // Build parts array - conditionally include logo reference
-    const parts: Part[] = [
-      { text: evaluationPrompt },
-      { text: 'Generated Background Image:' },
-      { inlineData: { mimeType: 'image/png', data: backgroundBase64 } }
+    // Build reference images array for multi-modal evaluation
+    const evalImages: GeminiReferenceImage[] = [
+      { mimeType: 'image/png', base64: backgroundBase64, description: 'Generated Background Image:' }
     ]
 
     // Only add logo reference if provided
     if (hasLogoReference && logoReference) {
-      parts.push(
-        { text: 'Logo Reference:' },
-        { inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } }
-      )
+      evalImages.push({
+        mimeType: logoReference.mimeType,
+        base64: logoReference.base64,
+        description: 'Logo Reference:'
+      })
     }
 
-    const contents: Content[] = [{ role: 'user', parts }]
-
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
+    // Use multi-provider fallback stack for evaluation
+    const response = await generateTextWithGemini(evaluationPrompt, evalImages, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION',
     })
 
-    const evalDurationMs = Date.now() - evalStartTime
-    const usageMetadata = response.response.usageMetadata
-    const responseText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const evalDurationMs = response.usage.durationMs
+    const usageMetadata = {
+      inputTokens: response.usage.inputTokens,
+      outputTokens: response.usage.outputTokens,
+    }
+    providerUsed = response.providerUsed
+    const responseText = response.text
+
+    Logger.debug('V3 Step 1b Eval: Provider used', { provider: providerUsed, model: modelName })
     
     // Note: Cost tracking moved to after evaluation status is determined
     // (see below after finalStatus is computed)
@@ -279,8 +282,9 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
           reason: 'evaluation',
           result: 'success',
           model: STAGE_MODEL.EVALUATION,
-          inputTokens: usageMetadata?.promptTokenCount,
-          outputTokens: usageMetadata?.candidatesTokenCount,
+          provider: providerUsed,
+          inputTokens: usageMetadata?.inputTokens,
+          outputTokens: usageMetadata?.outputTokens,
           durationMs: evalDurationMs,
           evaluationStatus: evaluation.status === 'Approved' ? 'approved' : 'rejected',
           rejectionReason: evaluation.status === 'Not Approved' ? evaluation.reason : undefined,
@@ -315,6 +319,7 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
           reason: 'evaluation',
           result: 'failure',
           model: STAGE_MODEL.EVALUATION,
+          provider: providerUsed,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
