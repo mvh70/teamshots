@@ -60,12 +60,12 @@ export function CustomClothingSelector({
   const previewSetRef = useRef<string | null>(null)
   const analyzingRef = useRef(false)
 
-  // Sync preview URL from value.outfitS3Key when editing existing outfits
+  // Sync preview URL from value.value.outfitS3Key when editing existing outfits
   // This is an intentional prop sync pattern: when the parent provides a saved key,
   // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    const currentKey = value.outfitS3Key || null
+    const currentKey = value.value?.outfitS3Key || null
 
     // Only set preview if key changed and we haven't set it yet
     if (currentKey && previewSetRef.current !== currentKey) {
@@ -77,7 +77,7 @@ export function CustomClothingSelector({
       setPreviewUrl(null)
       previewSetRef.current = null
     }
-  }, [value.outfitS3Key, token])
+  }, [value.value?.outfitS3Key, token])
   /* eslint-enable react-hooks/exhaustive-deps */
 
   // Sync analyzing ref with state for debugging
@@ -164,13 +164,15 @@ export function CustomClothingSelector({
         Telemetry.increment('outfit.analysis.started')
 
         // Save upload data AFTER spinner is visible (delayed to avoid parent re-render interference)
-        // In admin mode: type='predefined' (admin is setting the preset outfit)
-        // In user mode: type='user-choice' (user is customizing their outfit)
+        // In admin mode: mode='predefined' (admin is setting the preset outfit)
+        // In user mode: mode='user-choice' (user is customizing their outfit)
         onChange({
-          type: mode === 'admin' ? 'predefined' : 'user-choice',
-          assetId: uploadData.assetId,
-          outfitS3Key: uploadData.s3Key,
-          uploadedAt: new Date().toISOString(),
+          mode: mode === 'admin' ? 'predefined' : 'user-choice',
+          value: {
+            assetId: uploadData.assetId,
+            outfitS3Key: uploadData.s3Key,
+            uploadedAt: new Date().toISOString(),
+          },
         })
 
         // 2. Analyze colors using Gemini
@@ -216,12 +218,14 @@ export function CustomClothingSelector({
 
           // 3. Update settings with colors and description
           onChange({
-            type: mode === 'admin' ? 'predefined' : 'user-choice',
-            assetId: uploadData.assetId,
-            outfitS3Key: uploadData.s3Key,
-            colors: analysisData.colors,
-            description: analysisData.description,
-            uploadedAt: new Date().toISOString(),
+            mode: mode === 'admin' ? 'predefined' : 'user-choice',
+            value: {
+              assetId: uploadData.assetId,
+              outfitS3Key: uploadData.s3Key,
+              colors: analysisData.colors,
+              description: analysisData.description,
+              uploadedAt: new Date().toISOString(),
+            },
           })
 
           Telemetry.increment('outfit.complete.success')
@@ -243,15 +247,16 @@ export function CustomClothingSelector({
 
   const handleRemove = useCallback(() => {
     onChange({
-      type: 'predefined',
+      mode: 'predefined',
+      value: undefined,
     })
     setPreviewUrl(null)
     setError(null)
   }, [onChange])
 
-  // Determine if upload section should be shown based on mode and type
+  // Determine if upload section should be shown based on mode
   const shouldShowUpload = mode === 'admin'
-    ? value.type === 'predefined'  // Admin mode: show when predefined (admin configures outfit)
+    ? value.mode === 'predefined'  // Admin mode: show when predefined (admin configures outfit)
     : true  // User mode: always show upload (outfit1 package requires user to upload their outfit)
 
   // Debug: Log render with analyzing state
@@ -360,29 +365,29 @@ export function CustomClothingSelector({
           })()}
 
           {/* Outfit Details - shown after analysis */}
-          {value.description && !analyzing && (
+          {value.value?.description && !analyzing && (
             <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
               <p className="font-medium mb-1">Detected outfit:</p>
-              <p>{value.description}</p>
+              <p>{value.value.description}</p>
             </div>
           )}
 
           {/* Color Swatches - shown after analysis */}
-          {value.colors && !analyzing && (
+          {value.value?.colors && !analyzing && (
             <div className="flex gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <div
                   className="w-6 h-6 rounded border border-gray-300"
-                  style={{ backgroundColor: value.colors.topLayer }}
+                  style={{ backgroundColor: value.value.colors.topLayer }}
                   title="Top layer color"
                 />
                 <span className="text-xs text-gray-500">Top</span>
               </div>
-              {value.colors.baseLayer && (
+              {value.value.colors.baseLayer && (
                 <div className="flex items-center gap-1">
                   <div
                     className="w-6 h-6 rounded border border-gray-300"
-                    style={{ backgroundColor: value.colors.baseLayer }}
+                    style={{ backgroundColor: value.value.colors.baseLayer }}
                     title="Base layer color"
                   />
                   <span className="text-xs text-gray-500">Base</span>
@@ -391,16 +396,16 @@ export function CustomClothingSelector({
               <div className="flex items-center gap-1">
                 <div
                   className="w-6 h-6 rounded border border-gray-300"
-                  style={{ backgroundColor: value.colors.bottom }}
+                  style={{ backgroundColor: value.value.colors.bottom }}
                   title="Bottom color"
                 />
                 <span className="text-xs text-gray-500">Bottom</span>
               </div>
-              {value.colors.shoes && (
+              {value.value.colors.shoes && (
                 <div className="flex items-center gap-1">
                   <div
                     className="w-6 h-6 rounded border border-gray-300"
-                    style={{ backgroundColor: value.colors.shoes }}
+                    style={{ backgroundColor: value.value.colors.shoes }}
                     title="Shoes color"
                   />
                   <span className="text-xs text-gray-500">Shoes</span>

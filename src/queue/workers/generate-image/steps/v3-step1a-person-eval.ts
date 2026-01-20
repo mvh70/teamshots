@@ -1,7 +1,6 @@
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import sharp from 'sharp'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
@@ -79,10 +78,8 @@ export async function executeV3Step1aEval(
   const actualHeight = metadata.height ?? null
 
   // 1. Evaluation Logic (Inlined from evaluator.ts)
-  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+  const modelName = STAGE_MODEL.EVALUATION
+
   const model = await getVertexGenerativeModel(modelName)
 
   const expectedRatio = expectedWidth / expectedHeight
@@ -354,7 +351,7 @@ Generation prompt used:\n${generationPrompt}`
           stepName: 'step1a-eval',
           reason: 'evaluation',
           result: 'failure',
-          model: 'gemini-2.5-flash',
+          model: STAGE_MODEL.EVALUATION,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -379,7 +376,7 @@ Generation prompt used:\n${generationPrompt}`
           stepName: 'step1a-eval',
           reason: 'evaluation',
           result: 'success',
-          model: 'gemini-2.5-flash',
+          model: STAGE_MODEL.EVALUATION,
           inputTokens: usageMetadata.promptTokenCount,
           outputTokens: usageMetadata.candidatesTokenCount,
           durationMs: evalDurationMs,
@@ -516,7 +513,7 @@ Generation prompt used:\n${generationPrompt}`
         stepName: 'step1a-eval',
         reason: 'evaluation',
         result: 'success',
-        model: 'gemini-2.5-flash',
+        model: STAGE_MODEL.EVALUATION,
         inputTokens: usageMetadata.promptTokenCount,
         outputTokens: usageMetadata.candidatesTokenCount,
         durationMs: evalDurationMs,

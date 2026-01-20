@@ -1,7 +1,6 @@
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ImageEvaluationResult } from '../evaluator'
 import type { CostTrackingHandler } from '../workflow-v3'
@@ -142,7 +141,7 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
 
   const evalStartTime = Date.now()
   try {
-    const modelName = Env.string('GEMINI_EVAL_MODEL', Env.string('GEMINI_IMAGE_MODEL'))
+    const modelName = STAGE_MODEL.EVALUATION
     const model = await getVertexGenerativeModel(modelName)
 
     // Build parts array - conditionally include logo reference
@@ -279,7 +278,7 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
           stepName: 'step1b-eval',
           reason: 'evaluation',
           result: 'success',
-          model: 'gemini-2.5-flash',
+          model: STAGE_MODEL.EVALUATION,
           inputTokens: usageMetadata?.promptTokenCount,
           outputTokens: usageMetadata?.candidatesTokenCount,
           durationMs: evalDurationMs,
@@ -315,7 +314,7 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
           stepName: 'step1b-eval',
           reason: 'evaluation',
           result: 'failure',
-          model: 'gemini-2.5-flash',
+          model: STAGE_MODEL.EVALUATION,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })

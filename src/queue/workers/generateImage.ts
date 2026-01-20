@@ -56,7 +56,7 @@ const BUCKET_NAME = getS3BucketName()
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, teamId, selfieS3Keys, selfieAssetIds, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
+    const { generationId, personId, userId, teamId, selfieS3Keys, selfieAssetIds, selfieTypeMap, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
       workflowState?: V3WorkflowState
     }
 
@@ -202,6 +202,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const refs: PersistedImageReference[] = []
 
       if (state.composites?.selfie) refs.push(state.composites.selfie)
+      if (state.composites?.faceComposite) refs.push(state.composites.faceComposite)
+      if (state.composites?.bodyComposite) refs.push(state.composites.bodyComposite)
       if (state.composites?.background) refs.push(state.composites.background)
       if (state.composites?.garmentCollage) refs.push(state.composites.garmentCollage)
       if (state.step1a?.personImage) refs.push(state.step1a.personImage)
@@ -342,8 +344,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       // Check if custom clothing is configured
       const hasCustomClothing = Boolean(
-        mergedStyleSettings.customClothing &&
-        (mergedStyleSettings.customClothing.outfitS3Key || mergedStyleSettings.customClothing.assetId)
+        mergedStyleSettings.customClothing?.value &&
+        (mergedStyleSettings.customClothing.value.outfitS3Key || mergedStyleSettings.customClothing.value.assetId)
       )
 
       // Can only use cached payload if:
@@ -381,6 +383,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           styleSettings: mergedStyleSettings as PhotoStyleSettings,
           selfieKeys: providedKeys,
           processedSelfies,
+          selfieTypeMap, // Pass selfie type map for split composite building
           options: {
             workflowVersion
           }
@@ -393,6 +396,57 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         labelInstruction = generationPayload.labelInstruction
         aspectRatioFromPayload = generationPayload.aspectRatio
         aspectRatioDescription = generationPayload.aspectRatioDescription
+
+        // Persist split composites (face/body) to workflow state if available
+        if (workflowVersion === 'v3') {
+          const compositePatch: V3WorkflowState['composites'] = {
+            ...(workflowState?.composites ?? {})
+          }
+
+          // Persist face composite if available
+          if (generationPayload.faceComposite) {
+            const persistedFaceComposite = await uploadIntermediateAsset(
+              Buffer.from(generationPayload.faceComposite.base64, 'base64'),
+              {
+                fileName: `face-composite-${randomUUID()}.png`,
+                description: generationPayload.faceComposite.description,
+                mimeType: generationPayload.faceComposite.mimeType ?? 'image/png'
+              }
+            )
+            compositePatch.faceComposite = persistedFaceComposite
+            Logger.info('Persisted face composite to workflow state', {
+              generationId,
+              s3Key: persistedFaceComposite.key
+            })
+          }
+
+          // Persist body composite if available
+          if (generationPayload.bodyComposite) {
+            const persistedBodyComposite = await uploadIntermediateAsset(
+              Buffer.from(generationPayload.bodyComposite.base64, 'base64'),
+              {
+                fileName: `body-composite-${randomUUID()}.png`,
+                description: generationPayload.bodyComposite.description,
+                mimeType: generationPayload.bodyComposite.mimeType ?? 'image/png'
+              }
+            )
+            compositePatch.bodyComposite = persistedBodyComposite
+            Logger.info('Persisted body composite to workflow state', {
+              generationId,
+              s3Key: persistedBodyComposite.key
+            })
+          }
+
+          // Update workflow state if we added any split composites
+          if (compositePatch.faceComposite || compositePatch.bodyComposite) {
+            const patch: V3WorkflowState = {
+              ...workflowState,
+              composites: compositePatch
+            }
+            await persistWorkflowState(patch)
+            workflowState = patch
+          }
+        }
 
         // Persist garment collage to workflow state if it was generated
         const garmentCollage = referenceImages.find((ref) =>
@@ -451,6 +505,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           }))
 
           let v3SelfieComposite
+          let v3FaceComposite: { base64: string; mimeType: string; description?: string } | undefined
+          let v3BodyComposite: { base64: string; mimeType: string; description?: string } | undefined
 
           if (workflowState?.composites?.selfie) {
             v3SelfieComposite = await referenceFromPersisted(workflowState.composites.selfie)
@@ -493,6 +549,24 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             workflowState = patch
           }
 
+          // Load face composite from workflow state if available
+          if (workflowState?.composites?.faceComposite) {
+            v3FaceComposite = await referenceFromPersisted(workflowState.composites.faceComposite)
+            Logger.info('Loaded face composite from workflow state', {
+              generationId,
+              hasFaceComposite: true
+            })
+          }
+
+          // Load body composite from workflow state if available
+          if (workflowState?.composites?.bodyComposite) {
+            v3BodyComposite = await referenceFromPersisted(workflowState.composites.bodyComposite)
+            Logger.info('Loaded body composite from workflow state', {
+              generationId,
+              hasBodyComposite: true
+            })
+          }
+
           const intermediateStorage = {
             saveBuffer: uploadIntermediateAsset,
             loadBuffer: (reference: PersistedImageReference) => downloadIntermediateAsset(reference)
@@ -509,6 +583,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             backgroundAssetId: job.data.backgroundAssetId,
             logoAssetId: job.data.logoAssetId,
             selfieComposite: v3SelfieComposite,
+            faceComposite: v3FaceComposite, // Split face composite (front_view + side_view selfies)
+            bodyComposite: v3BodyComposite, // Split body composite (partial_body + full_body selfies)
             styleSettings: mergedStyleSettings,
             prompt: basePrompt,
             mustFollowRules: mustFollowRulesFromPayload,

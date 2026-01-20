@@ -399,12 +399,16 @@ export class BrandingElement extends StyleElement {
     }
 
     // CRITICAL: Check if ClothingOverlayElement is handling branding
-    // If overlay exists in contributions, it means clothing overlay is active and handling logo
-    const hasClothingOverlay = context.existingContributions.some(
-      (c) => c.metadata?.hasClothingOverlay === true
-    )
+    // Check if clothing overlay was successfully prepared (not just attempted)
+    const preparedAssets = context.generationContext.preparedAssets
+    const clothingOverlayAsset = preparedAssets?.get('clothing-overlay-overlay')
+    const hasWorkingClothingOverlay = 
+      // Overlay asset exists AND has actual image data
+      (clothingOverlayAsset?.data?.base64 && clothingOverlayAsset.data.base64.length > 0) ||
+      // OR it's already in contributions (fallback check for dependency ordering)
+      context.existingContributions.some((c) => c.metadata?.hasClothingOverlay === true)
 
-    if (hasClothingOverlay) {
+    if (hasWorkingClothingOverlay) {
       // ClothingOverlayElement is handling branding - skip all branding instructions
       Logger.info('[BrandingElement] Clothing overlay is handling branding, skipping all direct logo contributions and instructions', {
         generationId: context.generationContext.generationId,
@@ -437,8 +441,7 @@ export class BrandingElement extends StyleElement {
       },
     }
 
-    // Get prepared logo from context
-    const preparedAssets = context.generationContext.preparedAssets
+    // Get prepared logo from context (preparedAssets already declared above)
     const logoAsset = preparedAssets?.get(`${this.id}-logo`)
 
     // Add reference image if logo was prepared - with emphatic copying instructions

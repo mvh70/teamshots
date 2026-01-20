@@ -244,20 +244,32 @@ export async function POST(request: NextRequest) {
       requestedIds.length > 0
         ? prisma.selfie.findMany({
             where: { id: { in: requestedIds } },
-            include: { person: { select: { userId: true, teamId: true } } }
+            select: {
+              id: true,
+              key: true,
+              personId: true,
+              selfieType: true, // Include selfie type for split composite building
+              person: { select: { userId: true, teamId: true } }
+            }
           })
         : Promise.resolve([]),
       requestedKeys.length > 0
         ? prisma.selfie.findMany({
             where: { key: { in: requestedKeys } },
-            include: { person: { select: { userId: true, teamId: true } } }
+            select: {
+              id: true,
+              key: true,
+              personId: true,
+              selfieType: true, // Include selfie type for split composite building
+              person: { select: { userId: true, teamId: true } }
+            }
           })
         : Promise.resolve([])
     ])
 
     // Combine results, avoiding duplicates
     const seenIds = new Set<string>()
-    const selfies = [] as Array<{ id: string; key: string; personId: string; person: { userId: string | null; teamId: string | null } }>
+    const selfies = [] as Array<{ id: string; key: string; personId: string; selfieType: string | null; person: { userId: string | null; teamId: string | null } }>
     for (const s of [...foundByIds, ...foundByKeys]) {
       if (!seenIds.has(s.id)) {
         seenIds.add(s.id)
@@ -265,6 +277,7 @@ export async function POST(request: NextRequest) {
           id: s.id,
           key: s.key,
           personId: s.personId,
+          selfieType: s.selfieType || null,
           person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null }
         })
       }
@@ -281,14 +294,14 @@ export async function POST(request: NextRequest) {
       try {
         const moreSelected = await prisma.selfie.findMany({
           where: { personId: selfies[0].personId, selected: true },
-          select: { id: true, key: true }
+          select: { id: true, key: true, selfieType: true }
         })
         if (moreSelected.length > 1) {
           const existingIds = new Set(selfies.map((s: { id: string }) => s.id))
           type SelectedSelfie = typeof moreSelected[number];
           const additionalSelfies = moreSelected
             .filter((s: SelectedSelfie) => !existingIds.has(s.id))
-            .map((s: SelectedSelfie) => ({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person }))
+            .map((s: SelectedSelfie) => ({ id: s.id, key: s.key, selfieType: s.selfieType, personId: selfies[0].personId, person: selfies[0].person }))
           selfies.push(...additionalSelfies)
         }
       } catch {}
@@ -828,6 +841,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Build selfie type map for split composite building (face vs body)
+    const selfieTypeMap: Record<string, string> = {}
+    for (const s of selfies) {
+      if (s.selfieType && s.selfieType !== 'unknown') {
+        selfieTypeMap[s.key] = s.selfieType
+      }
+    }
+
     const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: primarySelfie.personId,
@@ -835,6 +856,7 @@ export async function POST(request: NextRequest) {
       teamId: ownerPerson.teamId ?? undefined,
       selfieS3Keys: jobSelfieS3Keys,
       selfieAssetIds: selfieAssetIds.length > 0 ? selfieAssetIds : undefined,
+      selfieTypeMap: Object.keys(selfieTypeMap).length > 0 ? selfieTypeMap : undefined,
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,

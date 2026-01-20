@@ -22,7 +22,7 @@ export class LightingElement extends StyleElement {
     const { phase, settings } = context
 
     // Skip if user-choice (will be derived by system)
-    if (settings.lighting?.type === 'user-choice') {
+    if (settings.lighting?.mode === 'user-choice') {
       return false
     }
 
@@ -41,9 +41,9 @@ export class LightingElement extends StyleElement {
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {}
 
-    // Handle explicit lighting type if set
-    if (settings.lighting && settings.lighting.type !== 'user-choice') {
-      const lightingType = settings.lighting.type
+    // Handle explicit lighting type if set (predefined mode with a value)
+    if (settings.lighting?.mode === 'predefined' && settings.lighting.value) {
+      const lightingType = settings.lighting.value.type
       metadata.lightingType = lightingType
 
       // Add type-specific instructions
@@ -237,10 +237,18 @@ export class LightingElement extends StyleElement {
       return errors
     }
 
-    // Validate lighting type
-    const validTypes = ['natural', 'studio', 'soft', 'dramatic', 'user-choice']
-    if (!validTypes.includes(lighting.type)) {
-      errors.push(`Unknown lighting type: ${lighting.type}`)
+    // Validate mode
+    const validModes = ['predefined', 'user-choice']
+    if (!validModes.includes(lighting.mode)) {
+      errors.push(`Unknown lighting mode: ${lighting.mode}`)
+    }
+
+    // Validate lighting type if predefined with a value
+    if (lighting.mode === 'predefined' && lighting.value) {
+      const validTypes = ['natural', 'studio', 'soft', 'dramatic']
+      if (!validTypes.includes(lighting.value.type)) {
+        errors.push(`Unknown lighting type: ${lighting.value.type}`)
+      }
     }
 
     return errors

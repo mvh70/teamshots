@@ -7,6 +7,17 @@ import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { generateWithGeminiRest } from './gemini-rest'
 import { isRateLimitError, isTransientServiceError } from '@/lib/rate-limit-retry'
+import {
+  MODEL_CONFIG,
+  STAGE_MODEL,
+  DEFAULT_MODEL,
+  PROVIDER_FALLBACK_ORDER,
+  PROVIDER_DEFAULTS,
+  getModelNameForProvider,
+  type ModelName,
+  type ModelProvider,
+  type StageName,
+} from './config'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -100,11 +111,11 @@ export interface GenerationOptions {
   seed?: number
   safetySettings?: SafetySetting[]
   /**
-   * Preferred provider for this generation.
-   * If not available or fails, will fall back to other providers.
-   * Use for load balancing: e.g., Step 1a -> 'vertex', Step 1b -> 'openrouter'
+   * Generation stage - determines which model to use from STAGE_MODEL config.
+   * Providers are tried in PROVIDER_FALLBACK_ORDER, skipping those without
+   * credentials or model support.
    */
-  preferredProvider?: 'openrouter' | 'vertex' | 'rest' | 'replicate'
+  stage?: StageName
 }
 
 /**
@@ -163,86 +174,50 @@ function convertToRestOptions(options?: GenerationOptions) {
 }
 
 /**
- * Build the ordered list of providers to try based on configuration and available credentials
- * @param preferredProvider Optional provider to prioritize first (for load balancing)
+ * Build the ordered list of providers to try based on PROVIDER_FALLBACK_ORDER and available credentials.
+ * Providers are tried in the order defined in config, skipping those without credentials or model support.
+ * @param model The canonical model name from MODEL_CONFIG
  */
-function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[] {
-  // Support both GOOGLE_CLOUD_API_KEY and GEMINI_API_KEY for REST API
-  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '') || !!Env.string('GEMINI_API_KEY', '')
-  // GOOGLE_APPLICATION_CREDENTIALS JSON file contains project_id, so we only need to check for that
-  const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '')
-  const hasReplicate = !!Env.string('REPLICATE_API_TOKEN', '')
-  const hasOpenRouter = !!Env.string('OPENROUTER_API_KEY', '')
+function buildProviderOrder(model: ModelName): GeminiProvider[] {
+  // Check available credentials
+  const credentials: Record<ModelProvider, boolean> = {
+    openrouter: !!Env.string('OPENROUTER_API_KEY', ''),
+    vertex: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
+    rest: !!Env.string('GOOGLE_CLOUD_API_KEY', '') || !!Env.string('GEMINI_API_KEY', ''),
+    replicate: !!Env.string('REPLICATE_API_TOKEN', ''),
+  }
 
-  // Check if model requires Google AI Studio REST API (not available on OpenRouter or Vertex)
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
-  const isGemini3Model = imageModel.includes('gemini-3-pro')
+  // Get model config to check which providers support this model
+  const modelConfig = MODEL_CONFIG[model]
 
-  // Gemini 3 Pro models are ONLY available via Google AI Studio REST API
-  // Not available on: OpenRouter, Vertex AI, or Replicate
-  const openRouterAvailable = hasOpenRouter && !isGemini3Model
-  const vertexAvailable = hasServiceAccount && !isGemini3Model
-  const replicateAvailable = hasReplicate && !isGemini3Model
-
-  Logger.debug('Building provider order - checking credentials', {
-    hasApiKey,
-    hasServiceAccount,
-    hasReplicate,
-    hasOpenRouter,
-    openRouterAvailable,
-    vertexAvailable,
-    replicateAvailable,
-    imageModel,
-    isGemini3Model,
-    preferredProvider
+  Logger.debug('Building provider order from PROVIDER_FALLBACK_ORDER', {
+    model,
+    fallbackOrder: PROVIDER_FALLBACK_ORDER,
+    credentials,
+    modelProviders: modelConfig.providers,
   })
 
-  // Use preferred provider if specified, otherwise use env var default
-  // If Gemini 3 model, default to 'rest' instead of 'openrouter'
-  const defaultProvider = isGemini3Model ? 'rest' : 'openrouter'
-  const primaryProvider = preferredProvider ?? (Env.string('GEMINI_PRIMARY_PROVIDER', defaultProvider) as GeminiProvider)
+  // Build provider list following PROVIDER_FALLBACK_ORDER
+  // Only include providers that have credentials AND support this model
   const providers: GeminiProvider[] = []
 
-  // Add primary provider first if available
-  if (primaryProvider === 'openrouter' && openRouterAvailable) {
-    providers.push('openrouter')
-    Logger.debug('Added openrouter as primary provider')
-  } else if (primaryProvider === 'vertex' && vertexAvailable) {
-    providers.push('vertex')
-    Logger.debug('Added vertex as primary provider')
-  } else if (primaryProvider === 'rest' && hasApiKey) {
-    providers.push('rest')
-    Logger.debug('Added rest as primary provider')
-  } else if (primaryProvider === 'replicate' && replicateAvailable) {
-    providers.push('replicate')
-    Logger.debug('Added replicate as primary provider')
-  }
+  for (const provider of PROVIDER_FALLBACK_ORDER) {
+    const hasCredentials = credentials[provider]
+    const modelSupported = modelConfig.providers[provider] !== null
 
-  // Add remaining providers as fallbacks (in order of preference)
-  if (!providers.includes('openrouter') && openRouterAvailable) {
-    providers.push('openrouter')
-    Logger.debug('Added openrouter as fallback')
-  }
-  if (!providers.includes('vertex') && vertexAvailable) {
-    providers.push('vertex')
-    Logger.debug('Added vertex as fallback')
-  }
-  if (!providers.includes('rest') && hasApiKey) {
-    providers.push('rest')
-    Logger.debug('Added rest as fallback')
-  }
-  if (!providers.includes('replicate') && replicateAvailable) {
-    providers.push('replicate')
-    Logger.debug('Added replicate as fallback')
+    if (hasCredentials && modelSupported) {
+      providers.push(provider as GeminiProvider)
+      Logger.debug(`Added ${provider} to provider order`, { position: providers.length })
+    } else {
+      Logger.debug(`Skipped ${provider}`, { hasCredentials, modelSupported })
+    }
   }
 
   Logger.info('Provider order built', {
     providers,
     providerCount: providers.length,
-    primaryProvider,
-    preferredProvider,
-    imageModel,
-    isGemini3Model
+    model,
+    fallbackOrder: PROVIDER_FALLBACK_ORDER,
   })
 
   return providers
@@ -255,14 +230,17 @@ export async function generateWithGemini(
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
 ): Promise<GeminiGenerationResult> {
-  // Use preferred provider if specified, otherwise use default order
-  const providers = options?.preferredProvider
-    ? buildProviderOrder(options.preferredProvider)
-    : buildProviderOrder()
+  // Resolve model from stage config, or use default
+  const model: ModelName = options?.stage
+    ? STAGE_MODEL[options.stage]
+    : DEFAULT_MODEL
+
+  // Build provider order based on PROVIDER_FALLBACK_ORDER from config
+  const providers = buildProviderOrder(model)
 
   if (providers.length === 0) {
     throw new Error(
-      'No Gemini API credentials configured. Need one of: ' +
+      `No Gemini API credentials configured for model "${model}". Need one of: ` +
       'OPENROUTER_API_KEY (for OpenRouter), ' +
       'GOOGLE_CLOUD_API_KEY (for AI Studio REST), ' +
       'GOOGLE_APPLICATION_CREDENTIALS (for Vertex AI - project_id is in the JSON), ' +
@@ -273,45 +251,55 @@ export async function generateWithGemini(
   Logger.info('Gemini providers configured', {
     providers,
     primaryProvider: providers[0],
-    preferredProvider: options?.preferredProvider,
+    model,
+    stage: options?.stage,
     fallbackCount: providers.length - 1,
     hasOpenRouter: !!Env.string('OPENROUTER_API_KEY', ''),
     hasServiceAccount: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
     hasApiKey: !!Env.string('GOOGLE_CLOUD_API_KEY', ''),
     hasReplicate: !!Env.string('REPLICATE_API_TOKEN', '')
   })
-  
+
   // Try each provider in order, fallback on rate limit errors
   let lastError: unknown
   for (let i = 0; i < providers.length; i++) {
     const provider = providers[i]
     const isLastProvider = i === providers.length - 1
     const providerUsed = normalizeProvider(provider)
-    
+
+    // Get the provider-specific model name
+    const providerModelName = getModelNameForProvider(model, provider as ModelProvider)
+    if (!providerModelName) {
+      Logger.warn(`Model ${model} not available on ${provider}, skipping`, { model, provider })
+      continue
+    }
+
     Logger.info(`Attempting provider ${i + 1}/${providers.length}`, {
       provider,
       providerUsed,
+      model,
+      providerModelName,
       isLastProvider
     })
-    
+
     try {
       if (provider === 'vertex') {
-        Logger.debug(`Using Vertex AI client (provider ${i + 1}/${providers.length})`)
-        const result = await generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
+        Logger.debug(`Using Vertex AI client (provider ${i + 1}/${providers.length})`, { providerModelName })
+        const result = await generateWithGeminiVertex(prompt, images, providerModelName, aspectRatio, resolution, options)
         return { ...result, providerUsed: 'vertex' }
       } else if (provider === 'rest') {
-        Logger.debug(`Using Gemini REST API client (provider ${i + 1}/${providers.length})`)
-        const result = await generateWithGeminiRest(prompt, images, aspectRatio, resolution, convertToRestOptions(options))
+        Logger.debug(`Using Gemini REST API client (provider ${i + 1}/${providers.length})`, { providerModelName })
+        const result = await generateWithGeminiRest(prompt, images, providerModelName, aspectRatio, resolution, convertToRestOptions(options))
         return { ...result, providerUsed: 'gemini-rest' }
       } else if (provider === 'replicate') {
-        Logger.debug(`Using Replicate API client (provider ${i + 1}/${providers.length})`)
+        Logger.debug(`Using Replicate API client (provider ${i + 1}/${providers.length})`, { providerModelName })
         const { generateWithGeminiReplicate } = await import('./gemini-replicate')
-        const result = await generateWithGeminiReplicate(prompt, images, aspectRatio, resolution)
+        const result = await generateWithGeminiReplicate(prompt, images, providerModelName, aspectRatio, resolution)
         return { ...result, providerUsed: 'replicate' }
       } else if (provider === 'openrouter') {
-        Logger.debug(`Using OpenRouter API client (provider ${i + 1}/${providers.length})`)
+        Logger.debug(`Using OpenRouter API client (provider ${i + 1}/${providers.length})`, { providerModelName })
         const { generateWithGeminiOpenRouter } = await import('./gemini-openrouter')
-        const result = await generateWithGeminiOpenRouter(prompt, images, aspectRatio, resolution, options)
+        const result = await generateWithGeminiOpenRouter(prompt, images, providerModelName, aspectRatio, resolution, options)
         return { ...result, providerUsed: 'openrouter' }
       }
     } catch (error) {
@@ -324,37 +312,54 @@ export async function generateWithGemini(
       const rateLimited = isRateLimitError(error)
       const serviceError = isTransientServiceError(error)
 
-      // Check if this is a transient IMAGE_OTHER error from OpenRouter
+      // Check if this is a transient IMAGE_OTHER error from OpenRouter or Replicate
       // Be more defensive - check for "returned no images" OR "IMAGE_OTHER" in the message
       const errorMessage = error instanceof Error ? error.message : String(error)
       const isImageOtherError = (
         (errorMessage.includes('OpenRouter returned no images') ||
          errorMessage.includes('returned no images') ||
+         errorMessage.includes('returned no image URLs') || // Replicate error
          errorMessage.includes('IMAGE_OTHER')) &&
-        provider === 'openrouter'
+        (provider === 'openrouter' || provider === 'replicate')
+      )
+
+      // Check if this is a safety filter error - different providers have different thresholds
+      const isSafetyError = (
+        errorMessage.includes('flagged as sensitive') ||
+        errorMessage.includes('SAFETY') ||
+        errorMessage.includes('content policy') ||
+        errorMessage.includes('blocked_reason') ||
+        errorMessage.toLowerCase().includes('safety')
       )
 
       Logger.info('Provider failed - checking fallback eligibility', {
         provider,
         providerUsed,
+        model,
+        providerModelName,
         rateLimited,
         serviceError,
         isImageOtherError,
+        isSafetyError,
         isLastProvider,
         errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
-        willFallback: (rateLimited || serviceError || isImageOtherError) && !isLastProvider
+        willFallback: (rateLimited || serviceError || isImageOtherError || isSafetyError) && !isLastProvider
       })
 
-      // Fall back to next provider if rate limited OR service error OR transient image generation failure
-      if ((rateLimited || serviceError || isImageOtherError) && !isLastProvider) {
+      // Fall back to next provider if rate limited OR service error OR transient image generation failure OR safety filter
+      // (different providers have different safety thresholds)
+      if ((rateLimited || serviceError || isImageOtherError || isSafetyError) && !isLastProvider) {
         const reason = rateLimited
           ? 'rate limited'
           : serviceError
             ? 'service unavailable (503)'
-            : 'returned no images (IMAGE_OTHER)'
+            : isSafetyError
+              ? 'content safety filter triggered'
+              : 'returned no images (IMAGE_OTHER)'
         Logger.warn(`Provider ${reason}, falling back to next provider`, {
           provider,
           providerUsed,
+          model,
           reason,
           attempt: i + 1,
           totalProviders: providers.length,
@@ -368,6 +373,7 @@ export async function generateWithGemini(
       Logger.error('No fallback available - throwing error', {
         provider,
         providerUsed,
+        model,
         isLastProvider,
         rateLimited,
         serviceError,
@@ -376,7 +382,7 @@ export async function generateWithGemini(
       throw error
     }
   }
-  
+
   // Should never reach here, but TypeScript needs it
   throw lastError || new Error('All providers failed')
 }
@@ -384,6 +390,7 @@ export async function generateWithGemini(
 async function generateWithGeminiVertex(
   prompt: string,
   images: GeminiReferenceImage[],
+  modelName: string,
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
@@ -392,7 +399,7 @@ async function generateWithGeminiVertex(
   // Validate images before sending
   if (!images || images.length === 0) {
     Logger.error('generateWithGeminiVertex: No reference images provided!', {
-      modelName: Env.string('GEMINI_IMAGE_MODEL'),
+      modelName,
       imagesCount: images?.length || 0
     })
     throw new Error('No reference images provided to Gemini API')
@@ -412,7 +419,6 @@ async function generateWithGeminiVertex(
     }
   }
 
-  const modelName = Env.string('GEMINI_IMAGE_MODEL')
   const model = await getVertexGenerativeModel(modelName)
 
   const parts: Part[] = [{ text: prompt }]
@@ -469,18 +475,16 @@ async function generateWithGeminiVertex(
   if (options?.topK !== undefined) generationConfig.topK = options.topK
   if (options?.topP !== undefined) generationConfig.topP = options.topP
   
-  if (aspectRatio || (resolution && supportsResolution)) {
+  // Apply resolution using default from PROVIDER_DEFAULTS if not explicitly provided
+  const effectiveResolution = resolution ?? PROVIDER_DEFAULTS.vertex.resolution
+
+  if (aspectRatio || supportsResolution) {
     generationConfig.imageConfig = {}
     if (aspectRatio) {
       generationConfig.imageConfig.aspectRatio = aspectRatio
     }
-    if (resolution && supportsResolution) {
-      generationConfig.imageConfig.imageSize = resolution
-    } else if (resolution && !supportsResolution) {
-      Logger.warn('Resolution parameter ignored - not supported by model', {
-        modelName,
-        requestedResolution: resolution
-      })
+    if (supportsResolution) {
+      generationConfig.imageConfig.imageSize = effectiveResolution
     }
   }
 

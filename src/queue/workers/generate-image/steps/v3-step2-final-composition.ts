@@ -1,7 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { generateWithGemini } from '../gemini'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import sharp from 'sharp'
 import type { Step7Output, ReferenceImage } from '@/types/generation'
 import { logPrompt, logStepResult } from '../utils/logging'
@@ -462,7 +462,7 @@ export async function executeV3Step2(
       resolution,
       {
         temperature: AI_CONFIG.REFINEMENT_TEMPERATURE, // Lower temperature for more consistent refinement
-        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
+        stage: 'STEP_2_COMPOSITION',
       }
     )
   } catch (error) {
@@ -473,7 +473,7 @@ export async function executeV3Step2(
           stepName: 'step2-composition',
           reason: 'generation',
           result: 'failure',
-          model: 'gemini-2.5-flash-image',
+          model: STAGE_MODEL.STEP_2_COMPOSITION,
           provider: providerUsed,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -498,7 +498,7 @@ export async function executeV3Step2(
   logStepResult('V3 Step 2', {
     success: true,
     provider: generationResult.providerUsed,
-    model: Env.string('GEMINI_IMAGE_MODEL'),
+    model: STAGE_MODEL.STEP_2_COMPOSITION,
     imageSize: pngBuffer.length,
     durationMs: generationResult.usage.durationMs
   })
@@ -510,7 +510,7 @@ export async function executeV3Step2(
         stepName: 'step2-composition',
         reason: 'generation',
         result: 'success',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.STEP_2_COMPOSITION,
         provider: generationResult.providerUsed,  // Pass actual provider used
         inputTokens: generationResult.usage.inputTokens,
         outputTokens: generationResult.usage.outputTokens,

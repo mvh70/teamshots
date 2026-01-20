@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { HexColorPicker } from 'react-colorful'
 import { useTranslations } from 'next-intl'
-import { normalizeColorToHex } from '@/lib/color-utils'
+import { normalizeColorToHex, hexToColorName } from '@/lib/color-utils'
 
 export interface ColorValue {
   hex: string
@@ -75,11 +75,15 @@ export default function ColorWheelPicker({
   // Use refs to store color data (doesn't trigger re-renders)
   const colorNameListRef = useRef<ColorName[]>([])
   const colorMapRef = useRef<Map<string, string>>(new Map())
+  const colorNameDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Initialize input with color name if available (only on mount and when value changes)
+  // Initialize input with color name (only on mount and when value changes from outside)
   useEffect(() => {
-    if (currentName && currentHex && !inputValue) {
-      setInputValue(`${currentName} ${currentHex}`)
+    // Only update if there's a hex and the input is empty (don't override user typing)
+    if (currentHex && !inputValue) {
+      // Use provided name or find closest semantic color name
+      const displayName = currentName || hexToColorName(currentHex)
+      setInputValue(`${displayName} ${currentHex}`)
     }
   }, [currentName, currentHex, inputValue])
 
@@ -115,10 +119,23 @@ export default function ColorWheelPicker({
           console.error('❌ Failed to load color-name-list:', error)
         })
     }
+    
+    // Cleanup debounce timeout on unmount
+    return () => {
+      if (colorNameDebounceRef.current) {
+        clearTimeout(colorNameDebounceRef.current)
+      }
+    }
   }, [])
 
   // Normalize the current value
   const normalizedValue = normalizeColorToHex(currentHex || '#000000')
+  
+  // Dynamic placeholder showing the current swatch color name
+  const placeholderText = useMemo(() => {
+    const colorName = hexToColorName(normalizedValue)
+    return `${colorName} ${normalizedValue}`
+  }, [normalizedValue])
 
   // Helper function to strip hex codes from color names (defined before useMemo)
   const stripHexCode = (text: string): string => {
@@ -264,10 +281,21 @@ export default function ColorWheelPicker({
     }
   }
 
-  // Handle color wheel change
+  // Handle color wheel change (debounce name lookup for performance)
   const handleColorWheelChange = (newColor: string) => {
+    // Update hex immediately
+    setInputValue(newColor)
     onChange({ hex: newColor })
-    setInputValue(newColor) // Show the hex code in input
+    
+    // Debounce the expensive semantic name lookup (30k+ colors)
+    if (colorNameDebounceRef.current) {
+      clearTimeout(colorNameDebounceRef.current)
+    }
+    colorNameDebounceRef.current = setTimeout(() => {
+      const colorName = hexToColorName(newColor)
+      setInputValue(`${colorName} ${newColor}`)
+      onChange({ hex: newColor, name: colorName })
+    }, 150)
   }
 
   // Update popup position when suggestions or color wheel is shown
@@ -362,7 +390,7 @@ export default function ColorWheelPicker({
           className={`flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm ${
             disabled ? 'opacity-60 cursor-not-allowed bg-gray-100' : ''
           }`}
-          placeholder="Search colors or click swatch..."
+          placeholder={placeholderText}
         />
 
         {/* Color preview swatch button */}

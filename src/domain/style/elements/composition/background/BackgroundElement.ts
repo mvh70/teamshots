@@ -205,39 +205,52 @@ export class BackgroundElement extends StyleElement {
         break
 
       case 'custom':
-        mustFollow.push(
-          'Custom background image must be used exactly as provided',
-          'Do not modify or alter the custom background',
-          'Subject must be properly integrated with natural lighting/shadows'
-        )
         if (bgValue.key) {
           metadata.customBackgroundKey = bgValue.key
         }
 
-        // Get prepared custom background from context
-        const preparedAssets = context.generationContext.preparedAssets
-        const backgroundAsset = preparedAssets?.get(`${this.id}-custom-background`)
+        // Only add reference images during composition phase
+        // Person-generation (Step 1a) should use grey background only
+        if (context.phase === 'composition') {
+          mustFollow.push(
+            'Custom background image must be used exactly as provided',
+            'Do not modify or alter the custom background',
+            'Subject must be properly integrated with natural lighting/shadows'
+          )
 
-        // Add reference image if custom background was prepared
-        const referenceImages = []
-        if (backgroundAsset?.data.base64) {
-          referenceImages.push({
-            url: `data:${backgroundAsset.data.mimeType || 'image/png'};base64,${backgroundAsset.data.base64}`,
-            description: 'Custom background image - use exactly as provided for the scene',
-            type: 'background' as const,
-          })
+          // Get prepared custom background from context
+          const preparedAssets = context.generationContext.preparedAssets
+          const backgroundAsset = preparedAssets?.get(`${this.id}-custom-background`)
 
-          Logger.info('[BackgroundElement] Added custom background to contribution', {
-            generationId: context.generationContext.generationId,
-          })
+          // Add reference image if custom background was prepared
+          const referenceImages = []
+          if (backgroundAsset?.data.base64) {
+            referenceImages.push({
+              url: `data:${backgroundAsset.data.mimeType || 'image/png'};base64,${backgroundAsset.data.base64}`,
+              description: 'Custom background image - use exactly as provided for the scene',
+              type: 'background' as const,
+            })
 
-          return {
-            instructions,
-            mustFollow,
-            payload,
-            metadata,
-            referenceImages,
+            Logger.info('[BackgroundElement] Added custom background to contribution', {
+              generationId: context.generationContext.generationId,
+              phase: context.phase,
+            })
+
+            return {
+              instructions,
+              mustFollow,
+              payload,
+              metadata,
+              referenceImages,
+            }
           }
+        } else {
+          // For person-generation phase: just add a note in payload
+          // The actual grey background is set in Step 1a's prompt
+          Logger.debug('[BackgroundElement] Skipping custom background reference in person-generation phase', {
+            generationId: context.generationContext.generationId,
+            phase: context.phase,
+          })
         }
         break
 

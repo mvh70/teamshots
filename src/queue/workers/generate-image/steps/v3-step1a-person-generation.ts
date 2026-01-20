@@ -10,7 +10,7 @@ import {
 } from '../utils/reference-builder'
 import { logDebugPrompt } from '../utils/debug-helpers'
 import { logPrompt, logStepResult } from '../utils/logging'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { isFeatureEnabled } from '@/config/feature-flags'
@@ -28,6 +28,8 @@ import {
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
   selfieComposite: ReferenceImage
+  faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
+  bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
   downloadAsset: DownloadAssetFn
   aspectRatio: string
@@ -219,6 +221,8 @@ export async function executeV3Step1a(
   const {
     selfieReferences,
     selfieComposite,
+    faceComposite, // Split face composite (front_view + side_view selfies)
+    bodyComposite, // Split body composite (partial_body + full_body selfies)
     styleSettings,
     downloadAsset,
     aspectRatio,
@@ -339,16 +343,54 @@ export async function executeV3Step1a(
     return !desc.includes('composite image containing') && !desc.includes('stacked subject selfies')
   })
   
+  // Determine if we have any split composites
+  // If we have ANY split composite, the combined composite is redundant:
+  // - If we have both face + body: combined is just face + body stacked differently
+  // - If we have only face: combined = face (identical)
+  // - If we have only body: combined = body (identical)
+  // Combined is only useful when NO selfies are classified (no split composites at all)
+  const hasAnySplitComposite = !!faceComposite || !!bodyComposite
+
+  // Filter out combined selfie composite from preparedReferences when we have any split composite
+  const filteredPreparedReferences = hasAnySplitComposite
+    ? preparedReferences.filter(ref => {
+        const desc = ref.description?.toLowerCase() || ''
+        // Remove the combined composite (it contains "stacked" or "composite image containing")
+        return !desc.includes('stacked subject selfies') && !desc.includes('composite image containing')
+      })
+    : preparedReferences
+
   const referenceImages = [
     ...filteredInputReferences, // Pre-built references from package (outfit1 garment collage, format frame, etc.)
-    ...preparedReferences  // Prepared references (selfie composite, logo for clothing branding)
+    ...filteredPreparedReferences  // Prepared references (logo for clothing branding, and selfie composite only if needed)
   ]
-  
+
+  // Add split composites when available (face and body separated for better accuracy)
+  if (faceComposite) {
+    referenceImages.push(faceComposite)
+    Logger.debug('V3 Step 1a: Added face composite to references', {
+      generationId,
+      description: faceComposite.description?.substring(0, 80)
+    })
+  }
+  if (bodyComposite) {
+    referenceImages.push(bodyComposite)
+    Logger.debug('V3 Step 1a: Added body composite to references', {
+      generationId,
+      description: bodyComposite.description?.substring(0, 80)
+    })
+  }
+
   Logger.debug('V3 Step 1a: Merged reference images', {
     generationId: `v3-step1-${Date.now()}`,
     inputReferencesCount: input.referenceImages?.length || 0,
     filteredInputReferencesCount: filteredInputReferences.length,
     preparedReferencesCount: preparedReferences.length,
+    filteredPreparedReferencesCount: filteredPreparedReferences.length,
+    hasFaceComposite: !!faceComposite,
+    hasBodyComposite: !!bodyComposite,
+    hasAnySplitComposite,
+    combinedCompositeIncluded: !hasAnySplitComposite,
     finalReferenceCount: referenceImages.length,
     finalDescriptions: referenceImages.map(r => r.description?.substring(0, 50))
   })
@@ -514,6 +556,7 @@ export async function executeV3Step1a(
     '',
     'Must Follow Rules:',
     '- Quality: Make the image as realistic as possible, with all the natural imperfections. Ensure the skin texture and hair details are high-frequency and realistic, avoiding plastic smoothness. Add realistic effects, taken from the selfies, like some hairs sticking out.',
+    '- Face Selection: DO NOT average or blend facial features from multiple selfies. Instead, select the ONE face selfie that best matches the requested expression as your PRIMARY basis for the face. Use the other selfies only as supporting reference for skin texture, facial structure from different angles, and details - but the primary facial proportions and expression must come from that single best-matching selfie.',
     '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
 
     `- Output Dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`,
@@ -547,11 +590,33 @@ export async function executeV3Step1a(
 
   // Add explicit reference instructions focused on person/face only
   const instructionLines: string[] = [
-    '\n\nReference images are supplied with clear labels. Follow each resource precisely:',
-    '- **Subject Selfies:** Use the stacked selfie reference to recreate the person. Do not show the original selfies in the final image.',
+    '\n\nReference images are supplied with clear labels. Follow each resource precisely:'
+  ]
+
+  // Add selfie reference instructions based on whether we have split composites
+  // Note: Combined composite is only included when NO split composites exist (unclassified selfies)
+  if (faceComposite || bodyComposite) {
+    if (faceComposite) {
+      instructionLines.push(
+        '- **Face Reference:** The FACE REFERENCE composite shows face selfies from different angles. Select the ONE selfie whose expression best matches the requested expression as your PRIMARY face basis. Use other face selfies only for supporting details like skin texture, facial structure from other angles, and fine details - but do NOT average or blend the faces together.'
+      )
+    }
+    if (bodyComposite) {
+      instructionLines.push(
+        '- **Body Reference:** Use the BODY REFERENCE composite to understand the subject\'s body proportions and structure. Match the body type, posture, and build shown in these body selfies.'
+      )
+    }
+  } else {
+    // Fallback to combined composite instruction (only when no selfies are classified)
+    instructionLines.push(
+      '- **Subject Selfies:** Use the stacked selfie reference to recreate the person. Select ONE selfie whose expression best matches the requested expression as your PRIMARY face basis - do NOT average multiple faces. Use other selfies for supporting texture and structural details only.'
+    )
+  }
+
+  instructionLines.push(
     '- **Neutral Background:** Isolated on a solid flat neutral grey background (#808080). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
     '- **Focus on Person:** Your primary goal is to accurately recreate the person from the selfies - face, body, pose, and clothing. The background, lighting, and camera effects will be added later.'
-  ]
+  )
 
   // Check for garment collage reference (from outfit1 package)
   const hasGarmentCollage = input.referenceImages?.some(ref =>
@@ -630,7 +695,7 @@ export async function executeV3Step1a(
       '1K', // Fixed resolution - model max
       {
         temperature: AI_CONFIG.PERSON_GENERATION_TEMPERATURE,
-        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
+        stage: 'STEP_1A_PERSON',
       }
     )
   } catch (error) {
@@ -641,7 +706,7 @@ export async function executeV3Step1a(
           stepName: 'step1a-person',
           reason: 'generation',
           result: 'failure',
-          model: 'gemini-2.5-flash-image',
+          model: STAGE_MODEL.STEP_1A_PERSON,
           provider: providerUsed,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -671,7 +736,7 @@ export async function executeV3Step1a(
   logStepResult('V3 Step 1a', {
     success: true,
     provider: generationResult.providerUsed,
-    model: Env.string('GEMINI_IMAGE_MODEL'),
+    model: STAGE_MODEL.STEP_1A_PERSON,
     imageSize: pngBuffer.length,
     durationMs: generationResult.usage.durationMs
   })
@@ -683,7 +748,7 @@ export async function executeV3Step1a(
         stepName: 'step1a-person',
         reason: 'generation',
         result: 'success',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.STEP_1A_PERSON,
         provider: generationResult.providerUsed,  // Pass actual provider used
         inputTokens: generationResult.usage.inputTokens,
         outputTokens: generationResult.usage.outputTokens,

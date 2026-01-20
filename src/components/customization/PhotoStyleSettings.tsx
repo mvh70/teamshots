@@ -317,8 +317,8 @@ export default function PhotoStyleSettings({
 
   // Auto-sync outfit colors to clothing colors when outfit analysis completes
   React.useEffect(() => {
-    // Only sync if we have detected colors from outfit analysis
-    const outfitColors = value.customClothing?.colors
+    // Only sync if we have detected colors from outfit analysis (now in value.colors)
+    const outfitColors = value.customClothing?.value?.colors
     if (!outfitColors) return
 
     // Create a signature of the outfit colors to track if they've changed
@@ -350,7 +350,7 @@ export default function PhotoStyleSettings({
         : userChoice(newClothingColors)
       onChange(newSettings)
     }
-  }, [value.customClothing?.colors, value, onChange]) // Re-run when outfit colors change
+  }, [value.customClothing?.value?.colors, value, onChange]) // Re-run when outfit colors change
 
   // Auto-reveal locked sections after user customizes editable sections (Context B only)
   React.useEffect(() => {
@@ -439,16 +439,32 @@ export default function PhotoStyleSettings({
         packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
     }
 
-    // Get the new value from the element config
+    // Get the current setting to preserve its value when toggling
+    const currentSetting = (newSettings as Record<string, unknown>)[category] as 
+      { mode?: string; value?: unknown; type?: string } | undefined
+
+    // Get the new value from the element config as a fallback for default values
     const packageDefault = (packageDefaults as Record<string, unknown>)[category]
-    const newValue = isPredefined
+    const defaultValue = isPredefined
       ? elementConfig.getDefaultPredefined(packageDefault)
       : elementConfig.getDefaultUserChoice()
 
-    // Special handling for clothingColors to preserve existing colors
-    if (category === 'clothingColors' && hasValue(newSettings.clothingColors)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (newValue as any).value = newSettings.clothingColors.value
+    // Preserve existing value when toggling modes
+    // This ensures user settings aren't lost when switching between predefined and user-choice
+    let newValue = defaultValue
+    
+    // All categories now use the ElementSetting pattern (mode + value)
+    // Keep the existing value, just change the mode
+    if (currentSetting && 'mode' in currentSetting && currentSetting.value !== undefined) {
+      newValue = {
+        mode: isPredefined ? 'predefined' : 'user-choice',
+        value: currentSetting.value
+      }
+    }
+    // Legacy fallback: some old stored data might use 'type' field directly
+    // In this case, use the default value since there's no inner value to preserve
+    else if (currentSetting && 'type' in currentSetting && !('mode' in currentSetting)) {
+      newValue = defaultValue
     }
 
     // Update the setting
@@ -728,14 +744,14 @@ export default function PhotoStyleSettings({
                 showPredefinedBadge={isPredefined}
                 showHeader={false}
                 excludeColors={excludedClothingColors}
-                customClothingColors={value.customClothing?.colors}
+                customClothingColors={value.customClothing?.value?.colors}
                 defaultDisplayColors={hasValue(resolvedClothingColors) ? resolvedClothingColors.value : undefined}
               />
             )}
 
             {category.key === 'customClothing' && (
               <CustomClothingSelector
-                value={value.customClothing || { type: 'predefined' }}
+                value={value.customClothing || { mode: 'predefined', value: undefined }}
                 onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
                 disabled={!showToggles && readonlyPredefined && isPredefined}
                 mode={showToggles ? 'admin' : 'user'}
@@ -774,7 +790,7 @@ export default function PhotoStyleSettings({
 
             {category.key === 'pose' && (
               <PoseSelector
-                value={value.pose || { type: 'user-choice' }}
+                value={value.pose || { mode: 'user-choice', value: undefined }}
                 onChange={(settings) => handleCategorySettingsChange('pose', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
                 isDisabled={!showToggles && readonlyPredefined && isPredefined}

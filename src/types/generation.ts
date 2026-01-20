@@ -21,6 +21,7 @@ export interface GenerationContext {
   styleSettings: PhotoStyleSettings
   selfieKeys: string[]
   processedSelfies: Record<string, Buffer>
+  selfieTypeMap?: Record<string, string> // Map of S3 key to selfie type for split composites
   options: {
     workflowVersion?: 'v3' // Workflow version to determine labelInstruction generation
   }
@@ -34,6 +35,10 @@ export interface GenerationPayload {
   labelInstruction?: string // Optional for V3 (V3 builds its own prompt structure)
   aspectRatio: string
   aspectRatioDescription: string
+  // Split selfie composites for focused reference
+  faceComposite?: ReferenceImage // Face-focused composite (front_view + side_view selfies)
+  bodyComposite?: ReferenceImage // Body-focused composite (partial_body + full_body selfies)
+  selfieComposite?: ReferenceImage // Combined fallback composite
 }
 
 // V2 Workflow Types

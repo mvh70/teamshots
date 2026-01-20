@@ -99,6 +99,8 @@ export interface V3WorkflowInput {
   backgroundAssetId?: string // Background asset ID for fingerprinting
   logoAssetId?: string // Logo asset ID for fingerprinting
   selfieComposite: ReferenceImage
+  faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
+  bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
   prompt: string // JSON only (no rules)
   mustFollowRules: string[] // Rules from elements
@@ -208,6 +210,8 @@ async function generatePersonWithRetry({
   job,
   processedSelfieReferences,
   selfieComposite,
+  faceComposite,
+  bodyComposite,
   styleSettings,
   downloadAsset,
   aspectRatio,
@@ -232,6 +236,8 @@ async function generatePersonWithRetry({
   job: Job
   processedSelfieReferences: ReferenceImage[]
   selfieComposite: ReferenceImage
+  faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
+  bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
   downloadAsset: DownloadAssetFn
   aspectRatio: string
@@ -271,6 +277,8 @@ async function generatePersonWithRetry({
         return await executeV3Step1a({
           selfieReferences: processedSelfieReferences,
           selfieComposite,
+          faceComposite, // Split face composite (front_view + side_view selfies)
+          bodyComposite, // Split body composite (partial_body + full_body selfies)
           styleSettings,
           downloadAsset,
           aspectRatio,
@@ -407,7 +415,10 @@ async function generatePersonWithRetry({
 }
 
 /**
- * Step 1b: Generate background with branding (if applicable) with retry
+ * Step 1b: Generate background with branding (DISABLED - always returns undefined)
+ * 
+ * Background and branding are now handled in Step 2 via element composition.
+ * Custom backgrounds are user-uploaded images that don't need AI generation.
  */
 async function generateBackgroundWithRetry({
   job,
@@ -444,14 +455,32 @@ async function generateBackgroundWithRetry({
   intermediateStorage: IntermediateStorageHandlers
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; assetId?: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage; reused?: boolean } | undefined> {
+  // ============================================================================
+  // STEP 1B DISABLED - TO RE-ENABLE: Comment out the return statement below
+  // ============================================================================
+  // Background generation (including custom backgrounds) and logo branding are 
+  // now handled in Step 2 via element composition. Custom backgrounds are 
+  // user-uploaded images that don't need AI generation.
+  //
+  // To re-enable Step 1b: Comment out lines 465-470 and uncomment lines 472-659
+  // ============================================================================
+  
+  const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
+  
+  Logger.info('V3 Step 1b: Skipping background generation (Step 1b disabled)', {
+    backgroundType: styleSettings.background?.value?.type,
+    brandingPosition: brandingValue?.position,
+    note: 'All background and branding handled in Step 2 for better integration'
+  })
+  return undefined
+
+  /* COMMENTED OUT - TO RE-ENABLE STEP 1B, UNCOMMENT FROM HERE...
+  
   // Check if Step 1b should run
   // Step 1b ONLY runs for custom backgrounds
   // Logo branding on background/elements is handled in Step 2 via element composition
   const bgValue1b = styleSettings.background?.value
   const hasCustomBackground = bgValue1b?.type === 'custom' && bgValue1b.key
-
-  // Extract branding value for logging
-  const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
 
   const shouldRunStep1b = hasCustomBackground
 
@@ -657,13 +686,16 @@ async function generateBackgroundWithRetry({
   }
 
   throw new Error('V3 Step 1b: Failed to generate background after retries')
+  
+  ...TO HERE TO RE-ENABLE STEP 1B */
 }
 
 /**
- * Execute the V3 parallel workflow
- * Step 1a (Person) and Step 1b (Background) run in parallel
- * Then Step 2 (Composition/Refinement) combines them
- * Finally Step 3 (Final Eval) validates the result
+ * Execute the V3 workflow
+ * Step 1a (Person) generates the person on neutral background
+ * Step 1b (Background) is DISABLED - background handled in Step 2
+ * Step 2 (Composition/Refinement) combines person with background and applies branding
+ * Step 3 (Final Eval) validates the result
  */
 export async function executeV3Workflow({
   job,
@@ -676,6 +708,8 @@ export async function executeV3Workflow({
   backgroundAssetId,
   logoAssetId,
   selfieComposite,
+  faceComposite, // Split face composite (front_view + side_view selfies)
+  bodyComposite, // Split body composite (partial_body + full_body selfies)
   styleSettings,
   prompt,
   mustFollowRules,
@@ -843,7 +877,7 @@ export async function executeV3Workflow({
     // Continue without prepared assets - elements will fall back gracefully
   }
 
-  Logger.info('V3: Preparing Step 1a and Step 1b execution', { generationId })
+  Logger.info('V3: Preparing Step 1a execution (Step 1b disabled)', { generationId })
 
   type Step1aWrappedResult = {
     output: Awaited<ReturnType<typeof generatePersonWithRetry>>
@@ -880,6 +914,8 @@ export async function executeV3Workflow({
       job,
       processedSelfieReferences,
       selfieComposite,
+      faceComposite, // Split face composite (front_view + side_view selfies)
+      bodyComposite, // Split body composite (partial_body + full_body selfies)
       styleSettings,
       downloadAsset,
       aspectRatio,
@@ -1142,8 +1178,7 @@ export async function executeV3Workflow({
 
   const [step1aResult, step1bResult] = await Promise.allSettled([step1aPromise, step1bPromise])
 
-  // IMPORTANT: Always persist Step 1b state first, even if Step 1a failed
-  // This allows Step 1b results to be cached and reused on retry
+  // Step 1b is disabled and always returns undefined - kept for backward compatibility
   let step1bOutput: Awaited<ReturnType<typeof generateBackgroundWithRetry>> | undefined
   if (step1bResult.status === 'fulfilled') {
     step1bOutput = step1bResult.value.output
@@ -1155,7 +1190,7 @@ export async function executeV3Workflow({
     if (step1bOutput) {
       Logger.info('V3 Step 1b completed successfully', { generationId })
     } else {
-      Logger.info('V3 Step 1b was skipped (no branding in background)', { generationId })
+      Logger.info('V3 Step 1b skipped (disabled)', { generationId })
     }
   } else {
     Logger.warn('V3 Step 1b failed, proceeding without it', {
@@ -1164,11 +1199,10 @@ export async function executeV3Workflow({
     })
   }
 
-  // Now check Step 1a and throw error if it failed (after Step 1b state is saved)
+  // Now check Step 1a and throw error if it failed
   if (step1aResult.status === 'rejected') {
-    Logger.error('V3 Step 1a failed - Step 1b state saved for reuse on retry', {
+    Logger.error('V3 Step 1a failed', {
       error: step1aResult.reason,
-      step1bCached: step1bResult.status === 'fulfilled' ? !!step1bResult.value?.statePatch : false,
       generationId
     })
     throw step1aResult.reason

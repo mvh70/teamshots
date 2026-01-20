@@ -13,8 +13,8 @@ function getThumbnailUrl(key: string): string {
 export function CustomClothingSummary({ settings }: ElementSummaryProps<CustomClothingSettings>) {
   if (!settings) return null
 
-  const customClothingKey = settings.outfitS3Key || settings.assetId
-  const showContent = settings.type === 'user-choice' || customClothingKey
+  const customClothingKey = settings.value?.outfitS3Key || settings.value?.assetId
+  const showContent = settings.mode === 'user-choice' || customClothingKey
 
   if (!showContent) return null
 
@@ -42,8 +42,8 @@ export function CustomClothingSummary({ settings }: ElementSummaryProps<CustomCl
           </div>
         </div>
       ) : (
-        // Show "User choice" if type is user-choice OR if image failed to load
-        (settings.type === 'user-choice' || imageError) && (
+        // Show "User choice" if mode is user-choice OR if image failed to load
+        (settings.mode === 'user-choice' || imageError) && (
           <div className="ml-6 text-sm text-gray-600 inline-flex items-center gap-1.5">
             <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
             <span>User choice</span>

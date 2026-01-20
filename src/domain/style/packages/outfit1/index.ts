@@ -54,7 +54,8 @@ const OUTFIT1_PRESET_DEFAULTS = getDefaultPresetSettings(OUTFIT1_PRESET)
 const DEFAULTS = {
   ...OUTFIT1_PRESET_DEFAULTS,
   customClothing: {
-    type: 'predefined' as const
+    mode: 'predefined' as const,
+    value: undefined
   },
   clothingColors: userChoice<ClothingColorValue>(),
   shotType: predefined({ type: 'medium-close-up' as const }),
@@ -96,10 +97,10 @@ export const outfit1: ClientStylePackage = {
       settings: {
         background: ui.background,
         branding: ui.branding,
-        // Preserve customClothing if it exists, even if just { type: 'user-choice' } without uploaded outfit
-        customClothing: ui.customClothing && typeof ui.customClothing === 'object' && 'type' in ui.customClothing
+        // Preserve customClothing if it exists, even if just { mode: 'user-choice' } without uploaded outfit
+        customClothing: ui.customClothing && typeof ui.customClothing === 'object' && 'mode' in ui.customClothing
           ? ui.customClothing
-          : { type: 'predefined' as const },
+          : { mode: 'predefined' as const, value: undefined },
         clothingColors: ui.clothingColors || userChoice(),
         pose: ui.pose,
         expression: ui.expression,
@@ -132,10 +133,10 @@ export const outfit1: ClientStylePackage = {
       // Sync colors from customClothing to clothingColors if outfit has colors
       // This ensures colors show up on initial page load (server-side)
       // Merge customClothing colors into clothingColors (customClothing colors take precedence)
-      if (customClothingResult.colors &&
-          customClothingResult.type === 'user-choice' &&
+      if (customClothingResult.value?.colors &&
+          customClothingResult.mode === 'user-choice' &&
           isUserChoice(clothingColorsResult)) {
-        const outfitColors = customClothingResult.colors
+        const outfitColors = customClothingResult.value.colors
         const existingColors = hasValue(clothingColorsResult) ? clothingColorsResult.value : {}
 
         // Merge colors: outfit colors take precedence, but keep existing ones if outfit doesn't have them

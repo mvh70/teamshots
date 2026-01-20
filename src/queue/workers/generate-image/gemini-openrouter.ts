@@ -1,5 +1,6 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
+import { PROVIDER_DEFAULTS } from './config'
 import type { GeminiGenerationResult, GeminiReferenceImage, GeminiUsageMetadata, GenerationOptions } from './gemini'
 
 /**
@@ -8,9 +9,9 @@ import type { GeminiGenerationResult, GeminiReferenceImage, GeminiUsageMetadata,
 export async function generateWithGeminiOpenRouter(
   prompt: string,
   images: GeminiReferenceImage[],
+  modelName: string,
   aspectRatio?: string,
-  // Note: Resolution is not currently configurable via OpenRouter; included for API parity
-  _resolution?: '1K' | '2K' | '4K',
+  resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
 ): Promise<GeminiGenerationResult> {
   const apiKey = Env.string('OPENROUTER_API_KEY', '')
@@ -54,11 +55,9 @@ export async function generateWithGeminiOpenRouter(
     }
   }
 
-  const modelFromEnv = Env.string('OPENROUTER_GEMINI_IMAGE_MODEL', 'google/gemini-2.5-flash-image-preview')
-
   // Build request body with proper OpenRouter API format
   const requestBody: Record<string, unknown> = {
-    model: modelFromEnv,
+    model: modelName,
     messages: [
       {
         role: 'user',
@@ -69,9 +68,17 @@ export async function generateWithGeminiOpenRouter(
     stream: false
   }
 
-  // Add image_config if aspectRatio is specified
-  if (aspectRatio) {
-    requestBody.image_config = { aspect_ratio: aspectRatio }
+  // Add image_config if aspectRatio or resolution is specified
+  const effectiveResolution = resolution ?? PROVIDER_DEFAULTS.openrouter.resolution
+  if (aspectRatio || effectiveResolution) {
+    const imageConfig: Record<string, string> = {}
+    if (aspectRatio) {
+      imageConfig.aspect_ratio = aspectRatio
+    }
+    if (effectiveResolution) {
+      imageConfig.image_size = effectiveResolution
+    }
+    requestBody.image_config = imageConfig
   }
 
   // Add generation options if provided
@@ -153,7 +160,7 @@ export async function generateWithGeminiOpenRouter(
       }
 
       Logger.error('OpenRouter returned no images - DETAILED DEBUG', {
-        model: modelFromEnv,
+        model: modelName,
         aspectRatio,
         referenceImageCount: images.length,
         referenceImageSizes: images.map(img => ({
@@ -192,9 +199,10 @@ export async function generateWithGeminiOpenRouter(
 
     Logger.debug('OpenRouter generation succeeded', {
       provider: 'openrouter',
-      model: modelFromEnv,
+      model: modelName,
       imagesGenerated: buffers.length,
       aspectRatio,
+      resolution: effectiveResolution,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       durationMs: usage.durationMs
@@ -209,7 +217,7 @@ export async function generateWithGeminiOpenRouter(
     Logger.error('OpenRouter generation failed', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      model: modelFromEnv,
+      model: modelName,
       aspectRatio
     })
     throw error

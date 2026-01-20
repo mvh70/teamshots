@@ -563,8 +563,8 @@ export default function InviteCustomizationPage() {
       promptParts.push(`${settings.expression.value.type} expression`)
     }
 
-    if (settings.lighting?.type) {
-      promptParts.push(`${settings.lighting.type} lighting`)
+    if (settings.lighting?.value?.type) {
+      promptParts.push(`${settings.lighting.value.type} lighting`)
     }
 
     if (promptParts.length === 0) {

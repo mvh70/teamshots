@@ -28,6 +28,7 @@ import { isUserChoice, hasValue } from '../../base/element-types'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
+import { STAGE_MODEL } from '@/queue/workers/generate-image/config'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getColorHex, type ColorValue } from '../../clothing-colors/types'
 import type { S3Client } from '@aws-sdk/client-s3'
@@ -423,7 +424,7 @@ export class ClothingOverlayElement extends StyleElement {
         ],
         '3:4', // Portrait aspect ratio for clothing
         undefined,
-        { temperature: 0.2 }
+        { temperature: 0.2, stage: 'CLOTHING_OVERLAY' }
       )
 
       if (!result.images || result.images.length === 0) {
@@ -441,7 +442,7 @@ export class ClothingOverlayElement extends StyleElement {
       await CostTrackingService.trackCall({
         generationId: generationId || 'unknown',
         provider: result.providerUsed || 'unknown',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.CLOTHING_OVERLAY,
         inputTokens: result.usage.inputTokens || 0,
         outputTokens: result.usage.outputTokens || 0,
         imagesGenerated: 1,

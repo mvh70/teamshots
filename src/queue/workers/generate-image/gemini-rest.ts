@@ -3,6 +3,7 @@ import { GoogleGenAI, HarmCategory } from '@google/genai'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { isRateLimitError } from '@/lib/rate-limit-retry'
+import { PROVIDER_DEFAULTS } from './config'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -240,6 +241,7 @@ async function generateWithGemini3DirectFetch(
 export async function generateWithGeminiRest(
   prompt: string,
   images: GeminiReferenceImage[],
+  modelName: string,
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
@@ -249,20 +251,6 @@ export async function generateWithGeminiRest(
   const apiKey = Env.string('GOOGLE_CLOUD_API_KEY', '') || Env.string('GEMINI_API_KEY', '')
   if (!apiKey) {
     throw new Error('GOOGLE_CLOUD_API_KEY or GEMINI_API_KEY environment variable is required for REST API client')
-  }
-
-  let modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
-
-  // Normalize Vertex AI model names ending in "-image" to base model names for REST API
-  // e.g., "gemini-2.5-flash-image" → "gemini-2.5-flash"
-  // REST API uses the base model name with responseModalities to enable image generation
-  // NOTE: Don't normalize Gemini 3 models - they use "-image-preview" as part of the actual model name
-  if (modelName.endsWith('-image') && !modelName.includes('gemini-3')) {
-    modelName = modelName.slice(0, -6) // Remove '-image' suffix
-    Logger.debug('Normalized model name for REST API', {
-      original: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'),
-      normalized: modelName
-    })
   }
 
   // Use direct fetch for Gemini 3 models (SDK doesn't support them properly yet)
@@ -283,7 +271,7 @@ export async function generateWithGeminiRest(
     topP: options?.topP ?? 0.95,
     imageConfig: {
       aspectRatio: aspectRatio ?? "1:1",
-      imageSize: resolution ?? "1K",
+      imageSize: resolution ?? PROVIDER_DEFAULTS.rest.resolution,
       outputMimeType: "image/png",
     },
   }

@@ -6,7 +6,7 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
-import { getColorHex, type ColorValue } from '../../clothing-colors/types'
+import { getColorHex, getColorDisplay, type ColorValue } from '../../clothing-colors/types'
 import { hasValue } from '../../base/element-types'
 import type { ShotTypeValue } from '@/types/photo-style'
 
@@ -113,30 +113,30 @@ export class ClothingColorsElement extends StyleElement {
     if (isSingleLayer) {
       // Single-layer garments: the garment itself is the top layer
       if (colors.topLayer) {
-        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${getColorHex(colors.topLayer)} color`)
+        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${getColorDisplay(colors.topLayer)} color`)
       }
     } else {
       // Multi-layer garments: topLayer is the outer garment (jacket, blazer), baseLayer is the shirt underneath
       if (colors.topLayer) {
-        colorPalette.push(`top layer (e.g., suit jacket, blazer, cardigan): ${getColorHex(colors.topLayer)} color`)
+        colorPalette.push(`top layer (e.g., suit jacket, blazer, cardigan): ${getColorDisplay(colors.topLayer)} color`)
       }
       if (colors.baseLayer) {
-        colorPalette.push(`base layer (e.g., shirt under jacket, dress shirt under blazer): ${getColorHex(colors.baseLayer)} color`)
+        colorPalette.push(`base layer (e.g., shirt under jacket, dress shirt under blazer): ${getColorDisplay(colors.baseLayer)} color`)
       }
     }
 
     // Bottom garment handling based on shot type visibility
     if (colors.bottom && isBottomVisible) {
       // Fully visible - include color as primary specification
-      colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${getColorHex(colors.bottom)} color`)
+      colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${getColorDisplay(colors.bottom)} color`)
     } else if (colors.bottom && mayPartiallyShowBottom) {
       // Edge case: shot cuts near waistline - bottom may be partially visible
       // Include color as fallback to ensure consistency if AI shows any trousers
-      colorPalette.push(`bottom garment if partially visible (trousers, skirt): ${getColorHex(colors.bottom)} color`)
+      colorPalette.push(`bottom garment if partially visible (trousers, skirt): ${getColorDisplay(colors.bottom)} color`)
       metadata.bottomColorPartiallyVisible = true
       // Also add a must-follow rule to ensure color consistency
       mustFollow.push(
-        `If any bottom garment (trousers, skirt) is partially visible at the waistline, it MUST be ${getColorHex(colors.bottom)} color - do not use a random color`
+        `If any bottom garment (trousers, skirt) is partially visible at the waistline, it MUST be ${getColorDisplay(colors.bottom)} color - do not use a random color`
       )
     } else if (colors.bottom) {
       // Not expected to be visible at all
@@ -145,7 +145,7 @@ export class ClothingColorsElement extends StyleElement {
 
     // Shoes (only if visible in full-body shot)
     if (colors.shoes && isFullBody) {
-      colorPalette.push(`shoes (dress shoes, loafers, heels): ${getColorHex(colors.shoes)} color`)
+      colorPalette.push(`shoes (dress shoes, loafers, heels): ${getColorDisplay(colors.shoes)} color`)
     } else if (colors.shoes && !isFullBody) {
       // Log that shoes color is specified but won't be visible
       metadata.shoesColorNotVisible = true

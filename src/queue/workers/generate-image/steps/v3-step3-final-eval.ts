@@ -1,9 +1,8 @@
 import { Logger } from '@/lib/logger'
 import type { Step8Output } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
-import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { isFeatureEnabled } from '@/config/feature-flags'
@@ -126,10 +125,8 @@ export async function executeV3Step3(
   }
   
   // Inlined Evaluation Logic (replacing evaluateFinalImage)
-  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+  const modelName = STAGE_MODEL.EVALUATION
+
   Logger.debug('V3 Step 3: Evaluating final image', { modelName })
   
   const actualWidth = metadata.width
@@ -392,7 +389,7 @@ export async function executeV3Step3(
               stepName: 'step3-final-eval',
               reason: 'evaluation',
               result: 'success',
-              model: 'gemini-2.5-flash',
+              model: STAGE_MODEL.EVALUATION,
               inputTokens: usageMetadata.promptTokenCount,
               outputTokens: usageMetadata.candidatesTokenCount,
               durationMs: evalDurationMs,
@@ -436,7 +433,7 @@ export async function executeV3Step3(
           stepName: 'step3-final-eval',
           reason: 'evaluation',
           result: 'failure',
-          model: 'gemini-2.5-flash',
+          model: STAGE_MODEL.EVALUATION,
           durationMs: evalDurationMs,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -459,7 +456,7 @@ export async function executeV3Step3(
         stepName: 'step3-final-eval',
         reason: 'evaluation',
         result: 'success',
-        model: 'gemini-2.5-flash',
+        model: STAGE_MODEL.EVALUATION,
         inputTokens: usageMetadata.promptTokenCount,
         outputTokens: usageMetadata.candidatesTokenCount,
         durationMs: evalDurationMs,

@@ -559,7 +559,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className={`flex px-3 py-4 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
+          <div className={`h-24 flex px-3 py-4 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-start justify-between'}`}>
             {!effectiveCollapsed && (
               <Link href="/" className="flex items-center">
                 <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7" style={{ width: 'auto' }} priority />
@@ -623,9 +623,9 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-3 py-4 space-y-2 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+        <nav className={`flex-1 px-3 py-4 min-h-0 bg-white ${effectiveCollapsed ? 'space-y-2' : ''} ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
           {!effectiveCollapsed ? (
-            <div className="h-full overflow-x-visible">
+            <div className="h-full overflow-x-visible space-y-2">
               {!navReady ? null : navigation.map((item) => {
                 const Icon = item.current ? item.iconSolid : item.icon
                 return (

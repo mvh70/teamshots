@@ -11,6 +11,7 @@ export type AIModelId =
   | 'gemini-2.5-flash'       // Text/evaluation model
   | 'gemini-2.5-flash-image' // Image generation model
   | 'gemini-2.5-flash-image-openrouter' // Image generation via OpenRouter
+  | 'gemini-3-pro'           // Gemini 3 Pro text model
   | 'gemini-3-pro-image'     // Gemini 3 Pro Image (via REST API)
   | 'nano-banana'            // Replicate fallback
 
@@ -93,6 +94,18 @@ export const AI_COST_CONFIG = {
         perImageGenerated: 0.039,
       },
       description: 'Gemini 3 Pro Image generation via REST API (aka Nano Banana 3)',
+    } satisfies ModelConfig,
+
+    // Gemini 3 Pro (text model - via REST API or OpenRouter)
+    'gemini-3-pro': {
+      id: 'gemini-3-pro',
+      provider: 'gemini-rest',
+      pricing: {
+        type: 'token',
+        inputPer1MTokens: 0.075,  // Pricing TBD - using 2.5 Flash as baseline
+        outputPer1MTokens: 0.30,
+      },
+      description: 'Gemini 3 Pro for text evaluation and analysis',
     } satisfies ModelConfig,
 
     // Replicate fallback (nano-banana)

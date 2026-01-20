@@ -8,8 +8,8 @@
  */
 
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '@/queue/workers/generate-image/gemini'
+import { STAGE_MODEL } from '@/queue/workers/generate-image/config'
 import type { SelfieType, ClassificationResult, QualityRating } from './selfie-types'
 
 export interface ClassificationInput {
@@ -133,9 +133,7 @@ Rules:
 export async function classifySelfieType(
   input: ClassificationInput
 ): Promise<ClassificationResult> {
-  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.0-flash'
+  const modelName = STAGE_MODEL.SELFIE_CLASSIFICATION
 
   Logger.debug('Classifying selfie type', {
     mimeType: input.mimeType,

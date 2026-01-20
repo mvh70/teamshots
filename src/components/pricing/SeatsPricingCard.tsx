@@ -98,11 +98,18 @@ export default function SeatsPricingCard({
   const total = calculateTotal(validatedSeats);
   const topUpTotal = isTopUpMode ? calculateTotal(validatedSeats) - calculateTotal(currentSeats) : total;
 
-  // Calculate average price per seat for display (more accurate for graduated pricing)
-  // Use discounted price if promo code is applied
-  const effectiveTotal = promoDiscount ? promoDiscount.finalAmount : (isTopUpMode ? topUpTotal : total);
-  const seatsForAverage = isTopUpMode ? additionalSeats : validatedSeats;
-  const averagePricePerSeat = seatsForAverage > 0 ? effectiveTotal / seatsForAverage : 0;
+  // Get the marginal price per seat at the current tier
+  const pricePerSeatAtTier = PRICING_CONFIG.seats.getPricePerSeatAtTier(validatedSeats);
+  
+  // If promo code is applied, calculate the discounted price per seat
+  const displayPricePerSeat = promoDiscount 
+    ? promoDiscount.finalAmount / (isTopUpMode ? additionalSeats : validatedSeats)
+    : pricePerSeatAtTier;
+
+  // Calculate discount percentage compared to full price (smallest tier)
+  const fullPrice = PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat;
+  const discountPercentage = fullPrice > 0 ? Math.round(((fullPrice - pricePerSeatAtTier) / fullPrice) * 100) : 0;
+  const hasDiscount = discountPercentage > 0 && !promoDiscount;
 
   const savings = getSavings(validatedSeats);
   const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);
@@ -141,24 +148,101 @@ export default function SeatsPricingCard({
         <div className="text-sm text-gray-600">{t('seats.selectSeats')}</div>
       </div>
 
-        {/* Slider */}
-        <input
-          type="range"
-          min={minSeats}
-          max="200"
-          step="1"
-          value={validatedSeats}
-          onChange={(e) => {
-            const newValue = Number(e.target.value);
-            // Enforce minimum
-            const clampedValue = Math.max(newValue, minSeats);
-            setSeats(clampedValue);
-          }}
-          className="w-full h-3 bg-indigo-100 rounded-lg appearance-none cursor-pointer slider-thumb"
-          style={{
-            background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF 100%)`
-          }}
-        />
+        {/* Enhanced Slider */}
+        <div className="relative px-2">
+          {/* Visual indicator - arrows pointing to slider */}
+          <div className="flex justify-center mb-2 text-brand-primary">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <span className="text-2xl">←</span>
+              <span>Drag slider to adjust</span>
+              <span className="text-2xl">→</span>
+            </div>
+          </div>
+
+          <style>{`
+            input[type="range"].pricing-slider {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 100%;
+              height: 12px;
+              border-radius: 12px;
+              outline: none;
+              background: transparent;
+            }
+            
+            /* Gradient track background */
+            input[type="range"].pricing-slider {
+              background-image: linear-gradient(to right, #4F46E5 0%, #4F46E5 50%, #E0E7FF 50%, #E0E7FF 100%);
+            }
+            
+            /* Thumb with grip pattern */
+            input[type="range"].pricing-slider::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 48px;
+              height: 48px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+              border: 6px solid #4F46E5;
+              cursor: grab;
+              box-shadow: 0 4px 16px rgba(79, 70, 229, 0.5), inset 0 -2px 4px rgba(0,0,0,0.1);
+              position: relative;
+              transition: all 0.2s ease;
+            }
+            
+            input[type="range"].pricing-slider::-webkit-slider-thumb:hover {
+              border-width: 7px;
+              box-shadow: 0 6px 24px rgba(79, 70, 229, 0.7), inset 0 -2px 4px rgba(0,0,0,0.1);
+              transform: scale(1.05);
+            }
+            
+            input[type="range"].pricing-slider::-webkit-slider-thumb:active {
+              cursor: grabbing;
+              transform: scale(0.98);
+              box-shadow: 0 2px 8px rgba(79, 70, 229, 0.6), inset 0 -2px 4px rgba(0,0,0,0.1);
+            }
+            
+            input[type="range"].pricing-slider::-moz-range-thumb {
+              width: 48px;
+              height: 48px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+              border: 6px solid #4F46E5;
+              cursor: grab;
+              box-shadow: 0 4px 16px rgba(79, 70, 229, 0.5), inset 0 -2px 4px rgba(0,0,0,0.1);
+              transition: all 0.2s ease;
+            }
+            
+            input[type="range"].pricing-slider::-moz-range-thumb:hover {
+              border-width: 7px;
+              box-shadow: 0 6px 24px rgba(79, 70, 229, 0.7), inset 0 -2px 4px rgba(0,0,0,0.1);
+              transform: scale(1.05);
+            }
+            
+            input[type="range"].pricing-slider::-moz-range-thumb:active {
+              cursor: grabbing;
+              transform: scale(0.98);
+              box-shadow: 0 2px 8px rgba(79, 70, 229, 0.6), inset 0 -2px 4px rgba(0,0,0,0.1);
+            }
+          `}</style>
+          
+          <input
+            type="range"
+            min={minSeats}
+            max="200"
+            step="1"
+            value={validatedSeats}
+            onChange={(e) => {
+              const newValue = Number(e.target.value);
+              const clampedValue = Math.max(newValue, minSeats);
+              setSeats(clampedValue);
+            }}
+            className="pricing-slider"
+            style={{
+              background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF 100%)`
+            }}
+          />
+        </div>
       </div>
 
       {/* Pricing Display */}
@@ -173,10 +257,18 @@ export default function SeatsPricingCard({
         )}
 
         {/* Price per seat - prominent */}
-        <div className="text-4xl font-bold text-gray-900 mb-1">
-          ${averagePricePerSeat.toFixed(2)}
-          <span className="text-lg font-medium text-gray-500"> {t('seats.perSeat')}</span>
+        <div className="flex items-start justify-center gap-2 mb-1">
+          <div className="text-4xl font-bold text-gray-900">
+            ${displayPricePerSeat.toFixed(2)}
+          </div>
+          {/* Discount badge */}
+          {hasDiscount && (
+            <div className="bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white whitespace-nowrap mt-1">
+              {discountPercentage}% OFF
+            </div>
+          )}
         </div>
+        <div className="text-lg font-medium text-gray-500">{t('seats.perSeat')}</div>
 
         {/* Total price - secondary */}
         {promoDiscount ? (

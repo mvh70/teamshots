@@ -32,8 +32,18 @@ export interface StyleSettings {
   preset?: 'corporate' | 'casual' | 'creative' | 'modern' | 'classic' | 'artistic'
 }
 
+// Lighting types that can be selected as a value
+export type LightingType = 'natural' | 'studio' | 'soft' | 'dramatic'
+
+// The inner value when a lighting type is selected
+export interface LightingValue {
+  type: LightingType
+}
+
+// Full lighting settings with mode wrapper (matches ElementSetting pattern)
 export interface LightingSettings {
-  type: 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice'
+  mode: 'predefined' | 'user-choice'
+  value?: LightingValue
 }
 
 export type SubjectCountSetting = '1' | '2-3' | '4-8' | '9+'
@@ -102,7 +112,8 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     value: undefined
   },
   customClothing: {
-    type: 'predefined'
+    mode: 'predefined',
+    value: undefined
   },
   shotType: {
     mode: 'user-choice',
@@ -119,7 +130,8 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     value: undefined
   },
   lighting: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   pose: {
     mode: 'user-choice',

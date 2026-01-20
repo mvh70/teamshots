@@ -36,17 +36,18 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
 
     const settings = value as CustomClothingSettings
 
-    // type is required
-    if (settings.type !== 'user-choice' && settings.type !== 'predefined') {
+    // mode is required
+    if (settings.mode !== 'user-choice' && settings.mode !== 'predefined') {
       return false
     }
 
-    // If user-choice, validate optional fields if present
-    if (settings.type === 'user-choice') {
-      // assetId/outfitS3Key are optional - user may set type to user-choice before uploading
+    // If user-choice with a value, validate the value fields
+    if (settings.mode === 'user-choice' && settings.value) {
+      const val = settings.value
+      // assetId/outfitS3Key are optional - user may set mode to user-choice before uploading
       // If colors are provided, validate structure
-      if (settings.colors) {
-        const { topLayer, bottom } = settings.colors
+      if (val.colors) {
+        const { topLayer, bottom } = val.colors
         if (!topLayer || !bottom) {
           return false
         }
@@ -55,16 +56,16 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
         if (!hexRegex.test(topLayer) || !hexRegex.test(bottom)) {
           return false
         }
-        if (settings.colors.baseLayer && !hexRegex.test(settings.colors.baseLayer)) {
+        if (val.colors.baseLayer && !hexRegex.test(val.colors.baseLayer)) {
           return false
         }
-        if (settings.colors.shoes && !hexRegex.test(settings.colors.shoes)) {
+        if (val.colors.shoes && !hexRegex.test(val.colors.shoes)) {
           return false
         }
       }
 
       // If description is provided, validate it's a string
-      if (settings.description !== undefined && typeof settings.description !== 'string') {
+      if (val.description !== undefined && typeof val.description !== 'string') {
         return false
       }
     }
@@ -82,10 +83,11 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
 
 /**
  * Element registry config for custom clothing
+ * Uses the standard { mode, value } pattern
  */
 export const customClothingElementConfig: ElementConfig<PhotoStyleSettings['customClothing']> = {
-  getDefaultPredefined: () => ({ type: 'predefined' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  getDefaultPredefined: () => ({ mode: 'predefined', value: undefined }),
+  getDefaultUserChoice: () => ({ mode: 'user-choice', value: undefined }),
   deserialize: (raw) => deserializeCustomClothing(
     typeof raw.customClothing === 'string'
       ? raw.customClothing

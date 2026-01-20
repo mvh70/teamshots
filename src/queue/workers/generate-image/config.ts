@@ -73,20 +73,20 @@ export const PROGRESS_CONFIG = {
 } as const
 
 // Workflow Step Progress Percentages
-// NOTE: Steps 1a and 1b run in parallel, so progress tracking prevents backwards movement
+// NOTE: Step 1b is disabled, so only Step 1a runs
 export const PROGRESS_STEPS = {
-  // V3 Workflow (Parallel)
+  // V3 Workflow
   V3_INIT: 5,
   V3_PREPARING: 10,
-  // Steps 1a and 1b run in parallel - both start around 15%, complete around 40%
+  // Step 1a: Person generation
   V3_GENERATING_PERSON: 15, // Step 1a: Person generation start
+  V3_GENERATING_BACKGROUND: 20, // Step 1b: DISABLED (kept for backward compatibility)
   V3_EVALUATING_PERSON: 30, // Step 1a eval
-  V3_PERSON_COMPLETE: 40, // Step 1a complete (both person + eval done)
-  V3_GENERATING_BACKGROUND: 15, // Step 1b: Background generation (parallel with 1a)
-  V3_EVALUATING_BACKGROUND: 30, // Step 1b eval
-  V3_BACKGROUND_COMPLETE: 40, // Step 1b complete (both background + eval done)
-  // Step 2: Composition happens after both 1a and 1b complete
-  V3_COMPOSITING: 60, // Step 2: Composition/refinement
+  V3_EVALUATING_BACKGROUND: 30, // Step 1b: DISABLED (kept for backward compatibility)
+  V3_PERSON_COMPLETE: 40, // Step 1a complete (person + eval done)
+  V3_BACKGROUND_COMPLETE: 40, // Step 1b: DISABLED (kept for backward compatibility)
+  // Step 2: Composition happens after Step 1a completes
+  V3_COMPOSITING: 60, // Step 2: Composition/refinement with background and branding
   V3_FINAL_EVAL: 85, // Step 3: Final evaluation
   V3_COMPLETE: 100,
 
@@ -120,4 +120,142 @@ export type AIConfig = typeof AI_CONFIG
 export type ProgressConfig = typeof PROGRESS_CONFIG
 export type ProgressSteps = typeof PROGRESS_STEPS
 export type WorkflowConfig = typeof WORKFLOW_CONFIG
+
+// =============================================================================
+// Model Configuration
+// =============================================================================
+
+/** Available AI providers for model access */
+export type ModelProvider = 'vertex' | 'rest' | 'openrouter' | 'replicate'
+
+/**
+ * Global provider fallback order.
+ * When a model's preferredProvider fails or is unavailable, providers are tried in this order.
+ * Providers not in this list or without credentials/model support are skipped.
+ */
+export const PROVIDER_FALLBACK_ORDER: ModelProvider[] = [
+  'openrouter',
+  'rest',
+  'vertex',
+  'replicate'
+]
+
+/**
+ * Default settings per provider.
+ * These are applied when no explicit value is passed.
+ */
+export const PROVIDER_DEFAULTS: Record<ModelProvider, {
+  resolution: '1K' | '2K' | '4K'
+}> = {
+  openrouter: { resolution: '1K' },
+  vertex: { resolution: '1K' },
+  rest: { resolution: '1K' },
+  replicate: { resolution: '1K' },
+}
+
+/**
+ * Model definitions with provider-specific names and optional preferred provider.
+ * - preferredProvider: If set, this provider is tried first before fallback order.
+ *                      If not set, follows PROVIDER_FALLBACK_ORDER directly.
+ * - providers: Provider-specific model names. null means not available on that provider.
+ */
+export const MODEL_CONFIG = {
+  /** Text/eval model (no image generation) */
+  'gemini-2.5-flash': {
+    providers: {
+      vertex: 'gemini-2.5-flash',
+      rest: 'gemini-2.5-flash',
+      openrouter: 'google/gemini-2.5-flash',
+      replicate: null, // Text-only, no Replicate equivalent
+    },
+  },
+  /** Image generation model (Gemini 2.5) */
+  'gemini-2.5-flash-image': {
+    providers: {
+      vertex: 'gemini-2.5-flash-image',
+      rest: 'gemini-2.5-flash', // REST normalizes -image suffix, uses responseModalities
+      openrouter: 'google/gemini-2.5-flash-image',
+      replicate: null//'google/nano-banana', // Nano Banana (Gemini 2.5) - supports multi-image input
+    },
+  },
+  /** Advanced image model (Gemini 3) */
+  'gemini-3-pro-image': {
+    providers: {
+      vertex: 'gemini-3-pro-image', // TODO: Verify if this is the correct Vertex model name
+      rest: 'gemini-3-pro-image-preview',
+      openrouter: 'google/gemini-3-pro-image-preview',
+      replicate: null // Gemini 3 Pro Image on Replicate
+    },
+  },
+  /** Text model (Gemini 3 - non-image) */
+  'gemini-3-pro': {
+    providers: {
+      vertex: 'gemini-3-pro',
+      rest: 'gemini-3-pro',
+      openrouter: 'google/gemini-3-pro-preview',
+      replicate: null, // Text-only, no Replicate equivalent
+    },
+  },
+} as const
+
+/** Canonical model names */
+export type ModelName = keyof typeof MODEL_CONFIG
+
+/** Per-stage model selection */
+export const STAGE_MODEL = {
+  CLOTHING_COLLAGE: 'gemini-2.5-flash-image' as ModelName,
+  CLOTHING_OVERLAY: 'gemini-2.5-flash-image' as ModelName,
+  STEP_1A_PERSON: 'gemini-2.5-flash-image' as ModelName,
+  STEP_1B_BACKGROUND: 'gemini-2.5-flash-image' as ModelName,
+  STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
+  EVALUATION: 'gemini-2.5-flash' as ModelName,
+  GARMENT_ANALYSIS: 'gemini-2.5-flash' as ModelName,
+  SELFIE_CLASSIFICATION: 'gemini-2.5-flash' as ModelName,
+} as const
+
+export type StageName = keyof typeof STAGE_MODEL
+
+/** Fallback model when stage config is missing */
+export const DEFAULT_MODEL: ModelName = 'gemini-2.5-flash-image'
+
+/**
+ * Get the provider-specific model name for a given canonical model and provider.
+ * Returns null if the model is not available on the provider.
+ */
+export function getModelNameForProvider(
+  model: ModelName,
+  provider: ModelProvider
+): string | null {
+  return MODEL_CONFIG[model].providers[provider]
+}
+
+/**
+ * Get the first available provider for a model based on PROVIDER_FALLBACK_ORDER.
+ * Returns the first provider in the fallback order that supports this model.
+ */
+export function getFirstAvailableProvider(model: ModelName): ModelProvider | null {
+  const modelConfig = MODEL_CONFIG[model]
+  for (const provider of PROVIDER_FALLBACK_ORDER) {
+    if (modelConfig.providers[provider] !== null) {
+      return provider
+    }
+  }
+  return null
+}
+
+/**
+ * Get the model configuration for a given stage.
+ */
+export function getStageModelConfig(stage: StageName): {
+  model: ModelName
+  firstAvailableProvider: ModelProvider | null
+  getProviderModelName: (provider: ModelProvider) => string | null
+} {
+  const model = STAGE_MODEL[stage]
+  return {
+    model,
+    firstAvailableProvider: getFirstAvailableProvider(model),
+    getProviderModelName: (provider: ModelProvider) => getModelNameForProvider(model, provider),
+  }
+}
 

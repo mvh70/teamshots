@@ -1,5 +1,5 @@
 import { freepackage as freepackageBase } from './index'
-import { buildDefaultReferencePayload } from '@/lib/generation/reference-utils'
+import { buildDefaultReferencePayload, buildSplitSelfieComposites } from '@/lib/generation/reference-utils'
 import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../../elements/shot-type/config'
 import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
@@ -9,7 +9,8 @@ import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import { compositionRegistry } from '../../elements/composition'
 import { Telemetry } from '@/lib/telemetry'
 import { hasValue, predefined } from '../../elements/base/element-types'
-import type { GenerationContext, GenerationPayload } from '@/types/generation'
+import type { GenerationContext, GenerationPayload, ReferenceImage } from '@/types/generation'
+import { Logger } from '@/lib/logger'
 
 export type FreePackageServerPackage = typeof freepackageBase & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>
@@ -23,6 +24,7 @@ export const freepackageServer: FreePackageServerPackage = {
     styleSettings,
     selfieKeys,
     processedSelfies,
+    selfieTypeMap,
     options
   }: GenerationContext): Promise<GenerationPayload> => {
     // Track package usage
@@ -76,7 +78,38 @@ export const freepackageServer: FreePackageServerPackage = {
     // V3 workflow always uses composite reference
     const bucketName = getS3BucketName()
     const s3Client = createS3Client({ forcePathStyle: false })
-    
+
+    // Build split composites if selfieTypeMap is available
+    let faceComposite: ReferenceImage | undefined
+    let bodyComposite: ReferenceImage | undefined
+    let selfieComposite: ReferenceImage | undefined
+
+    if (selfieTypeMap && Object.keys(selfieTypeMap).length > 0) {
+      Logger.info('Building split selfie composites (face/body)', {
+        generationId,
+        selfieTypeMap,
+        selfieCount: selfieKeys.length
+      })
+
+      const splitComposites = await buildSplitSelfieComposites({
+        selfieKeys,
+        selfieTypeMap,
+        getSelfieBuffer,
+        generationId
+      })
+
+      faceComposite = splitComposites.faceComposite ?? undefined
+      bodyComposite = splitComposites.bodyComposite ?? undefined
+      selfieComposite = splitComposites.combinedComposite
+
+      Logger.info('Split selfie composites built', {
+        generationId,
+        hasFaceComposite: !!faceComposite,
+        hasBodyComposite: !!bodyComposite,
+        hasCombinedComposite: !!selfieComposite
+      })
+    }
+
     const payload = await buildDefaultReferencePayload({
       styleSettings: effectiveSettings,
       selfieKeys,
@@ -115,9 +148,11 @@ export const freepackageServer: FreePackageServerPackage = {
       referenceImages,
       labelInstruction,
       aspectRatio,
-      aspectRatioDescription
+      aspectRatioDescription,
+      // Split selfie composites for focused reference
+      faceComposite,
+      bodyComposite,
+      selfieComposite
     }
   }
 }
-
-

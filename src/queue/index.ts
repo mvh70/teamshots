@@ -38,6 +38,7 @@ export interface ImageGenerationJobData {
   teamId?: string // For cost tracking and asset scoping
   selfieS3Keys: string[] // Array of multiple selfies for multi-selfie generation
   selfieAssetIds?: string[] // Asset IDs for fingerprinting and cost tracking
+  selfieTypeMap?: Record<string, string> // Map of S3 key to selfie type (front_view, side_view, partial_body, full_body)
   backgroundAssetId?: string // Background asset ID for fingerprinting
   logoAssetId?: string // Logo asset ID for fingerprinting
   prompt: string

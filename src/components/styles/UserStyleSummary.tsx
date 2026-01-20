@@ -29,7 +29,7 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   const clothingDetails = clothingHasValue ? clothingWrapper.value.details : undefined
   const clothingAccessories = clothingHasValue ? clothingWrapper.value.accessories : undefined
   const clothingIsUserChoice = clothingWrapper ? isUserChoice(clothingWrapper) : false
-  const lightingType = settings.lighting?.type
+  const lightingType = settings.lighting?.value?.type
   const hasClothingSettings = settings.clothing !== undefined
   const hasLighting = settings.lighting !== undefined
 
@@ -83,7 +83,7 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
               // For other elements, only show if settings exist
               if (elementKey === 'customClothing') {
                 if (!elementSettings) return null
-                // Pass settings even if just { type: 'user-choice' } - let Summary component decide
+                // Pass settings even if just { mode: 'user-choice' } - let Summary component decide
               } else {
                 if (!elementSettings) return null
               }
@@ -127,7 +127,7 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
                     <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Lighting</span>
                   </div>
                   <div className="ml-6 text-sm capitalize">
-                    {!lightingType || lightingType === 'user-choice' ? (
+                    {!lightingType ? (
                       <span className="inline-flex items-center gap-1.5 normal-case">
                         <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
                         <span className="text-gray-600">User choice</span>

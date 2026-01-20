@@ -56,7 +56,7 @@ export function normalizeContextToPhotoStyleSettings(context: LegacyContext): Ph
     expression: (settings.expression as { mode?: string; type?: string })?.mode || (settings.expression as { mode?: string; type?: string })?.type
       ? settings.expression as ExpressionSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.expression,
-    lighting: settings.lighting?.type 
+    lighting: (settings.lighting as { mode?: string })?.mode
       ? settings.lighting as LightingSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.lighting,
     pose: settings.pose?.mode

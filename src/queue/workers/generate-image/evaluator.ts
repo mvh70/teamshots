@@ -1,7 +1,6 @@
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from './gemini'
-import { AI_CONFIG } from './config'
+import { AI_CONFIG, STAGE_MODEL } from './config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 
 export interface SelfieReference {
@@ -98,16 +97,12 @@ export async function evaluateGeneratedImage({
   isClothingLogo = false,
   backgroundReference
 }: ImageEvaluationInput): Promise<ImageEvaluationResult> {
-  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+  const modelName = STAGE_MODEL.EVALUATION
+
   Logger.debug('Using evaluation model', {
-    GEMINI_EVAL_MODEL: evalModel || '(not set)',
-    GEMINI_IMAGE_MODEL: imageModel || '(not set)',
     selectedModel: modelName
   })
-  
+
   const model = await getVertexGenerativeModel(modelName)
 
   const expectedRatio = expectedWidth / expectedHeight

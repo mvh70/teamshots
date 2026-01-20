@@ -6,14 +6,20 @@
  * generate a headshot wearing similar clothing.
  */
 
-export interface CustomClothingSettings {
-  /**
-   * Type of custom clothing setting
-   * - 'user-choice': User can upload and customize outfit
-   * - 'predefined': Custom clothing disabled (not used)
-   */
-  type: 'user-choice' | 'predefined'
+/**
+ * Dominant colors extracted from the outfit
+ */
+export interface CustomClothingColors {
+  topLayer: string // Hex color for visible outer garment (jacket/blazer/shirt)
+  baseLayer?: string // Hex color for shirt underneath (optional, for multi-layer)
+  bottom: string // Hex color for pants/skirt
+  shoes?: string // Hex color for shoes (optional)
+}
 
+/**
+ * The inner value containing custom clothing configuration
+ */
+export interface CustomClothingValue {
   /**
    * S3 key of the uploaded outfit image
    * This photo will be processed during generation to extract individual garments
@@ -35,12 +41,7 @@ export interface CustomClothingSettings {
   /**
    * Dominant colors extracted from the outfit
    */
-  colors?: {
-    topLayer: string // Hex color for visible outer garment (jacket/blazer/shirt)
-    baseLayer?: string // Hex color for shirt underneath (optional, for multi-layer)
-    bottom: string // Hex color for pants/skirt
-    shoes?: string // Hex color for shoes (optional)
-  }
+  colors?: CustomClothingColors
 
   /**
    * Natural language description of the outfit
@@ -55,8 +56,18 @@ export interface CustomClothingSettings {
 }
 
 /**
+ * Full custom clothing settings with mode wrapper (matches ElementSetting pattern)
+ * - 'predefined': Custom clothing disabled (admin locked it off)
+ * - 'user-choice': User can upload and customize outfit
+ */
+export interface CustomClothingSettings {
+  mode: 'predefined' | 'user-choice'
+  value?: CustomClothingValue
+}
+
+/**
  * Default settings for custom clothing element
  */
 export const DEFAULT_CUSTOM_CLOTHING: CustomClothingSettings = {
-  type: 'predefined', // Disabled by default
+  mode: 'predefined', // Disabled by default
 }

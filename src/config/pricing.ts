@@ -115,6 +115,20 @@ export const PRICING_CONFIG = {
       }
 
       return total
+    },
+    // Helper to get the price per seat at a specific tier (marginal price)
+    getPricePerSeatAtTier: (seats: number): number => {
+      if (seats < 1) return 0
+
+      // Find which tier this seat count falls into
+      for (const tier of PRICING_CONFIG.seats.graduatedTiers) {
+        if (seats >= tier.min && seats <= tier.max) {
+          return tier.pricePerSeat
+        }
+      }
+
+      // Default to highest tier if not found
+      return PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat
     }
   },
 

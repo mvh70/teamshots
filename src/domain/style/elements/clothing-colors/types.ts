@@ -1,4 +1,5 @@
 import type { ElementSetting } from '../base/element-types'
+import { hexToColorName } from '@/lib/color-utils'
 
 export type ClothingColorKey = 'topLayer' | 'baseLayer' | 'bottom' | 'shoes'
 
@@ -50,12 +51,23 @@ export function getColorName(color: string | ColorValue | undefined): string | u
 }
 
 /**
- * Get display text for a color (name + hex or just hex)
+ * Get display text for a color (semantic name + hex)
+ * Always includes semantic name for better AI understanding
  */
 export function getColorDisplay(color: string | ColorValue | undefined): string | undefined {
   if (!color) return undefined
-  if (typeof color === 'string') return color
-  return color.name ? `${color.name} ${color.hex}` : color.hex
+  
+  // Get hex value
+  const hex = typeof color === 'string' ? color : color.hex
+  if (!hex) return undefined
+  
+  // Get name - use provided name or derive from hex
+  const name = typeof color === 'object' && color.name 
+    ? color.name 
+    : hexToColorName(hex)
+  
+  // Return "Semantic Name (#HEX)" format for AI clarity
+  return `${name} (${hex})`
 }
 
 /**

@@ -4,7 +4,7 @@ import { generateWithGemini } from '../gemini'
 import sharp from 'sharp'
 import type { ReferenceImage } from '@/types/generation'
 import { logPrompt, logStepResult } from '../utils/logging'
-import { AI_CONFIG } from '../config'
+import { AI_CONFIG, STAGE_MODEL } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { CostTrackingHandler } from '../workflow-v3'
 import type { PhotoStyleSettings } from '@/types/photo-style'
@@ -378,7 +378,7 @@ export async function executeV3Step1b(
       '1K', // Fixed resolution for raw asset
       {
         temperature: AI_CONFIG.BACKGROUND_GENERATION_TEMPERATURE,
-        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
+        stage: 'STEP_1B_BACKGROUND',
       }
     )
   } catch (error) {
@@ -389,7 +389,7 @@ export async function executeV3Step1b(
           stepName: 'step1b-background',
           reason: 'generation',
           result: 'failure',
-          model: 'gemini-2.5-flash-image',
+          model: STAGE_MODEL.STEP_1B_BACKGROUND,
           provider: providerUsed,
           errorMessage: error instanceof Error ? error.message : String(error),
         })
@@ -412,7 +412,7 @@ export async function executeV3Step1b(
   logStepResult('V3 Step 1b', {
     success: true,
     provider: generationResult.providerUsed,
-    model: Env.string('GEMINI_IMAGE_MODEL'),
+    model: STAGE_MODEL.STEP_1B_BACKGROUND,
     imageSize: pngBuffer.length,
     durationMs: generationResult.usage.durationMs
   })
@@ -424,7 +424,7 @@ export async function executeV3Step1b(
         stepName: 'step1b-background',
         reason: 'generation',
         result: 'success',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.STEP_1B_BACKGROUND,
         provider: generationResult.providerUsed,  // Pass actual provider used
         inputTokens: generationResult.usage.inputTokens,
         outputTokens: generationResult.usage.outputTokens,

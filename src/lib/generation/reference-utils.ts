@@ -225,6 +225,281 @@ export async function buildVerticalSelfieComposite({
   }
 }
 
+/**
+ * Build split selfie composites: one for face (front_view, side_view) and one for body (partial_body, full_body)
+ * This helps the AI model focus on different aspects of the subject during generation.
+ */
+export async function buildSplitSelfieComposites({
+  selfieKeys,
+  selfieTypeMap,
+  getSelfieBuffer,
+  generationId
+}: {
+  selfieKeys: string[]
+  selfieTypeMap: Record<string, string>
+  getSelfieBuffer: (key: string) => Promise<Buffer>
+  generationId: string
+}): Promise<{
+  faceComposite: ReferenceImage | null
+  bodyComposite: ReferenceImage | null
+  combinedComposite: ReferenceImage // Fallback for when no types available
+}> {
+  // Categorize selfie keys by type
+  const faceTypes = ['front_view', 'side_view']
+  const bodyTypes = ['partial_body', 'full_body']
+
+  const faceKeys: string[] = []
+  const bodyKeys: string[] = []
+  const unclassifiedKeys: string[] = []
+
+  for (const key of selfieKeys) {
+    const selfieType = selfieTypeMap[key]
+    if (selfieType && faceTypes.includes(selfieType)) {
+      faceKeys.push(key)
+    } else if (selfieType && bodyTypes.includes(selfieType)) {
+      bodyKeys.push(key)
+    } else {
+      unclassifiedKeys.push(key)
+    }
+  }
+
+  Logger.debug('Split selfie composites: categorized selfies', {
+    generationId,
+    faceKeysCount: faceKeys.length,
+    bodyKeysCount: bodyKeys.length,
+    unclassifiedKeysCount: unclassifiedKeys.length,
+    faceTypes: faceKeys.map(k => selfieTypeMap[k]),
+    bodyTypes: bodyKeys.map(k => selfieTypeMap[k])
+  })
+
+  // Build composites based on available types
+  let faceComposite: ReferenceImage | null = null
+  let bodyComposite: ReferenceImage | null = null
+
+  // Build face composite if we have face selfies
+  if (faceKeys.length > 0) {
+    const faceResult = await buildTypedComposite({
+      keys: faceKeys,
+      getSelfieBuffer,
+      generationId,
+      compositeType: 'face',
+      title: 'FACE REFERENCE',
+      description: 'FACE REFERENCE - These selfies show the subject\'s face from different angles. Use them to accurately recreate facial features, skin texture, eyes, nose, mouth, and facial structure.'
+    })
+    faceComposite = faceResult
+  }
+
+  // Build body composite if we have body selfies
+  if (bodyKeys.length > 0) {
+    const bodyResult = await buildTypedComposite({
+      keys: bodyKeys,
+      getSelfieBuffer,
+      generationId,
+      compositeType: 'body',
+      title: 'BODY REFERENCE',
+      description: 'BODY REFERENCE - These selfies show the subject\'s body. Use them to understand body proportions, posture, and build.'
+    })
+    bodyComposite = bodyResult
+  }
+
+  // Build combined composite intelligently to avoid duplication
+  let combinedComposite: ReferenceImage
+  
+  // If we only have face selfies, reuse the face composite
+  if (faceKeys.length > 0 && bodyKeys.length === 0 && unclassifiedKeys.length === 0) {
+    Logger.debug('Split selfie composites: Only face selfies present, reusing face composite', {
+      generationId,
+      faceKeysCount: faceKeys.length
+    })
+    combinedComposite = faceComposite!
+  }
+  // If we only have body selfies, reuse the body composite
+  else if (bodyKeys.length > 0 && faceKeys.length === 0 && unclassifiedKeys.length === 0) {
+    Logger.debug('Split selfie composites: Only body selfies present, reusing body composite', {
+      generationId,
+      bodyKeysCount: bodyKeys.length
+    })
+    combinedComposite = bodyComposite!
+  }
+  // Otherwise, build a proper combined composite
+  else {
+    Logger.debug('Split selfie composites: Mixed selfie types, building combined composite', {
+      generationId,
+      faceKeysCount: faceKeys.length,
+      bodyKeysCount: bodyKeys.length,
+      unclassifiedKeysCount: unclassifiedKeys.length
+    })
+    const combinedResult = await buildVerticalSelfieComposite({
+      selfieKeys,
+      getSelfieBuffer,
+      generationId,
+      additionalAssets: []
+    })
+
+    combinedComposite = {
+      mimeType: combinedResult.mimeType,
+      base64: combinedResult.base64,
+      description: 'REFERENCE: Composite image containing vertically stacked subject selfies.'
+    }
+  }
+
+  return {
+    faceComposite,
+    bodyComposite,
+    combinedComposite
+  }
+}
+
+/**
+ * Build a typed composite (face or body) from a set of selfie keys
+ */
+async function buildTypedComposite({
+  keys,
+  getSelfieBuffer,
+  generationId,
+  compositeType,
+  title,
+  description
+}: {
+  keys: string[]
+  getSelfieBuffer: (key: string) => Promise<Buffer>
+  generationId: string
+  compositeType: 'face' | 'body'
+  title: string
+  description: string
+}): Promise<ReferenceImage> {
+  const margin = 20
+  const selfieSpacing = 10
+
+  const elements: Array<Record<string, unknown>> = []
+  let currentY = margin
+
+  // Create title overlay
+  const titleOverlay = await createTextOverlayDynamic(title, 32, '#000000', 12)
+  const titleMetadata = await sharp(titleOverlay).metadata()
+  const titleHeight = titleMetadata.height ?? 0
+  const titleWidth = titleMetadata.width ?? 0
+
+  type SelfieEntry = {
+    selfieBuffer: Buffer
+    selfieWidth: number
+    selfieHeight: number
+    labelOverlay: Buffer
+    labelWidth: number
+    labelHeight: number
+  }
+  const selfieEntries: SelfieEntry[] = []
+  let maxContentWidth = titleWidth
+
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index]
+    const selfieBuffer = await getSelfieBuffer(key)
+
+    // Apply EXIF orientation
+    const selfieSharp = sharp(selfieBuffer)
+    const selfieMetadata = await selfieSharp.metadata()
+
+    let orientedBuffer = selfieBuffer
+    if (selfieMetadata.orientation && selfieMetadata.orientation > 1) {
+      let rotationAngle = 0
+      if (selfieMetadata.orientation === 3) {
+        rotationAngle = 180
+      } else if (selfieMetadata.orientation === 6) {
+        rotationAngle = -90
+      } else if (selfieMetadata.orientation === 8) {
+        rotationAngle = 90
+      }
+
+      if (rotationAngle !== 0) {
+        orientedBuffer = await selfieSharp
+          .rotate(rotationAngle)
+          .withMetadata({ orientation: 1 })
+          .toBuffer()
+      }
+    }
+
+    const orientedMetadata = await sharp(orientedBuffer).metadata()
+    const selfieWidth = orientedMetadata.width ?? 0
+    const selfieHeight = orientedMetadata.height ?? 0
+
+    const labelText = compositeType === 'face'
+      ? `FACE-SELFIE${index + 1}`
+      : `BODY-SELFIE${index + 1}`
+    const labelOverlay = await createTextOverlayDynamic(labelText, 24, '#000000', 8)
+    const labelMetadata = await sharp(labelOverlay).metadata()
+    const labelWidth = labelMetadata.width ?? 0
+    const labelHeight = labelMetadata.height ?? 0
+
+    maxContentWidth = Math.max(maxContentWidth, selfieWidth, labelWidth)
+    selfieEntries.push({
+      selfieBuffer: orientedBuffer,
+      selfieWidth,
+      selfieHeight,
+      labelOverlay,
+      labelWidth,
+      labelHeight
+    })
+  }
+
+  // Add title to composite
+  elements.push({
+    input: titleOverlay,
+    left: margin + Math.floor((maxContentWidth - titleWidth) / 2),
+    top: currentY
+  })
+  currentY += titleHeight + selfieSpacing
+
+  // Add selfies to composite
+  for (const entry of selfieEntries) {
+    const imageLeft = margin + Math.floor((maxContentWidth - entry.selfieWidth) / 2)
+    const labelLeft = margin + Math.floor((maxContentWidth - entry.labelWidth) / 2)
+
+    elements.push(
+      { input: entry.selfieBuffer, left: imageLeft, top: currentY },
+      { input: entry.labelOverlay, left: labelLeft, top: currentY + entry.selfieHeight + 5 }
+    )
+
+    currentY += entry.selfieHeight + entry.labelHeight + selfieSpacing + 5
+  }
+
+  const canvasWidth = margin * 2 + maxContentWidth
+  const canvasHeight = currentY + margin
+
+  const compositeBuffer = await sharp({
+    create: {
+      width: canvasWidth,
+      height: canvasHeight,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
+    }
+  })
+    .png()
+    .composite(elements)
+    .toBuffer()
+
+  const compositeBase64 = compositeBuffer.toString('base64')
+
+  // Save debug file
+  try {
+    const filename = `${compositeType}-composite-${generationId}.png`
+    const tmpDir = path.join(process.cwd(), 'tmp', 'v3-debug')
+    const filePath = path.join(tmpDir, filename)
+
+    await fsWriteFile(filePath, compositeBuffer)
+    Logger.debug(`Wrote ${compositeType} composite reference image to temporary directory`, { filePath })
+  } catch (error) {
+    Logger.warn(`Failed to write ${compositeType} composite reference image to temporary directory`, {
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+
+  return {
+    mimeType: 'image/png',
+    base64: compositeBase64,
+    description
+  }
+}
+
 export async function buildLogoReference(
   logoKey: string | undefined,
   downloadAsset: DownloadAssetFn

@@ -10,34 +10,36 @@ import { CustomClothingSettings } from './types'
  * Build prompt text for custom clothing
  */
 export function buildCustomClothingPrompt(settings: CustomClothingSettings): string {
+  const value = settings.value
+  
   // Only build prompt if there's an actual outfit set
-  if (!settings.outfitS3Key && !settings.assetId) {
+  if (!value?.outfitS3Key && !value?.assetId) {
     return ''
   }
 
   const parts: string[] = []
 
   // If we have a description, use it as the primary guidance
-  if (settings.description) {
-    parts.push(`The person should be wearing: ${settings.description}.`)
-  } else if (settings.colors) {
+  if (value.description) {
+    parts.push(`The person should be wearing: ${value.description}.`)
+  } else if (value.colors) {
     // Otherwise, build description from colors
     const colorParts: string[] = []
 
-    if (settings.colors.topLayer) {
-      colorParts.push(`a ${settings.colors.topLayer} colored outer garment (jacket/blazer/shirt)`)
+    if (value.colors.topLayer) {
+      colorParts.push(`a ${value.colors.topLayer} colored outer garment (jacket/blazer/shirt)`)
     }
 
-    if (settings.colors.baseLayer) {
-      colorParts.push(`with a ${settings.colors.baseLayer} colored shirt underneath`)
+    if (value.colors.baseLayer) {
+      colorParts.push(`with a ${value.colors.baseLayer} colored shirt underneath`)
     }
 
-    if (settings.colors.bottom) {
-      colorParts.push(`${settings.colors.bottom} colored pants/trousers`)
+    if (value.colors.bottom) {
+      colorParts.push(`${value.colors.bottom} colored pants/trousers`)
     }
 
-    if (settings.colors.shoes) {
-      colorParts.push(`${settings.colors.shoes} colored shoes`)
+    if (value.colors.shoes) {
+      colorParts.push(`${value.colors.shoes} colored shoes`)
     }
 
     if (colorParts.length > 0) {
@@ -46,7 +48,7 @@ export function buildCustomClothingPrompt(settings: CustomClothingSettings): str
   }
 
   // Add general guidance for outfit matching
-  if (settings.assetId || settings.outfitS3Key) {
+  if (value.assetId || value.outfitS3Key) {
     parts.push(
       'Match the style, fit, and overall appearance of the reference outfit provided.',
       'Pay close attention to collar style, sleeve length, garment fit, and any visible details.',

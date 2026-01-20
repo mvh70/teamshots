@@ -16,6 +16,7 @@ export interface JobEnqueueOptions {
   teamId?: string
   selfieS3Keys: string[]
   selfieAssetIds?: string[] // Asset IDs for fingerprinting and cost tracking
+  selfieTypeMap?: Record<string, string> // Map of S3 key to selfie type for split composites
   prompt: string
   workflowVersion: 'v3'
   debugMode: boolean
@@ -29,7 +30,7 @@ export interface JobEnqueueOptions {
  */
 export async function enqueueGenerationJob(options: JobEnqueueOptions) {
   const { imageGenerationQueue } = await import('@/queue')
-  
+
   const {
     generationId,
     personId,
@@ -37,6 +38,7 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
     teamId,
     selfieS3Keys,
     selfieAssetIds,
+    selfieTypeMap,
     prompt,
     workflowVersion,
     debugMode,
@@ -54,6 +56,7 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
       teamId,
       selfieS3Keys,
       selfieAssetIds, // Pass asset IDs for fingerprinting and cost tracking
+      selfieTypeMap, // Pass selfie type map for split composite building
       prompt,
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL'),

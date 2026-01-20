@@ -17,7 +17,9 @@ export interface V3CachedPayload {
 export interface V3WorkflowState {
   cachedPayload?: V3CachedPayload
   composites?: {
-    selfie?: PersistedImageReference
+    selfie?: PersistedImageReference // Legacy combined composite (keep for backwards compat)
+    faceComposite?: PersistedImageReference // Face-focused composite (front_view + side_view selfies)
+    bodyComposite?: PersistedImageReference // Body-focused composite (partial_body + full_body selfies)
     background?: PersistedImageReference
     garmentCollage?: PersistedImageReference // Custom clothing garment collage
   }

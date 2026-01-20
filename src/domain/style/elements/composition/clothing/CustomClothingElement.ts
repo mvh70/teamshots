@@ -41,6 +41,7 @@ export interface GarmentDescription {
   logoDescription?: string | null
 }
 import { Logger } from '@/lib/logger'
+import { STAGE_MODEL } from '@/queue/workers/generate-image/config'
 import { Telemetry } from '@/lib/telemetry'
 import { AssetService } from '@/domain/services/AssetService'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
@@ -57,18 +58,20 @@ export class CustomClothingElement extends StyleElement {
   // Clothing only affects person generation, not backgrounds
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
+    const clothing = settings.customClothing
+    const value = clothing?.value
 
     // Skip if no custom clothing configured
-    if (!settings.customClothing) {
+    if (!clothing) {
       Logger.debug('[CustomClothingElement] isRelevantForPhase: no customClothing settings', { phase })
       return false
     }
 
-    // Skip if no asset or outfit key
-    if (!settings.customClothing.assetId && !settings.customClothing.outfitS3Key) {
+    // Skip if no asset or outfit key in value
+    if (!value?.assetId && !value?.outfitS3Key) {
       Logger.debug('[CustomClothingElement] isRelevantForPhase: no assetId or outfitS3Key', {
         phase,
-        customClothingType: settings.customClothing.type,
+        customClothingMode: clothing.mode,
       })
       return false
     }
@@ -77,8 +80,8 @@ export class CustomClothingElement extends StyleElement {
     Logger.info('[CustomClothingElement] isRelevantForPhase result', {
       phase,
       isRelevant,
-      hasAssetId: !!settings.customClothing.assetId,
-      hasOutfitS3Key: !!settings.customClothing.outfitS3Key,
+      hasAssetId: !!value.assetId,
+      hasOutfitS3Key: !!value.outfitS3Key,
     })
     // Only contribute to person generation
     return isRelevant
@@ -90,20 +93,21 @@ export class CustomClothingElement extends StyleElement {
   needsPreparation(context: ElementContext): boolean {
     const { settings, generationContext } = context
     const clothing = settings.customClothing
+    const value = clothing?.value
 
     if (!clothing) {
       Logger.debug('[CustomClothingElement] needsPreparation: no customClothing settings')
       return false
     }
 
-    // Need preparation if we have an asset to process
-    const needsPrep = !!(clothing.assetId || clothing.outfitS3Key)
+    // Need preparation if we have an asset to process in value
+    const needsPrep = !!(value?.assetId || value?.outfitS3Key)
     Logger.info('[CustomClothingElement] needsPreparation result', {
       generationId: generationContext?.generationId,
       needsPrep,
-      hasAssetId: !!clothing.assetId,
-      hasOutfitS3Key: !!clothing.outfitS3Key,
-      clothingType: clothing.type,
+      hasAssetId: !!value?.assetId,
+      hasOutfitS3Key: !!value?.outfitS3Key,
+      clothingMode: clothing.mode,
     })
     return needsPrep
   }
@@ -122,6 +126,7 @@ export class CustomClothingElement extends StyleElement {
   async prepare(context: ElementContext): Promise<PreparedAsset> {
     const { settings, generationContext } = context
     const clothing = settings.customClothing!
+    const clothingValue = clothing.value!
     const generationId = generationContext.generationId || 'unknown'
 
     // Type guard for services - they should be available in preparation phase
@@ -138,33 +143,33 @@ export class CustomClothingElement extends StyleElement {
 
     Logger.info('[CustomClothingElement] Starting garment collage preparation', {
       generationId,
-      hasAssetId: !!clothing.assetId,
-      hasOutfitS3Key: !!clothing.outfitS3Key,
-      hasCachedCollage: !!clothing.collageS3Key,
+      hasAssetId: !!clothingValue.assetId,
+      hasOutfitS3Key: !!clothingValue.outfitS3Key,
+      hasCachedCollage: !!clothingValue.collageS3Key,
     })
 
     // 1. Resolve assetId to S3 key if needed
-    let outfitKey = clothing.outfitS3Key
-    if (!outfitKey && clothing.assetId) {
+    let outfitKey = clothingValue.outfitS3Key
+    if (!outfitKey && clothingValue.assetId) {
       try {
-        const asset = await AssetService.getAsset(clothing.assetId)
+        const asset = await AssetService.getAsset(clothingValue.assetId)
         if (asset) {
           outfitKey = asset.s3Key
           Logger.info('[CustomClothingElement] Resolved assetId to S3 key', {
             generationId,
-            assetId: clothing.assetId,
+            assetId: clothingValue.assetId,
             s3Key: outfitKey,
           })
         } else {
           Logger.warn('[CustomClothingElement] Asset not found for assetId', {
             generationId,
-            assetId: clothing.assetId,
+            assetId: clothingValue.assetId,
           })
         }
       } catch (error) {
         Logger.error('[CustomClothingElement] Failed to resolve assetId', {
           generationId,
-          assetId: clothing.assetId,
+          assetId: clothingValue.assetId,
           error: error instanceof Error ? error.message : String(error),
         })
       }
@@ -178,7 +183,7 @@ export class CustomClothingElement extends StyleElement {
     let shouldSaveCollage = false
 
     // 2. Check for cached collage
-    const cachedCollageKey = clothing.collageS3Key
+    const cachedCollageKey = clothingValue.collageS3Key
     if (cachedCollageKey) {
       Logger.info('[CustomClothingElement] Checking cached garment collage', {
         cachedCollageKey,
@@ -340,7 +345,7 @@ export class CustomClothingElement extends StyleElement {
         metadata: {
           outfitKey,
           cachedCollageKey,
-          colors: clothing.colors,
+          colors: clothingValue.colors,
           garmentDescription, // Structured JSON description of the clothing
         },
       },
@@ -350,13 +355,14 @@ export class CustomClothingElement extends StyleElement {
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings, generationContext } = context
     const clothing = settings.customClothing!
+    const clothingValue = clothing.value
 
     Logger.info('[CustomClothingElement] contribute() called', {
       generationId: generationContext.generationId,
       hasCustomClothing: !!clothing,
-      clothingType: clothing?.type,
-      hasAssetId: !!clothing?.assetId,
-      hasOutfitS3Key: !!clothing?.outfitS3Key,
+      clothingMode: clothing?.mode,
+      hasAssetId: !!clothingValue?.assetId,
+      hasOutfitS3Key: !!clothingValue?.outfitS3Key,
       hasPreparedAssets: !!generationContext.preparedAssets,
       preparedAssetKeys: Array.from(generationContext.preparedAssets?.keys() || []),
     })
@@ -384,21 +390,21 @@ export class CustomClothingElement extends StyleElement {
     // Build metadata with clothing information
     const metadata: Record<string, unknown> = {
       hasCustomClothing: true,
-      assetId: clothing.assetId,
-      outfitS3Key: clothing.outfitS3Key,
+      assetId: clothingValue?.assetId,
+      outfitS3Key: clothingValue?.outfitS3Key,
     }
 
     // Include color information if available
-    if (clothing.colors) {
-      metadata.clothingColors = clothing.colors
+    if (clothingValue?.colors) {
+      metadata.clothingColors = clothingValue.colors
       instructions.push(
         'Reference the clothing colors data provided in metadata for accurate color matching'
       )
     }
 
     // Include description if available
-    if (clothing.description) {
-      metadata.description = clothing.description
+    if (clothingValue?.description) {
+      metadata.description = clothingValue.description
     }
 
     // Get prepared collage from context (if available)
@@ -453,12 +459,12 @@ export class CustomClothingElement extends StyleElement {
       wardrobe: {
         source: 'garment_collage',
         instruction: 'CRITICAL: Dress the person EXACTLY as shown in the GARMENT COLLAGE reference image. The collage shows all clothing items extracted from the original outfit - replicate these items precisely on the person.',
-        description: clothing.description || 'Professional outfit as shown in the garment collage reference image',
-        colors: clothing.colors ? {
-          topLayer: clothing.colors.topLayer,
-          baseLayer: clothing.colors.baseLayer,
-          bottom: clothing.colors.bottom,
-          shoes: clothing.colors.shoes,
+        description: clothingValue?.description || 'Professional outfit as shown in the garment collage reference image',
+        colors: clothingValue?.colors ? {
+          topLayer: clothingValue.colors.topLayer,
+          baseLayer: clothingValue.colors.baseLayer,
+          bottom: clothingValue.colors.bottom,
+          shoes: clothingValue.colors.shoes,
         } : undefined,
         // Structured garment description from AI analysis
         garmentAnalysis: garmentDescription ? {
@@ -493,8 +499,8 @@ export class CustomClothingElement extends StyleElement {
 
     Logger.info('[CustomClothingElement] Added wardrobe payload to contribution', {
       generationId: generationContext.generationId,
-      hasDescription: !!clothing.description,
-      hasColors: !!clothing.colors,
+      hasDescription: !!clothingValue?.description,
+      hasColors: !!clothingValue?.colors,
     })
 
     return {
@@ -528,12 +534,10 @@ export class CustomClothingElement extends StyleElement {
 
     try {
       const { getVertexGenerativeModel } = await import('@/queue/workers/generate-image/gemini')
-      const { Env } = await import('@/lib/env')
+      const { getModelNameForProvider } = await import('@/queue/workers/generate-image/config')
 
-      // Use the same model as evaluations
-      const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-      const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-      const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+      // Use GARMENT_ANALYSIS stage model via Vertex AI
+      const modelName = getModelNameForProvider(STAGE_MODEL.GARMENT_ANALYSIS, 'vertex') || 'gemini-2.5-flash'
 
       const model = await getVertexGenerativeModel(modelName)
 
@@ -735,7 +739,7 @@ Style: Clean, commercial product photography.`
         images,
         '1:1', // Square aspect ratio
         undefined,
-        { temperature: 0.2 }
+        { temperature: 0.2, stage: 'CLOTHING_COLLAGE' }
       )
 
       if (!result.images || result.images.length === 0) {
@@ -753,7 +757,7 @@ Style: Clean, commercial product photography.`
       await CostTrackingService.trackCall({
         generationId,
         provider: result.providerUsed || 'unknown',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.CLOTHING_COLLAGE,
         inputTokens: result.usage.inputTokens || 0,
         outputTokens: result.usage.outputTokens || 0,
         imagesGenerated: 1,
@@ -783,7 +787,7 @@ Style: Clean, commercial product photography.`
       await CostTrackingService.trackCall({
         generationId,
         provider: 'gemini-rest',
-        model: 'gemini-2.5-flash-image',
+        model: STAGE_MODEL.CLOTHING_COLLAGE,
         inputTokens: 0,
         outputTokens: 0,
         reason: 'outfit_collage_creation',
@@ -880,14 +884,17 @@ Style: Clean, commercial product photography.`
   validate(settings: import('@/types/photo-style').PhotoStyleSettings): string[] {
     const errors: string[] = []
     const clothing = settings.customClothing
+    const clothingValue = clothing?.value
 
     if (!clothing) {
       return errors
     }
 
-    // Must have either assetId or outfitS3Key
-    if (!clothing.assetId && !clothing.outfitS3Key) {
-      errors.push('Custom clothing requires either assetId or outfitS3Key')
+    // If user-choice mode with a value, must have either assetId or outfitS3Key
+    if (clothing.mode === 'user-choice' && clothingValue) {
+      if (!clothingValue.assetId && !clothingValue.outfitS3Key) {
+        errors.push('Custom clothing requires either assetId or outfitS3Key')
+      }
     }
 
     return errors
