@@ -164,7 +164,14 @@ export default function AppShell({
       router.push('/auth/signin')
       return
     }
-  }, [status, router])
+
+    // Redirect team admins who need to set up their team to the team page
+    // Skip redirect if already on team page to avoid infinite loop
+    if (initialRole?.needsTeamSetup && initialRole?.isTeamAdmin && !pathname?.includes('/app/team')) {
+      router.push('/app/team')
+      return
+    }
+  }, [status, router, initialRole?.needsTeamSetup, initialRole?.isTeamAdmin, pathname])
 
   if (status === 'loading') {
     return (

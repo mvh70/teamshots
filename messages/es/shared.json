@@ -400,6 +400,8 @@
       "signingIn": "Iniciando...",
       "submit": "Iniciar sesión",
       "noAccount": "¿No tienes cuenta? Regístrate",
+      "continueWithGoogle": "Continuar con Google",
+      "orContinueWith": "o continúa con email",
       "errors": {
         "invalidCredentials": "Correo o contraseña incorrectos. Por favor intenta de nuevo.",
         "magicLinkFailed": "No se pudo enviar el enlace mágico. Por favor intenta de nuevo.",
@@ -410,6 +412,8 @@
     "signup": {
       "freeBadge": "Te estás registrando en el plan gratuito con {photoCount} {photoCount, plural, one {foto gratis} other {fotos gratis}} y marca fija de {brandName}",
       "title": "Crea tu cuenta",
+      "signUpWithGoogle": "Registrarse con Google",
+      "orContinueWith": "o regístrate con email",
       "welcome": "La mejor primera impresión de tu equipo",
       "welcomeSubtitle": "Diseñado para equipos y fundadores. Únete en segundos. Sin fotógrafo ni gestión—solo fotos profesionales.",
       "benefit1": "Genera retratos en 60 segundos",

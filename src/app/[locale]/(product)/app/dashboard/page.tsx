@@ -291,23 +291,34 @@ export default function DashboardPage() {
       // OPTIMIZATION: Fetch all dashboard data in a single API call
       // This consolidates stats, activity, and pending invites into one request
       // reducing database queries from 9-15 to 3-5 per dashboard load
-      const dashboardData = await jsonFetcher<{ 
+      const dashboardData = await jsonFetcher<{
         success: boolean;
-        stats: DashboardStats; 
+        stats: DashboardStats;
         userRole: UserPermissions & {
+          needsTeamSetup?: boolean;
           needsPhotoStyleSetup?: boolean;
           nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null;
         };
         activities: Activity[];
         pendingInvites: PendingInvite[];
       }>('/api/dashboard')
-      
+
       if (dashboardData.success && dashboardData.stats) {
+        // Redirect team admins who need to set up their team
+        if (dashboardData.userRole?.needsTeamSetup && dashboardData.userRole?.isTeamAdmin) {
+          // Clear stale sessionStorage cache to ensure team page fetches fresh data
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('teamshots.initialData')
+          }
+          router.push('/app/team')
+          return
+        }
+
         setStats(dashboardData.stats)
         setUserPermissions(normalizeUserPermissions(dashboardData.userRole))
         setRecentActivity(dashboardData.activities || [])
         setPendingInvites(dashboardData.pendingInvites || [])
-        
+
         // IMPORTANT: Do NOT redirect based on needsPhotoStyleSetup
         // Users should complete onboarding first, then navigate to photo styles when ready
         // The onboarding flow will guide them appropriately
@@ -319,7 +330,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (session?.user?.id) {

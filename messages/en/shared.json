@@ -395,6 +395,8 @@
       "signingIn": "Signing in...",
       "submit": "Sign in",
       "noAccount": "Don't have an account? Sign up",
+      "continueWithGoogle": "Continue with Google",
+      "orContinueWith": "or continue with email",
       "errors": {
         "invalidCredentials": "Invalid email or password. Please try again.",
         "magicLinkFailed": "Failed to send magic link. Please try again.",
@@ -405,6 +407,8 @@
     "signup": {
       "freeBadge": "You're signing up for the free plan with {photoCount} free {photoCount, plural, one {photo} other {photos}} and fixed {brandName} branding",
       "title": "Create your account",
+      "signUpWithGoogle": "Sign up with Google",
+      "orContinueWith": "or sign up with email",
       "welcome": "Your team's best first impression",
       "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.",
       "benefit1": "Generate professional headshots in 60 seconds",

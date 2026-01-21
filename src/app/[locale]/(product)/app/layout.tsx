@@ -44,8 +44,15 @@ export default async function AppLayout({
 
   const teamOnboarding = await getTeamOnboardingState({
     isTeamAdmin: userContext?.roles.isTeamAdmin ?? false,
-    teamId: userContext?.teamId ?? null
+    teamId: userContext?.teamId ?? null,
+    teamName: userContext?.person?.team?.name ?? null
   })
+
+  // Note: Team setup redirect is handled by the dashboard page, not the layout
+  // This avoids redirect loops since layouts don't have access to current pathname
+
+  // Get headers for brand detection
+  const headersList = await headers()
 
   const initialRole = {
     isTeamAdmin: userContext?.roles.isTeamAdmin ?? false,
@@ -56,8 +63,8 @@ export default async function AppLayout({
     nextTeamOnboardingStep: teamOnboarding.nextStep
   }
 
-  // Get brand config from server-side headers to avoid hydration mismatch
-  const headersList = await headers()
+  // Get brand config from server-side headers
+  // headersList already fetched above
   const brand = getBrand(headersList)
   
   // Determine if this is an individual-only domain (no team features)

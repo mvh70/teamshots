@@ -2,6 +2,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import ResendProvider from "next-auth/providers/resend"
+import Google from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
@@ -93,9 +94,165 @@ async function fetchPersonForToken(userId: string): Promise<{
   return null
 }
 
+// Custom adapter that wraps PrismaAdapter to handle schema differences
+// Our User model doesn't have 'name' or 'image' fields that OAuth providers send
+// Also sets default values for OAuth users and creates Person/Team in one transaction
+const customAdapter = (() => {
+  const baseAdapter = PrismaAdapter(prisma)
+  return {
+    ...baseAdapter,
+    // Override createUser to strip unsupported fields and set defaults for OAuth users
+    // Also creates Person and Team (if team domain) in the same transaction
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createUser: async (data: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { name, image, ...userData } = data
+
+      // Extract first/last name from OAuth profile name
+      const nameParts = (name || '').split(' ')
+      const firstName = nameParts[0] || 'User'
+      const lastName = nameParts.slice(1).join(' ') || null
+
+      // Capture domain from request headers using same logic as getRequestDomain
+      let domain: string | null = null
+      try {
+        const { headers } = await import('next/headers')
+        const headersList = await headers()
+
+        // Prioritize x-forwarded-host (original client request) over host
+        let host = headersList.get('x-forwarded-host')
+        if (host) {
+          host = host.split(',')[0].trim()
+        } else {
+          host = headersList.get('host')
+        }
+
+        if (host) {
+          const hostname = host.split(':')[0].toLowerCase().trim()
+          if (hostname === 'localhost') {
+            // Use forced domain for localhost (development/testing)
+            const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+            domain = forcedDomain ? forcedDomain.replace(/^www\./, '').toLowerCase() : null
+          } else {
+            domain = hostname.replace(/^www\./, '')
+          }
+        }
+      } catch {
+        // Headers not available in this context
+      }
+
+      // Use existing domain logic to determine signup type
+      const { getSignupTypeFromDomain } = await import('@/lib/domain')
+      const { PRICING_CONFIG } = await import('@/config/pricing')
+      const { getDefaultPackage } = await import('@/config/landing-content')
+
+      const userType = getSignupTypeFromDomain(domain) || 'individual'
+
+      // Determine role and planTier based on signup type (same as registration route)
+      const role = userType === 'team' ? 'team_admin' : 'user'
+      const planTier = userType === 'team' ? 'pro' : 'individual'
+      const freeCredits = userType === 'team'
+        ? PRICING_CONFIG.freeTrial.pro
+        : PRICING_CONFIG.freeTrial.individual
+      const packageId = getDefaultPackage(domain || undefined)
+
+      // Don't store localhost as signupDomain
+      const signupDomain = domain && domain !== 'localhost' ? domain : null
+
+      // Create User, Person, and Team (if applicable) in a single transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Create User
+        const user = await tx.user.create({
+          data: {
+            ...userData,
+            role,
+            planTier,
+            planPeriod: 'free',
+            freeTrialGrantedAt: new Date(),
+            signupDomain,
+          }
+        })
+
+        // 2. Create Person
+        const person = await tx.person.create({
+          data: {
+            userId: user.id,
+            firstName,
+            lastName,
+            email: userData.email,
+            onboardingState: JSON.stringify({
+              state: 'not_started',
+              completedTours: [],
+              pendingTours: [],
+              lastUpdated: new Date().toISOString(),
+            }),
+          }
+        })
+
+        // 3. Create Team if team domain
+        let teamId: string | null = null
+        if (userType === 'team') {
+          const team = await tx.team.create({
+            data: {
+              name: null,
+              adminId: user.id,
+              teamMembers: {
+                connect: { id: person.id }
+              }
+            }
+          })
+
+          // Link person to team
+          await tx.person.update({
+            where: { id: person.id },
+            data: { teamId: team.id }
+          })
+
+          teamId = team.id
+        }
+
+        // 4. Grant free trial credits
+        await tx.creditTransaction.create({
+          data: {
+            personId: person.id,
+            credits: freeCredits,
+            type: 'free_grant',
+            description: 'Free trial credits',
+            planTier,
+            planPeriod: 'free',
+          }
+        })
+
+        // 5. Create subscription change record
+        await tx.subscriptionChange.create({
+          data: {
+            userId: user.id,
+            planTier,
+            planPeriod: 'free',
+            action: 'start',
+          }
+        })
+
+        // 6. Grant default package
+        await tx.userPackage.create({
+          data: {
+            userId: user.id,
+            packageId,
+            purchasedAt: new Date()
+          }
+        })
+
+        return { user, person, teamId }
+      })
+
+      return result.user
+    },
+  }
+})()
+
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: customAdapter as any,
   providers: [
     // Email/password authentication with OTP verification
     // Also supports one-time sign-in tokens for guest checkout
@@ -193,30 +350,30 @@ export const authOptions = {
         // Detect locale from email domain or default to 'en'
         // For now, default to 'en' - could be enhanced to detect from user preferences
         const locale = 'en' as 'en' | 'es'
-        
+
         // Parse the URL to extract and fix the callbackUrl
         // The url parameter contains the full callback URL with token
         // We need to ensure the callbackUrl points to dashboard, not verify-request
         const urlObj = new URL(url)
         const currentCallbackUrl = urlObj.searchParams.get('callbackUrl')
-        
+
         // If callbackUrl points to verify-request, replace it with dashboard
         if (currentCallbackUrl && currentCallbackUrl.includes('/auth/verify-request')) {
           // Extract the original callbackUrl from the verify-request URL if present
           const verifyRequestUrl = new URL(currentCallbackUrl, urlObj.origin)
           const originalCallbackUrl = verifyRequestUrl.searchParams.get('callbackUrl') || '/app/dashboard'
-          
+
           // Update the callbackUrl in the magic link URL
           urlObj.searchParams.set('callbackUrl', originalCallbackUrl)
         } else if (!currentCallbackUrl) {
           // If no callbackUrl, default to dashboard
           urlObj.searchParams.set('callbackUrl', '/app/dashboard')
         }
-        
+
         const magicLinkUrl = urlObj.toString()
-        
+
         const subject = getEmailTranslation('magicLink.subject', locale)
-        
+
         // Render the React email template to HTML
         const html = await render(
           MagicLinkEmail({
@@ -224,14 +381,14 @@ export const authOptions = {
             locale,
           })
         )
-        
+
         // Also provide plain text fallback
         const text = getEmailTranslation('magicLink.body', locale, { link: magicLinkUrl })
-        
+
         try {
           const { Resend } = await import('resend')
           const resend = new Resend(provider.apiKey)
-          
+
           await resend.emails.send({
             from: provider.from as string,
             to: email,
@@ -244,7 +401,29 @@ export const authOptions = {
           throw error
         }
       },
-    })
+    }),
+
+    // Google OAuth authentication
+    // allowDangerousEmailAccountLinking is safe for Google because they always verify emails
+    // Credentials loaded from JSON file specified by GOOGLE_OAUTH_CREDENTIALS env var
+    ...(() => {
+      const credentialsPath = Env.string('GOOGLE_OAUTH_CREDENTIALS', '')
+      if (!credentialsPath) return []
+      try {
+        const fs = require('fs')
+        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'))
+        const { client_id, client_secret } = credentials.installed || credentials.web || credentials
+        if (!client_id || !client_secret) return []
+        return [Google({
+          clientId: client_id,
+          clientSecret: client_secret,
+          allowDangerousEmailAccountLinking: true,
+        })]
+      } catch {
+        console.warn('Failed to load Google OAuth credentials from', credentialsPath)
+        return []
+      }
+    })(),
   ],
   
   session: {
@@ -303,6 +482,17 @@ export const authOptions = {
   })(),
   
   callbacks: {
+    /**
+     * signIn callback - handles OAuth user setup (Person creation, free trial credits)
+     * This runs after the OAuth provider validates the user but before the session is created
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+    async signIn({ user, account }: { user: User | AdapterUser; account?: any; profile?: any }) {
+      // For OAuth/OIDC sign-ins, the customAdapter.createUser handles all setup
+      // (User, Person, Team, credits, package) in a single transaction.
+      return true
+    },
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async jwt({ token, user, trigger: _trigger }: { token: JWT; user?: User | AdapterUser | null; trigger?: string }) {
       // SECURITY: Check if token has been revoked (only on subsequent requests, not initial auth)

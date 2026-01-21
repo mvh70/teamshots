@@ -78,6 +78,7 @@ export async function GET() {
         getTeamOnboardingState({
           isTeamAdmin: userContext.roles.isTeamAdmin,
           teamId,
+          teamName,
           prefetchedMemberCount: typeof cachedData.stats.teamMembers === 'number' ? cachedData.stats.teamMembers : undefined,
           prefetchedPendingInviteCount: pendingInviteCountFromCache
         }),
@@ -219,6 +220,7 @@ export async function GET() {
       getTeamOnboardingState({
         isTeamAdmin: userContext.roles.isTeamAdmin,
         teamId,
+        teamName,
         prefetchedMemberCount: teamMembersCount,
         prefetchedPendingInviteCount: pendingTeamInvitesCount
       }),

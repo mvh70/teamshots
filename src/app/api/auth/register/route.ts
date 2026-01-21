@@ -364,119 +364,24 @@ export async function POST(request: NextRequest) {
       Logger.info('21. Person created', { personId: person.id })
     }
 
-    // Handle team registration (only if not from invite - invites already have teamId)
-    if (userType === 'team' && !teamId) {
-      // Create team for pro user immediately (with null name - they'll set it up later)
-      const team = await prisma.team.create({
-        data: {
-          name: null,
-          adminId: user.id,
-          teamMembers: {
-            connect: { id: person.id }
-          }
-        }
-      })
-      
-      // Link person to team
-      await prisma.person.update({
-        where: { id: person.id },
-        data: { teamId: team.id }
-      })
-      
-      teamId = team.id
-      
-      // Set user role to team_admin
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { role: 'team_admin' }
-      })
+    // Grant signup benefits using shared function (free trial credits + default package + team creation)
+    // skipNotifications: true because we send richer analytics below with more context
+    const { grantSignupBenefits } = await import('@/domain/account/signup-grants')
+    const grantsResult = await grantSignupBenefits({
+      userId: user.id,
+      email,
+      firstName: firstName || 'User',
+      lastName,
+      domain,
+      existingTeamId: teamId,
+      skipNotifications: true, // We handle analytics/email below with more context
+    })
 
-      Logger.info('22. Team auto-created for pro user', { userId: user.id, teamId: team.id })
-    }
+    // Use teamId from shared function (handles team creation for team domains)
+    teamId = grantsResult.teamId
 
-    // Consolidated signup grants (free trial + default package) in single transaction
-    try {
-      await prisma.$transaction(async (tx: PrismaTransactionClient) => {
-        const { PRICING_CONFIG } = await import('@/config/pricing')
-        const { getDefaultPackage } = await import('@/config/landing-content')
-        // Package ownership model:
-        // - Users are granted their target package on signup (e.g., headshot1)
-        // - Runtime access control enforces freepackage during free trial (see fetchStyleData in actions.ts)
-        // - When users pay, they already "own" the package - runtime override is lifted
-        const packageId = getDefaultPackage(domain || undefined)
-        const freePlanTier = userType === 'team' ? 'pro' : 'individual'
-        // Use free trial credits based on user type (Team/Pro gets more)
-        const freeCredits = userType === 'team'
-          ? PRICING_CONFIG.freeTrial.pro
-          : PRICING_CONFIG.freeTrial.individual
-
-        // Get person's id and team association for credit assignment
-        // Person is the business entity that owns credits
-        const personWithTeam = await tx.person.findUnique({
-          where: { userId: user.id },
-          select: { id: true, teamId: true }
-        })
-
-        // Check existing grants in single query - use personId for credits (Person is business entity)
-        const [existingFreeGrant, existingPackage] = await Promise.all([
-          tx.creditTransaction.findFirst({
-            where: { personId: personWithTeam?.id, type: 'free_grant' }
-          }),
-          tx.userPackage.findFirst({
-            where: { userId: user.id, packageId }
-          })
-        ])
-
-        // Free trial grant (only if not already granted)
-        // Credits belong to Person (business entity), not User (auth)
-        // NOTE: Free trial credits should NOT have teamId set - they are personal credits
-        // for the admin, not team pool credits. Team pool credits come from seat_purchase.
-        if (!existingFreeGrant && personWithTeam?.id) {
-          await tx.creditTransaction.create({
-            data: {
-              personId: personWithTeam.id,
-              // Do NOT set teamId here - free trial credits are personal, not team pool
-              credits: freeCredits,
-              type: 'free_grant',
-              description: 'Free trial credits',
-              planTier: freePlanTier,
-              planPeriod: 'free',
-            }
-          })
-
-          type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-          const txEx = tx as unknown as PrismaWithSubscriptionChange
-          await txEx.subscriptionChange.create({
-            data: {
-              userId: user.id,
-              planTier: freePlanTier,
-              planPeriod: 'free',
-              action: 'start',
-            }
-          })
-
-          await tx.user.update({
-            where: { id: user.id },
-            data: { planTier: freePlanTier, planPeriod: 'free', freeTrialGrantedAt: new Date() }
-          })
-
-          Logger.info('Free trial granted', { userId: user.id, credits: freeCredits, planTier: freePlanTier })
-        }
-
-        // Package grant (only if not already granted)
-        if (!existingPackage) {
-          await tx.userPackage.create({
-            data: {
-              userId: user.id,
-              packageId,
-              purchasedAt: new Date()
-            }
-          })
-          Logger.info('Package granted', { userId: user.id, packageId })
-        }
-      })
-    } catch (e) {
-      Logger.error('Signup grants failed', { error: e instanceof Error ? e.message : String(e) })
+    if (!grantsResult.success) {
+      Logger.error('Signup grants failed', { error: grantsResult.error })
     }
 
     Logger.info('24. Registration complete!')
