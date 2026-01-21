@@ -9,10 +9,16 @@ import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { auth } from '@/auth'
 
 export async function GET(request: NextRequest) {
-  // Only allow in development or for authenticated users
+  // SECURITY: Require authentication
   const session = await auth()
-  if (process.env.NODE_ENV === 'production' && !session?.user?.id) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // SECURITY: In production, require admin role to prevent file enumeration attacks
+  // This endpoint can be used to check if arbitrary file keys exist
+  if (process.env.NODE_ENV === 'production' && !session.user.isAdmin) {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)

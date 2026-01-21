@@ -21,6 +21,8 @@ export function LoadingSpinner({
 }: LoadingSpinnerProps) {
   return (
     <div
+      role="status"
+      aria-label="Loading"
       className={`animate-spin rounded-full border-2 border-gray-300 border-t-brand-primary ${sizeClasses[size]} ${className}`}
       data-testid={testId}
     />

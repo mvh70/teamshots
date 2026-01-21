@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { Env } from '@/lib/env'
 import { Logger } from '@/lib/logger'
+import { SESSION_MAX_AGE_SECONDS } from '@/lib/auth'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -79,8 +80,8 @@ export async function POST(request: NextRequest) {
     const jti = await extractJtiFromRequest(request)
     
     if (jti) {
-      // Calculate token expiration (30 minutes from now, matching SESSION_MAX_AGE_SECONDS)
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+      // Calculate token expiration using the actual SESSION_MAX_AGE_SECONDS constant
+      const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000)
       
       // Revoke the specific token
       await revokeToken(jti, userId, expiresAt)
@@ -91,14 +92,14 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // If we can't extract jti, log for monitoring
-      // The token will still expire naturally (30 minutes), and the cookie is cleared
+      // The token will still expire naturally (per SESSION_MAX_AGE_SECONDS), and the cookie is cleared
       // This is acceptable because:
-      // 1. Tokens have short expiration (30 minutes)
+      // 1. Tokens have short expiration (15 minutes)
       // 2. Cookie is cleared on logout, making token extraction difficult
       // 3. Most users cannot extract tokens from httpOnly cookies
       Logger.warn('Could not extract jti from session token during logout', {
         userId,
-        note: 'Token will expire naturally in 30 minutes. Cookie is cleared on logout.'
+        note: `Token will expire naturally in ${SESSION_MAX_AGE_SECONDS / 60} minutes. Cookie is cleared on logout.`
       })
     }
     

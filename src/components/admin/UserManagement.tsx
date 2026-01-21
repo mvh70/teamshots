@@ -119,13 +119,14 @@ function PackageGrantModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="grant-package-title">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Grant Package</h3>
+          <h3 id="grant-package-title" className="text-lg font-semibold text-gray-900">Grant Package</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label="Close"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -146,10 +147,11 @@ function PackageGrantModal({
         ) : (
           <>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="package-select" className="block text-sm font-medium text-gray-700 mb-2">
                 Select Package
               </label>
               <select
+                id="package-select"
                 value={selectedPackage}
                 onChange={(e) => setSelectedPackage(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
@@ -262,13 +264,14 @@ function PlanUpgradeModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="upgrade-plan-title">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Upgrade Plan</h3>
+          <h3 id="upgrade-plan-title" className="text-lg font-semibold text-gray-900">Upgrade Plan</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label="Close"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -457,13 +460,14 @@ function GiveCreditsModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="give-credits-title">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Give Credits</h3>
+          <h3 id="give-credits-title" className="text-lg font-semibold text-gray-900">Give Credits</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label="Close"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -570,7 +574,7 @@ export default function UserManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-brand-primary border-t-transparent rounded-full"></div>
+        <div role="status" aria-label="Loading users" className="animate-spin h-8 w-8 border-4 border-brand-primary border-t-transparent rounded-full"></div>
       </div>
     )
   }
@@ -639,8 +643,9 @@ export default function UserManagement() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="inline-block">
-                    <span
-                      className="text-sm font-medium text-gray-900 cursor-help"
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-gray-900 cursor-help bg-transparent border-none p-0"
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect()
                         setHoveredUserId(user.id)
@@ -653,9 +658,22 @@ export default function UserManagement() {
                         setHoveredUserId(null)
                         setTooltipPosition(null)
                       }}
+                      onFocus={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setHoveredUserId(user.id)
+                        setTooltipPosition({
+                          x: rect.left,
+                          y: rect.top - 10
+                        })
+                      }}
+                      onBlur={() => {
+                        setHoveredUserId(null)
+                        setTooltipPosition(null)
+                      }}
+                      aria-describedby={hoveredUserId === user.id ? `tooltip-${user.id}` : undefined}
                     >
                       {user.totalCredits}
-                    </span>
+                    </button>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -717,6 +735,8 @@ export default function UserManagement() {
 
         return (
           <div
+            id={`tooltip-${user.id}`}
+            role="tooltip"
             style={{
               position: 'fixed',
               left: '300px',

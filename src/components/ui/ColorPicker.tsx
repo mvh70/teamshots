@@ -246,7 +246,7 @@ export default function ColorPicker({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="color-picker-input" className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
@@ -259,6 +259,7 @@ export default function ColorPicker({
           <>
             <input
               ref={inputRef}
+              id="color-picker-input"
               type="text"
               value={inputValue}
               onChange={handleInputChange}
@@ -291,7 +292,7 @@ export default function ColorPicker({
               className={`absolute right-2 p-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors ${
                 disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               }`}
-              title="Open color picker"
+              aria-label="Open color picker"
             >
               <div
                 className="w-5 h-5 rounded border border-gray-300 shadow-sm"

@@ -8,7 +8,7 @@
  */
 
 import sharp from 'sharp'
-import { execAsync } from '@/lib/exec'
+import { spawnAsync } from '@/lib/exec'
 import { Logger } from '@/lib/logger'
 
 export interface PreprocessingStepResult {
@@ -51,11 +51,16 @@ export async function removePersonFromBackground(
       throw new Error('Base64 data too large')
     }
 
-    // Call Python script for background removal (uses u2net_human_seg to remove person)
+    // SECURITY: Use spawnAsync with argument array to prevent command injection
+    // This separates command from arguments, preventing shell metacharacter interpretation
     const pythonPath = '/usr/bin/python3'
     const pythonScript = 'scripts/remove_background.py'
-    
-    const { stdout } = await execAsync(`${pythonPath} ${pythonScript} "${base64}" u2net_human_seg`)
+
+    const { stdout, exitCode } = await spawnAsync(pythonPath, [pythonScript, base64, 'u2net_human_seg'])
+
+    if (exitCode !== 0) {
+      throw new Error(`Python script exited with code ${exitCode}`)
+    }
     const result = JSON.parse(stdout.trim())
     
     if (!result.success) {

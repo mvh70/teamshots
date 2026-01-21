@@ -60,6 +60,8 @@ export default function WaitlistForm() {
           <div className="flex flex-col sm:flex-row gap-4">
             <input
               type="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('emailPlaceholder')}
@@ -70,8 +72,14 @@ export default function WaitlistForm() {
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all duration-300 disabled:bg-gray-400 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg min-w-[200px]"
+              className="px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all duration-300 disabled:bg-gray-400 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg min-w-[200px] flex items-center justify-center gap-2"
             >
+              {status === 'loading' && (
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
               {status === 'loading' ? t('submitting') : t('submitFirstPerson')}
             </button>
           </div>

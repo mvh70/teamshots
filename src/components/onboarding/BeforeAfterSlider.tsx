@@ -128,10 +128,32 @@ export function BeforeAfterSlider({
 
       {/* Slider Handle */}
       <div
+        role="slider"
+        tabIndex={0}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(sliderPosition)}
+        aria-label="Compare before and after images"
         className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize z-10"
-        style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+        style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)', touchAction: 'manipulation' }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
+        onKeyDown={(e) => {
+          const step = e.shiftKey ? 10 : 1
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+            e.preventDefault()
+            setSliderPosition((prev) => Math.max(0, prev - step))
+          } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            setSliderPosition((prev) => Math.min(100, prev + step))
+          } else if (e.key === 'Home') {
+            e.preventDefault()
+            setSliderPosition(0)
+          } else if (e.key === 'End') {
+            e.preventDefault()
+            setSliderPosition(100)
+          }
+        }}
       >
         {/* Handle Button */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-200 flex items-center justify-center">
@@ -141,6 +163,7 @@ export function BeforeAfterSlider({
         {/* Mobile Touch Area (Invisible, larger) */}
         <div
           className="absolute inset-0 -m-4 cursor-ew-resize"
+          style={{ touchAction: 'manipulation' }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         />

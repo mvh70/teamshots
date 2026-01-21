@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
+import crypto from 'crypto'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
@@ -11,6 +12,15 @@ if (!bucket) {
   Logger.warn('[uploads/sign] Missing S3 bucket configuration')
 }
 
+// SECURITY: Allowed content types for presigned uploads
+const ALLOWED_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -19,8 +29,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'contentType required' }, { status: 400 })
     }
 
-    // Construct relative key (without folder prefix) - this will be stored in database
-    const relativeKey = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
+    // SECURITY: Validate content type against allowlist
+    if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
+      return NextResponse.json(
+        { error: 'Invalid content type. Only images are allowed.' },
+        { status: 400 }
+      )
+    }
+
+    // SECURITY: Use crypto.randomUUID for unpredictable filenames instead of Math.random
+    const relativeKey = `uploads/${Date.now()}-${crypto.randomUUID()}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
     // Add folder prefix if configured for S3 upload
     const s3Key = getS3Key(relativeKey)
 
@@ -29,12 +47,14 @@ export async function POST(req: NextRequest) {
       Bucket: bucket!,
       Key: s3Key,
       Fields: {
-        'success_action_status': '201'
+        'success_action_status': '201',
+        'Content-Type': contentType, // Include content type in fields
       },
       Expires: 60,
       Conditions: [
         ['content-length-range', 0, 50 * 1024 * 1024], // 50MB max
-        ['eq', '$key', s3Key]
+        ['eq', '$key', s3Key],
+        ['eq', '$Content-Type', contentType], // SECURITY: Enforce content type at S3 level
       ]
     })
 

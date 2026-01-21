@@ -75,7 +75,7 @@ export default function PlanCard({
       <ul className="space-y-3 mb-8 flex-grow">
         {(t.raw(`plans.${id}.features`) as string[]).map((feature: string) => (
           <li key={feature} className="flex items-start gap-3 text-gray-700">
-            <svg className="w-5 h-5 text-brand-secondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-brand-secondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             <span>{feature}</span>

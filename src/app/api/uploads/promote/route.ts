@@ -14,6 +14,37 @@ const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 const BASE_DIR = path.join(process.cwd(), 'storage', 'tmp')
 
+/**
+ * SECURITY: Validate temp filename to prevent path traversal attacks
+ * - Rejects filenames with path separators or traversal sequences
+ * - Validates resolved path is within BASE_DIR
+ */
+function validateTempFilename(fileName: string): { valid: boolean; error?: string } {
+  // Check for path traversal patterns
+  if (
+    fileName.includes('/') ||
+    fileName.includes('\\') ||
+    fileName.includes('..') ||
+    fileName.includes('\0') ||
+    fileName.includes('%2f') ||
+    fileName.includes('%2F') ||
+    fileName.includes('%5c') ||
+    fileName.includes('%5C') ||
+    fileName.includes('%2e%2e') ||
+    fileName.includes('%00')
+  ) {
+    return { valid: false, error: 'Invalid filename: path traversal detected' }
+  }
+
+  // Validate the resolved path is within BASE_DIR
+  const resolvedPath = path.resolve(BASE_DIR, fileName)
+  if (!resolvedPath.startsWith(BASE_DIR + path.sep) && resolvedPath !== BASE_DIR) {
+    return { valid: false, error: 'Invalid filename: path escape detected' }
+  }
+
+  return { valid: true }
+}
+
 export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
 
@@ -36,6 +67,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid temp key' }, { status: 400 })
     }
     const fileName = tempKey.slice('temp:'.length)
+
+    // SECURITY: Validate filename to prevent path traversal attacks
+    const filenameValidation = validateTempFilename(fileName)
+    if (!filenameValidation.valid) {
+      await SecurityLogger.logSuspiciousActivity(
+        session.user.id,
+        'path_traversal_attempt',
+        { endpoint: '/api/uploads/promote', fileName, tempKey }
+      )
+      return NextResponse.json({ error: filenameValidation.error }, { status: 400 })
+    }
+
     const filePath = path.join(BASE_DIR, fileName)
 
     const file = await fs.readFile(filePath)

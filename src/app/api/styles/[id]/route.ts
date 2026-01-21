@@ -103,6 +103,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Context not found' }, { status: 404 })
     }
 
+    // SECURITY: For team contexts, require admin role for modifications
+    // This prevents team members from modifying shared team settings
+    if (context.teamId && context.team?.adminId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Only team admin can modify team contexts' },
+        { status: 403 }
+      )
+    }
+
     // Update style - store customPrompt in settings
     const updatedSettings = { ...settings, customPrompt }
     const updatedContext = await prisma.context.update({
@@ -149,7 +158,7 @@ export async function DELETE(
         id: contextId,
         OR: [
           { userId: session.user.id }, // Personal context
-          { 
+          {
             team: {
               teamMembers: {
                 some: {
@@ -167,6 +176,15 @@ export async function DELETE(
 
     if (!context) {
       return NextResponse.json({ error: 'Context not found' }, { status: 404 })
+    }
+
+    // SECURITY: For team contexts, require admin role for deletion
+    // This prevents team members from deleting shared team contexts
+    if (context.teamId && context.team?.adminId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Only team admin can delete team contexts' },
+        { status: 403 }
+      )
     }
 
     // Check if this is the active context and handle accordingly

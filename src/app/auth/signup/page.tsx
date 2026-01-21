@@ -84,8 +84,13 @@ export default function SignUpPage() {
     otpCode: '',
   }))
 
+  // Email validation state
+  // Basic format check - server-side validation is more thorough
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+
   // Password validation state
-  const passwordMeetsRequirements = formData.password.length >= 6
+  // SECURITY: Must match server-side validation in src/lib/validation.ts (8 chars min)
+  const passwordMeetsRequirements = formData.password.length >= 8
   const passwordsMatch = formData.password === formData.confirmPassword
   const confirmPasswordTouched = formData.confirmPassword.length > 0
 
@@ -293,6 +298,7 @@ export default function SignUpPage() {
                 type="email"
                 required
                 label={t('emailLabel')}
+                placeholder={t('emailPlaceholder')}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -306,9 +312,7 @@ export default function SignUpPage() {
                   required
                   label={
                     <span className="flex items-center gap-2">
-                      <span>
-                        {t('passwordLabel')} ({t('passwordRequirement')})
-                      </span>
+                      <span>{t('passwordLabel')}</span>
                       {passwordMeetsRequirements && (
                         <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -316,6 +320,7 @@ export default function SignUpPage() {
                       )}
                     </span>
                   }
+                  placeholder={t('passwordRequirement')}
                   strengthMeter
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -344,7 +349,7 @@ export default function SignUpPage() {
                 type="button"
                 onClick={handleSubscribe}
                 loading={isLoading}
-                disabled={isLoading || !formData.email || !formData.firstName || !passwordMeetsRequirements || !passwordsMatch}
+                disabled={isLoading || !isValidEmail || !formData.firstName || !passwordMeetsRequirements || !passwordsMatch}
               >
                 {isLoading ? t('sending') : t('sendCode')}
               </AuthButton>

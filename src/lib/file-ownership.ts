@@ -108,6 +108,7 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
 /**
  * Validate invite token and return person ID, team ID, and context ID if valid
  * Also extends invite expiry (sliding expiration) when token is valid
+ * SECURITY: Validates token expiry to prevent access with expired invites
  */
 export async function validateInviteToken(token: string | null): Promise<{ personId: string; teamId: string | null; contextId: string | null } | null> {
   if (!token) {
@@ -118,6 +119,8 @@ export async function validateInviteToken(token: string | null): Promise<{ perso
     where: {
       token,
       usedAt: { not: null },
+      // SECURITY: Validate invite has not expired
+      expiresAt: { gt: new Date() },
     },
     include: {
       person: {
@@ -131,7 +134,7 @@ export async function validateInviteToken(token: string | null): Promise<{ perso
 
   if (!invite?.person) {
     return null
- }
+  }
 
   // Extend invite expiry (sliding expiration) - don't await to avoid blocking
   extendInviteExpiry(invite.id).catch(() => {

@@ -233,10 +233,10 @@ export function FeedbackModal({ isOpen, onClose, context }: FeedbackModalProps) 
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Category Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <fieldset>
+              <legend className="block text-sm font-medium text-gray-700 mb-2">
                 {t('form.category')}
-              </label>
+              </legend>
               <div className="space-y-2">
                 {(['bug', 'suggestion', 'question', 'other'] as Category[]).map((cat) => (
                   <label
@@ -256,17 +256,18 @@ export function FeedbackModal({ isOpen, onClose, context }: FeedbackModalProps) 
                   </label>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             {/* Rating */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <fieldset>
+              <legend className="block text-sm font-medium text-gray-700 mb-2">
                 {t('form.rating')}
-              </label>
-              <div className="flex gap-4">
+              </legend>
+              <div className="flex gap-4" role="group" aria-label={t('form.rating')}>
                 <button
                   type="button"
                   onClick={() => setRating('up')}
+                  aria-pressed={rating === 'up'}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     rating === 'up'
                       ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
@@ -279,6 +280,7 @@ export function FeedbackModal({ isOpen, onClose, context }: FeedbackModalProps) 
                 <button
                   type="button"
                   onClick={() => setRating('down')}
+                  aria-pressed={rating === 'down'}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     rating === 'down'
                       ? 'border-red-500 bg-red-50 text-red-600'
@@ -289,7 +291,7 @@ export function FeedbackModal({ isOpen, onClose, context }: FeedbackModalProps) 
                   <span className="text-sm font-medium">{t('rating.down')}</span>
                 </button>
               </div>
-            </div>
+            </fieldset>
 
             {/* Email (for anonymous users) */}
             {!session?.user && (

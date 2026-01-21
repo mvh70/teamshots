@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
@@ -188,7 +189,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 11. Upload to S3
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.png`
+    // SECURITY: Use crypto.randomUUID for unpredictable filenames instead of Math.random
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.png`
     const relativeKey = `outfits/${person.id}/${fileName}`
     const s3Key = getS3Key(relativeKey)
 

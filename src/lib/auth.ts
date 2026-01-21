@@ -16,7 +16,8 @@ import { render } from '@react-email/render'
 import { getEmailTranslation } from '@/lib/translations'
 
 // SECURITY: Tightened session configuration for better security
-const SESSION_MAX_AGE_SECONDS = 15 * 60 // 15 minutes (reduced from 30)
+// Exported so other modules can use consistent session timing
+export const SESSION_MAX_AGE_SECONDS = 15 * 60 // 15 minutes (reduced from 30)
 const SESSION_EXTENSION_THRESHOLD_SECONDS = 2 * 60 // 2 minutes (reduced from 5)
 const ABSOLUTE_MAX_SESSION_AGE_SECONDS = 4 * 60 * 60 // 4 hours absolute maximum
 

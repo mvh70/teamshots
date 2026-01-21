@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
+import crypto from 'crypto'
 import { Logger } from '@/lib/logger'
 import { getRequestHeader } from '@/lib/server-headers'
 import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
@@ -74,7 +75,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Person record not found' }, { status: 404 })
       }
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
+      // SECURITY: Use crypto.randomUUID for unpredictable filenames instead of Math.random
+      const fileName = `${Date.now()}-${crypto.randomUUID()}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
       
       if (fileType === 'selfie') {
         // Format: selfies/{personId}-{firstName}/{filename}
@@ -86,7 +88,8 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Use provided keyHeader or construct standard key
-      relativeKey = keyHeader || `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
+      // SECURITY: Use crypto.randomUUID for unpredictable filenames instead of Math.random
+      relativeKey = keyHeader || `${folder}/${Date.now()}-${crypto.randomUUID()}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
     }
 
     const body = await req.arrayBuffer()

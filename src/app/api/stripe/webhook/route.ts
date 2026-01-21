@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Skip signature verification only in development when webhook secret is not set
+    // SECURITY NOTE: This is acceptable for development with Stripe CLI, but webhook
+    // secret should always be configured in staging/production environments
     if (!webhookSecret) {
-      Logger.warn('Webhook secret not configured, skipping signature verification');
+      Logger.warn('SECURITY: Webhook secret not configured, skipping signature verification. Use Stripe CLI for local testing.');
       event = JSON.parse(body) as Stripe.Event;
     } else {
       // When webhook secret is configured, signature verification is required

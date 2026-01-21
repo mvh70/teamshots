@@ -94,7 +94,7 @@ export function Button({
 
   const getButtonContent = () => {
     if (loading) {
-      const loadingDisplay = loadingText || (variant === 'auth' ? 'Please wait…' : 'Loading...')
+      const loadingDisplay = loadingText || (variant === 'auth' ? 'Please wait…' : 'Loading…')
 
       if (subLabel && variant === 'checkout') {
         return (

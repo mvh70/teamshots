@@ -186,7 +186,9 @@ export async function POST(request: NextRequest) {
       )
     }
     Logger.info('13. Hashing password...')
-    const hashedPassword = await bcrypt.hash(password, 13)
+    // SECURITY: Use standardized bcrypt cost factor from validation module
+    const { BCRYPT_COST_FACTOR } = await import('@/lib/validation')
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_COST_FACTOR)
     Logger.debug('14. Password hashed')
 
     // Extract and normalize the signup domain for email links later

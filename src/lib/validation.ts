@@ -1,15 +1,20 @@
 import { z } from 'zod'
 import validator from 'validator'
 
+// SECURITY: Standardized bcrypt cost factor for all password hashing
+// Cost factor 12 provides ~250ms hashing time on modern hardware
+// This should be used consistently across all password operations
+export const BCRYPT_COST_FACTOR = 12
+
 // Email validation (stricter than Zod default)
 export const emailSchema = z.string()
   .email('Invalid email format')
   .max(255, 'Email too long')
   .refine((email) => validator.isEmail(email), 'Invalid email')
 
-// Password requirements (gradually increasing)
+// Password requirements - SECURITY: NIST SP 800-63B recommends minimum 8 characters
 export const passwordSchema = z.string()
-  .min(6, 'Password must be at least 6 characters')
+  .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password too long')
 
 // Name validation (basic security)

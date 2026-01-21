@@ -21,10 +21,11 @@ export default function LanguageSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" role="group" aria-label="Language selection">
       <button
         onClick={() => onSelectChange('en')}
         disabled={isPending}
+        aria-pressed={locale === 'en'}
         className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           locale === 'en'
             ? 'bg-brand-primary-hover text-white'
@@ -36,6 +37,7 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => onSelectChange('es')}
         disabled={isPending}
+        aria-pressed={locale === 'es'}
         className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           locale === 'es'
             ? 'bg-brand-primary-hover text-white'
