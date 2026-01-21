@@ -1,6 +1,6 @@
 import StyleSummary from '@/components/styles/StyleSummary'
 import type { PhotoStyleSummarySettings } from '@/components/styles/StyleSummary'
-import { PhotoIcon } from '@heroicons/react/24/outline'
+import { CameraIcon } from '@heroicons/react/24/outline'
 
 interface StyleSummaryCardProps {
   settings?: PhotoStyleSummarySettings | null
@@ -9,27 +9,34 @@ interface StyleSummaryCardProps {
 
 export default function StyleSummaryCard({ settings, packageId }: StyleSummaryCardProps) {
   return (
-    <div className="relative bg-gradient-to-br from-gray-50 via-white to-gray-50/80 rounded-2xl p-6 md:p-7 border border-gray-200/60 shadow-md shadow-gray-200/20 hover:shadow-lg hover:shadow-gray-300/30 transition-all duration-300 hover:-translate-y-0.5">
-      {/* Decorative element */}
-      <div className="absolute top-0 right-0 -mt-3 -mr-3 h-20 w-20 bg-gradient-to-br from-brand-primary/8 to-brand-secondary/8 rounded-full blur-2xl opacity-60" />
-      <div className="absolute bottom-0 left-0 -mb-3 -ml-3 h-16 w-16 bg-gradient-to-tr from-brand-secondary/5 to-brand-primary/5 rounded-full blur-xl opacity-40" />
-      
-      <div className="relative space-y-4">
-        {/* Header with icon */}
-        <div className="flex items-center gap-3 pb-3 border-b border-gray-200/60">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-brand-primary via-brand-primary-hover to-brand-primary flex items-center justify-center shadow-md shadow-brand-primary/25 ring-2 ring-brand-primary/10">
-            <PhotoIcon className="h-5 w-5 text-white" strokeWidth={2.5} />
+    <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+      {/* Refined header with gradient background */}
+      <div className="relative px-5 py-4 bg-gradient-to-br from-slate-50 via-white to-slate-50/50 border-b border-gray-100 rounded-t-2xl overflow-hidden">
+        {/* Subtle decorative element */}
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-brand-primary/[0.03] to-transparent rounded-bl-full" />
+
+        <div className="relative flex items-center gap-3.5">
+          {/* Icon with refined treatment */}
+          <div className="relative flex-shrink-0">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-brand-primary/10 via-brand-primary/5 to-transparent flex items-center justify-center border border-brand-primary/10">
+              <CameraIcon className="h-5 w-5 text-brand-primary" strokeWidth={1.75} />
+            </div>
           </div>
-          <h4 className="text-lg font-display font-bold text-gray-900 tracking-tight">Composition</h4>
+
+          {/* Title */}
+          <div className="min-w-0">
+            <h4 className="text-[13px] font-semibold text-gray-800 tracking-wide uppercase">
+              Composition
+            </h4>
+            <p className="text-xs text-gray-400 mt-0.5">Photo settings</p>
+          </div>
         </div>
-        
-        {/* Content */}
-        <div className="pt-2">
-          <StyleSummary settings={settings} packageId={packageId} />
-        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="px-5 py-4 flex-1">
+        <StyleSummary settings={settings} packageId={packageId} />
       </div>
     </div>
   )
 }
-
-

@@ -22,7 +22,8 @@ export interface V3Step2FinalInput {
   backgroundBuffer?: Buffer // Custom background if provided (from Step 1b OR user's custom background)
   styleSettings?: PhotoStyleSettings // For element composition and user's background choice
   logoReference?: BaseReferenceImage // Logo for background/environmental branding (not clothing)
-  faceCompositeReference?: BaseReferenceImage // Selfie composite from Step 1a for face refinement
+  faceCompositeReference?: BaseReferenceImage // Face composite from Step 1a for face refinement
+  bodyCompositeReference?: BaseReferenceImage // Body composite from Step 1a for body verification
   evaluatorComments?: string[] // Comments from Step 1a and Step 1b evaluations
   aspectRatio: string
   resolution?: '1K' | '2K' | '4K'
@@ -44,6 +45,8 @@ async function composeElementContributions(
     personId?: string
     teamId?: string
     preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
+    hasFaceComposite?: boolean  // Whether face composite reference is available
+    hasBodyComposite?: boolean  // Whether body composite reference is available
   }
 ): Promise<{
   instructions: string[]
@@ -86,6 +89,8 @@ export async function executeV3Step2(
     personBuffer,
     backgroundBuffer,
     styleSettings,
+    faceCompositeReference,
+    bodyCompositeReference,
     evaluatorComments,
     aspectRatio,
     resolution,
@@ -93,11 +98,12 @@ export async function executeV3Step2(
   } = input
   
   // Logging handled by logPrompt
-  
-  // Get expected dimensions from aspect ratio
+
+  // Get expected dimensions from aspect ratio, scaled by resolution
   const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
-  const expectedWidth = aspectRatioConfig.width
-  const expectedHeight = aspectRatioConfig.height
+  const resolutionMultiplier = resolution === '4K' ? 4 : resolution === '2K' ? 2 : 1
+  const expectedWidth = aspectRatioConfig.width * resolutionMultiplier
+  const expectedHeight = aspectRatioConfig.height * resolutionMultiplier
   
   // Parse original prompt and extract scene/camera/lighting/rendering (exclude subject)
   const promptObj = JSON.parse(originalPrompt)
@@ -137,7 +143,9 @@ export async function executeV3Step2(
         generationId: input.generationId,
         personId: input.personId,
         teamId: input.teamId,
-        preparedAssets: input.preparedAssets
+        preparedAssets: input.preparedAssets,
+        hasFaceComposite: !!faceCompositeReference,
+        hasBodyComposite: !!bodyCompositeReference
       })
       Logger.debug('V3 Step 2: Element composition OK')
 
@@ -246,28 +254,27 @@ export async function executeV3Step2(
     '',
     'The person is the primary subject and the background is the secondary subject.',
     'The background can not be changed - it must be exactly as provided in the attached image labeled "BACKGROUND REFERENCE".',
-    'The person can not be changed - pose, expression, clothes, body framing, and crop points must remain EXACTLY the same as shown in the "BASE IMAGE".',
     `CRITICAL: The person is already framed as ${shotType} (${shotDescription}). DO NOT reframe or change where the body is cropped. Maintain the exact crop point from the "BASE IMAGE".`,
     '',
-    
-    // HARD CONSTRAINTS (consolidated)
+
+    // HARD CONSTRAINTS
+    // NOTE: Identity refinement and PRESERVE/REFINE rules now come from SubjectElement
     '**HARD CONSTRAINTS (Non-Negotiable):**',
-    '1. **Use the EXACT person from "BASE IMAGE":** Copy the person pixel-perfectly. Do NOT regenerate, reinterpret, or modify the person in any way.',
-    `2. **Person Preservation:** The person's identity, pose, expression, clothing, body position, and crop point must remain EXACTLY as shown in the "BASE IMAGE". The person is already framed as ${shotType} - maintain this exact framing.`,
-    '3. **Background Content:** Do NOT change background content (objects, text, layout, logos). Preserve everything exactly as provided in "BACKGROUND REFERENCE".',
-    '4. **Allowed Adjustments:** You MAY apply color grading, lighting, shadows, and depth-of-field effects to unify the composite cohesively.',
+    `1. **Framing:** The person is already framed as ${shotType} - maintain this exact framing and crop point.`,
+    '2. **Background Content:** Do NOT change background content (objects, text, layout, logos). Preserve everything exactly as provided in "BACKGROUND REFERENCE".',
+    '3. **Allowed Adjustments:** You MAY apply color grading, lighting, shadows, and depth-of-field effects to unify the composite cohesively.',
     '',
 
     // Section 2: Scene Specifications
     'Scene, Camera, Lighting & Rendering Specifications:',
     jsonPrompt,
     
-    // Section 2b: Subject Reference (for context only)
+    // Section 2b: Subject Reference (for context only - helps AI understand intended scale/positioning)
     ...(subjectReference ? [
       '',
-      'Subject Reference (FOR CONTEXT ONLY - DO NOT MODIFY THE PERSON):',
+      'Subject Reference (FOR FRAMING CONTEXT ONLY):',
       'The following subject description is provided ONLY as a reference for understanding the intended framing, scale, and positioning.',
-      'The person in the "BASE IMAGE" is ALREADY GENERATED and must NOT be changed based on this description.',
+      'Use the actual person from "BASE IMAGE" - this JSON describes the target framing, not a person to generate.',
       subjectReference
     ] : []),
 
@@ -293,6 +300,9 @@ export async function executeV3Step2(
     '- Person should be visually larger than background elements.',
     ''
   ]
+
+  // NOTE: Identity Refinement instructions now come from SubjectElement via element composition
+  // SubjectElement contributes PRESERVE/REFINE rules and refinement instructions based on composite availability
 
   // Add background preservation rules for branding (if applicable)
   // Uses element composition rules when available, otherwise falls back to extracted rules
@@ -429,6 +439,23 @@ export async function executeV3Step2(
     }
   }
 
+  // Add face and body composites for identity refinement
+  if (faceCompositeReference) {
+    referenceImages.push({
+      description: 'FACE REFERENCE - CRITICAL: The final face MUST match this reference. Modify head shape, facial structure, proportions, jawline, cheekbones, nose, eyes to match these selfies. Preserve only the expression and eye direction from BASE IMAGE.',
+      base64: faceCompositeReference.base64,
+      mimeType: faceCompositeReference.mimeType
+    })
+  }
+
+  if (bodyCompositeReference) {
+    referenceImages.push({
+      description: 'BODY REFERENCE - CRITICAL: The body proportions MUST match this reference. Adjust shoulder width, torso shape, arm thickness to match. Preserve only the pose and clothing from BASE IMAGE.',
+      base64: bodyCompositeReference.base64,
+      mimeType: bodyCompositeReference.mimeType
+    })
+  }
+
   // Add logo for background/environmental branding ONLY (clothing was done in Step 1)
   /* LEGACY CODE - Now handled by element contributions above
   if (logoReference) {
@@ -486,11 +513,45 @@ export async function executeV3Step2(
     throw new Error('V3 Step 2: Gemini returned no images')
   }
   
-  // Convert all images to PNG buffers (for debugging) - use first for pipeline
+  // Convert all images to PNG buffers and select the best one
   const allPngBuffers = await Promise.all(
     generationResult.images.map(img => sharp(img).png().toBuffer())
   )
-  const pngBuffer = allPngBuffers[0]
+
+  // Select the image with correct dimensions (or largest if none match exactly)
+  let pngBuffer = allPngBuffers[0]
+  if (allPngBuffers.length > 1) {
+    const bufferMetadata = await Promise.all(
+      allPngBuffers.map(async (buf, idx) => {
+        const meta = await sharp(buf).metadata()
+        return { idx, buf, width: meta.width || 0, height: meta.height || 0, size: buf.length }
+      })
+    )
+
+    // Prefer image with correct dimensions, otherwise take largest
+    const correctDimImage = bufferMetadata.find(
+      m => m.width === expectedWidth && m.height === expectedHeight
+    )
+    if (correctDimImage) {
+      pngBuffer = correctDimImage.buf
+      Logger.debug('V3 Step 2: Selected image with correct dimensions', {
+        selectedIndex: correctDimImage.idx,
+        dimensions: `${correctDimImage.width}x${correctDimImage.height}`,
+        totalImages: allPngBuffers.length
+      })
+    } else {
+      // Take largest image
+      const largest = bufferMetadata.reduce((a, b) => a.size > b.size ? a : b)
+      pngBuffer = largest.buf
+      Logger.debug('V3 Step 2: No exact dimension match, selected largest image', {
+        selectedIndex: largest.idx,
+        dimensions: `${largest.width}x${largest.height}`,
+        expectedDimensions: `${expectedWidth}x${expectedHeight}`,
+        totalImages: allPngBuffers.length
+      })
+    }
+  }
+
   const base64 = pngBuffer.toString('base64')
   
   logStepResult('V3 Step 2', {

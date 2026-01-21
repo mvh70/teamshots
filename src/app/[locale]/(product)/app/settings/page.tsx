@@ -11,6 +11,7 @@ import {
 import StripeNotice from '@/components/stripe/StripeNotice'
 import SubscriptionSection from '@/components/settings/SubscriptionSection'
 import BillingSection from '@/components/settings/BillingSection'
+import IntegrationsTab from '@/components/settings/IntegrationsTab'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface UserSettings {
@@ -29,20 +30,20 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'billing' | 'account'>(() => {
+  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'billing' | 'account' | 'integrations'>(() => {
     // Initialize from localStorage if available and recent (< 5 min)
     if (typeof window !== 'undefined') {
       const savedTab = localStorage.getItem('settings-active-tab')
       const savedTimestamp = localStorage.getItem('settings-active-tab-timestamp')
-      
-      if (savedTab && savedTimestamp && ['team', 'subscription', 'billing', 'account'].includes(savedTab)) {
+
+      if (savedTab && savedTimestamp && ['team', 'subscription', 'billing', 'account', 'integrations'].includes(savedTab)) {
         const timestamp = parseInt(savedTimestamp, 10)
         const now = Date.now()
         const fiveMinutes = 5 * 60 * 1000
-        
+
         // Only restore if saved within last 5 minutes
         if (now - timestamp < fiveMinutes) {
-          return savedTab as 'team' | 'subscription' | 'billing' | 'account'
+          return savedTab as 'team' | 'subscription' | 'billing' | 'account' | 'integrations'
         }
       }
     }
@@ -184,8 +185,8 @@ export default function SettingsPage() {
       if (userRoles.isTeamAdmin && activeTab === 'subscription' && searchParams.get('success') !== 'true') {
         setActiveTab('team')
       }
-      // Non team_admin users shouldn't be on the team tab
-      else if (!userRoles.isTeamAdmin && activeTab === 'team') {
+      // Non team_admin users shouldn't be on the team or integrations tab
+      else if (!userRoles.isTeamAdmin && (activeTab === 'team' || activeTab === 'integrations')) {
         setActiveTab('subscription')
       }
       setInitialTabSet(true)
@@ -199,6 +200,22 @@ export default function SettingsPage() {
       setActiveTab('subscription')
     }
   }, [searchParams])
+
+  // Handle tab query parameter (e.g., from team page linking to integrations)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['team', 'subscription', 'billing', 'integrations', 'account'].includes(tabParam)) {
+      // Only allow integrations tab for team admins
+      if (tabParam === 'integrations' && !userRoles.isTeamAdmin) {
+        return
+      }
+      // Only allow team tab for team admins
+      if (tabParam === 'team' && !userRoles.isTeamAdmin) {
+        return
+      }
+      setActiveTab(tabParam as typeof activeTab)
+    }
+  }, [searchParams, userRoles.isTeamAdmin])
 
   const fetchUserSettings = async () => {
     try {
@@ -330,6 +347,17 @@ export default function SettingsPage() {
             >
               {t('tabs.billing')}
             </button>
+            {isTeamAdmin && (
+              <button
+                type="button"
+                data-tab="integrations"
+                onClick={() => setActiveTab('integrations')}
+                className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium border-r border-gray-200 whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'integrations' ? 'bg-brand-primary text-white shadow-sm font-semibold' : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+                style={{ minHeight: '44px' }}
+              >
+                {t('tabs.integrations')}
+              </button>
+            )}
             <button
               type="button"
               data-tab="account"
@@ -427,8 +455,15 @@ export default function SettingsPage() {
 
       {/* Billing */}
       {activeTab === 'billing' && (
-        <BillingSection 
+        <BillingSection
           userId={session?.user?.id || ''}
+        />
+      )}
+
+      {/* Integrations - visible only to team_admins */}
+      {activeTab === 'integrations' && isTeamAdmin && (
+        <IntegrationsTab
+          teamId={session?.user?.person?.teamId || undefined}
         />
       )}
 

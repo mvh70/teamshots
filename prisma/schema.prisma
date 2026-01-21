@@ -100,6 +100,7 @@ model Team {
   teamInvites          TeamInvite[]
   subscriptionChanges  SubscriptionChange[]
   assets               Asset[]
+  zapierApiKeys        ZapierApiKey[]
 
   @@index([adminId])
   @@index([domain])
@@ -645,5 +646,22 @@ model ExtensionToken {
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+}
+
+// ZapierApiKey: API keys for Zapier integration to automate team member invites
+model ZapierApiKey {
+  id         String    @id @default(cuid())
+  teamId     String
+  token      String    @unique // SHA-256 hashed
+  name       String    @default("Default")
+  lastUsedAt DateTime?
+  lastUsedIp String?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([token])
 }
 

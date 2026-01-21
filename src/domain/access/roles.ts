@@ -104,7 +104,10 @@ export async function hasPermission(
       return roles.isTeamAdmin && 
              context.teamId === context.user.person?.teamId
     case 'team.view_analytics':
-      return roles.isTeamAdmin && 
+      return roles.isTeamAdmin &&
+             context.teamId === context.user.person?.teamId
+    case 'team.manage_integrations':
+      return roles.isTeamAdmin &&
              context.teamId === context.user.person?.teamId
     case 'generation.create_personal':
       return true
@@ -252,7 +255,7 @@ export async function createPermissionContext(
   }
 }
 
-export type Permission = 
+export type Permission =
   | 'platform.admin'
   | 'user.manage_own_account'
   | 'team.view'
@@ -261,6 +264,7 @@ export type Permission =
   | 'team.manage_members'
   | 'team.allocate_credits'
   | 'team.view_analytics'
+  | 'team.manage_integrations'
   | 'generation.create_personal'
   | 'generation.create_team'
   | 'generation.view_own'

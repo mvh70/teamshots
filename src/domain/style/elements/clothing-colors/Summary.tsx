@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import type { ElementSummaryProps } from '../metadata'
 import type { ClothingColorSettings, ColorValue, ClothingColorKey } from './types'
@@ -7,139 +8,101 @@ import { getColorHex } from './types'
 import { hasValue, isUserChoice } from '../base/element-types'
 import { normalizeColorToHex, hexToColorName } from '@/lib/color-utils'
 
-/**
- * Extended props for ClothingColorsSummary that includes exclusion context
- */
 export interface ClothingColorsSummaryProps extends ElementSummaryProps<ClothingColorSettings> {
-  /** Colors to exclude from display based on shot type and clothing style */
   excludeColors?: ClothingColorKey[]
 }
 
-/**
- * Get the display hex for a color value.
- * Handles both hex strings and color name strings (e.g., "Dark red").
- */
 function getDisplayHex(color: string | ColorValue | undefined): string | undefined {
   const rawValue = getColorHex(color)
   if (!rawValue) return undefined
-  // If already a hex, return as-is; otherwise convert color name to hex
   if (rawValue.startsWith('#')) return rawValue
   return normalizeColorToHex(rawValue)
 }
 
-/**
- * Get the semantic color name for display.
- * Returns the original color name if stored as a name, otherwise derives from hex.
- */
-function getSemanticColorName(color: string | ColorValue | undefined): string {
+function getColorName(color: string | ColorValue | undefined): string {
   const rawValue = getColorHex(color)
   if (!rawValue) return 'Unknown'
-  
-  // If it's a color name (not hex), capitalize and return it
   if (!rawValue.startsWith('#')) {
-    // Capitalize first letter of each word
-    return rawValue
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ')
+    return rawValue.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
   }
-  
-  // If it's a hex, derive the semantic name
   return hexToColorName(rawValue)
 }
 
 export function ClothingColorsSummary({ settings, excludeColors = [] }: ClothingColorsSummaryProps) {
-  // Check mode first: if user-choice, show "User choice" regardless of any stored values
+  const [hoveredColor, setHoveredColor] = React.useState<string | null>(null)
+
   if (!settings || isUserChoice(settings)) {
     return (
-      <div id="style-clothing-colors" className="flex flex-col space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Colors</span>
-        </div>
-        <div className="ml-6 text-sm text-gray-600 inline-flex items-center gap-1.5">
-          <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
+      <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+        <span className="text-[13px] text-gray-500">Colors</span>
+        <span className="inline-flex items-center gap-1.5 text-[13px] text-amber-600">
+          <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
           <span>User choice</span>
-        </div>
+        </span>
       </div>
     )
   }
 
   const colors = hasValue(settings) ? settings.value : undefined
-  
-  // Helper to check if a color should be shown (not excluded and has a value)
+
   const shouldShow = (key: ClothingColorKey, value: unknown): boolean => {
     if (excludeColors.includes(key)) return false
     return !!value
   }
 
   const hasAnyVisibleColor = colors && (
-    shouldShow('topLayer', colors.topLayer) || 
-    shouldShow('baseLayer', colors.baseLayer) || 
-    shouldShow('bottom', colors.bottom) || 
+    shouldShow('topLayer', colors.topLayer) ||
+    shouldShow('baseLayer', colors.baseLayer) ||
+    shouldShow('bottom', colors.bottom) ||
     shouldShow('shoes', colors.shoes)
   )
 
+  const visibleColors: Array<{ key: string; label: string; hex: string | undefined; name: string }> = []
+  if (colors) {
+    if (shouldShow('topLayer', colors.topLayer)) {
+      visibleColors.push({ key: 'topLayer', label: 'Top', hex: getDisplayHex(colors.topLayer), name: getColorName(colors.topLayer) })
+    }
+    if (shouldShow('baseLayer', colors.baseLayer)) {
+      visibleColors.push({ key: 'baseLayer', label: 'Base', hex: getDisplayHex(colors.baseLayer), name: getColorName(colors.baseLayer) })
+    }
+    if (shouldShow('bottom', colors.bottom)) {
+      visibleColors.push({ key: 'bottom', label: 'Bottom', hex: getDisplayHex(colors.bottom), name: getColorName(colors.bottom) })
+    }
+    if (shouldShow('shoes', colors.shoes)) {
+      visibleColors.push({ key: 'shoes', label: 'Shoes', hex: getDisplayHex(colors.shoes), name: getColorName(colors.shoes) })
+    }
+  }
+
   return (
-    <div id="style-clothing-colors" className="flex flex-col space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Colors</span>
-      </div>
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+      <span className="text-[13px] text-gray-500">Colors</span>
       {hasAnyVisibleColor ? (
-        <div className="ml-6 flex flex-wrap items-start gap-4">
-          {shouldShow('topLayer', colors.topLayer) && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-xs font-semibold text-gray-700">Top</span>
-              <div 
-                className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200" 
-                style={{ backgroundColor: getDisplayHex(colors.topLayer) }}
+        <div className="flex items-center gap-1.5">
+          {visibleColors.map(({ key, label, hex, name }) => (
+            <div
+              key={key}
+              className="relative group"
+              onMouseEnter={() => setHoveredColor(key)}
+              onMouseLeave={() => setHoveredColor(null)}
+            >
+              <div
+                className="w-5 h-5 rounded border border-gray-200 shadow-sm cursor-default transition-transform group-hover:scale-110"
+                style={{ backgroundColor: hex }}
               />
-              <span className="text-xs text-gray-500 max-w-[60px] text-center leading-tight">
-                {getSemanticColorName(colors.topLayer)}
-              </span>
+              {/* Tooltip */}
+              <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded-md whitespace-nowrap shadow-lg z-50 transition-all duration-150 ${hoveredColor === key ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
+                <span className="text-gray-400">{label}:</span> {name}
+                {/* Arrow */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              </div>
             </div>
-          )}
-          {shouldShow('baseLayer', colors.baseLayer) && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-xs font-semibold text-gray-700">Base</span>
-              <div 
-                className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200" 
-                style={{ backgroundColor: getDisplayHex(colors.baseLayer) }}
-              />
-              <span className="text-xs text-gray-500 max-w-[60px] text-center leading-tight">
-                {getSemanticColorName(colors.baseLayer)}
-              </span>
-            </div>
-          )}
-          {shouldShow('bottom', colors.bottom) && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-xs font-semibold text-gray-700">Bottom</span>
-              <div 
-                className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200" 
-                style={{ backgroundColor: getDisplayHex(colors.bottom) }}
-              />
-              <span className="text-xs text-gray-500 max-w-[60px] text-center leading-tight">
-                {getSemanticColorName(colors.bottom)}
-              </span>
-            </div>
-          )}
-          {shouldShow('shoes', colors.shoes) && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-xs font-semibold text-gray-700">Shoes</span>
-              <div 
-                className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200" 
-                style={{ backgroundColor: getDisplayHex(colors.shoes) }}
-              />
-              <span className="text-xs text-gray-500 max-w-[60px] text-center leading-tight">
-                {getSemanticColorName(colors.shoes)}
-              </span>
-            </div>
-          )}
+          ))}
         </div>
       ) : (
-        <div className="ml-6 text-sm text-gray-600 inline-flex items-center gap-1.5">
-          <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-          <span>No colors defined</span>
-        </div>
+        <span className="inline-flex items-center gap-1.5 text-[13px] text-amber-600">
+          <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Not set</span>
+        </span>
       )}
     </div>
   )

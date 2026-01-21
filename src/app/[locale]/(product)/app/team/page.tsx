@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
 import { Link } from '@/i18n/routing'
-import { PlusIcon, EnvelopeIcon, CheckIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, EnvelopeIcon, CheckIcon, DocumentArrowUpIcon, BoltIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
 import { getPricingTier } from '@/config/pricing'
@@ -1201,51 +1201,69 @@ export default function TeamPage() {
 
       {/* Team Stats Overview */}
       <div className={`grid grid-cols-1 gap-5 lg:gap-6 ${teamData?.seatInfo?.isSeatsModel ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
-          <div className="flex items-center gap-5">
-            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
-              <Users className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                {teamData?.seatInfo?.isSeatsModel ? t('teamMembers.headers.seatUsage') : 'Team members'}
-              </p>
-              <p className="text-4xl font-extrabold text-gray-900 leading-none">
-                {teamData?.seatInfo?.isSeatsModel 
-                  ? `${teamData.seatInfo.activeSeats} ${t('teamMembers.seatUsage.of')} ${teamData.seatInfo.totalSeats}`
-                  : (teamMembers?.length || 0) + (invites?.filter(inv => !inv.usedAt).length || 0)
-                }
-              </p>
+        {/* Team Members Card */}
+        <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl hover:border-brand-primary/20 transition-all duration-300 group overflow-hidden">
+          {/* Decorative gradient background */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-brand-primary/[0.06] to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative p-6">
+            <div className="flex items-start gap-5">
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 bg-gradient-to-br from-brand-primary/15 via-brand-primary/10 to-brand-primary/5 rounded-xl flex items-center justify-center border border-brand-primary/10 group-hover:scale-105 transition-transform duration-300">
+                  <Users className="h-7 w-7 text-brand-primary" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  {teamData?.seatInfo?.isSeatsModel ? t('teamMembers.headers.seatUsage') : 'Team members'}
+                </p>
+                <p className="text-3xl font-black text-gray-900 leading-none tracking-tight">
+                  {teamData?.seatInfo?.isSeatsModel
+                    ? <><span className="text-brand-primary">{teamData.seatInfo.activeSeats}</span> <span className="text-lg font-semibold text-gray-400">{t('teamMembers.seatUsage.of')}</span> {teamData.seatInfo.totalSeats}</>
+                    : (teamMembers?.length || 0) + (invites?.filter(inv => !inv.usedAt).length || 0)
+                  }
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        
-        {/* Only show Available Photos for legacy credit-based teams */}
+
+        {/* Available Photos Card - Only show for legacy credit-based teams */}
         {!teamData?.seatInfo?.isSeatsModel && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
-            <div className="flex items-center gap-5">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
-                <Camera className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Available photos</p>
-                <p className="text-4xl font-extrabold text-gray-900 leading-none">{calculatePhotosFromCredits(credits.team)}</p>
+          <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl hover:border-brand-primary/20 transition-all duration-300 group overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-brand-primary/[0.06] to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="relative p-6">
+              <div className="flex items-start gap-5">
+                <div className="relative flex-shrink-0">
+                  <div className="w-14 h-14 bg-gradient-to-br from-brand-primary/15 via-brand-primary/10 to-brand-primary/5 rounded-xl flex items-center justify-center border border-brand-primary/10 group-hover:scale-105 transition-transform duration-300">
+                    <Camera className="h-7 w-7 text-brand-primary" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Available photos</p>
+                  <p className="text-3xl font-black text-gray-900 leading-none tracking-tight">{calculatePhotosFromCredits(credits.team)}</p>
+                </div>
               </div>
             </div>
           </div>
         )}
-        
-        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
-          <div className="flex items-center gap-5">
-            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-secondary-light to-brand-secondary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-secondary/10 group-hover:ring-brand-secondary/30 transition-all">
-              {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              <Image className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.secondary }} aria-hidden="true" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Photos generated</p>
-              <p className="text-4xl font-extrabold text-gray-900 leading-none">
-                {teamMembers?.reduce((acc, member) => acc + (member.stats?.generations || 0), 0) || 0}
-              </p>
+
+        {/* Photos Generated Card */}
+        <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl hover:border-brand-secondary/20 transition-all duration-300 group overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-brand-secondary/[0.06] to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative p-6">
+            <div className="flex items-start gap-5">
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 bg-gradient-to-br from-brand-secondary/15 via-brand-secondary/10 to-brand-secondary/5 rounded-xl flex items-center justify-center border border-brand-secondary/10 group-hover:scale-105 transition-transform duration-300">
+                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                  <Image className="h-7 w-7 text-brand-secondary" aria-hidden="true" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Photos generated</p>
+                <p className="text-3xl font-black text-gray-900 leading-none tracking-tight">
+                  {teamMembers?.reduce((acc, member) => acc + (member.stats?.generations || 0), 0) || 0}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1375,7 +1393,7 @@ export default function TeamPage() {
             </div>
           </div>
         )}
-        <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+        <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
         {teamMembers.length === 0 && pendingInvites.length === 0 ? (
           <div className="p-12 text-center">
             {/* Seats-based teams with no seats: need to buy seats first */}
@@ -1434,11 +1452,11 @@ export default function TeamPage() {
         ) : (
           <>
             {/* Desktop: Table Layout */}
-            <div className="hidden md:block divide-y divide-gray-200">
+            <div className="hidden md:block">
                 {/* Header row */}
-                <div className="px-7 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                <div className="px-6 py-4 bg-gradient-to-r from-slate-50 via-gray-50/80 to-white border-b border-gray-100">
                   <div
-                    className={`grid gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider ${
+                    className={`grid gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ${
                       userRoles.isTeamAdmin
                         ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
                         : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
@@ -1472,52 +1490,52 @@ export default function TeamPage() {
                   const inviteLink = memberInvite?.token ? `${getCleanClientBaseUrl()}/invite/${memberInvite.token}` : null
 
                   return (
-                <div key={`member-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
+                <div key={`member-${member.id}`} className="px-6 py-4 hover:bg-gradient-to-r hover:from-slate-50/50 hover:via-white hover:to-white transition-all duration-200 border-b border-gray-100/80 last:border-b-0 group">
                   <div
-                    className={`grid gap-6 items-center ${
+                    className={`grid gap-4 items-center ${
                       userRoles.isTeamAdmin
                         ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
                         : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
                     }`}
                   >
                     {/* Member Info */}
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-brand-primary/5 group-hover:ring-brand-primary/20 transition-all shadow-sm">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-11 h-11 bg-gradient-to-br from-brand-primary/15 via-brand-primary/10 to-brand-primary/5 rounded-xl flex items-center justify-center flex-shrink-0 border border-brand-primary/10 group-hover:border-brand-primary/20 group-hover:scale-105 transition-all duration-200">
                         <span className="text-sm font-bold text-brand-primary">
-                          {member.isCurrentUser 
-                            ? t('teamMembers.you') 
+                          {member.isCurrentUser
+                            ? t('teamMembers.you')
                             : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
                           }
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <p className="text-base font-semibold text-gray-900 truncate">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-[13px] font-semibold text-gray-900 truncate">
                             {member.isCurrentUser ? 'You' : member.name}
                           </p>
                           {member.isAdmin && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-premium/10 to-brand-premium/5 text-brand-premium border border-brand-premium/20 flex-shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-200/50 flex-shrink-0 uppercase tracking-wide">
                               {t('teamMembers.roles.teamAdmin')}
                             </span>
                           )}
                           {!member.isAdmin && member.userId && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary-light to-brand-primary/10 text-brand-primary border border-brand-primary/20 flex-shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-primary/5 text-brand-primary border border-brand-primary/10 flex-shrink-0 uppercase tracking-wide">
                               {t('teamMembers.roles.teamMember')}
                             </span>
                           )}
                           {!member.userId && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 flex-shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200/80 flex-shrink-0 uppercase tracking-wide">
                               {t('teamMembers.roles.guest')}
                             </span>
                           )}
                         </div>
                         {member.email && (
-                          <p className="text-xs text-gray-500 truncate font-medium">{member.email}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{member.email}</p>
                         )}
-                        <p className="text-xs text-gray-500 mt-1.5 font-medium">
+                        <p className="text-[11px] text-gray-400 mt-1">
                           {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
                           {creditsUsed > 0 && (
-                            <span className="ml-2 text-brand-cta font-semibold">
+                            <span className="ml-1.5 text-brand-secondary font-medium">
                               • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
                             </span>
                           )}
@@ -1528,18 +1546,18 @@ export default function TeamPage() {
                     {/* Selfies */}
                     <div className="flex justify-center">
                       {member.stats ? (
-                        <span className="text-base font-bold text-gray-900">{member.stats.selfies}</span>
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{member.stats.selfies}</span>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-gray-300">—</span>
                       )}
                     </div>
-                    
+
                     {/* Generations */}
                     <div className="flex justify-center">
                       {member.stats ? (
-                        <span className="text-base font-bold text-gray-900">{member.stats.generations}</span>
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{member.stats.generations}</span>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-gray-300">—</span>
                       )}
                     </div>
                     
@@ -1547,7 +1565,7 @@ export default function TeamPage() {
                     <div className="flex justify-center items-center gap-1.5">
                       {memberInvite?.creditsRemaining !== undefined ? (
                         <>
-                          <span className="text-base font-bold text-gray-900">
+                          <span className="text-sm font-semibold text-gray-700 tabular-nums">
                             {calculatePhotosFromCredits(memberInvite.creditsRemaining)}
                           </span>
                           {/* Hide add photos button for seats-based teams */}
@@ -1558,17 +1576,17 @@ export default function TeamPage() {
                                 setAddPhotosValue('1')
                                 setAddPhotosError(null)
                               }}
-                              className="w-5 h-5 flex items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary hover:bg-brand-secondary/20 transition-colors"
+                              className="w-5 h-5 flex items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary hover:bg-brand-secondary/20 hover:scale-110 transition-all"
                               title={t('teamInvites.actions.addPhotos')}
                             >
-                              <span className="text-sm font-bold leading-none">+</span>
+                              <span className="text-xs font-bold leading-none">+</span>
                             </button>
                           )}
                         </>
                       ) : (
-                        <span className="text-base font-bold text-gray-900">
-                          {member.isAdmin 
-                            ? (teamData?.seatInfo?.isSeatsModel 
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums">
+                          {member.isAdmin
+                            ? (teamData?.seatInfo?.isSeatsModel
                                 ? calculatePhotosFromCredits(credits.person ?? 0)
                                 : calculatePhotosFromCredits(credits.team ?? 0))
                             : calculatePhotosFromCredits(creditsAllocated - creditsUsed)
@@ -1576,19 +1594,19 @@ export default function TeamPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Status */}
                     <div className="flex justify-center">
                       {member.userId ? (
-                        <div className="flex items-center justify-center gap-2 text-brand-secondary">
-                          <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
-                          <span className="text-sm font-semibold">{t('teamMembers.status.registered')}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-brand-secondary/10 text-brand-secondary">
+                          <span className="w-1.5 h-1.5 bg-brand-secondary rounded-full"></span>
+                          {t('teamMembers.status.registered')}
+                        </span>
                       ) : (
-                        <div className="flex items-center justify-center gap-2 text-brand-secondary">
-                          <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
-                          <span className="text-sm font-semibold">{t('teamMembers.status.guest')}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-brand-secondary/10 text-brand-secondary">
+                          <span className="w-1.5 h-1.5 bg-brand-secondary rounded-full"></span>
+                          {t('teamMembers.status.guest')}
+                        </span>
                       )}
                     </div>
 
@@ -1597,13 +1615,13 @@ export default function TeamPage() {
                       {photoStyle && !member.isAdmin ? (
                         <Link
                           href="/app/styles/team"
-                          className="text-sm font-semibold text-brand-primary hover:text-brand-primary-hover underline decoration-2 underline-offset-2 transition-colors truncate max-w-[120px]"
+                          className="text-[13px] font-medium text-brand-primary hover:text-brand-primary-hover underline decoration-1 underline-offset-2 transition-colors truncate max-w-[120px]"
                           title={photoStyle}
                         >
                           {photoStyle}
                         </Link>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-gray-300">—</span>
                       )}
                     </div>
 
@@ -1614,21 +1632,21 @@ export default function TeamPage() {
                           <button
                             type="button"
                             onClick={() => handleCopyInviteLink(inviteLink, member.id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-all duration-200 ${
                               tableLinkCopied === member.id
-                                ? 'text-green-700 bg-green-100'
-                                : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                                ? 'text-brand-secondary bg-brand-secondary/10'
+                                : 'text-gray-500 bg-gray-100/80 hover:bg-gray-100 hover:text-gray-700'
                             }`}
                             title={t('teamMembers.copyInviteLink', { default: 'Copy invite link' })}
                           >
                             {tableLinkCopied === member.id ? (
                               <>
-                                <CheckIcon className="w-3.5 h-3.5" />
+                                <CheckIcon className="w-3 h-3" />
                                 {t('teamMembers.copied', { default: 'Copied!' })}
                               </>
                             ) : (
                               <>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                                 {t('teamMembers.copyLink', { default: 'Copy' })}
@@ -1636,50 +1654,28 @@ export default function TeamPage() {
                             )}
                           </button>
                         ) : (
-                          <span className="text-sm text-gray-400">-</span>
+                          <span className="text-sm text-gray-300">—</span>
                         )}
                       </div>
                     )}
 
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5">
                         {memberInvite && (
                           <button
                             onClick={() => handleResendInvite(memberInvite.id)}
                             disabled={resending === memberInvite.id}
-                            className="text-xs px-3.5 py-2 rounded-lg text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/10 hover:border-brand-primary/50 disabled:opacity-50 font-medium transition-all duration-200"
+                            className="text-[11px] px-2.5 py-1.5 rounded-lg text-gray-600 bg-gray-100/80 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50 font-semibold transition-all duration-200"
                           >
                             {resending === memberInvite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                           </button>
-                        )}
-                        {!member.isCurrentUser && member.userId && (
-                          <>
-                            {!member.isAdmin && (
-                              <button
-                                onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
-                                disabled={changingRole === member.id}
-                                className="text-xs px-3.5 py-2 rounded-lg text-brand-premium border border-brand-premium/30 hover:bg-brand-premium/10 hover:border-brand-premium/50 disabled:opacity-50 font-medium transition-all duration-200"
-                              >
-                                {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
-                              </button>
-                            )}
-                            {member.isAdmin && (
-                              <button
-                                onClick={() => handleChangeMemberRole(member.id, 'team_member')}
-                                disabled={changingRole === member.id}
-                                className="text-xs px-3.5 py-2 rounded-lg text-brand-cta border border-brand-cta/30 hover:bg-brand-cta/10 hover:border-brand-cta/50 disabled:opacity-50 font-medium transition-all duration-200"
-                              >
-                                {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
-                              </button>
-                            )}
-                          </>
                         )}
                         {!member.isCurrentUser && (
                           <button
                             onClick={() => handleRevokeMember(member.id)}
                             disabled={revokingMember === member.id}
-                            className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 font-medium transition-all duration-200"
+                            className="text-[11px] px-2.5 py-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 font-semibold transition-all duration-200"
                           >
                             {revokingMember === member.id ? t('teamMembers.actions.revoking') : t('teamMembers.actions.revoke')}
                           </button>
@@ -2390,7 +2386,7 @@ export default function TeamPage() {
               {t('buttons.buyCredits')}
             </Link>
           ) : (
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => {
                   setInviteError(null)
@@ -2399,9 +2395,9 @@ export default function TeamPage() {
                   setFirstNameValue('')
                   setShowInviteForm(true)
                 }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors duration-150 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4 w-4" />
                 {t('buttons.inviteTeamMember')}
               </button>
               <button
@@ -2413,11 +2409,18 @@ export default function TeamPage() {
                   setBulkInviteSuccess(null)
                   setShowBulkInviteForm(true)
                 }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-gray-700 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-white border-2 border-gray-200 hover:border-brand-secondary hover:text-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-200 bg-white transition-colors duration-150 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200"
               >
-                <DocumentArrowUpIcon className="h-5 w-5" />
+                <DocumentArrowUpIcon className="h-4 w-4" />
                 {t('buttons.bulkInvite', { default: 'Bulk Invite' })}
               </button>
+              <Link
+                href="/app/settings?tab=integrations"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-200 bg-white transition-colors duration-150 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200"
+              >
+                <BoltIcon className="h-4 w-4" />
+                {t('buttons.zapierIntegration', { default: 'Automate with Zapier' })}
+              </Link>
             </div>
           )}
         </div>
@@ -3216,86 +3219,32 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Floating Invite Button - Show for admins with active context, free plan, OR seats-based teams */}
+      {/* Mobile - Bottom Sticky Invite Button - Show for admins with active context, free plan, OR seats-based teams */}
       {userRoles.isTeamAdmin && (teamData?.activeContext || isFreePlan || teamData?.seatInfo?.isSeatsModel) && (
         <>
-          {/* Desktop - Top Right Floating Button */}
-          <div className="hidden md:flex fixed top-20 right-8 z-[100] pointer-events-auto">
-            {isFreePlan ? (
-              <button
-                disabled
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold rounded-xl shadow-lg bg-gray-100 text-gray-400 cursor-not-allowed"
-              >
-                <PlusIcon className="h-5 w-5" />
-                {t('buttons.upgradeToInvite')}
-              </button>
-            ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
-              // Seats-based team without photo style - prompt to set up first
-              <Link
-                href="/app/styles/team/create"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-              >
-                <PlusIcon className="h-5 w-5" />
-                {t('setupRequired.createButton')}
-              </Link>
-            ) : credits.team === 0 ? (
-              <Link
-                href="/app/top-up"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                style={{
-                  background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                }}
-              >
-                <PlusIcon className="h-5 w-5" />
-                {t('buttons.buyCredits')}
-              </Link>
-            ) : (
-              <button
-                id="floating-invite-btn-desktop"
-                onClick={() => {
-                  setInviteError(null)
-                  setError(null)
-                  setEmailValue('')
-                  setFirstNameValue('')
-                  setShowInviteForm(true)
-                }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
-              >
-                <PlusIcon className="h-5 w-5" />
-                {t('buttons.inviteTeamMember')}
-              </button>
-            )}
-          </div>
-
           {/* Mobile - Bottom Sticky Button */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm pt-3 pb-3 px-4 border-t border-gray-100 shadow-[0_-4px_12px_-1px_rgba(0,0,0,0.08)]">
             {isFreePlan ? (
               <button
                 disabled
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold rounded-xl shadow-lg bg-gray-100 text-gray-400 cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4.5 w-4.5" />
                 {t('buttons.upgradeToInvite')}
               </button>
             ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
               // Seats-based team without photo style - prompt to set up first
               <Link
                 href="/app/styles/team/create"
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg bg-gradient-to-r from-brand-primary to-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4.5 w-4.5" />
                 {t('setupRequired.createButton')}
               </Link>
             ) : credits.team === 0 ? (
               <Link
                 href="/app/top-up"
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
                 style={{
                   background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
@@ -3306,7 +3255,7 @@ export default function TeamPage() {
                   e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4.5 w-4.5" />
                 {t('buttons.buyCredits')}
               </Link>
             ) : (
@@ -3319,9 +3268,9 @@ export default function TeamPage() {
                   setFirstNameValue('')
                   setShowInviteForm(true)
                 }}
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+                className="group w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg bg-gradient-to-r from-brand-secondary to-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4.5 w-4.5 transition-transform group-hover:rotate-90 duration-200" />
                 {t('buttons.inviteTeamMember')}
               </button>
             )}

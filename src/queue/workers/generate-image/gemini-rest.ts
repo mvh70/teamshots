@@ -71,6 +71,7 @@ async function generateWithGemini3DirectFetch(
   modelName: string,
   apiKey: string,
   aspectRatio?: string,
+  resolution?: '1K' | '2K' | '4K',
   startTime: number = Date.now()
 ): Promise<GeminiGenerationResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
@@ -79,7 +80,8 @@ async function generateWithGemini3DirectFetch(
     modelName,
     promptLength: prompt.length,
     referenceImageCount: images.length,
-    aspectRatio
+    aspectRatio,
+    resolution
   })
 
   // Build parts array: prompt first, then reference images with descriptions
@@ -107,10 +109,12 @@ async function generateWithGemini3DirectFetch(
     responseModalities: ['Text', 'Image']
   }
 
-  // Add imageConfig if aspect ratio is specified
-  if (aspectRatio) {
+  // Add imageConfig if aspect ratio or resolution is specified
+  const effectiveResolution = resolution ?? PROVIDER_DEFAULTS.rest.resolution
+  if (aspectRatio || effectiveResolution) {
     generationConfig.imageConfig = {
-      aspectRatio: aspectRatio // e.g., "3:4", "16:9"
+      ...(aspectRatio && { aspectRatio }), // e.g., "3:4", "16:9"
+      ...(effectiveResolution && { imageSize: effectiveResolution }) // e.g., "1K", "2K", "4K"
     }
   }
 
@@ -256,7 +260,7 @@ export async function generateWithGeminiRest(
   // Use direct fetch for Gemini 3 models (SDK doesn't support them properly yet)
   const isGemini3Model = modelName.includes('gemini-3-pro')
   if (isGemini3Model) {
-    return generateWithGemini3DirectFetch(prompt, images, modelName, apiKey, aspectRatio, startTime)
+    return generateWithGemini3DirectFetch(prompt, images, modelName, apiKey, aspectRatio, resolution, startTime)
   }
 
   // Initialize the REST API client

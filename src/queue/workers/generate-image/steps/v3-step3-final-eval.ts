@@ -351,6 +351,14 @@ export async function executeV3Step3(
             ...(evaluation.branding_placement ? { branding_placement: evaluation.branding_placement } : {})
           })
 
+          // Log face similarity metric for analytics
+          const faceScore = getFaceSimilarityScore(evaluation.face_similarity)
+          Logger.info('V3 Step 3: Face similarity metric', {
+            generationId: input.generationId,
+            faceSimilarity: evaluation.face_similarity,
+            score: faceScore
+          })
+
           const finalReason = failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met'
 
           // Track evaluation cost with outcome
@@ -538,4 +546,17 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   }
   
   return suggestions.join('; ')
+}
+
+/**
+ * Convert face similarity evaluation to numeric score for logging
+ * YES = 100, UNCERTAIN = 50, NO = 0, undefined = -1
+ */
+function getFaceSimilarityScore(value: 'YES' | 'NO' | 'UNCERTAIN' | undefined): number {
+  switch (value) {
+    case 'YES': return 100
+    case 'UNCERTAIN': return 50
+    case 'NO': return 0
+    default: return -1
+  }
 }

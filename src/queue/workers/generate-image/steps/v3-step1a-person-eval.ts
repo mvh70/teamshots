@@ -527,6 +527,14 @@ Generation prompt used:\n${generationPrompt}`
     ...(finalStatus === 'Not Approved' ? { reason: finalReason.substring(0, 80) } : {})
   })
 
+  // Log face similarity metric for analytics
+  const identityScore = getFaceSimilarityScore(structuredEvaluation?.identity_preserved)
+  Logger.info('V3 Step 1a: Face similarity metric', {
+    generationId: input.generationId,
+    identityPreserved: structuredEvaluation?.identity_preserved,
+    score: identityScore
+  })
+
   // Track evaluation cost with outcome
   if (input.onCostTracking && usageMetadata) {
     try {
@@ -641,4 +649,17 @@ function normalizeYesNoNA(value: unknown): 'YES' | 'NO' | 'N/A' {
   if (normalized === 'YES') return 'YES'
   if (normalized === 'NO') return 'NO'
   return 'N/A'
+}
+
+/**
+ * Convert face similarity evaluation to numeric score for logging
+ * YES = 100, UNCERTAIN = 50, NO = 0, N/A or undefined = -1
+ */
+function getFaceSimilarityScore(value: 'YES' | 'NO' | 'UNCERTAIN' | 'N/A' | undefined): number {
+  switch (value) {
+    case 'YES': return 100
+    case 'UNCERTAIN': return 50
+    case 'NO': return 0
+    default: return -1
+  }
 }

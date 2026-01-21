@@ -55,7 +55,20 @@ import { getProgressMessage } from '@/lib/generation-progress-messages'
 import { buildBackgroundComposite } from '@/lib/generation/reference-utils'
 
 // Import configuration
-import { RETRY_CONFIG, PROGRESS_STEPS } from './config'
+import { RETRY_CONFIG, PROGRESS_STEPS, STAGE_RESOLUTION } from './config'
+
+/**
+ * Get the resolution multiplier for scaling expected dimensions
+ * 1K = 1x (base), 2K = 2x, 4K = 4x
+ */
+function getResolutionMultiplier(resolution?: '1K' | '2K' | '4K'): number {
+  switch (resolution) {
+    case '4K': return 4
+    case '2K': return 2
+    case '1K':
+    default: return 1
+  }
+}
 
 /**
  * Cost tracking context for workflow steps
@@ -261,10 +274,16 @@ async function generatePersonWithRetry({
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
   intermediateStorage: IntermediateStorageHandlers
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
-}): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
-  let step1Output: { imageBuffer: Buffer; imageBase64: string; allImageBuffers: Buffer[]; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; reused?: boolean } | undefined
+}): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
+  let step1Output: { imageBuffer: Buffer; imageBase64: string; allImageBuffers: Buffer[]; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; reused?: boolean } | undefined
   let evaluationFeedback: EvaluationFeedback | undefined
   const evaluatorComments: string[] = []
+
+  // Calculate expected dimensions for Step 1a based on resolution config
+  const step1aResolution = STAGE_RESOLUTION.STEP_1A_PERSON || '1K'
+  const step1aMultiplier = getResolutionMultiplier(step1aResolution)
+  const step1aExpectedWidth = expectedWidth * step1aMultiplier
+  const step1aExpectedHeight = expectedHeight * step1aMultiplier
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (attempt === 1) {
@@ -286,8 +305,8 @@ async function generatePersonWithRetry({
           downloadAsset,
           aspectRatio,
           aspectRatioConfig,
-          expectedWidth,
-          expectedHeight,
+          expectedWidth: step1aExpectedWidth,
+          expectedHeight: step1aExpectedHeight,
           prompt,
           mustFollowRules,
           freedomRules,
@@ -367,8 +386,8 @@ async function generatePersonWithRetry({
           imageBase64: step1Output!.imageBase64,
           selfieReferences: processedSelfieReferences,
           selfieComposite,
-          expectedWidth,
-          expectedHeight,
+          expectedWidth: step1aExpectedWidth,
+          expectedHeight: step1aExpectedHeight,
           aspectRatioConfig,
           generationPrompt: prompt,
           clothingLogoReference: step1Output!.clothingLogoReference,
@@ -1233,10 +1252,16 @@ export async function executeV3Workflow({
     ...(step1bOutput?.evaluatorComments ?? [])
   ]
 
-  // Use the selfie composite from Step 1a for face refinement in Step 2
-  // This avoids rebuilding the composite and ensures consistency
-  Logger.info('V3: Using selfie composite from Step 1a for refinement', { generationId })
-  const faceCompositeReference = step1aOutput.selfieComposite
+  // Use split composites from Step 1a for face/body refinement in Step 2
+  // Prefer split composites (face/body) if available, fallback to combined selfieComposite
+  const faceCompositeReference = step1aOutput.faceComposite || step1aOutput.selfieComposite
+  const bodyCompositeReference = step1aOutput.bodyComposite
+  Logger.info('V3: Using composites from Step 1a for refinement', {
+    generationId,
+    hasFaceComposite: !!step1aOutput.faceComposite,
+    hasBodyComposite: !!step1aOutput.bodyComposite,
+    usingFallback: !step1aOutput.faceComposite
+  })
 
   // STEP 2: Composition and Refinement
   logStepStart('V3 Step 2: Compositing and refining', generationId)
@@ -1261,9 +1286,10 @@ export async function executeV3Workflow({
         backgroundBuffer: backgroundBufferForStep2,
         styleSettings: styleSettings as unknown as Record<string, unknown>,
         faceCompositeReference,
+        bodyCompositeReference,
         evaluatorComments: allEvaluatorComments.length > 0 ? allEvaluatorComments : undefined,
         aspectRatio,
-        resolution,
+        resolution: STAGE_RESOLUTION.STEP_2_COMPOSITION || resolution,
         originalPrompt: prompt,
         generationId,
         personId,
@@ -1302,14 +1328,20 @@ export async function executeV3Workflow({
     mimeType: 'image/png'
   })
 
+  // Scale expected dimensions based on Step 2 resolution
+  const step2Resolution = STAGE_RESOLUTION.STEP_2_COMPOSITION || resolution
+  const resolutionMultiplier = getResolutionMultiplier(step2Resolution)
+  const scaledExpectedWidth = expectedWidth * resolutionMultiplier
+  const scaledExpectedHeight = expectedHeight * resolutionMultiplier
+
   const step3Output = await executeWithRateLimitRetry(
     async () => {
       return await executeV3Step3({
         refinedBuffer: step2Output.refinedBuffer,
         refinedBase64: step2Output.refinedBase64,
         selfieComposite: step1aOutput.selfieComposite,
-        expectedWidth,
-        expectedHeight,
+        expectedWidth: scaledExpectedWidth,
+        expectedHeight: scaledExpectedHeight,
         aspectRatio,
         logoReference: step1bOutput?.backgroundLogoReference || step1aOutput.backgroundLogoReference,
         generationPrompt: prompt,

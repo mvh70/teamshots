@@ -34,8 +34,8 @@ export function isRateLimitError(error: unknown): boolean {
 export function isTransientServiceError(error: unknown): boolean {
   const metadata = collectErrorMetadata(error)
 
-  // Check for 503 status code
-  if (metadata.statusCodes.includes(503)) {
+  // Check for 503 (Service Unavailable) or 408 (Request Timeout) status codes
+  if (metadata.statusCodes.includes(503) || metadata.statusCodes.includes(408)) {
     return true
   }
 
@@ -45,6 +45,8 @@ export function isTransientServiceError(error: unknown): boolean {
     return normalized.includes('service unavailable') ||
            normalized.includes('service temporarily unavailable') ||
            normalized.includes('503') ||
+           normalized.includes('408') ||
+           normalized.includes('request timeout') ||
            // HTML error responses (<!DOCTYPE or <!doctype)
            normalized.includes('<!doctype html') ||
            normalized.includes('<!doctype')

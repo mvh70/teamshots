@@ -10,7 +10,7 @@ import {
 } from '../utils/reference-builder'
 import { logDebugPrompt } from '../utils/debug-helpers'
 import { logPrompt, logStepResult } from '../utils/logging'
-import { AI_CONFIG, STAGE_MODEL } from '../config'
+import { AI_CONFIG, STAGE_MODEL, STAGE_RESOLUTION } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { isFeatureEnabled } from '@/config/feature-flags'
@@ -64,6 +64,8 @@ export interface V3Step1aOutput {
   backgroundLogoReference?: BaseReferenceImage // Logo for background/elements (for Step 3 composition)
   backgroundBuffer?: Buffer
   selfieComposite: BaseReferenceImage
+  faceComposite?: BaseReferenceImage // Split face composite for Step 2 refinement
+  bodyComposite?: BaseReferenceImage // Split body composite for Step 2 refinement
   reused?: boolean // Whether this asset was reused from cache
 }
 
@@ -87,6 +89,7 @@ async function prepareAllReferences({
 }): Promise<{
   referenceImages: BaseReferenceImage[]
   logoReference?: BaseReferenceImage
+  logoReferenceForEval?: BaseReferenceImage
   selfieComposite: BaseReferenceImage
 }> {
   // 1. Log info about provided selfie composite
@@ -99,30 +102,44 @@ async function prepareAllReferences({
   })
 
   // 2. Check if clothing overlay is being used (from ClothingOverlayElement)
-  // If overlay exists, skip logo loading as the overlay already has the logo correctly placed
+  // If overlay exists, skip logo loading FOR GENERATION (overlay already has logo)
+  // but still load it FOR EVALUATION (so evaluator knows logo is authorized)
   const hasClothingOverlay = preparedAssets?.has('clothing-overlay-overlay')
 
-  // 3. Load logo ONLY if branding is on clothing AND no clothing overlay is being used
+  // 3. Load logo reference for generation AND/OR evaluation
   let logoReference: BaseReferenceImage | undefined
+  let logoReferenceForEval: BaseReferenceImage | undefined
   if (
     hasValue(styleSettings.branding) &&
     styleSettings.branding.value.type === 'include' &&
-    styleSettings.branding.value.position === 'clothing' &&
-    !hasClothingOverlay  // CRITICAL: Skip if overlay is handling the logo
+    styleSettings.branding.value.position === 'clothing'
   ) {
     // Use prepared logo from BrandingElement (Step 0) - already has SVG conversion
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
-      logoReference = {
+      const logoRef = {
         description: 'Company logo for clothing branding - apply according to branding rules',
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
       }
-      Logger.debug('V3 Step 1a: Using prepared logo asset for clothing branding', {
-        generationId,
-        mimeType: preparedLogo.data.mimeType,
-        s3Key: preparedLogo.data.s3Key
-      })
+
+      // Always save for evaluation (so evaluator knows logo is authorized)
+      logoReferenceForEval = logoRef
+
+      if (!hasClothingOverlay) {
+        // Only pass to generation if NOT using clothing overlay
+        logoReference = logoRef
+        Logger.debug('V3 Step 1a: Using prepared logo asset for clothing branding', {
+          generationId,
+          mimeType: preparedLogo.data.mimeType,
+          s3Key: preparedLogo.data.s3Key
+        })
+      } else {
+        Logger.info('V3 Step 1a: Logo reference loaded for eval only - clothing overlay handles generation', {
+          generationId,
+          overlayKey: 'clothing-overlay-overlay'
+        })
+      }
     } else {
       Logger.warn('V3 Step 1a: Prepared logo asset not found, branding may not appear', {
         generationId,
@@ -130,11 +147,6 @@ async function prepareAllReferences({
         preparedAssetKeys: Array.from(preparedAssets?.keys() || [])
       })
     }
-  } else if (hasClothingOverlay) {
-    Logger.info('V3 Step 1a: Skipping logo reference - clothing overlay is handling it', {
-      generationId,
-      overlayKey: 'clothing-overlay-overlay'
-    })
   }
 
   // 4. REMOVED: Outfit reference loading (now handled by outfit1/server.ts)
@@ -158,7 +170,7 @@ async function prepareAllReferences({
     hasLogo: !!logoReference
   })
 
-  return { referenceImages, logoReference, selfieComposite }
+  return { referenceImages, logoReference, logoReferenceForEval, selfieComposite }
 }
 
 /**
@@ -175,6 +187,8 @@ async function composeElementContributions(
     personId?: string
     teamId?: string
     preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
+    hasFaceComposite?: boolean  // Whether face composite reference is available
+    hasBodyComposite?: boolean  // Whether body composite reference is available
   }
 ): Promise<{
   instructions: string[]
@@ -331,7 +345,7 @@ export async function executeV3Step1a(
   const bodyBoundaryInstruction = buildBodyBoundaryInstruction(shotTypeConfig)
 
   // Prepare references (selfies, optional logo for clothing branding, and format - no background yet)
-  const { referenceImages: preparedReferences, logoReference } = await prepareAllReferences({
+  const { referenceImages: preparedReferences, logoReference, logoReferenceForEval } = await prepareAllReferences({
     selfieReferences,
     selfieComposite,
     styleSettings,
@@ -419,6 +433,8 @@ export async function executeV3Step1a(
         personId,
         teamId: input.teamId,
         preparedAssets, // Pass prepared assets from step 0
+        hasFaceComposite: !!faceComposite,
+        hasBodyComposite: !!bodyComposite
       })
       Logger.debug('[ElementComposition] Element contributions composed successfully', {
         generationId,
@@ -537,21 +553,34 @@ export async function executeV3Step1a(
 
   // Compose prompt with simplified specifications
   const jsonPrompt = JSON.stringify(personOnlyPrompt, null, 2)
-  
+
+  // Check for clothing reference (overlay or garment collage)
+  const hasClothingOverlay = preparedAssets?.has('clothing-overlay-overlay')
+  const hasGarmentCollage = input.referenceImages?.some(ref =>
+    ref.description?.toUpperCase().includes('GARMENT COLLAGE')
+  )
+  const hasClothingReference = hasClothingOverlay || hasGarmentCollage
+
+  // Build HARD CONSTRAINTS dynamically
+  const hardConstraints = [
+    '**HARD CONSTRAINTS (Non-Negotiable):**',
+    '1. **Framing:** ' + (bodyBoundaryInstruction || `Frame as ${shotDescription} per JSON framing section.`),
+    '2. **Background:** Solid neutral grey (#808080) only. No gradients, props, environment, or text.',
+  ]
+  // Only add clothing constraint when clothing reference is provided
+  if (hasClothingReference) {
+    hardConstraints.push('3. **Clothing:** Use the clothing reference as PRIMARY source for all garment styling.')
+  }
+  hardConstraints.push('')
+
   const structuredPrompt = [
     // Section 1: Intro & Task
     `You are a world-class professional photographer creating ${shotTypeIntroContext} from the attached selfies.`,
     '',
 
-    // Section 2: HARD CONSTRAINTS (Top 6 - improvement #8)
-    '**HARD CONSTRAINTS (Non-Negotiable):**',
-    '1. **Identity:** Select ONE selfie as PRIMARY face basis. Do NOT average/blend faces into a new person.',
-    '2. **Framing:** ' + (bodyBoundaryInstruction || `Frame as ${shotDescription} per JSON framing section.`),
-    '3. **Accessories:** Do NOT add accessories not visible in selfies. Do NOT remove accessories visible in selfies.',
-    '4. **Background:** Solid neutral grey (#808080) only. No gradients, props, environment, or text.',
-    '5. **Equipment:** No visible studio equipment (softboxes, umbrellas, reflectors, lights).',
-    '6. **Clothing:** If clothing overlay provided, use it as PRIMARY reference for all garment styling.',
-    '',
+    // Section 2: HARD CONSTRAINTS
+    // NOTE: Identity, accessories, and equipment rules now come from SubjectElement and LightingElement
+    ...hardConstraints,
 
     // Section 3: Composition JSON
     'Scene Specifications:',
@@ -566,26 +595,24 @@ export async function executeV3Step1a(
     structuredPrompt.push('')
   }
 
-  // Section 4: Quality & Technical Rules
+  // Section 4: Technical Requirements
+  // NOTE: Skin texture, hair, lighting, catchlights rules now come from SubjectElement and LightingElement
   structuredPrompt.push('Technical Requirements:')
-  structuredPrompt.push('- Realistic skin texture and hair (high-frequency details, natural imperfections, stray hairs).')
-  structuredPrompt.push('- Neutral, even lighting (no harsh shadows). Final scene lighting applied in Step 2.')
-  structuredPrompt.push('- Catchlights in eyes must be present and realistic.')
   if (!elementContributions) {
+    // Fallback if element composition not available
+    structuredPrompt.push('- Realistic skin texture and hair (high-frequency details, natural imperfections, stray hairs).')
+    structuredPrompt.push('- Neutral, even lighting (no harsh shadows). Final scene lighting applied in Step 2.')
+    structuredPrompt.push('- Catchlights in eyes must be present and realistic.')
     structuredPrompt.push(`- Output: ${aspectRatioConfig.width}x${aspectRatioConfig.height}px (${aspectRatioConfig.id || aspectRatio}). Fill canvas edge-to-edge.`)
   }
 
-  // Add element-specific must follow rules (filter out redundant rules already in Hard Constraints)
+  // Add element-specific must follow rules (filter out redundant framing rules)
   if (effectiveMustFollowRules && effectiveMustFollowRules.length > 0) {
-    // Filter out rules that duplicate Hard Constraints:
-    // - Body/framing rules (Hard Constraint #2)
-    // - Accessory rules (Hard Constraint #3)
+    // Filter out body/framing rules that duplicate Hard Constraint #1
     const bodyFramingKeywords = ['body boundaries', 'must show', 'must not show', 'cut point', 'frame from', 'crop']
-    const accessoryKeywords = ['do not add accessories', 'do not remove accessories', 'not visible in selfies']
     const nonRedundantRules = effectiveMustFollowRules.filter(rule => {
       const lowerRule = rule.toLowerCase()
-      return !bodyFramingKeywords.some(kw => lowerRule.includes(kw)) &&
-             !accessoryKeywords.some(kw => lowerRule.includes(kw))
+      return !bodyFramingKeywords.some(kw => lowerRule.includes(kw))
     })
     for (const rule of nonRedundantRules) {
       structuredPrompt.push(`- ${rule}`)
@@ -605,41 +632,15 @@ export async function executeV3Step1a(
     }
   }
 
-  // Add explicit reference instructions focused on person/face only
+  // Add reference image usage instructions
+  // NOTE: Selfie/face/body composite instructions now come from SubjectElement via element composition
   const instructionLines: string[] = [
-    '\n\nReference images are supplied with clear labels. Follow each resource precisely:'
-  ]
-
-  // Add selfie reference instructions based on whether we have split composites
-  // Note: Combined composite is only included when NO split composites exist (unclassified selfies)
-  if (faceComposite || bodyComposite) {
-    if (faceComposite) {
-      instructionLines.push(
-        '- **Face reference:** Use the FACE REFERENCE composite for identity, facial structure, and fine details. Do not average/blend faces; stick to the primary face basis.'
-      )
-    }
-    if (bodyComposite) {
-      instructionLines.push(
-        '- **Body Reference:** Use the BODY REFERENCE composite to understand the subject\'s body proportions and structure. Match the body type, posture, and build shown in these body selfies.'
-      )
-    }
-  } else {
-    // Fallback to combined composite instruction (only when no selfies are classified)
-    instructionLines.push(
-      '- **Subject selfies:** Use the stacked selfie reference to recreate the person. Choose one selfie as the primary face basis and use others for supporting details only. Do not average/blend faces.'
-    )
-  }
-
-  instructionLines.push(
+    '\n\nReference images are supplied with clear labels. Follow each resource precisely:',
     '- **Neutral background:** Solid flat neutral grey background (#808080) only. No gradients, no props, no environment, and no text.',
     '- **Focus on person:** Prioritize identity, expression, pose, clothing accuracy, and correct framing. Keep the subject consistent with the JSON camera + lighting so Step 2 can composite cleanly.'
-  )
+  ]
 
-  // Check for garment collage reference (from outfit1 package)
-  const hasGarmentCollage = input.referenceImages?.some(ref =>
-    ref.description?.toUpperCase().includes('GARMENT COLLAGE')
-  )
-
+  // Add garment collage instructions if present (hasGarmentCollage computed earlier)
   if (hasGarmentCollage) {
     // Check if we have structured garment analysis from Step 0
     const hasGarmentAnalysis = !!garmentAnalysisFromStep0
@@ -687,7 +688,8 @@ export async function executeV3Step1a(
     types: referenceImages.map(img => img.description?.split(' ')[0] || 'unknown').join(', ')
   })
 
-  // Generate with Gemini (fixed at 1K resolution for raw asset) and track failures
+  // Generate with Gemini and track failures
+  const step1aResolution = STAGE_RESOLUTION.STEP_1A_PERSON || '1K'
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
   try {
     logPrompt('V3 Step 1a', compositionPrompt, generationId)
@@ -695,7 +697,7 @@ export async function executeV3Step1a(
       compositionPrompt,
       referenceImages,
       aspectRatio,
-      '1K', // Fixed resolution - model max
+      step1aResolution,
       {
         temperature: AI_CONFIG.PERSON_GENERATION_TEMPERATURE,
         stage: 'STEP_1A_PERSON',
@@ -807,8 +809,9 @@ export async function executeV3Step1a(
 
   // Prepare assets for Step 2 and Step 3
   
-  // 1. Keep clothing logo reference for Step 2 evaluation
-  const clothingLogoRef = logoReference // This was loaded in prepareAllReferences if branding.position === 'clothing'
+  // 1. Keep clothing logo reference for evaluation (authorizes logo on clothing)
+  // Use logoReferenceForEval which is set even when clothing overlay handles generation
+  const clothingLogoRef = logoReferenceForEval
   
   // 2. Load custom background if specified (for Step 3)
   let backgroundBuffer: Buffer | undefined
@@ -862,6 +865,8 @@ export async function executeV3Step1a(
     backgroundLogoReference: backgroundLogoRef, // For Step 3 composition
     backgroundBuffer,
     selfieComposite,
+    faceComposite, // For Step 2 face refinement
+    bodyComposite, // For Step 2 body verification
     reused: false,
   }
 }

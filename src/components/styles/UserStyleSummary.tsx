@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
-import { UserIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon } from '@heroicons/react/24/outline'
 import { getElementMetadata } from '@/domain/style/elements'
 import { isUserChoice, hasValue } from '@/domain/style/elements/base/element-types'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
@@ -39,14 +39,11 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   const hasLighting = settings.lighting !== undefined
 
   // Compute excluded clothing colors based on shot type and clothing style
-  // This matches the logic in PhotoStyleSettings.tsx
   const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
     const exclusions = new Set<ClothingColorKey>()
 
-    // Get shot type value from wrapper format { mode, value: { type } }
-    // Note: All settings go through deserializers which convert to wrapper format
     const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
-    
+
     if (shotTypeValue) {
       const shotTypeConfig = resolveShotType(shotTypeValue)
       if (shotTypeConfig.excludeClothingColors) {
@@ -54,7 +51,6 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
       }
     }
 
-    // Get exclusions from clothing style + detail
     if (clothingStyle) {
       const knownStyle = clothingStyle as KnownClothingStyle
       const wardrobeExclusions = getWardrobeExclusions(knownStyle, clothingDetails)
@@ -70,7 +66,6 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
     const s = norm(style)
     let d = norm(details)
 
-    // Normalize common detail variants
     if (d === 'buttondown' || d === 'button-down' || d === 'button down shirt') d = 'button down'
     if (d === 'tshirt' || d === 't-shirt') d = 't-shirt'
     if (d === 'suit jacket') d = 'suit'
@@ -83,23 +78,50 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
     return `${styleLabel} — ${detailLabel}`
   }
 
+  // Setting row component for consistent styling
+  const SettingRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+      <span className="text-[13px] text-gray-500">{label}</span>
+      <div className="text-[13px] text-right">{children}</div>
+    </div>
+  )
+
+  // User choice indicator
+  const UserChoiceIndicator = () => (
+    <span className="inline-flex items-center gap-1.5 text-amber-600">
+      <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>User choice</span>
+    </span>
+  )
+
   return (
-    <div className="relative bg-gradient-to-br from-gray-50 via-white to-gray-50/80 rounded-2xl p-6 md:p-7 border border-gray-200/60 shadow-md shadow-gray-200/20 hover:shadow-lg hover:shadow-gray-300/30 transition-all duration-300 hover:-translate-y-0.5">
-      {/* Decorative element */}
-      <div className="absolute top-0 right-0 -mt-3 -mr-3 h-20 w-20 bg-gradient-to-br from-brand-secondary/8 to-brand-primary/8 rounded-full blur-2xl opacity-60" />
-      <div className="absolute bottom-0 left-0 -mb-3 -ml-3 h-16 w-16 bg-gradient-to-tr from-brand-primary/5 to-brand-secondary/5 rounded-full blur-xl opacity-40" />
-      
-      <div className="relative space-y-4">
-        {/* Header with icon */}
-        <div className="flex items-center gap-3 pb-3 border-b border-gray-200/60">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-brand-secondary via-brand-secondary-hover to-brand-secondary flex items-center justify-center shadow-md shadow-brand-secondary/25 ring-2 ring-brand-secondary/10">
-            <UserIcon className="h-5 w-5 text-white" strokeWidth={2.5} />
+    <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+      {/* Refined header with gradient background */}
+      <div className="relative px-5 py-4 bg-gradient-to-br from-slate-50 via-white to-slate-50/50 border-b border-gray-100 rounded-t-2xl overflow-hidden">
+        {/* Subtle decorative element */}
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-brand-secondary/[0.03] to-transparent rounded-bl-full" />
+
+        <div className="relative flex items-center gap-3.5">
+          {/* Icon with refined treatment */}
+          <div className="relative flex-shrink-0">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-brand-secondary/10 via-brand-secondary/5 to-transparent flex items-center justify-center border border-brand-secondary/10">
+              <SparklesIcon className="h-5 w-5 text-brand-secondary" strokeWidth={1.75} />
+            </div>
           </div>
-          <h4 className="text-lg font-display font-bold text-gray-900 tracking-tight">User Style</h4>
+
+          {/* Title */}
+          <div className="min-w-0">
+            <h4 className="text-[13px] font-semibold text-gray-800 tracking-wide uppercase">
+              User Style
+            </h4>
+            <p className="text-xs text-gray-400 mt-0.5">Appearance options</p>
+          </div>
         </div>
-        
-        {/* Content */}
-        <div className="pt-2 space-y-5">
+      </div>
+
+      {/* Content area */}
+      <div className="px-5 py-4 flex-1">
+        <div className="space-y-0">
           {/* Render elements using registry */}
           {USER_STYLE_ELEMENTS.map((elementKey) => {
             const metadata = getElementMetadata(elementKey)
@@ -109,12 +131,9 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
             if (metadata.summaryComponent) {
               const SummaryComponent = metadata.summaryComponent
               const elementSettings = settings[elementKey]
-              
-              // For customClothing, always pass settings if they exist (Summary component handles visibility logic)
-              // For other elements, only show if settings exist
+
               if (elementKey === 'customClothing') {
                 if (!elementSettings) return null
-                // Pass settings even if just { mode: 'user-choice' } - let Summary component decide
               } else {
                 if (!elementSettings) return null
               }
@@ -127,29 +146,22 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
               )
             }
 
-            // Fallback for elements without summary components yet
+            // Fallback for elements without summary components
             if (elementKey === 'clothing' && hasClothingSettings) {
               return (
                 <React.Fragment key="clothing">
-                  <div id="style-clothing-type" className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Clothing style</span>
-                    </div>
-                    <div className="ml-6 text-sm capitalize">
-                      {clothingIsUserChoice || !clothingStyle ? (
-                        <span className="inline-flex items-center gap-1.5 normal-case">
-                          <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-                          <span className="text-gray-600">User choice</span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-700 font-semibold">{getClothingPhrase(clothingStyle, clothingDetails) || ''}</span>
-                      )}
-                    </div>
-                    {clothingAccessories && clothingAccessories.length > 0 && (
-                      <div className="ml-6 text-sm text-gray-600 mt-1">Accessories: <span className="font-medium">{clothingAccessories.join(', ')}</span></div>
+                  <SettingRow label="Clothing">
+                    {clothingIsUserChoice || !clothingStyle ? (
+                      <UserChoiceIndicator />
+                    ) : (
+                      <div className="text-right">
+                        <span className="text-gray-800 font-medium">{getClothingPhrase(clothingStyle, clothingDetails) || ''}</span>
+                        {clothingAccessories && clothingAccessories.length > 0 && (
+                          <div className="text-xs text-gray-400 mt-0.5">{clothingAccessories.join(', ')}</div>
+                        )}
+                      </div>
                     )}
-                  </div>
-                  {/* Clothing Colors - rendered right after clothing style */}
+                  </SettingRow>
                   {settings.clothingColors && (
                     <ClothingColorsSummary
                       settings={settings.clothingColors}
@@ -162,21 +174,13 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
 
             if (elementKey === 'lighting' && hasLighting) {
               return (
-                <div key="lighting" className="flex flex-col space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Lighting</span>
-                  </div>
-                  <div className="ml-6 text-sm capitalize">
-                    {!lightingType ? (
-                      <span className="inline-flex items-center gap-1.5 normal-case">
-                        <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-                        <span className="text-gray-600">User choice</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-700 font-semibold">{lightingType}</span>
-                    )}
-                  </div>
-                </div>
+                <SettingRow key="lighting" label="Lighting">
+                  {!lightingType ? (
+                    <UserChoiceIndicator />
+                  ) : (
+                    <span className="text-gray-800 font-medium capitalize">{lightingType}</span>
+                  )}
+                </SettingRow>
               )
             }
 
@@ -187,5 +191,3 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
     </div>
   )
 }
-
-

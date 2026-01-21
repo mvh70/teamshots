@@ -326,7 +326,8 @@ export class ClothingOverlayElement extends StyleElement {
     const mustFollow = [
       'Use the clothing overlay as the PRIMARY reference for all garment styling and details.',
       'Replicate the EXACT appearance of the clothing shown in the overlay - colors, patterns, logos, and all visible details are already correctly applied.',
-      'Logo handling: Preserve the base-layer logo exactly as shown. If an outer layer naturally covers part of it, that is expected. Do NOT relocate or “save” the logo.',
+      'Logo handling: The logo in the overlay may have a bright GREEN (chroma key) background for visibility. Do NOT include the green background - only reproduce the logo elements themselves on the fabric.',
+      'Logo handling: Preserve the base-layer logo exactly as shown. If an outer layer naturally covers part of it, that is expected. Do NOT relocate or "save" the logo.',
       'Do NOT modify, reinterpret, or add clothing elements. For clothing/branding/logo info, ignore all other references and use the overlay only.',
     ]
 
@@ -347,7 +348,7 @@ export class ClothingOverlayElement extends StyleElement {
     if (overlay?.data.base64) {
       referenceImages.push({
         url: `data:${overlay.data.mimeType};base64,${overlay.data.base64}`,
-        description: 'CLOTHING TEMPLATE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed.',
+        description: 'CLOTHING TEMPLATE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements on the fabric.',
         type: 'clothing' as const,
       })
 
@@ -623,17 +624,18 @@ STYLE: ${template.logoStyle}
 
 LOGO REPRODUCTION RULES (MUST FOLLOW EXACTLY):
 1. COPY the logo from the reference image with PERFECT ACCURACY - every letter, icon, and element must be included
-2. CRITICAL: Include EVERY letter and character visible in the logo - DO NOT skip or omit any text
-3. If the logo contains text, reproduce each letter individually and completely - check that all letters are present
-4. If the logo contains icons or graphics, reproduce every line, shape, and detail exactly
-5. DO NOT modify, stylize, or reinterpret the logo design in any way
-6. DO NOT alter logo colors - use the EXACT colors from the reference for each element
-7. DO NOT change logo proportions or aspect ratio
-8. The logo should appear ${template.logoStyle} on the fabric with all elements intact
-9. Size: The logo should be proportional (approx 8-12cm width on the garment)
-10. ONLY place the logo on the base layer garment - NEVER on outer layers
-11. The logo must be clearly visible and sharp with ALL text/graphics legible
-12. Before finalizing, verify that EVERY letter and element from the reference logo is present in your output
+2. CRITICAL: If the logo has a bright GREEN background, that is a CHROMA KEY for visibility only - do NOT include the green background. Only reproduce the logo elements (text, icons, graphics) on the fabric.
+3. CRITICAL: Include EVERY letter and character visible in the logo - DO NOT skip or omit any text
+4. If the logo contains text, reproduce each letter individually and completely - check that all letters are present
+5. If the logo contains icons or graphics, reproduce every line, shape, and detail exactly
+6. DO NOT modify, stylize, or reinterpret the logo design in any way
+7. DO NOT alter logo colors - use the EXACT colors from the reference for each element (ignore the green chroma background)
+8. DO NOT change logo proportions or aspect ratio
+9. The logo should appear ${template.logoStyle} on the fabric with all elements intact
+10. Size: The logo should be proportional (approx 8-12cm width on the garment)
+11. ONLY place the logo on the base layer garment - NEVER on outer layers
+12. The logo must be clearly visible and sharp with ALL text/graphics legible
+13. Before finalizing, verify that EVERY letter and element from the reference logo is present in your output
 
 CRITICAL QUALITY STANDARDS:
 - Photorealistic fabric textures (cotton weave, wool texture, etc.)
@@ -652,6 +654,7 @@ FORBIDDEN:
 - DO NOT overlap or layer garments on top of each other
 - DO NOT arrange items in a way that hides any part of any garment
 - DO NOT create an artistic composition - this is a technical product reference
+- DO NOT include the green chroma key background from the logo reference - only the logo elements
 
 OUTPUT SPECIFICATIONS:
 - PNG image with white background

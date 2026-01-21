@@ -181,7 +181,7 @@ export const MODEL_CONFIG = {
   /** Advanced image model (Gemini 3) */
   'gemini-3-pro-image': {
     providers: {
-      vertex: 'gemini-3-pro-image', // TODO: Verify if this is the correct Vertex model name
+      vertex: 'gemini-3-pro-image-preview',
       rest: 'gemini-3-pro-image-preview',
       openrouter: 'google/gemini-3-pro-image-preview',
       replicate: null // Gemini 3 Pro Image on Replicate
@@ -205,7 +205,7 @@ export type ModelName = keyof typeof MODEL_CONFIG
 export const STAGE_MODEL = {
   CLOTHING_COLLAGE: 'gemini-2.5-flash-image' as ModelName,
   CLOTHING_OVERLAY: 'gemini-2.5-flash-image' as ModelName,
-  STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName,
+  STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName, // EXPERIMENT: Gemini 3 @ 1K for both steps
   STEP_1B_BACKGROUND: 'gemini-2.5-flash-image' as ModelName,
   STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
   EVALUATION: 'gemini-2.5-flash' as ModelName,
@@ -217,6 +217,12 @@ export type StageName = keyof typeof STAGE_MODEL
 
 /** Fallback model when stage config is missing */
 export const DEFAULT_MODEL: ModelName = 'gemini-2.5-flash-image'
+
+/** Per-stage resolution overrides (undefined = use PROVIDER_DEFAULTS) */
+export const STAGE_RESOLUTION: Partial<Record<StageName, '1K' | '2K' | '4K'>> = {
+  // EXPERIMENT: Both steps at 1K resolution
+  // STEP_2_COMPOSITION: '2K', // Disabled - testing 1K output
+}
 
 /**
  * Get the provider-specific model name for a given canonical model and provider.

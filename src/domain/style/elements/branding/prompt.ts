@@ -228,22 +228,21 @@ export function generateBrandingPrompt({
   const position = brandingValue.position ?? 'clothing'
 
   if (position === 'background') {
-    // Extract all instructions (logo_source, placement, rules) from BACKGROUND_BRANDING_PROMPT
+    // Extract instructions from BACKGROUND_BRANDING_PROMPT
+    // NOTE: placement is in branding.placement field, NOT duplicated in rules array
     const { logo_source, placement, rules: configRules } = BACKGROUND_BRANDING_PROMPT
     const rules: string[] = []
-    
+
     if (typeof logo_source === 'string') {
       rules.push(logo_source)
     }
-    
-    if (typeof placement === 'string') {
-      rules.push(placement)
-    }
-    
+
+    // Don't add placement to rules - it's already in branding.placement to avoid duplication
+
     if (Array.isArray(configRules)) {
       rules.push(...(configRules as string[]))
     }
-    
+
     return {
       branding: {
         enabled: true,
@@ -256,22 +255,21 @@ export function generateBrandingPrompt({
   }
 
   if (position === 'elements') {
-    // Extract all instructions (logo_source, placement, rules) from ELEMENT_BRANDING_PROMPT
+    // Extract instructions from ELEMENT_BRANDING_PROMPT
+    // NOTE: placement is in branding.placement field, NOT duplicated in rules array
     const { logo_source, placement, rules: configRules, allowed_elements } = ELEMENT_BRANDING_PROMPT
     const rules: string[] = []
-    
+
     if (typeof logo_source === 'string') {
       rules.push(logo_source)
     }
-    
-    if (typeof placement === 'string') {
-      rules.push(placement)
-    }
-    
+
+    // Don't add placement to rules - it's already in branding.placement to avoid duplication
+
     if (Array.isArray(configRules)) {
       rules.push(...(configRules as string[]))
     }
-    
+
     return {
       branding: {
         enabled: true,

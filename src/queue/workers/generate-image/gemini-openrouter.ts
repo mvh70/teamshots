@@ -88,6 +88,13 @@ export async function generateWithGeminiOpenRouter(
   if (options?.seed !== undefined) requestBody.seed = options.seed
 
   const startTime = Date.now()
+
+  // Set a reasonable timeout to fail fast and fallback to next provider
+  // OpenRouter can be slow or unresponsive, don't wait forever
+  const OPENROUTER_TIMEOUT_MS = 15000 // 15 seconds
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+
   try {
     // Use direct fetch to OpenRouter API instead of SDK to support all parameters
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -98,8 +105,11 @@ export async function generateWithGeminiOpenRouter(
         'HTTP-Referer': Env.string('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
         'X-Title': 'TeamShots'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -256,6 +266,18 @@ export async function generateWithGeminiOpenRouter(
       providerUsed: 'openrouter'
     }
   } catch (error) {
+    clearTimeout(timeoutId)
+
+    // Handle timeout/abort errors
+    if (error instanceof Error && error.name === 'AbortError') {
+      Logger.error('OpenRouter request timed out', {
+        timeoutMs: OPENROUTER_TIMEOUT_MS,
+        model: modelName,
+        aspectRatio
+      })
+      throw new Error(`OpenRouter API error: 408 Request Timeout - Request exceeded ${OPENROUTER_TIMEOUT_MS}ms limit`)
+    }
+
     Logger.error('OpenRouter generation failed', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,

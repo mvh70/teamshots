@@ -80,11 +80,12 @@ export class LightingElement extends StyleElement {
 
     // Phase-specific quality constraints
     if (phase === 'person-generation') {
-      // Person-generation phase: lighting constraints are handled by:
-      // - Hard Constraint #5 in v3-step1a-person-generation.ts (no studio equipment)
-      // - Hardcoded Technical Requirement (catchlights)
-      // - Step 1a uses neutral/even lighting, not scene lighting
-      // We only contribute metadata here to avoid duplication.
+      // Step 1a uses neutral/even lighting (final scene lighting applied in Step 2)
+      mustFollow.push(
+        'Neutral, even lighting with no harsh shadows - final scene lighting applied in composition',
+        'Catchlights in eyes must be present and realistic',
+        'No studio lighting equipment visible (softboxes, umbrellas, reflectors, lights)'
+      )
     } else if (phase === 'background-generation') {
       // Background needs lighting coherence constraint
       mustFollow.push(

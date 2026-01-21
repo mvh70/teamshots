@@ -18,38 +18,34 @@ export function CustomClothingSummary({ settings }: ElementSummaryProps<CustomCl
 
   if (!showContent) return null
 
-  // Track if image failed to load
   const [imageError, setImageError] = React.useState(false)
 
   return (
-    <div id="style-custom-clothing" className="flex flex-col space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Custom Outfit</span>
-      </div>
-      {customClothingKey && !imageError ? (
-        <div className="ml-6">
-          <div className="relative group/outfit">
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+      <span className="text-[13px] text-gray-500">Custom Outfit</span>
+      <div className="text-[13px]">
+        {customClothingKey && !imageError ? (
+          <div className="flex items-center gap-2">
+            <span className="text-gray-800 font-medium">Uploaded</span>
             <Image
               src={getThumbnailUrl(customClothingKey)}
-              alt="Custom outfit thumbnail"
-              width={96}
-              height={96}
-              className="w-24 h-24 rounded-xl object-cover border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-300 group-hover/outfit:scale-105"
+              alt="Custom outfit"
+              width={28}
+              height={28}
+              className="w-7 h-7 rounded-md object-cover border border-gray-200 shadow-sm"
               unoptimized
               onError={() => setImageError(true)}
             />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/outfit:opacity-100 transition-opacity duration-300" />
           </div>
-        </div>
-      ) : (
-        // Show "User choice" if mode is user-choice OR if image failed to load
-        (settings.mode === 'user-choice' || imageError) && (
-          <div className="ml-6 text-sm text-gray-600 inline-flex items-center gap-1.5">
-            <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-            <span>User choice</span>
-          </div>
-        )
-      )}
+        ) : (
+          (settings.mode === 'user-choice' || imageError) && (
+            <span className="inline-flex items-center gap-1.5 text-amber-600">
+              <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>User choice</span>
+            </span>
+          )
+        )}
+      </div>
     </div>
   )
 }

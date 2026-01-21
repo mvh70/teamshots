@@ -325,6 +325,15 @@ export async function generateWithGemini(
         errorMessage.toLowerCase().includes('safety')
       )
 
+      // Check if this is a geo-restriction or provider-specific limitation error
+      // These are provider limitations, not terminal failures - should fallback to another provider
+      const isGeoRestrictionError = (
+        errorMessage.includes('not available in your country') ||
+        errorMessage.includes('FAILED_PRECONDITION') ||
+        errorMessage.includes('not available in your region') ||
+        errorMessage.includes('geo-restricted')
+      )
+
       Logger.info('Provider failed - checking fallback eligibility', {
         provider,
         providerUsed,
@@ -334,19 +343,22 @@ export async function generateWithGemini(
         serviceError,
         isImageOtherError,
         isSafetyError,
+        isGeoRestrictionError,
         isLastProvider,
         errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
-        willFallback: (rateLimited || serviceError || isImageOtherError || isSafetyError) && !isLastProvider
+        willFallback: (rateLimited || serviceError || isImageOtherError || isSafetyError || isGeoRestrictionError) && !isLastProvider
       })
 
-      // Fall back to next provider if rate limited OR service error OR transient image generation failure OR safety filter
-      // (different providers have different safety thresholds)
-      if ((rateLimited || serviceError || isImageOtherError || isSafetyError) && !isLastProvider) {
+      // Fall back to next provider if rate limited OR service error OR transient image generation failure OR safety filter OR geo-restriction
+      // (different providers have different thresholds and regional availability)
+      if ((rateLimited || serviceError || isImageOtherError || isSafetyError || isGeoRestrictionError) && !isLastProvider) {
         const reason = rateLimited
           ? 'rate limited'
           : serviceError
             ? 'service unavailable (503)'
-            : isSafetyError
+            : isGeoRestrictionError
+              ? 'geo-restricted or not available in region'
+              : isSafetyError
               ? 'content safety filter triggered'
               : 'returned no images (IMAGE_OTHER)'
         Logger.warn(`Provider ${reason}, falling back to next provider`, {
@@ -649,6 +661,11 @@ async function generateTextWithGeminiOpenRouterInternal(
   }
 
   const textContent = data.choices?.[0]?.message?.content ?? ''
+
+  // Throw error on empty response so fallback can kick in
+  if (!textContent) {
+    throw new Error('OpenRouter API error: 503 Empty response - no text content returned')
+  }
 
   return {
     text: textContent,
