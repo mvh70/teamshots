@@ -144,12 +144,12 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about TeamShotsPro",
     "searchPlaceholder": "Search questions...",
-    "category": {
+    "categories": {
       "all": "All",
-      "technical": "Technical",
+      "quality": "Quality",
       "pricing": "Pricing",
-      "privacy": "Privacy",
-      "usage": "Usage"
+      "process": "Process",
+      "security": "Security"
     },
     "noResults": "No questions found matching your search.",
     "stillHaveQuestions": "Still have questions?",
