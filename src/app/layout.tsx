@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: baseUrl,
       languages: {
-        'en': `${baseUrl}/`,
+        'en': baseUrl,
         'es': `${baseUrl}/es`,
       },
     },
