@@ -1,4 +1,4 @@
-import { posthog } from '@/lib/posthog'
+import { getPostHog } from '@/lib/posthog'
 
 /**
  * Track a custom event in PostHog and GTM (for GA4)
@@ -8,7 +8,8 @@ export const track = (event: string, properties?: Record<string, unknown>) => {
   if (typeof window === 'undefined') return
 
   // PostHog
-  if (posthog.__loaded) {
+  const posthog = getPostHog()
+  if (posthog?.__loaded) {
     posthog.capture(event, properties)
   }
 

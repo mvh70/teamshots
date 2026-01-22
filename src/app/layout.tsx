@@ -1,7 +1,6 @@
 import SessionProvider from '@/components/SessionProvider'
 import { PostHogProvider } from '@/components/PostHogProvider'
-// import GoogleAnalytics from '@/components/GoogleAnalytics' // Removed - managed through GTM instead
-import GoogleTagManager, { GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
+import { GoogleTagManager } from '@next/third-parties/google'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
@@ -73,6 +72,9 @@ export default function RootLayout({
   // We'll render a wrapper that awaits the session server-side.
   return (
     <html lang="en">
+      {process.env.NEXT_PUBLIC_GTM_ID && (
+        <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+      )}
       <head>
         <meta httpEquiv="Permissions-Policy" content="camera=(self)" />
         {/* Force protocol detection for Safari */}
@@ -80,13 +82,8 @@ export default function RootLayout({
         {/* Performance optimizations */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Google Tag Manager - manages all tracking tags including GA4 */}
-        <GoogleTagManager />
-        {/* Google Analytics is now managed through GTM dashboard */}
       </head>
       <body className="overflow-x-hidden bg-gray-50">
-        {/* Google Tag Manager (noscript) */}
-        <GoogleTagManagerNoScript />
         <Script
           src="/safari-compatibility.js"
           strategy="beforeInteractive"

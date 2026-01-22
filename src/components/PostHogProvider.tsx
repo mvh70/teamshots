@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import type { PostHog } from 'posthog-js'
 
-// Lazy import PostHog to defer loading
-let posthogModule: typeof import('@/lib/posthog') | null = null
+// Cached PostHog instance after initialization
+let posthogInstance: PostHog | null = null
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   // Prevent tracking in non-production environments
@@ -18,27 +19,28 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const hasInteracted = useRef(false)
 
   // Lazy load and initialize PostHog
-  const initPostHog = useCallback(async () => {
+  const loadPostHog = useCallback(async () => {
     if (isInitialized.current) return
 
     try {
       // Dynamically import the module
-      if (!posthogModule) {
-        posthogModule = await import('@/lib/posthog')
-      }
+      const { initPostHog } = await import('@/lib/posthog')
+      const ph = await initPostHog()
 
-      posthogModule.initPostHog()
-      isInitialized.current = true
+      if (ph) {
+        posthogInstance = ph
+        isInitialized.current = true
 
-      // Capture the initial pageview after initialization
-      if (pathname && posthogModule.posthog.__loaded) {
-        let url = window.origin + pathname
-        if (searchParams.toString()) {
-          url = url + `?${searchParams.toString()}`
+        // Capture the initial pageview after initialization
+        if (pathname) {
+          let url = window.origin + pathname
+          if (searchParams.toString()) {
+            url = url + `?${searchParams.toString()}`
+          }
+          ph.capture('$pageview', {
+            $current_url: url,
+          })
         }
-        posthogModule.posthog.capture('$pageview', {
-          $current_url: url,
-        })
       }
     } catch (error) {
       console.error('[PostHog] Failed to load:', error)
@@ -61,7 +63,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('mousemove', handleInteraction)
 
       // Initialize PostHog
-      initPostHog()
+      loadPostHog()
     }
 
     // Add interaction listeners
@@ -76,7 +78,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const fallbackTimer = setTimeout(() => {
       if (!hasInteracted.current) {
         hasInteracted.current = true
-        initPostHog()
+        loadPostHog()
       }
     }, 5000)
 
@@ -88,18 +90,18 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('keydown', handleInteraction)
       window.removeEventListener('mousemove', handleInteraction)
     }
-  }, [initPostHog])
+  }, [loadPostHog])
 
   // Track subsequent page views
   useEffect(() => {
-    if (!isInitialized.current || !posthogModule) return
+    if (!isInitialized.current || !posthogInstance) return
 
-    if (pathname && posthogModule.posthog.__loaded) {
+    if (pathname) {
       let url = window.origin + pathname
       if (searchParams.toString()) {
         url = url + `?${searchParams.toString()}`
       }
-      posthogModule.posthog.capture('$pageview', {
+      posthogInstance.capture('$pageview', {
         $current_url: url,
       })
     }

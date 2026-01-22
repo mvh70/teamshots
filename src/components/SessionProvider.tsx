@@ -3,7 +3,7 @@
 import { SessionProvider as NextAuthSessionProvider, useSession } from 'next-auth/react'
 import type { Session } from 'next-auth'
 import { useEffect, useRef } from 'react'
-import { posthog } from '@/lib/posthog'
+import { getPostHog } from '@/lib/posthog'
 import { ApolloTracking } from '@/components/ApolloTracking'
 
 function PostHogUserIdentifier() {
@@ -27,7 +27,8 @@ function PostHogUserIdentifier() {
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      if (session?.user && posthog.__loaded) {
+      const posthog = getPostHog()
+      if (session?.user && posthog?.__loaded) {
         // Only identify if user changed to prevent duplicate calls
         if (lastIdentifiedUserRef.current !== session.user.id) {
           posthog.identify(session.user.id, {
@@ -37,7 +38,7 @@ function PostHogUserIdentifier() {
           })
           lastIdentifiedUserRef.current = session.user.id
         }
-      } else if (!session && posthog.__loaded && lastIdentifiedUserRef.current) {
+      } else if (!session && posthog?.__loaded && lastIdentifiedUserRef.current) {
         // Reset PostHog when user logs out
         posthog.reset()
         lastIdentifiedUserRef.current = null

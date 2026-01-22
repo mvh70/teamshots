@@ -237,6 +237,7 @@ export default function SeatsPricingCard({
               const clampedValue = Math.max(newValue, minSeats);
               setSeats(clampedValue);
             }}
+            aria-label="Number of team seats"
             className="pricing-slider"
             style={{
               background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF 100%)`
