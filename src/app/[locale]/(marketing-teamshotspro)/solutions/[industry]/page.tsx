@@ -22,6 +22,9 @@ import {
   TrustLogos,
 } from '@/components/solutions'
 
+// Force dynamic rendering since we use headers() for brand detection
+export const dynamic = 'force-dynamic'
+
 type Props = {
   params: Promise<{ locale: string; industry: string }>
 }

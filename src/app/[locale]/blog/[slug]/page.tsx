@@ -11,12 +11,17 @@ import {
   variantToBrandId,
 } from '@/lib/cms'
 
+// Force dynamic rendering since we use headers() and read from CMS database
+export const dynamic = 'force-dynamic'
+
 type Props = {
   params: Promise<{ locale: string; slug: string }>
 }
 
 /**
  * Generate static params for all blog posts from CMS
+ * Note: With dynamic = 'force-dynamic', this serves as a hint for which paths exist
+ * but pages are still rendered dynamically on each request.
  */
 export async function generateStaticParams() {
   const params: Array<{ locale: string; slug: string }> = []
