@@ -120,7 +120,7 @@ export default async function SolucionesPage({ params }: Props) {
       <IndustryHowItWorks industry={englishSlug} />
 
       {/* Cost Comparison vs Traditional */}
-      <IndustryComparison industry={englishSlug} solution={solution} />
+      <IndustryComparison industry={englishSlug} />
 
       {/* Use Cases */}
       <IndustryUseCases industry={englishSlug} />
@@ -129,16 +129,16 @@ export default async function SolucionesPage({ params }: Props) {
       <IndustryTestimonials industry={englishSlug} />
 
       {/* Pricing */}
-      <IndustryPricing industry={englishSlug} />
+      <IndustryPricing industry={englishSlug} locale={locale} />
 
       {/* Guarantee */}
-      <IndustryGuarantee industry={englishSlug} />
+      <IndustryGuarantee locale={locale} />
 
       {/* FAQ */}
       <IndustryFAQ industry={englishSlug} />
 
       {/* Final CTA */}
-      <IndustryFinalCTA industry={englishSlug} />
+      <IndustryFinalCTA industry={englishSlug} locale={locale} />
     </div>
   )
 }
