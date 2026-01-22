@@ -188,7 +188,7 @@ export default async function BlogPostPage({ params }: Props) {
       ? {
           alt: title,
           caption: { en: '', es: '' },
-          src: post.heroImagePath,
+          src: `/api/cms/images${post.heroImagePath}`,
         }
       : undefined,
     datePublished: post.publishedAt || new Date().toISOString(),

@@ -195,6 +195,16 @@ function estimateReadTime(wordCount: number): string {
 }
 
 /**
+ * Transform CMS heroImagePath to API URL
+ * Converts /blog/slug.png → /api/cms/images/blog/slug.png
+ */
+function heroImageToUrl(heroImagePath: string | null): string | undefined {
+  if (!heroImagePath) return undefined
+  // heroImagePath is stored as /blog/slug.png or similar
+  return `/api/cms/images${heroImagePath}`
+}
+
+/**
  * Convert CMS blog post to BlogPost format for use in components
  */
 export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): BlogPost {
@@ -212,7 +222,7 @@ export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): Bl
       : undefined,
     date: cmsPost.publishedAt || undefined,
     readTime: estimateReadTime(cmsPost.wordCount),
-    image: cmsPost.heroImagePath || undefined,
+    image: heroImageToUrl(cmsPost.heroImagePath),
     author: variant === 'teamshotspro' ? 'TeamShotsPro Team' : 'PhotoShotsPro Team',
     featured: false, // Could be stored in CMS
   }
