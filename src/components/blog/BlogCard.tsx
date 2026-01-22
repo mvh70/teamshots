@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { BlogPost } from '@/config/blog';
-import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription } from '@/config/blog';
+import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription, getCategoryLabel, formatReadTime } from '@/config/blog';
 
 interface BlogCardProps {
   post: BlogPost;
@@ -55,7 +55,7 @@ export default function BlogCard({ post, locale = 'en' }: BlogCardProps) {
 
         {/* Category Badge */}
         <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full mb-3 ${categoryConfig.color}`}>
-          {categoryConfig.label}
+          {getCategoryLabel(post.category, locale)}
         </span>
 
         {/* Title */}
@@ -78,7 +78,14 @@ export default function BlogCard({ post, locale = 'en' }: BlogCardProps) {
             </time>
           )}
           {post.date && post.readTime && <span>·</span>}
-          {post.readTime && <span>{post.readTime}</span>}
+          {post.readTime && (
+            <span>
+              {(() => {
+                const minutes = parseInt(post.readTime.match(/\d+/)?.[0] || '0', 10)
+                return formatReadTime(minutes, locale)
+              })()}
+            </span>
+          )}
         </div>
       </Link>
     </article>

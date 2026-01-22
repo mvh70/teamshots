@@ -12,13 +12,18 @@ interface BlogContentProps {
   title: string
   description: string
   locale?: string
+  cta?: {
+    heading: string
+    subheading: string
+    buttonText: string
+  }
 }
 
 /**
  * Client-side blog content component with filtering.
  * Handles category filtering and displays featured post, grid, and CTA.
  */
-export default function BlogContent({ posts, title, description, locale = 'en' }: BlogContentProps) {
+export default function BlogContent({ posts, title, description, locale = 'en', cta }: BlogContentProps) {
   const [selectedCategory, setSelectedCategory] = useState<BlogPostCategory | 'all'>('all')
 
   // Find the featured post (first one marked as featured, or newest post)
@@ -59,6 +64,7 @@ export default function BlogContent({ posts, title, description, locale = 'en' }
           categories={allCategories}
           selectedCategory={selectedCategory}
           onCategoryChange={setSelectedCategory}
+          locale={locale}
         />
 
         {/* Posts Grid */}
@@ -70,12 +76,18 @@ export default function BlogContent({ posts, title, description, locale = 'en' }
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500">No posts found in this category.</p>
+            <p className="text-gray-500">
+              {locale === 'es' ? 'No se encontraron publicaciones en esta categoría.' : 'No posts found in this category.'}
+            </p>
           </div>
         )}
 
         {/* CTA Section */}
-        <BlogCTA />
+        <BlogCTA
+          heading={cta?.heading}
+          subheading={cta?.subheading}
+          buttonText={cta?.buttonText}
+        />
       </div>
     </div>
   )

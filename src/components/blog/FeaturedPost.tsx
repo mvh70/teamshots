@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { BlogPost } from '@/config/blog'
-import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription } from '@/config/blog'
+import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription, getCategoryLabel, formatReadTime } from '@/config/blog'
 
 interface FeaturedPostProps {
   post: BlogPost
@@ -47,10 +47,10 @@ export default function FeaturedPost({ post, locale = 'en' }: FeaturedPostProps)
             {/* Category Badge */}
             <div className="flex items-center gap-3 mb-4">
               <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-white/20 text-white backdrop-blur-sm">
-                Featured
+                {locale === 'es' ? 'Destacado' : 'Featured'}
               </span>
               <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${categoryConfig.color}`}>
-                {categoryConfig.label}
+                {getCategoryLabel(post.category, locale)}
               </span>
             </div>
 
@@ -84,7 +84,12 @@ export default function FeaturedPost({ post, locale = 'en' }: FeaturedPostProps)
               {post.readTime && (
                 <>
                   <span>·</span>
-                  <span>{post.readTime}</span>
+                  <span>
+                    {(() => {
+                      const minutes = parseInt(post.readTime.match(/\d+/)?.[0] || '0', 10)
+                      return formatReadTime(minutes, locale)
+                    })()}
+                  </span>
                 </>
               )}
             </div>

@@ -2,10 +2,9 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { routing } from '@/i18n/routing'
-import { getLandingVariant } from '@/config/landing-content'
 import { getSolutionBySlug, SOLUTIONS } from '@/config/solutions'
-import { getSpanishSolutionSlug } from '@/config/spanish-slugs'
+import { getEnglishSolutionSlug, SPANISH_SOLUTION_SLUGS } from '@/config/spanish-slugs'
+import { getLandingVariant } from '@/config/landing-content'
 import { getBaseUrl } from '@/lib/url'
 import {
   IndustryHero,
@@ -23,22 +22,31 @@ import {
 } from '@/components/solutions'
 
 type Props = {
-  params: Promise<{ locale: string; industry: string }>
+  params: Promise<{ locale: string; slug: string }>
 }
 
 export function generateStaticParams() {
-  // Generate for English only - Spanish uses /soluciones route
-  return SOLUTIONS.map((s) => ({
-    locale: 'en',
-    industry: s.slug,
+  // Generate params only for Spanish locale with Spanish slugs
+  return Object.keys(SPANISH_SOLUTION_SLUGS).map((spanishSlug) => ({
+    locale: 'es',
+    slug: spanishSlug,
   }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, industry } = await params
+  const { locale, slug } = await params
   const headersList = await headers()
 
-  const solution = getSolutionBySlug(industry)
+  // This route is only for Spanish - redirect English to /solutions
+  if (locale !== 'es') {
+    return {}
+  }
+
+  // Map Spanish slug to English slug
+  const englishSlug = getEnglishSolutionSlug(slug)
+  if (!englishSlug) notFound()
+
+  const solution = getSolutionBySlug(englishSlug)
   if (!solution) notFound()
 
   const baseUrl = getBaseUrl(headersList)
@@ -46,8 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const seoTitle = t('seo.title')
   const seoDescription = t('seo.description')
-  const canonical = `${baseUrl}/solutions/${solution.slug}`
-  const spanishSlug = getSpanishSolutionSlug(industry)
+  const canonical = `${baseUrl}/es/soluciones/${slug}`
 
   return {
     title: seoTitle,
@@ -56,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical,
       languages: {
         en: `${baseUrl}/solutions/${solution.slug}`,
-        es: spanishSlug ? `${baseUrl}/es/soluciones/${spanishSlug}` : `${baseUrl}/es/solutions/${solution.slug}`,
+        es: `${baseUrl}/es/soluciones/${slug}`,
       },
     },
     openGraph: {
@@ -67,18 +74,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function SolutionIndustryPage({ params }: Props) {
-  const { locale, industry } = await params
+export default async function SolucionesPage({ params }: Props) {
+  const { locale, slug } = await params
   const headersList = await headers()
 
-  // Redirect Spanish users to /soluciones with Spanish slug
-  if (locale === 'es') {
-    const spanishSlug = getSpanishSolutionSlug(industry)
-    if (spanishSlug) {
-      redirect(`/es/soluciones/${spanishSlug}`)
+  // This route is only for Spanish - redirect English to /solutions
+  if (locale !== 'es') {
+    const englishSlug = getEnglishSolutionSlug(slug)
+    if (englishSlug) {
+      redirect(`/solutions/${englishSlug}`)
     }
-    // If no Spanish slug mapping exists, still show the page
+    notFound()
   }
+
+  // Map Spanish slug to English slug
+  const englishSlug = getEnglishSolutionSlug(slug)
+  if (!englishSlug) notFound()
 
   // TeamShotsPro-only pages (B2B verticals)
   const host = headersList.get('host') || headersList.get('x-forwarded-host')
@@ -88,46 +99,46 @@ export default async function SolutionIndustryPage({ params }: Props) {
     notFound()
   }
 
-  const solution = getSolutionBySlug(industry)
+  const solution = getSolutionBySlug(englishSlug)
   if (!solution) notFound()
 
   return (
     <div className="relative space-y-0">
       {/* Hero Section */}
-      <IndustryHero industry={industry} solution={solution} locale={locale} />
+      <IndustryHero industry={englishSlug} solution={solution} locale={locale} />
 
       {/* Trust Logos (only shows if logos are configured) */}
       <TrustLogos solution={solution} locale={locale} />
 
       {/* Pain Points */}
-      <IndustryPainPoints industry={industry} />
+      <IndustryPainPoints industry={englishSlug} />
 
       {/* Showcase Gallery */}
-      <IndustryShowcase industry={industry} solution={solution} />
+      <IndustryShowcase industry={englishSlug} solution={solution} />
 
       {/* How It Works */}
-      <IndustryHowItWorks industry={industry} />
+      <IndustryHowItWorks industry={englishSlug} />
 
-      {/* Comparison Table */}
-      <IndustryComparison industry={industry} />
+      {/* Cost Comparison vs Traditional */}
+      <IndustryComparison industry={englishSlug} solution={solution} />
 
-      {/* Use Cases / Platforms */}
-      <IndustryUseCases industry={industry} />
+      {/* Use Cases */}
+      <IndustryUseCases industry={englishSlug} />
 
       {/* Testimonials */}
-      <IndustryTestimonials industry={industry} />
+      <IndustryTestimonials industry={englishSlug} />
 
       {/* Pricing */}
-      <IndustryPricing industry={industry} locale={locale} />
+      <IndustryPricing industry={englishSlug} />
 
-      {/* Human-Look Guarantee */}
-      <IndustryGuarantee locale={locale} />
+      {/* Guarantee */}
+      <IndustryGuarantee industry={englishSlug} />
 
       {/* FAQ */}
-      <IndustryFAQ industry={industry} />
+      <IndustryFAQ industry={englishSlug} />
 
       {/* Final CTA */}
-      <IndustryFinalCTA industry={industry} locale={locale} />
+      <IndustryFinalCTA industry={englishSlug} />
     </div>
   )
 }

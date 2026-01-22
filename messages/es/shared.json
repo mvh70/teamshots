@@ -36,7 +36,23 @@
   },
   "blog": {
     "title": "Blog",
-    "description": "Consejos, guías e ideas sobre headshots con IA, marca profesional y fotos de equipo."
+    "description": "Consejos, guías e ideas sobre headshots con IA, marca profesional y fotos de equipo.",
+    "cta": {
+      "heading": "¿Listo para obtener tus headshots profesionales?",
+      "subheading": "Únete a miles de profesionales que han transformado su presencia online con headshots generados por IA.",
+      "buttonText": "Comenzar Gratis"
+    }
+  },
+  "faq": {
+    "subtitle": "Encuentra respuestas a preguntas frecuentes",
+    "searchPlaceholder": "Buscar preguntas...",
+    "categories": {
+      "all": "Todos",
+      "quality": "Calidad",
+      "pricing": "Precios",
+      "process": "Proceso",
+      "security": "Seguridad"
+    }
   },
   "hero": {
     "titleMain": "Fotos profesionales de equipo",

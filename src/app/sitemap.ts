@@ -4,10 +4,11 @@ import { getBaseUrl } from '@/lib/url'
 import { getLandingVariant } from '@/config/landing-content'
 import { SOLUTIONS } from '@/config/solutions'
 import { routing } from '@/i18n/routing'
+import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
 
 /**
  * Domain-aware sitemap
- * Returns different content based on the incoming domain:
+ * Dynamically reads published content from CMS database.
  * - TeamShotsPro: blog + solutions + shared routes
  * - IndividualShots: blog + shared routes
  * - Others: shared routes only
@@ -15,7 +16,7 @@ import { routing } from '@/i18n/routing'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl: string
   let variant: ReturnType<typeof getLandingVariant>
-  
+
   try {
     const headersList = await headers()
     baseUrl = getBaseUrl(headersList)
@@ -26,7 +27,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com'
     variant = 'teamshotspro'
   }
-  
+
+  const entries: MetadataRoute.Sitemap = []
+
   // Shared routes for all domains
   const sharedRoutes = [
     '', // Landing page
@@ -34,40 +37,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/legal/privacy',
     '/legal/terms',
   ]
-  
-  // Domain-specific routes
-  let domainRoutes: string[] = []
-  
-  if (variant === 'teamshotspro') {
-    // TeamShotsPro: blog + solutions
-    const blogSlugs = ['corporate-ai-headshots', 'remote-onboarding-broken']
-    domainRoutes = [
-      '/blog',
-      ...blogSlugs.map(slug => `/blog/${slug}`),
-      ...SOLUTIONS.map(s => `/solutions/${s.slug}`)
-    ]
-  } else if (variant === 'individualshots') {
-    // IndividualShots: blog only
-    const blogSlugs = [
-      'free-vs-paid-ai-headshots',
-      'professional-headshot-photography-cost',
-      'ai-headshot-maker-individual',
-      'ai-headshot-etiquette',
-      'update-headshot-frequency',
-      'headshot-background-colors',
-      'headshot-clothing-tips',
-    ]
-    domainRoutes = [
-      '/blog',
-      ...blogSlugs.map(slug => `/blog/${slug}`)
-    ]
-  }
-  // Other domains (coupleshots, familyshots, rightclickfit): no blog/solutions yet
-  
-  const allRoutes = [...sharedRoutes, ...domainRoutes]
-  const entries: MetadataRoute.Sitemap = []
-  
-  for (const route of allRoutes) {
+
+  // Add shared routes for all locales
+  for (const route of sharedRoutes) {
     for (const locale of routing.locales) {
       const path = locale === 'en' ? route : `/${locale}${route}`
       entries.push({
@@ -78,6 +50,83 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
     }
   }
-  
+
+  // Get published content from CMS database
+  const brandId = variantToBrandId(variant)
+  const { blogSlugs, solutionSlugs } = getAllPublishedSlugs(brandId)
+
+  // Add blog routes
+  if (blogSlugs.length > 0 || variant === 'teamshotspro' || variant === 'individualshots') {
+    // Blog index page
+    for (const locale of routing.locales) {
+      const path = locale === 'en' ? '/blog' : `/${locale}/blog`
+      entries.push({
+        url: `${baseUrl}${path}`,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.9,
+      })
+    }
+
+    // Individual blog posts
+    for (const { en, es } of blogSlugs) {
+      // English version
+      entries.push({
+        url: `${baseUrl}/blog/${en}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      })
+
+      // Spanish version (use localized slug if available)
+      const spanishSlug = es || en
+      entries.push({
+        url: `${baseUrl}/es/blog/${spanishSlug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      })
+    }
+  }
+
+  // Add solution routes (TeamShotsPro only)
+  if (variant === 'teamshotspro') {
+    // From CMS database
+    for (const { en, es } of solutionSlugs) {
+      entries.push({
+        url: `${baseUrl}/solutions/${en}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      })
+
+      // Spanish version with localized path and slug
+      const spanishSlug = es || en
+      entries.push({
+        url: `${baseUrl}/es/soluciones/${spanishSlug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      })
+    }
+
+    // Also include static SOLUTIONS config as fallback
+    for (const solution of SOLUTIONS) {
+      // Check if already added from CMS
+      const alreadyAdded = solutionSlugs.some((s) => s.en === solution.slug)
+      if (!alreadyAdded) {
+        for (const locale of routing.locales) {
+          const path = locale === 'en' ? `/solutions/${solution.slug}` : `/${locale}/solutions/${solution.slug}`
+          entries.push({
+            url: `${baseUrl}${path}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.8,
+          })
+        }
+      }
+    }
+  }
+
   return entries
 }

@@ -36,7 +36,23 @@
   },
   "blog": {
     "title": "Blog",
-    "description": "Tips, guides, and insights about AI headshots, professional branding, and team photos."
+    "description": "Tips, guides, and insights about AI headshots, professional branding, and team photos.",
+    "cta": {
+      "heading": "Ready to get your professional headshots?",
+      "subheading": "Join thousands of professionals who have transformed their online presence with AI-powered headshots.",
+      "buttonText": "Get Started Free"
+    }
+  },
+  "faq": {
+    "subtitle": "Find answers to common questions",
+    "searchPlaceholder": "Search questions...",
+    "categories": {
+      "all": "All",
+      "quality": "Quality",
+      "pricing": "Pricing",
+      "process": "Process",
+      "security": "Security"
+    }
   },
   "hero": {
     "titleMain": "Professional team photos",

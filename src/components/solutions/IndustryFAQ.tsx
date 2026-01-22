@@ -32,6 +32,7 @@ function categorizeQuestion(question: string, answer: string): FAQCategory {
 
 export function IndustryFAQ({ industry }: FAQProps) {
   const t = useTranslations(`solutions.${industry}.faq`)
+  const tShared = useTranslations('faq')
   const items = t.raw('items') as Array<{ question: string; answer: string }>
 
   const [openIndex, setOpenIndex] = useState<number | null>(0)
@@ -67,11 +68,11 @@ export function IndustryFAQ({ industry }: FAQProps) {
   }, [categorizedItems, searchQuery, selectedCategory])
 
   const categoryLabels: Record<FAQCategory, string> = {
-    all: 'All',
-    quality: 'Quality',
-    pricing: 'Pricing',
-    process: 'Process',
-    security: 'Security',
+    all: tShared('categories.all'),
+    quality: tShared('categories.quality'),
+    pricing: tShared('categories.pricing'),
+    process: tShared('categories.process'),
+    security: tShared('categories.security'),
   }
 
   return (
@@ -82,7 +83,7 @@ export function IndustryFAQ({ industry }: FAQProps) {
             {t('title')}
           </h2>
           <p className="text-lg text-text-body">
-            Find answers to common questions
+            {tShared('subtitle')}
           </p>
         </div>
 
@@ -93,7 +94,7 @@ export function IndustryFAQ({ industry }: FAQProps) {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
             <input
               type="text"
-              placeholder="Search questions..."
+              placeholder={tShared('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-10 py-3 rounded-xl border border-bg-gray-200 bg-bg-white text-text-dark placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"

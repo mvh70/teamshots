@@ -4,6 +4,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { getLandingVariant } from '@/config/landing-content';
 import { BLOG_POSTS } from '@/config/blog';
 import { BlogContent } from '@/components/blog';
+import { getBlogPostsForVariant } from '@/lib/cms';
 
 export async function generateMetadata() {
   const t = await getTranslations('blog');
@@ -15,7 +16,8 @@ export async function generateMetadata() {
 
 /**
  * Domain-aware blog index page
- * Shows different blog posts based on the domain
+ * Dynamically reads published posts from CMS database.
+ * Falls back to static config for posts not yet in CMS.
  */
 export default async function BlogPage() {
   const headersList = await headers();
@@ -31,8 +33,18 @@ export default async function BlogPage() {
 
   const t = await getTranslations('blog');
 
-  // Filter posts for this domain and convert to mutable array
-  const posts = [...BLOG_POSTS.filter((post) => post.allowedVariants.includes(variant))];
+  // Get posts from CMS database (primary source)
+  // Pass locale to filter out untranslated posts for Spanish
+  const cmsPosts = getBlogPostsForVariant(variant, locale);
+  const cmsSlugSet = new Set(cmsPosts.map((p) => p.slug));
+
+  // Get static config posts not in CMS (fallback)
+  const staticPosts = BLOG_POSTS.filter(
+    (post) => post.allowedVariants.includes(variant) && !cmsSlugSet.has(post.slug)
+  );
+
+  // Merge: CMS posts first (newest), then static fallbacks
+  const posts = [...cmsPosts, ...staticPosts];
 
   return (
     <BlogContent
@@ -40,6 +52,11 @@ export default async function BlogPage() {
       title={t('title')}
       description={t('description')}
       locale={locale}
+      cta={{
+        heading: t('cta.heading'),
+        subheading: t('cta.subheading'),
+        buttonText: t('cta.buttonText'),
+      }}
     />
   );
 }

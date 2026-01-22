@@ -55,6 +55,8 @@ export interface BlogPostContent {
       en: string;
       es: string;
     };
+    /** Optional explicit image path. Falls back to /blog/{slug}.png if not provided */
+    src?: string;
   };
 
   // Dates
@@ -137,7 +139,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
         datePublished={datePublished}
         dateModified={dateModified}
         url={`${baseUrl}${locale === 'en' ? '' : '/' + locale}/blog/${slug}`}
-        image={heroImage ? `${baseUrl}/blog/${slug}.png` : undefined}
+        image={heroImage ? `${baseUrl}${heroImage.src || `/blog/${slug}.png`}` : undefined}
       />
       {faqs.length > 0 && <FaqJsonLd items={faqs} />}
 
@@ -182,6 +184,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
           alt={heroImage.alt}
           caption={heroImage.caption}
           locale={locale}
+          src={heroImage.src}
         />
       )}
 

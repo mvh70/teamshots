@@ -1,11 +1,12 @@
 'use client'
 
-import { BLOG_CATEGORIES, type BlogPostCategory } from '@/config/blog'
+import { BLOG_CATEGORIES, type BlogPostCategory, getCategoryLabel } from '@/config/blog'
 
 interface CategoryTabsProps {
   categories: BlogPostCategory[]
   selectedCategory: BlogPostCategory | 'all'
   onCategoryChange: (category: BlogPostCategory | 'all') => void
+  locale?: string
 }
 
 /**
@@ -16,6 +17,7 @@ export default function CategoryTabs({
   categories,
   selectedCategory,
   onCategoryChange,
+  locale = 'en',
 }: CategoryTabsProps) {
   // Get unique categories that exist in the current posts
   const uniqueCategories = [...new Set(categories)]
@@ -32,7 +34,7 @@ export default function CategoryTabs({
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All
+          {locale === 'es' ? 'Todos' : 'All'}
         </button>
 
         {/* Category Tabs */}
@@ -50,7 +52,7 @@ export default function CategoryTabs({
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {config.label}
+              {getCategoryLabel(category, locale)}
             </button>
           )
         })}
