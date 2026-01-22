@@ -97,7 +97,40 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * Convert markdown to HTML (basic conversion)
  */
 function markdownToHtml(markdown: string): string {
-  return markdown
+  // Normalize line endings
+  let result = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+  // Remove schema markup comments and scripts (they shouldn't be rendered)
+  result = result.replace(/<!--\s*COMPARISON_SCHEMA_START\s*-->[\s\S]*?<\/script>\s*/g, '')
+  result = result.replace(/<!--\s*COMPARISON_SCHEMA_END\s*-->/g, '')
+
+  // Convert markdown tables to HTML tables first (before other processing)
+  result = result.replace(
+    /^\|(.+)\|\s*\n\|[\s\-:|]+\|\s*\n((?:\|.+\|\s*\n?)+)/gm,
+    (match, headerRow, bodyRows) => {
+      const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean)
+      const rows = bodyRows.trim().split('\n').map((row: string) =>
+        row.split('|').map((cell: string) => cell.trim()).filter(Boolean)
+      )
+
+      let table = '<table class="w-full border-collapse my-6 text-sm"><thead><tr>'
+      headers.forEach((h: string) => {
+        table += `<th class="border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold">${h}</th>`
+      })
+      table += '</tr></thead><tbody>'
+      rows.forEach((row: string[]) => {
+        table += '<tr>'
+        row.forEach((cell: string) => {
+          table += `<td class="border border-gray-300 px-4 py-2">${cell}</td>`
+        })
+        table += '</tr>'
+      })
+      table += '</tbody></table>'
+      return table
+    }
+  )
+
+  return result
     // Headers
     .replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-8 mb-4">$1</h2>')
@@ -110,11 +143,6 @@ function markdownToHtml(markdown: string): string {
     // Lists
     .replace(/^- (.*$)/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="list-disc pl-6 mb-4">$&</ul>')
-    // Tables (basic)
-    .replace(/\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|/g, (match, c1, c2, c3, c4) => {
-      if (c1.includes('---')) return '' // Skip separator row
-      return `<tr><td class="border border-gray-200 p-2">${c1.trim()}</td><td class="border border-gray-200 p-2">${c2.trim()}</td><td class="border border-gray-200 p-2">${c3.trim()}</td><td class="border border-gray-200 p-2">${c4.trim()}</td></tr>`
-    })
     // Blockquotes
     .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 italic text-gray-600">$1</blockquote>')
     // Paragraphs (lines that don't start with tags)
