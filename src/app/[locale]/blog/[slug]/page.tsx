@@ -242,6 +242,8 @@ export default async function BlogPostPage({ params }: Props) {
       button: locale === 'es' ? `Prueba ${brandConfig.name} Gratis →` : `Try ${brandConfig.name} Free →`,
       href: '/',
     },
+    // Use pre-generated schema from CMS if available
+    schemaJson: post.schemaJson || undefined,
   }
 
   return (

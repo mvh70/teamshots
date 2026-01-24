@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getBrand } from '@/config/brand';
 import { getBaseUrl } from '@/lib/url';
@@ -10,6 +11,55 @@ import {
   Breadcrumb,
   BlogHeroImage,
 } from '@/components/blog';
+
+/**
+ * Render pre-generated schema from CMS
+ */
+function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
+  try {
+    const schema = JSON.parse(schemaJson);
+
+    // Handle both wrapped format { article: {...}, faq: {...} } and direct format
+    const hasArticle = schema.article || schema['@type'] === 'Article';
+    const hasFaq = schema.faq || schema['@type'] === 'FAQPage';
+
+    return (
+      <>
+        {schema.article && (
+          <Script
+            id="article-schema"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.article }),
+            }}
+          />
+        )}
+        {schema.faq && (
+          <Script
+            id="faq-schema"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.faq }),
+            }}
+          />
+        )}
+        {/* Handle direct schema format (single type) */}
+        {!schema.article && !schema.faq && schema['@type'] && (
+          <Script
+            id="schema"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema }),
+            }}
+          />
+        )}
+      </>
+    );
+  } catch {
+    // Invalid JSON, don't render anything
+    return null;
+  }
+}
 
 export interface BlogPostContent {
   // Required metadata
@@ -62,6 +112,9 @@ export interface BlogPostContent {
   // Dates
   datePublished: string;
   dateModified?: string;
+
+  // Pre-generated schema from CMS (optional, falls back to dynamic generation)
+  schemaJson?: string;
 }
 
 interface BlogPostTemplateProps {
@@ -114,6 +167,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
     heroImage,
     datePublished,
     dateModified,
+    schemaJson,
   } = content;
 
   const defaultCta = {
@@ -127,21 +181,27 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
 
   return (
     <>
-      {/* Structured Data */}
-      <ArticleJsonLd
-        headline={title}
-        description={description}
-        authorName={author.name}
-        authorUrl={author.linkedInUrl || 'https://linkedin.com/in/matthieuvanhaperen'}
-        authorJobTitle={author.title}
-        publisherName={brandConfig.name}
-        publisherUrl={baseUrl}
-        datePublished={datePublished}
-        dateModified={dateModified}
-        url={`${baseUrl}${locale === 'en' ? '' : '/' + locale}/blog/${slug}`}
-        image={heroImage ? `${baseUrl}${heroImage.src || `/blog/${slug}.png`}` : undefined}
-      />
-      {faqs.length > 0 && <FaqJsonLd items={faqs} />}
+      {/* Structured Data - use stored schema if available, otherwise generate dynamically */}
+      {schemaJson ? (
+        <StoredSchemaJsonLd schemaJson={schemaJson} />
+      ) : (
+        <>
+          <ArticleJsonLd
+            headline={title}
+            description={description}
+            authorName={author.name}
+            authorUrl={author.linkedInUrl || 'https://linkedin.com/in/matthieuvanhaperen'}
+            authorJobTitle={author.title}
+            publisherName={brandConfig.name}
+            publisherUrl={baseUrl}
+            datePublished={datePublished}
+            dateModified={dateModified}
+            url={`${baseUrl}${locale === 'en' ? '' : '/' + locale}/blog/${slug}`}
+            image={heroImage ? `${baseUrl}${heroImage.src || `/blog/${slug}.png`}` : undefined}
+          />
+          {faqs.length > 0 && <FaqJsonLd items={faqs} />}
+        </>
+      )}
 
       {/* Breadcrumb */}
       <Breadcrumb
