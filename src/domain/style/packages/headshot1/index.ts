@@ -12,11 +12,11 @@ import * as expression from '../../elements/expression'
 import { predefined, userChoice } from '../../elements/base/element-types'
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
-  'background', 
-  'branding', 
-  'clothing', 
-  'clothingColors', 
-  'pose', 
+  'background',
+  'branding',
+  'pose',
+  'clothing',
+  'clothingColors',
   'expression']
 
 const AVAILABLE_BACKGROUNDS = [
