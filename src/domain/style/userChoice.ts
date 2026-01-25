@@ -202,6 +202,12 @@ export function areAllCustomizableSectionsCustomized(
         return false // clothingColors is user-choice but no colors set and no package defaults
       }
       // If colors exist (either from current settings or defaults), consider it as finished
+    } else if (categoryKey === 'branding') {
+      // Special handling for branding: the UI shows "No Logo" as a valid default
+      // selection when value is undefined. Unlike other categories, undefined here
+      // represents a meaningful choice (exclude logo), so branding is always
+      // considered "customized" - the user can accept the default without interaction.
+      continue
     } else {
       // For other categories, if type/style/mode is still 'user-choice', it means not customized
       // When user selects an option, type/mode changes from 'user-choice' to 'predefined' with a value
@@ -281,6 +287,14 @@ export function getUneditedEditableFieldNames(
       if (!hasColors) {
         unedited.push(categoryKey)
       }
+    } else if (categoryKey === 'branding') {
+      // Special handling for branding: the UI shows "No Logo" as a valid default
+      // selection when value is undefined. Unlike other categories, undefined here
+      // represents a meaningful choice (exclude logo), not an unset field.
+      // Only consider branding unedited if explicitly marked as user-choice AND
+      // the user hasn't seen/acknowledged the default (handled by visited steps logic)
+      // Since the UI shows a valid default, we don't require explicit interaction.
+      continue
     } else {
       // For other categories, check if a value has been set
       // A field is "edited" (done) if it has any value, regardless of whether

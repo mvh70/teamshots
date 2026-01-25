@@ -170,7 +170,8 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
     isFreePlan,
     isProUser,
     generationType: shouldUseTeamGeneration ? 'team' : 'personal',
-    teamId: person?.teamId ?? null
+    teamId: person?.teamId ?? null,
+    ownedPackageIds: userPackages.map((up: { packageId: string }) => up.packageId)
   })
 
   return {
@@ -201,6 +202,7 @@ async function fetchStyleData(params: {
   isProUser: boolean
   generationType: 'personal' | 'team'
   teamId: string | null
+  ownedPackageIds: string[]
 }): Promise<GenerationPageData['styleData']> {
   // RUNTIME ACCESS CONTROL: Free plan users are restricted to freepackage style
   // Note: Users may "own" headshot1 in UserPackage table (granted on signup), but
@@ -341,10 +343,14 @@ async function fetchStyleData(params: {
       }
     }
 
+    // Use first owned package as default for team users without active context
+    const teamDefaultPackageId = params.ownedPackageIds[0] || PACKAGES_CONFIG.defaultPlanPackage
+    const teamDefaultPkg = getPackageConfig(teamDefaultPackageId)
+
     return {
-      photoStyleSettings: DEFAULT_PHOTO_STYLE_SETTINGS,
-      originalContextSettings: undefined,
-      selectedPackageId: PACKAGES_CONFIG.defaultPlanPackage,
+      photoStyleSettings: teamDefaultPkg.defaultSettings,
+      originalContextSettings: teamDefaultPkg.defaultSettings,
+      selectedPackageId: teamDefaultPackageId,
       activeContext: null,
       availableContexts: contexts
     }
@@ -458,10 +464,14 @@ async function fetchStyleData(params: {
     }
   }
 
+  // Use first owned package as default, falling back to global default if none
+  const defaultPackageId = params.ownedPackageIds[0] || PACKAGES_CONFIG.defaultPlanPackage
+  const defaultPkg = getPackageConfig(defaultPackageId)
+
   return {
-    photoStyleSettings: DEFAULT_PHOTO_STYLE_SETTINGS,
-    originalContextSettings: undefined,
-    selectedPackageId: PACKAGES_CONFIG.defaultPlanPackage,
+    photoStyleSettings: defaultPkg.defaultSettings,
+    originalContextSettings: defaultPkg.defaultSettings,
+    selectedPackageId: defaultPackageId,
     activeContext: null,
     availableContexts: contexts
   }

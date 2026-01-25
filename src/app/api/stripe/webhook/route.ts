@@ -11,6 +11,7 @@ import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail } from '@/lib
 import { getBaseUrlForUser } from '@/lib/url';
 import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
 import { recordPromoCodeUsage } from '@/domain/pricing/promo-codes';
+import { getDefaultPackage } from '@/config/landing-content';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
@@ -166,6 +167,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       if (!existing.password) {
         isNewGuestUser = true;
       }
+
+      // Ensure existing user has at least one package
+      type PrismaWithUserPackage = typeof prisma & {
+        userPackage: {
+          findFirst: (args: { where: { userId: string } }) => Promise<{ id: string } | null>
+          create: (args: { data: { userId: string; packageId: string; purchasedAt: Date } }) => Promise<unknown>
+        }
+      };
+      const prismaExisting = prisma as unknown as PrismaWithUserPackage;
+      const existingPackage = await prismaExisting.userPackage.findFirst({
+        where: { userId: existing.id }
+      });
+      if (!existingPackage) {
+        const checkoutDomain = session.metadata?.checkoutDomain || null;
+        const defaultPackageId = getDefaultPackage(checkoutDomain || undefined);
+        await prismaExisting.userPackage.create({
+          data: {
+            userId: existing.id,
+            packageId: defaultPackageId,
+            purchasedAt: new Date()
+          }
+        });
+        Logger.info('Default package granted to existing user', { userId: existing.id, packageId: defaultPackageId, domain: checkoutDomain });
+      }
     } else {
       // Create user and person record together for guest checkout
       const customerName = session.customer_details?.name || '';
@@ -207,7 +232,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }),
         }
       });
-      
+
+      // Grant default package based on signup domain
+      const defaultPackageId = getDefaultPackage(signupDomain || undefined);
+      type PrismaWithUserPackage = typeof prisma & {
+        userPackage: {
+          create: (args: { data: { userId: string; packageId: string; purchasedAt: Date } }) => Promise<unknown>
+        }
+      };
+      const prismaEx = prisma as unknown as PrismaWithUserPackage;
+      await prismaEx.userPackage.create({
+        data: {
+          userId: created.id,
+          packageId: defaultPackageId,
+          purchasedAt: new Date()
+        }
+      });
+      Logger.info('Default package granted', { userId: created.id, packageId: defaultPackageId, domain: signupDomain });
+
       isNewGuestUser = true;
       Logger.info('Guest user and person created', { userId: created.id, email, firstName, role: userRole });
     }

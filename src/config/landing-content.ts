@@ -71,32 +71,32 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
     variant: 'individualshots',
     contentNamespace: 'landing.individualshots',
     packages: {
-      available: ['linkedin', 'dating', 'casual', 'freepackage'],
-      default: 'linkedin',
+      available: ['headshot1', 'freepackage'],
+      default: 'headshot1',
     },
   },
   [INDIVIDUAL_DOMAIN_2]: {
     variant: 'photoshotspro',
     contentNamespace: 'landing.photoshotspro',
     packages: {
-      available: ['linkedin', 'dating', 'casual', 'freepackage'],
-      default: 'linkedin',
+      available: ['headshot1', 'freepackage'],
+      default: 'headshot1',
     },
   },
   [COUPLES_DOMAIN]: {
     variant: 'coupleshots',
     contentNamespace: 'landing.coupleshots',
     packages: {
-      available: ['couple', 'casual', 'freepackage'],
-      default: 'couple',
+      available: ['headshot1', 'freepackage'],
+      default: 'headshot1',
     },
   },
   [FAMILY_DOMAIN]: {
     variant: 'familyshots',
     contentNamespace: 'landing.familyshots',
     packages: {
-      available: ['family', 'casual', 'freepackage'],
-      default: 'family',
+      available: ['headshot1', 'freepackage'],
+      default: 'headshot1',
     },
   },
   [EXTENSION_DOMAIN]: {
