@@ -89,6 +89,11 @@ const VARIANT_TAB_LABEL_KEYS: Partial<Record<LandingVariant, Record<number, stri
     2: 'tabs.customize',
     3: 'tabs.generate',
   },
+  photoshotspro: {
+    1: 'tabs.upload',
+    2: 'tabs.customize',
+    3: 'tabs.generate',
+  },
   coupleshots: {
     1: 'tabs.upload',
     2: 'tabs.customize',

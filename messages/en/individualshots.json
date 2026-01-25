@@ -52,6 +52,13 @@
         "totalTimeValue": "2 minutes",
         "cta": "Get your professional headshots now!",
         "guarantee": "Risk-free: Try it free to see the quality. No credit card, no commitment.",
+        "tabs": {
+          "upload": "Upload",
+          "customize": "Customize",
+          "generate": "Generate"
+        },
+        "tryForFree": "Try for Free",
+        "bookDemo": "Book a Demo",
         "freePhotosLine": "Free preview generation included",
         "noCreditCardLine": "No credit card required",
         "steps": {

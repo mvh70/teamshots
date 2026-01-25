@@ -158,6 +158,13 @@
       "process": "Process",
       "security": "Security"
     },
+    "category": {
+      "all": "All",
+      "technical": "Technical",
+      "pricing": "Pricing",
+      "privacy": "Privacy",
+      "usage": "Usage"
+    },
     "noResults": "No questions found matching your search.",
     "stillHaveQuestions": "Still have questions?",
     "contactSupport": "Contact support",

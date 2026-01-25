@@ -50,6 +50,13 @@
         "totalTimeValue": "2 minutos",
         "cta": "¡Obtén tus retratos profesionales ahora!",
         "guarantee": "Sin riesgo: Pruébalo gratis para ver la calidad. Sin tarjeta de crédito, sin compromiso.",
+        "tabs": {
+          "upload": "Subir",
+          "customize": "Personalizar",
+          "generate": "Generar"
+        },
+        "tryForFree": "Probar Gratis",
+        "bookDemo": "Reservar Demo",
         "freePhotosLine": "Vista previa gratuita incluida",
         "noCreditCardLine": "Sin tarjeta de crédito",
         "steps": {
