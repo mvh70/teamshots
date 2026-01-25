@@ -1,4 +1,4 @@
-import { INDIVIDUAL_DOMAIN, TEAM_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
+import { INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, TEAM_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 
 // Type definitions for brand configuration
 export interface BrandContact {

@@ -13,6 +13,7 @@ export const TEAM_DOMAIN = 'teamshotspro'
 
 // Domains that restrict signup to individual subscription
 export const INDIVIDUAL_DOMAIN = 'individualshots'
+export const INDIVIDUAL_DOMAIN_2 = 'photoshotspro'
 
 // New vertical domains
 export const COUPLES_DOMAIN = 'coupleshots'
@@ -23,6 +24,7 @@ export const EXTENSION_DOMAIN = 'rightclickfit'
 export const RESTRICTED_DOMAINS = [
   TEAM_DOMAIN,
   INDIVIDUAL_DOMAIN,
+  INDIVIDUAL_DOMAIN_2,
   COUPLES_DOMAIN,
   FAMILY_DOMAIN,
   EXTENSION_DOMAIN,
