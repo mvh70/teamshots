@@ -77,17 +77,21 @@ export async function POST(request: NextRequest) {
     }
     Logger.info('8. Validation passed')
 
-    const { 
-      email, 
-      password, 
-      firstName, 
+    const {
+      email: rawEmail,
+      password,
+      firstName,
       lastName,
-      userType: clientUserType = 'individual', 
-      teamWebsite, 
+      userType: clientUserType = 'individual',
+      teamWebsite,
       otpCode,
       locale,
       guestCheckout
     } = validationResult.data
+
+    // Normalize email to lowercase for consistent lookups
+    // Stripe webhook stores emails as lowercase, so we must match
+    const email = rawEmail.toLowerCase()
 
     // Domain-based signup type: server is authoritative
     // If domain has a restriction, use it. Otherwise, use client's choice.

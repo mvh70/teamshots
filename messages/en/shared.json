@@ -488,6 +488,7 @@
       "resendIn": "Resend in {seconds}s",
       "otpHelp": "Code expires in 10 min",
       "newCodeSent": "Invalid or expired code. A new verification code was sent.",
+      "invalidOtp": "Invalid or expired verification code. Please try again.",
       "errorOccurred": "An error occurred. Please try again."
     },
     "forgotPassword": {

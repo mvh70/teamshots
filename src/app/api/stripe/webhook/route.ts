@@ -257,24 +257,64 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // Type-safe access to pricing tiers
       type PricingTierKey = 'individual' | 'vip'
       const credits = PRICING_CONFIG[configKey as PricingTierKey].credits
-      
+
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
-        // Update user plan info
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            subscriptionStatus: 'active',
-            planTier: finalTier,
-            planPeriod: finalPeriod,
-          },
-        });
-        
         // Get person record - Person is the business entity that owns credits
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
         if (!person) {
           Logger.error('Person not found for plan purchase', { userId, sessionId: session.id })
           throw new Error(`Person not found for userId: ${userId}`)
         }
+
+        // Check if user already has an active paid plan
+        const existingUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: { planTier: true, planPeriod: true, subscriptionStatus: true }
+        })
+
+        // Determine if user has an existing paid subscription (not free/tryOnce)
+        const existingPeriod = existingUser?.planPeriod
+        const hasExistingPaidPlan = existingPeriod &&
+          existingPeriod !== 'free' &&
+          existingPeriod !== 'tryOnce' &&
+          existingPeriod !== 'try_once'
+
+        // Only update plan info if user doesn't have an existing paid plan
+        // This prevents overwriting a team admin's pro plan when they purchase individual credits
+        if (!hasExistingPaidPlan) {
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              subscriptionStatus: 'active',
+              planTier: finalTier,
+              planPeriod: finalPeriod,
+            },
+          });
+
+          // Record subscription change only for new subscriptions
+          type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+          const txEx = tx as unknown as PrismaWithSubscriptionChange
+          await txEx.subscriptionChange.create({
+            data: {
+              userId,
+              planTier: finalTier,
+              planPeriod: finalPeriod,
+              action: 'start',
+              metadata: { checkoutSessionId: session.id },
+            }
+          })
+        } else {
+          Logger.info('User already has paid plan, adding credits without changing plan', {
+            userId,
+            existingTier: existingUser?.planTier,
+            existingPeriod: existingPeriod,
+            purchasedTier: finalTier,
+            purchasedPeriod: finalPeriod,
+          })
+        }
+
+        // For credit allocation: use the PURCHASED tier, not the existing tier
+        // This ensures team admins who buy individual credits get individual credits (not team credits)
         const teamId = (finalTier === 'pro') ? person.teamId || null : null
 
         // Record credit transaction - credits belong to Person (business entity), not User (auth)
@@ -284,7 +324,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
-            description: `Plan purchase - ${finalTier} ${finalPeriod}`,
+            description: hasExistingPaidPlan
+              ? `Credit purchase - ${credits} credits (from ${finalTier} ${finalPeriod} checkout)`
+              : `Plan purchase - ${finalTier} ${finalPeriod}`,
             amount: session.amount_total ? session.amount_total / 100 : 0,
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
@@ -293,22 +335,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             metadata: {
               stripePriceId: priceId,
               sessionId: session.id,
+              existingPlanPreserved: hasExistingPaidPlan,
             },
           },
         });
-        
-        // Record subscription change
-        type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-        const txEx = tx as unknown as PrismaWithSubscriptionChange
-        await txEx.subscriptionChange.create({
-          data: {
-            userId,
-            planTier: finalTier,
-            planPeriod: finalPeriod,
-            action: 'start',
-            metadata: { checkoutSessionId: session.id },
-          }
-        })
       });
       
     } else if (purchaseType === 'top_up') {

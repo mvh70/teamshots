@@ -162,11 +162,11 @@ export default function VerifyPage() {
     const registerData = await res.json()
 
     if (!res.ok) {
-      const errText = (registerData?.error as string) || ''
-      if (errText.includes('OTP') || errText.toLowerCase().includes('expired')) {
-        throw new Error('Invalid OTP')
+      const errText = (registerData?.tKey || registerData?.message || registerData?.error || '') as string
+      if (errText.toLowerCase().includes('otp') || errText.toLowerCase().includes('expired')) {
+        throw new Error('invalidOtp')
       } else {
-        throw new Error('An error occurred')
+        throw new Error('errorOccurred')
       }
     }
 
@@ -210,11 +210,11 @@ export default function VerifyPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      const errText = (data?.error as string) || ''
-      if (errText.includes('OTP') || errText.toLowerCase().includes('expired')) {
-        throw new Error('Invalid OTP')
+      const errText = (data?.tKey || data?.message || data?.error || '') as string
+      if (errText.toLowerCase().includes('otp') || errText.toLowerCase().includes('expired')) {
+        throw new Error('invalidOtp')
       } else {
-        throw new Error('An error occurred')
+        throw new Error('errorOccurred')
       }
     }
 
@@ -323,7 +323,7 @@ export default function VerifyPage() {
         await handleNormalVerify()
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'An error occurred')
+      setError(e instanceof Error ? e.message : 'errorOccurred')
     } finally {
       setIsLoading(false)
     }
