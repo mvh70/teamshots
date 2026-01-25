@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import PricingCard from '@/components/pricing/PricingCard'
 import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
-import { CheckoutButton } from '@/components/ui'
+import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
 import type { LandingVariant } from '@/config/landing-content'
@@ -197,32 +197,26 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
             const planTier = 'individual'
             const planPeriod = plan.id === 'vip' ? 'large' : 'small'
-            
-            // Unified button styling for CheckoutButton - matches PricingCard button styling
-            const baseButtonClasses = '!rounded-xl lg:!rounded-2xl w-full text-center !px-4 !py-3 lg:!px-6 lg:!py-4 min-h-[3.5rem] lg:min-h-[4rem] !font-bold !text-sm lg:!text-base transition-all duration-300 flex items-center justify-center'
+            const originalAmount = plan.id === 'individual'
+              ? PRICING_CONFIG.individual.price
+              : PRICING_CONFIG.vip.price
+
             const isPopular = 'popular' in plan && plan.popular
-            const buttonVariantClasses = isPopular
-              ? ''
-              : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary border-2 border-transparent hover:border-brand-primary-lighter/50'
-            
+
             return (
               <PricingCard
                 key={plan.id}
                 {...plan}
                 ctaSlot={
-                  <CheckoutButton
-                    type="plan"
+                  <PlanCheckoutSection
+                    planId={plan.id}
                     priceId={priceId}
-                    unauth={true}
-                    metadata={{
-                      planTier,
-                      planPeriod,
-                    }}
-                    useBrandCtaColors={isPopular}
-                    className={`${baseButtonClasses} ${buttonVariantClasses}`.trim()}
-                  >
-                    {t(`plans.${plan.id}.cta`, { totalPhotos: plan.totalPhotos })}
-                  </CheckoutButton>
+                    originalAmount={originalAmount}
+                    planTier={planTier}
+                    planPeriod={planPeriod}
+                    ctaText={t(`plans.${plan.id}.cta`, { totalPhotos: plan.totalPhotos })}
+                    isPopular={isPopular}
+                  />
                 }
                 className="h-full"
               />
