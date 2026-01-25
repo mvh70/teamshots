@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const LANDING_COMPONENTS: Record<LandingVariant, React.ComponentType<LandingProps>> = {
   teamshotspro: TeamShotsLanding,
   individualshots: PhotoShotsLanding,
+  photoshotspro: PhotoShotsLanding,
   coupleshots: PhotoShotsLanding,
   familyshots: PhotoShotsLanding,
   rightclickfit: RightClickFitLanding,

@@ -8,13 +8,13 @@
  * controls its own section visibility and layout directly.
  */
 
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 import type { PackageId } from './packages'
 
 /**
  * Landing page variant identifiers - matches domain names without .com
  */
-export type LandingVariant = 'teamshotspro' | 'individualshots' | 'coupleshots' | 'familyshots' | 'rightclickfit'
+export type LandingVariant = 'teamshotspro' | 'individualshots' | 'photoshotspro' | 'coupleshots' | 'familyshots' | 'rightclickfit'
 
 /**
  * Section visibility configuration for landing pages.
@@ -70,6 +70,14 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
   [INDIVIDUAL_DOMAIN]: {
     variant: 'individualshots',
     contentNamespace: 'landing.individualshots',
+    packages: {
+      available: ['linkedin', 'dating', 'casual', 'freepackage'],
+      default: 'linkedin',
+    },
+  },
+  [INDIVIDUAL_DOMAIN_2]: {
+    variant: 'photoshotspro',
+    contentNamespace: 'landing.photoshotspro',
     packages: {
       available: ['linkedin', 'dating', 'casual', 'freepackage'],
       default: 'linkedin',

@@ -123,6 +123,7 @@ export function variantToBrandId(variant: LandingVariant): string {
   const mapping: Record<LandingVariant, string> = {
     teamshotspro: 'teamshots-pro',
     individualshots: 'headshot-one',
+    photoshotspro: 'photoshotspro',
     coupleshots: 'duo-snaps',
     familyshots: 'kin-frame',
     rightclickfit: 'rightclick-fit',

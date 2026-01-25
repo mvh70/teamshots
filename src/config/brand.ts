@@ -90,6 +90,10 @@ const TYPOGRAPHY_CONFIGS: Record<string, BrandTypography> = {
     displayFont: 'font-display',
     bodyFont: 'font-sans',
   },
+  [INDIVIDUAL_DOMAIN_2]: {
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
+  },
   [COUPLES_DOMAIN]: {
     displayFont: 'font-display',
     bodyFont: 'font-sans',
@@ -112,6 +116,11 @@ const STYLE_CONFIGS: Record<string, BrandStyle> = {
     tone: 'corporate',
   },
   [INDIVIDUAL_DOMAIN]: {
+    borderRadius: 'pill',
+    shadowIntensity: 'dramatic',
+    tone: 'friendly',
+  },
+  [INDIVIDUAL_DOMAIN_2]: {
     borderRadius: 'pill',
     shadowIntensity: 'dramatic',
     tone: 'friendly',
@@ -259,9 +268,35 @@ const EXTENSION_BRAND: BrandConfig = {
   style: STYLE_CONFIGS[EXTENSION_DOMAIN],
 };
 
+const PHOTOSHOTSPRO_BRAND: BrandConfig = {
+  name: 'PhotoShotsPro',
+  domain: INDIVIDUAL_DOMAIN_2,
+  contact: {
+    hello: `hello@${INDIVIDUAL_DOMAIN_2}.com`,
+    support: `support@${INDIVIDUAL_DOMAIN_2}.com`,
+    privacy: `privacy@${INDIVIDUAL_DOMAIN_2}.com`,
+    legal: `legal@${INDIVIDUAL_DOMAIN_2}.com`,
+  },
+  logo: {
+    light: '/branding/PhotoShotsPro_trans.webp',
+    dark: '/branding/PhotoShotsPro_trans.webp',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'PhotoShotsPro',
+  },
+  colors: SHARED_CONFIG.colors,
+  typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN_2],
+  style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN_2],
+};
+
 export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   [TEAM_DOMAIN]: TEAM_BRAND,
   [INDIVIDUAL_DOMAIN]: INDIVIDUAL_BRAND,
+  [INDIVIDUAL_DOMAIN_2]: PHOTOSHOTSPRO_BRAND,
   [COUPLES_DOMAIN]: COUPLES_BRAND,
   [FAMILY_DOMAIN]: FAMILY_BRAND,
   [EXTENSION_DOMAIN]: EXTENSION_BRAND,
