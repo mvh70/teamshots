@@ -643,8 +643,14 @@ export const authOptions = {
      * This fixes an issue where reverse proxies forward x-forwarded-port: 80,
      * causing NextAuth (with trustHost: true) to construct URLs like
      * https://domain.com:80/ which break HTTPS connections.
+     *
+     * Also allows cross-domain redirects between our allowed domains
+     * (e.g., photoshotspro.com user logging out should stay on photoshotspro.com)
      */
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // Import allowed domains for cross-domain redirect validation
+      const { ALLOWED_DOMAINS } = await import('@/lib/url')
+
       const stripDefaultPort = (u: string): string => {
         try {
           const parsed = new URL(u)
@@ -677,6 +683,14 @@ export const authOptions = {
 
         // Allow same-origin redirects
         if (urlOrigin === baseOrigin) {
+          return cleanedUrl
+        }
+
+        // Allow cross-domain redirects to our other allowed domains
+        // This enables logout on photoshotspro.com to stay on photoshotspro.com
+        // instead of redirecting to teamshotspro.com (NEXTAUTH_URL)
+        const urlHostname = new URL(cleanedUrl).hostname.replace(/^www\./, '')
+        if ((ALLOWED_DOMAINS as readonly string[]).includes(urlHostname)) {
           return cleanedUrl
         }
       } catch {
