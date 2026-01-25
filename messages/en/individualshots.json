@@ -12,15 +12,72 @@
         "subtitleBold": "No studio, no photographer, just AI.",
         "cta": "Create Your Headshot",
         "ctaAria": "Create your professional headshot now",
+        "ctaSubtext": "Get your professional headshots in a preset style when you sign up. No commitment, no credit card.",
+        "noCreditCard": "Try with a fixed style for free, no credit card",
         "noCreditCardLine": "No credit card required",
         "freeGenerationsLine": "Free preview generation",
         "finalCtaTitle": "Upgrade your professional image today.",
-        "finalCtaSubtitle": "Join thousands of professionals who switched to AI headshots."
+        "finalCtaSubtitle": "Join thousands of professionals who switched to AI headshots.",
+        "getStarted": "Get Started"
+      },
+      "gallery": {
+        "title": "From casual selfies to professional headshots",
+        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles.",
+        "cta": "Try it yourself today"
+      },
+      "trust": {
+        "title": "Why people choose PhotoShotsPro",
+        "subtitle": "Professional headshots made simple - no studio, no waiting, just amazing photos",
+        "badges": {
+          "industryTemplates": {
+            "title": "Styles for every occasion",
+            "description": "Headshots optimized for LinkedIn, dating profile photos, casual professional looks, and more. Each style is designed to help you look your best for your specific needs."
+          },
+          "qualityControl": {
+            "title": "Quality guaranteed with automatic fixes",
+            "description": "Photos that fail our quality standards get automatically regenerated. Plus you get free retries based on your plan to perfect your results. Unlike other services where you pay per attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Professional headshots in 3 simple steps",
+        "subtitle": "Skip the expensive photographer and awkward poses. Here's how easy it is to get amazing headshots.",
+        "totalTime": "Total time:",
+        "totalTimeValue": "2 minutes",
+        "cta": "Get your professional headshots now!",
+        "guarantee": "Risk-free: Try it free to see the quality. No credit card, no commitment.",
+        "steps": {
+          "1": {
+            "title": "Upload your selfie",
+            "description": "Any clear photo of your face works. Selfies, casual photos - we work with what you have.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Choose your style",
+            "description": "Select from LinkedIn professional, dating profile, business casual, and more.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "Get 4 professional photos",
+            "description": "Receive 4 stunning variations in 60 seconds. Download your favorites instantly.",
+            "duration": "60s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Everything you need to know about PhotoShotsPro"
+      },
+      "footer": {
+        "tagline": "Professional headshots in 60 seconds",
+        "copyright": "© 2026 PhotoShotsPro. All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
       }
     }
   },
   "metadata": {
-    "title": "HeadshotOne - Professional AI Headshots",
+    "title": "PhotoShotsPro - Professional AI Headshots",
     "description": "Create professional LinkedIn headshots from a single selfie in 60 seconds. No photographer required."
   }
 }
