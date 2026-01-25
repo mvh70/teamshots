@@ -8,7 +8,7 @@ import { Logger } from '@/lib/logger';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
 import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail } from '@/lib/email';
-import { getBaseUrl } from '@/lib/url';
+import { getBaseUrlForUser } from '@/lib/url';
 import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
 import { recordPromoCodeUsage } from '@/domain/pricing/promo-codes';
 
@@ -171,11 +171,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const customerName = session.customer_details?.name || '';
       const firstName = customerName.split(' ')[0] || 'User';
       const lastName = customerName.split(' ').slice(1).join(' ') || null;
-      
+
       // Determine role based on plan tier - pro plans get team_admin role
       const planTier = session.metadata?.planTier;
       const userRole = (planTier === 'pro') ? 'team_admin' : 'user';
-      
+
+      // Get signup domain from checkout metadata (set by checkout route)
+      const signupDomain = session.metadata?.checkoutDomain || null;
+
       const created = await prisma.user.create({
         data: {
           email,
@@ -183,6 +186,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           role: userRole,
           stripeCustomerId: customerId || null,
           subscriptionStatus: 'active',
+          signupDomain,
         },
         select: { id: true }
       });
@@ -622,9 +626,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         
         // Convert credits to photos for display
         const purchasedPhotos = calculatePhotosFromCredits(purchasedCredits);
-        
+
         const token = await generatePasswordSetupToken(guestEmail);
-        const baseUrl = await getBaseUrl();
+        // Use the domain from checkout session metadata for correct email URLs
+        const checkoutDomain = session.metadata?.checkoutDomain;
+        const baseUrl = getBaseUrlForUser(checkoutDomain);
         const setupLink = `${baseUrl}/auth/set-password?token=${token}`;
         
         await sendWelcomeAfterPurchaseEmail({

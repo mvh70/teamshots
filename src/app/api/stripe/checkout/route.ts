@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
     // This allows the same deployment to serve multiple domains
     // Note: Stripe webhooks must point to HTTPS (https://app.teamshotspro.com/api/stripe/webhook)
     const baseUrl = getBaseUrl(request.headers)
+
+    // Extract the domain for storing in Stripe metadata (used by webhook for emails)
+    const checkoutDomain = new URL(baseUrl).hostname
     
     // Prefer returning to the page that initiated checkout. Accept explicit body.returnUrl or Referer header.
     // Validate to prevent open redirects: must start with our baseUrl; otherwise, fall back to dashboard.
@@ -316,6 +319,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(user?.id ? { userId: user.id } : {}),
         type,
+        checkoutDomain, // Store the domain for webhook to use in emails
         ...metadata,
         ...(validatedPromoCode?.promoCodeId ? { promoCodeId: validatedPromoCode.promoCodeId, promoCode } : {}),
         ...(validatedPromoCode?.discount ? {

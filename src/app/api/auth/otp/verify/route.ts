@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, code } = validationResult.data
+    const { email: rawEmail, code } = validationResult.data
+
+    // Normalize email to lowercase for consistent lookups
+    const email = rawEmail.toLowerCase()
 
     // SECURITY: Rate limiting to prevent brute-force attacks on OTP codes
     // 5 attempts per 5 minutes per IP+email combination

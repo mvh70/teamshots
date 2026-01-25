@@ -12,11 +12,14 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, locale } = await request.json()
+    const { email: rawEmail, locale } = await request.json()
 
-    if (!email) {
+    if (!rawEmail) {
       return NextResponse.json(badRequest('INVALID_INPUT', 'errors.invalidInput', 'Email is required'), { status: 400 })
     }
+
+    // Normalize email to lowercase for consistent lookups
+    const email = rawEmail.toLowerCase()
 
     // SECURITY: Multi-layer rate limiting to prevent OTP spam
     // Layer 1: IP-based rate limiting (3 OTP sends per 5 minutes per IP)
