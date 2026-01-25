@@ -1,7 +1,7 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 import { headers } from 'next/headers';
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
 import { SOLUTIONS } from '@/config/solutions';
 
 /**
@@ -30,9 +30,10 @@ async function getRequestDomain(): Promise<string | null> {
       return normalizedForced;
     }
 
-    // Normalize domain to variant name
+    // Normalize domain to message file name (must match files in messages/{locale}/)
     if (domain === TEAM_DOMAIN) return 'teamshotspro';
-    if (domain === INDIVIDUAL_DOMAIN) return 'photoshotspro';
+    if (domain === INDIVIDUAL_DOMAIN) return 'individualshots';
+    if (domain === INDIVIDUAL_DOMAIN_2) return 'individualshots';
     if (domain === COUPLES_DOMAIN) return 'coupleshotspro';
     if (domain === FAMILY_DOMAIN) return 'familyshotspro';
     if (domain === EXTENSION_DOMAIN) return 'rightclickfit';
