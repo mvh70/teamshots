@@ -9,16 +9,16 @@
  */
 
 // Domains that restrict signup to team subscription
-export const TEAM_DOMAIN = 'teamshotspro'
+export const TEAM_DOMAIN = 'teamshotspro.com'
 
 // Domains that restrict signup to individual subscription
-export const INDIVIDUAL_DOMAIN = 'individualshots'
-export const INDIVIDUAL_DOMAIN_2 = 'photoshotspro'
+export const INDIVIDUAL_DOMAIN = 'individualshots.com'
+export const INDIVIDUAL_DOMAIN_2 = 'photoshotspro.com'
 
 // New vertical domains
-export const COUPLES_DOMAIN = 'coupleshots'
-export const FAMILY_DOMAIN = 'familyshots'
-export const EXTENSION_DOMAIN = 'rightclickfit'
+export const COUPLES_DOMAIN = 'coupleshots.com'
+export const FAMILY_DOMAIN = 'familyshots.com'
+export const EXTENSION_DOMAIN = 'rightclickfit.com'
 
 // All domains that have signup restrictions or specific landing pages
 export const RESTRICTED_DOMAINS = [
