@@ -18,7 +18,13 @@
         "freeGenerationsLine": "Free preview generation",
         "finalCtaTitle": "Upgrade your professional image today.",
         "finalCtaSubtitle": "Join thousands of professionals who switched to AI headshots.",
-        "getStarted": "Get Started"
+        "getStarted": "Get Started",
+        "trustBadges": {
+          "stripeSecure": "Stripe Secure Checkout",
+          "instantResults": "Results in 60 Seconds",
+          "noSubscription": "No Subscription",
+          "moneyBack": "Money-Back Guarantee"
+        }
       },
       "gallery": {
         "title": "From casual selfies to professional headshots",
@@ -46,6 +52,8 @@
         "totalTimeValue": "2 minutes",
         "cta": "Get your professional headshots now!",
         "guarantee": "Risk-free: Try it free to see the quality. No credit card, no commitment.",
+        "freePhotosLine": "Free preview generation included",
+        "noCreditCardLine": "No credit card required",
         "steps": {
           "1": {
             "title": "Upload your selfie",

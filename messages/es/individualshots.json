@@ -16,7 +16,13 @@
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "noCreditCardLine": "Sin tarjeta de crédito",
         "freeGenerationsLine": "1 generación gratis con marca fija de PhotoShots",
-        "badge": "Retratos profesionales sin la molestia del estudio"
+        "badge": "Retratos profesionales sin la molestia del estudio",
+        "trustBadges": {
+          "stripeSecure": "Pago Seguro con Stripe",
+          "instantResults": "Resultados en 60 Segundos",
+          "noSubscription": "Sin Suscripción",
+          "moneyBack": "Garantía de Devolución"
+        }
       },
       "gallery": {
         "title": "De selfies casuales a retratos profesionales",
@@ -44,6 +50,8 @@
         "totalTimeValue": "2 minutos",
         "cta": "¡Obtén tus retratos profesionales ahora!",
         "guarantee": "Sin riesgo: Pruébalo gratis para ver la calidad. Sin tarjeta de crédito, sin compromiso.",
+        "freePhotosLine": "Vista previa gratuita incluida",
+        "noCreditCardLine": "Sin tarjeta de crédito",
         "steps": {
           "1": {
             "title": "Sube tu selfie",

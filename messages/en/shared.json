@@ -52,6 +52,13 @@
       "pricing": "Pricing",
       "process": "Process",
       "security": "Security"
+    },
+    "category": {
+      "all": "All",
+      "technical": "Technical",
+      "pricing": "Pricing",
+      "privacy": "Privacy",
+      "usage": "Usage"
     }
   },
   "hero": {
