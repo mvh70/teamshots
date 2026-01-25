@@ -3,7 +3,7 @@
 
 import { useTranslations } from 'next-intl'
 import { SparklesIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { getClientBrandInfo } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 interface FreePlanBannerProps {
@@ -22,22 +22,11 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
 
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {
-    if (typeof window === 'undefined') {
-      return {
-        brandName: 'TeamShotsPro',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-    const hostname = window.location.hostname.replace(/^www\./, '')
-    if (hostname === INDIVIDUAL_DOMAIN) {
-      return {
-        brandName: 'PhotoShotsPro',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
+    const { brandName, isIndividual } = getClientBrandInfo()
+    const credits = isIndividual ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
     return {
-      brandName: 'TeamShotsPro',
-      photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+      brandName,
+      photoCount: Math.floor(credits / PRICING_CONFIG.credits.perGeneration)
     }
   }
 

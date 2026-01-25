@@ -94,5 +94,14 @@
   "metadata": {
     "title": "PhotoShotsPro - Professional AI Headshots",
     "description": "Create professional LinkedIn headshots from a single selfie in 60 seconds. No photographer required."
+  },
+  "auth": {
+    "signup": {
+      "welcome": "Professional headshots in 60 seconds",
+      "welcomeSubtitle": "Transform your selfie into a stunning LinkedIn photo. No photographer, no studio, no hassle.",
+      "benefit1": "Generate professional headshots in 60 seconds",
+      "benefit2": "Credits never expire. Use them whenever.",
+      "benefit3": "Perfect for LinkedIn, resumes, and profiles"
+    }
   }
 }

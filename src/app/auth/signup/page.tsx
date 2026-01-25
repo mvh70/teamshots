@@ -13,7 +13,7 @@ import AuthInput from '@/components/auth/AuthInput'
 import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
+import { getClientBrandInfo } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { trackSignupStarted, trackSignupCompleted } from '@/lib/track'
 
@@ -32,42 +32,11 @@ export default function SignUpPage() {
 
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {
-    if (typeof window === 'undefined') {
-      return {
-        brandName: 'TeamShotsPro',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-    const hostname = window.location.hostname.replace(/^www\./, '')
-    
-    if (hostname === INDIVIDUAL_DOMAIN) {
-      return {
-        brandName: 'HeadshotOne',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-    if (hostname === COUPLES_DOMAIN) {
-      return {
-        brandName: 'DuoSnaps',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-    if (hostname === FAMILY_DOMAIN) {
-      return {
-        brandName: 'KinFrame',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-    if (hostname === EXTENSION_DOMAIN) {
-      return {
-        brandName: 'RightClickFit',
-        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
-      }
-    }
-
+    const { brandName, isIndividual } = getClientBrandInfo()
+    const credits = isIndividual ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
     return {
-      brandName: 'TeamShotsPro',
-      photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+      brandName,
+      photoCount: Math.floor(credits / PRICING_CONFIG.credits.perGeneration)
     }
   }
 

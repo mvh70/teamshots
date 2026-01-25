@@ -88,5 +88,14 @@
         "terms": "Términos de Servicio"
       }
     }
+  },
+  "auth": {
+    "signup": {
+      "welcome": "Retratos profesionales en 60 segundos",
+      "welcomeSubtitle": "Transforma tu selfie en una foto impresionante para LinkedIn. Sin fotógrafo, sin estudio, sin complicaciones.",
+      "benefit1": "Genera retratos profesionales en 60 segundos",
+      "benefit2": "Los créditos nunca expiran. Úsalos cuando quieras.",
+      "benefit3": "Perfecto para LinkedIn, currículum y perfiles"
+    }
   }
 }

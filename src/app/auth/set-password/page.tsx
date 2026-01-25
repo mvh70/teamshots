@@ -11,28 +11,12 @@ import AuthCard from '@/components/auth/AuthCard'
 import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
+import { getClientBrandInfo } from '@/config/domain'
 
 type TokenStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'already_set'
 
 function getBrandName(): string {
-  if (typeof window === 'undefined') return 'TeamShotsPro'
-  let hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
-
-  // On localhost, check for forced domain override
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
-    if (forcedDomain) {
-      hostname = forcedDomain.replace(/^www\./, '').toLowerCase()
-    }
-  }
-
-  if (hostname === INDIVIDUAL_DOMAIN) return 'IndividualShots'
-  if (hostname === INDIVIDUAL_DOMAIN_2) return 'PhotoShotsPro'
-  if (hostname === COUPLES_DOMAIN) return 'CoupleShots'
-  if (hostname === FAMILY_DOMAIN) return 'FamilyShots'
-  if (hostname === EXTENSION_DOMAIN) return 'RightClickFit'
-  return 'TeamShotsPro'
+  return getClientBrandInfo().brandName
 }
 
 export default function SetPasswordPage() {

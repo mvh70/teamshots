@@ -40,3 +40,54 @@ export function isRestrictedDomain(domain: string): boolean {
 export function getDomainVariants(domain: string): string[] {
   return [domain, `www.${domain}`]
 }
+
+/**
+ * Client-side brand info for use in React components.
+ * This is the single source of truth for client-side brand detection.
+ *
+ * For server-side brand detection, use getBrand() from @/config/brand instead.
+ */
+export interface ClientBrandInfo {
+  brandName: string
+  isIndividual: boolean
+}
+
+/**
+ * Get brand info on the client side based on current hostname.
+ * Handles localhost with NEXT_PUBLIC_FORCE_DOMAIN for development.
+ */
+export function getClientBrandInfo(): ClientBrandInfo {
+  if (typeof window === 'undefined') {
+    return { brandName: 'TeamShotsPro', isIndividual: false }
+  }
+
+  let hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
+
+  // On localhost, check for forced domain override
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+    if (forcedDomain) {
+      hostname = forcedDomain.replace(/^www\./, '').toLowerCase()
+    }
+  }
+
+  // Individual domains
+  if (hostname === INDIVIDUAL_DOMAIN) {
+    return { brandName: 'IndividualShots', isIndividual: true }
+  }
+  if (hostname === INDIVIDUAL_DOMAIN_2) {
+    return { brandName: 'PhotoShotsPro', isIndividual: true }
+  }
+  if (hostname === COUPLES_DOMAIN) {
+    return { brandName: 'CoupleShots', isIndividual: true }
+  }
+  if (hostname === FAMILY_DOMAIN) {
+    return { brandName: 'FamilyShots', isIndividual: true }
+  }
+  if (hostname === EXTENSION_DOMAIN) {
+    return { brandName: 'RightClickFit', isIndividual: true }
+  }
+
+  // Default to team domain
+  return { brandName: 'TeamShotsPro', isIndividual: false }
+}
