@@ -259,6 +259,9 @@
     "topUpCreditsAvailable": "Recarga de créditos disponible",
     "checkoutCanceled": "Pago cancelado. No se realizaron cargos. (¿Cambiaste de idea? Te entendemos, pasa a los mejores)",
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
+    "topUpTitle": "Recarga de créditos",
+    "topUpNotAvailableForFree": "Las recargas no están disponibles en el plan gratuito. Por favor, adquiere un plan para continuar.",
+    "viewPlans": "Ver Planes",
     "promoCode": {
       "haveCode": "¿Tienes un código promocional?",
       "enterPromoCode": "Ingresa código promocional",

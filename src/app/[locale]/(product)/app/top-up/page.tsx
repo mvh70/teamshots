@@ -87,20 +87,20 @@ export default function TopUpPage() {
         <>
         <StripeNotice className="mb-4" />
         <h1 className="text-2xl font-semibold mb-6">
-          {t('pricing.topUpTitle', { default: 'Credit top-up' })}
+          {t('pricing.topUpTitle')}
         </h1>
         {planTier && planTier !== 'free' && topUpDetails ? (
           <TopUpCard tier={topUpDetails.tier} returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined} />
         ) : planTier === 'free' ? (
           <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">{t('pricing.topUpNotAvailableForFree', { default: 'Top-ups are not available on the free plan. Please purchase a plan to continue.' })}</p>
+            <p className="text-gray-600 mb-4">{t('pricing.topUpNotAvailableForFree')}</p>
             <Link href="/app/upgrade" className="inline-block px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover">
-              {t('pricing.viewPlans', { default: 'View Plans' })}
+              {t('pricing.viewPlans')}
             </Link>
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
-            {t('common.loading', { default: 'Loading...' })}
+            {t('common.loading')}
           </div>
         )}
       </>
