@@ -159,7 +159,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate promo code if provided
-    let validatedPromoCode: { stripePromoCodeId?: string; promoCodeId?: string } | null = null
+    let validatedPromoCode: {
+      promoCodeId?: string
+      stripePromoCodeId?: string
+      discount?: { type: 'percentage' | 'fixed_amount'; value: number; discountAmount: number; finalAmount: number }
+      originalAmount?: number
+    } | null = null
     if (promoCode) {
       const brand = getBrand(request.headers)
       const domain = brand.domain
@@ -195,14 +200,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: promoValidation.error || 'Invalid promo code' }, { status: 400 })
       }
 
-      if (promoValidation.promoCode?.stripePromoCodeId) {
-        validatedPromoCode = {
-          stripePromoCodeId: promoValidation.promoCode.stripePromoCodeId,
-          promoCodeId: promoValidation.promoCode.id,
-        }
-      } else {
-        // Promo code exists but no Stripe integration - reject for now
-        return NextResponse.json({ error: 'This promo code is not properly configured' }, { status: 400 })
+      // Store promo code info - we'll apply discounts server-side via price_data
+      validatedPromoCode = {
+        promoCodeId: promoValidation.promoCode?.id,
+        stripePromoCodeId: promoValidation.promoCode?.stripePromoCodeId ?? undefined,
+        discount: promoValidation.discount,
+        originalAmount: validationAmount,
       }
     }
 
@@ -302,6 +305,7 @@ export async function POST(request: NextRequest) {
       : withParams(safeReturnUrl, { canceled: 'true' })
 
     // Build checkout session parameters
+    // Note: We apply discounts server-side via price_data, not via Stripe's discount system
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       customer_email: unauth ? (email as string | undefined) : undefined,
@@ -314,42 +318,70 @@ export async function POST(request: NextRequest) {
         type,
         ...metadata,
         ...(validatedPromoCode?.promoCodeId ? { promoCodeId: validatedPromoCode.promoCodeId, promoCode } : {}),
+        ...(validatedPromoCode?.discount ? {
+          discountType: validatedPromoCode.discount.type,
+          discountValue: String(validatedPromoCode.discount.value),
+          discountAmount: String(validatedPromoCode.discount.discountAmount),
+          originalAmount: String(validatedPromoCode.originalAmount),
+        } : {}),
       },
-      // Apply promo code discount if validated
-      ...(validatedPromoCode?.stripePromoCodeId ? {
-        discounts: [{ promotion_code: validatedPromoCode.stripePromoCodeId }],
-      } : {}),
     };
 
     // Add line items based on type
     if (type === 'plan') {
-      // Use provided price ID for plans
-      if (priceId) {
+      // Determine plan details from price ID
+      let planTier: PlanTier | null = null
+      let planPeriod: PlanPeriod | null = null
+      let planName = ''
+      let planDescription = ''
+      let originalPrice = 0
+
+      if (priceId === PRICING_CONFIG.individual.stripePriceId) {
+        planTier = 'individual'
+        planPeriod = 'small'
+        planName = 'PhotoShots - Individual Plan'
+        planDescription = 'Professional AI headshots'
+        originalPrice = PRICING_CONFIG.individual.price
+      } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+        planTier = 'individual'
+        planPeriod = 'large'
+        planName = 'PhotoShots - VIP Plan'
+        planDescription = 'Premium professional AI headshots'
+        originalPrice = PRICING_CONFIG.vip.price
+      }
+
+      // If promo code is applied, use price_data with discounted price
+      // Otherwise, use the predefined Stripe price ID
+      if (validatedPromoCode?.discount && originalPrice > 0) {
+        const finalPrice = validatedPromoCode.discount.finalAmount
+        sessionParams.line_items = [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: planName,
+                description: `${planDescription} (${validatedPromoCode.discount.value}${validatedPromoCode.discount.type === 'percentage' ? '%' : '$'} discount applied)`,
+              },
+              unit_amount: Math.round(finalPrice * 100), // Convert to cents
+            },
+            quantity,
+          },
+        ];
+      } else if (priceId) {
+        // No promo code - use predefined Stripe price
         sessionParams.line_items = [
           {
             price: priceId,
             quantity,
           },
         ];
+      }
 
-        // Set planTier and planPeriod in metadata based on price ID
-        let planTier: PlanTier | null = null
-        let planPeriod: PlanPeriod | null = null
-
-        if (priceId === PRICING_CONFIG.individual.stripePriceId) {
-          planTier = 'individual'
-          planPeriod = 'small'
-        } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
-          planTier = 'individual'
-          planPeriod = 'large'
-        }
-
-        if (planTier && planPeriod) {
-          sessionParams.metadata = {
-            ...sessionParams.metadata,
-            planTier,
-            planPeriod,
-          }
+      if (planTier && planPeriod) {
+        sessionParams.metadata = {
+          ...sessionParams.metadata,
+          planTier,
+          planPeriod,
         }
       }
     } else if (type === 'top_up') {

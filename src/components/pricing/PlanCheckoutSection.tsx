@@ -28,17 +28,24 @@ export default function PlanCheckoutSection({
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
   const [promoDiscount, setPromoDiscount] = useState<PromoCodeDiscount | null>(null)
   const [stripePromoCodeId, setStripePromoCodeId] = useState<string | undefined>(undefined)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const handlePromoCodeApply = (code: string, discount: PromoCodeDiscount, promoCodeId?: string) => {
     setAppliedPromoCode(code)
     setPromoDiscount(discount)
     setStripePromoCodeId(promoCodeId)
+    setCheckoutError(null)
   }
 
   const handlePromoCodeClear = () => {
     setAppliedPromoCode(null)
     setPromoDiscount(null)
     setStripePromoCodeId(undefined)
+    setCheckoutError(null)
+  }
+
+  const handleCheckoutError = (error: string) => {
+    setCheckoutError(error)
   }
 
   // Unified button styling for CheckoutButton - matches PricingCard button styling
@@ -75,6 +82,13 @@ export default function PlanCheckoutSection({
         appliedCode={appliedPromoCode || ''}
       />
 
+      {/* Checkout Error */}
+      {checkoutError && (
+        <div className="text-center py-2 bg-red-50 rounded-lg border border-red-200">
+          <div className="text-sm text-red-600">{checkoutError}</div>
+        </div>
+      )}
+
       {/* Checkout Button */}
       <CheckoutButton
         type="plan"
@@ -87,6 +101,7 @@ export default function PlanCheckoutSection({
         promoCode={appliedPromoCode || undefined}
         stripePromoCodeId={stripePromoCodeId}
         useBrandCtaColors={isPopular}
+        onError={handleCheckoutError}
         className={`${baseButtonClasses} ${buttonVariantClasses}`.trim()}
       >
         {ctaText}

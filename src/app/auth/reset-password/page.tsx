@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
-import AuthInput from '@/components/auth/AuthInput'
+import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 
@@ -28,6 +28,9 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  // Password validation state
+  const { isValid: passwordIsValid } = usePasswordValidation(password, confirmPassword)
 
   // Verify token on page load
   useEffect(() => {
@@ -226,25 +229,12 @@ export default function ResetPasswordPage() {
       >
         <FocusTrap>
           <form onSubmit={handleSubmit} className="space-y-7 lg:space-y-8">
-            <AuthInput
-              id="password"
-              name="password"
-              type="password"
-              required
-              label={t('passwordLabel')}
-              strengthMeter
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            
-            <AuthInput
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              label={t('confirmPasswordLabel')}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+            <PasswordFields
+              password={password}
+              confirmPassword={confirmPassword}
+              onPasswordChange={setPassword}
+              onConfirmPasswordChange={setConfirmPassword}
+              namespace="auth.resetPassword"
             />
 
             {error && (
@@ -256,7 +246,7 @@ export default function ResetPasswordPage() {
             <AuthButton
               type="submit"
               loading={isLoading}
-              disabled={isLoading || !password || !confirmPassword}
+              disabled={isLoading || !passwordIsValid}
             >
               {isLoading ? t('resetting') : t('resetPassword')}
             </AuthButton>

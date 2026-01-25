@@ -8,11 +8,32 @@ import Link from 'next/link'
 import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
-import AuthInput from '@/components/auth/AuthInput'
+import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
+import { INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 
 type TokenStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'already_set'
+
+function getBrandName(): string {
+  if (typeof window === 'undefined') return 'TeamShotsPro'
+  let hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
+
+  // On localhost, check for forced domain override
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+    if (forcedDomain) {
+      hostname = forcedDomain.replace(/^www\./, '').toLowerCase()
+    }
+  }
+
+  if (hostname === INDIVIDUAL_DOMAIN) return 'IndividualShots'
+  if (hostname === INDIVIDUAL_DOMAIN_2) return 'PhotoShotsPro'
+  if (hostname === COUPLES_DOMAIN) return 'CoupleShots'
+  if (hostname === FAMILY_DOMAIN) return 'FamilyShots'
+  if (hostname === EXTENSION_DOMAIN) return 'RightClickFit'
+  return 'TeamShotsPro'
+}
 
 export default function SetPasswordPage() {
   const t = useTranslations('auth.setPassword')
@@ -28,6 +49,9 @@ export default function SetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  // Password validation state
+  const { isValid: passwordIsValid } = usePasswordValidation(password, confirmPassword)
 
   // Verify token on page load
   useEffect(() => {
@@ -234,7 +258,7 @@ export default function SetPasswordPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-pink-500/10 rounded-3xl shadow-xl border border-white/20 backdrop-blur-sm transition-all duration-500 group-hover:shadow-2xl group-hover:from-blue-500/15 group-hover:via-purple-500/8 group-hover:to-pink-500/15" />
           <div className="relative p-12 lg:p-14">
             <h1 className="text-5xl lg:text-6xl font-display font-bold text-slate-900 mb-6 tracking-tight leading-tight bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
-              {t('welcomeTitle')}
+              {t('welcomeTitle', { brandName: getBrandName() })}
             </h1>
             <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed font-medium">
               {t('welcomeSubtitle')}
@@ -267,25 +291,12 @@ export default function SetPasswordPage() {
       >
         <FocusTrap>
           <form onSubmit={handleSubmit} className="space-y-7 lg:space-y-8">
-            <AuthInput
-              id="password"
-              name="password"
-              type="password"
-              required
-              label={t('passwordLabel')}
-              strengthMeter
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            
-            <AuthInput
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              label={t('confirmPasswordLabel')}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+            <PasswordFields
+              password={password}
+              confirmPassword={confirmPassword}
+              onPasswordChange={setPassword}
+              onConfirmPasswordChange={setConfirmPassword}
+              namespace="auth.setPassword"
             />
 
             {error && (
@@ -297,7 +308,7 @@ export default function SetPasswordPage() {
             <AuthButton
               type="submit"
               loading={isLoading}
-              disabled={isLoading || !password || !confirmPassword}
+              disabled={isLoading || !passwordIsValid}
             >
               {isLoading ? t('setting') : t('setPassword')}
             </AuthButton>

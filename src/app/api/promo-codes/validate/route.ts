@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return success with discount details
+    // stripePromoCodeId is optional - discounts are applied server-side via price_data
     return NextResponse.json({
       valid: true,
       discount: result.discount,

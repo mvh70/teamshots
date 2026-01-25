@@ -24,10 +24,18 @@ async function getRequestDomain(): Promise<string | null> {
       const forced = process.env.NEXT_PUBLIC_FORCE_DOMAIN;
       if (!forced) return null;
 
-      // Normalize forced domain to variant name (strip www. and .com)
-      // This is a simplified fallback for local dev
-      const normalizedForced = forced.replace(/^www\./, '').toLowerCase().replace(/\.com$/, '');
-      return normalizedForced;
+      // Normalize forced domain and map to message file name
+      const normalizedForced = forced.replace(/^www\./, '').toLowerCase();
+
+      // Apply same mapping as production domains
+      if (normalizedForced === TEAM_DOMAIN) return 'teamshotspro';
+      if (normalizedForced === INDIVIDUAL_DOMAIN) return 'individualshots';
+      if (normalizedForced === INDIVIDUAL_DOMAIN_2) return 'individualshots';
+      if (normalizedForced === COUPLES_DOMAIN) return 'coupleshotspro';
+      if (normalizedForced === FAMILY_DOMAIN) return 'familyshotspro';
+      if (normalizedForced === EXTENSION_DOMAIN) return 'rightclickfit';
+
+      return null;
     }
 
     // Normalize domain to message file name (must match files in messages/{locale}/)

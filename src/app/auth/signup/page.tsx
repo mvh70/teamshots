@@ -10,6 +10,7 @@ import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
+import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
@@ -90,8 +91,10 @@ export default function SignUpPage() {
 
   // Password validation state
   // SECURITY: Must match server-side validation in src/lib/validation.ts (8 chars min)
-  const passwordMeetsRequirements = formData.password.length >= 8
-  const passwordsMatch = formData.password === formData.confirmPassword
+  const { passwordMeetsRequirements, passwordsMatch, isValid: passwordIsValid } = usePasswordValidation(
+    formData.password,
+    formData.confirmPassword
+  )
   const confirmPasswordTouched = formData.confirmPassword.length > 0
 
   // Track signup page view
