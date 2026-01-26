@@ -78,15 +78,15 @@ export default function ColorWheelPicker({
   const colorNameDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const lastExternalValueRef = useRef<string>('') // Track last external value to detect changes
 
-  // Initialize/update input when external value changes
+  // Initialize/update input when external value changes (not when user is typing)
   useEffect(() => {
     if (!currentHex) return
-    
+
     // Create a key from both hex and name to detect any external change
     const externalValueKey = `${currentHex}|${currentName || ''}`
     const valueChanged = externalValueKey !== lastExternalValueRef.current
-    
-    if (valueChanged || !inputValue) {
+
+    if (valueChanged) {
       // Use saved name if user explicitly chose one (from suggestions/typing)
       // Otherwise derive from hex (for color wheel picks)
       // The derivation is now deterministic thanks to the tiebreaker fix in color-utils.ts
@@ -94,7 +94,9 @@ export default function ColorWheelPicker({
       setInputValue(`${displayName} ${currentHex}`)
       lastExternalValueRef.current = externalValueKey
     }
-  }, [currentName, currentHex, inputValue])
+    // Note: inputValue intentionally NOT in deps - we only sync from external changes,
+    // not when user is actively typing
+  }, [currentName, currentHex])
 
   useEffect(() => {
     setIsMounted(true)

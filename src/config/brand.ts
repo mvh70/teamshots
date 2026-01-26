@@ -351,16 +351,18 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
  */
 export function getBrand(requestHeaders?: Headers): BrandConfig {
   const domain = getCurrentDomain(requestHeaders)
-  
+
   if (domain) {
     // Exact match
     if (BRAND_CONFIGS[domain]) {
       return BRAND_CONFIGS[domain]
     }
-    // Also try matching the forced domain directly if it's not in the map yet (fallback)
-    // This handles cases where EXTENSION_DOMAIN might not be perfectly aligned with the map key in some envs
+    // Try matching with .com suffix (for local dev without .com in hosts file)
+    if (BRAND_CONFIGS[`${domain}.com`]) {
+      return BRAND_CONFIGS[`${domain}.com`]
+    }
   }
-  
+
   // Default to TeamShotsPro
   return BRAND_CONFIGS[TEAM_DOMAIN]
 }

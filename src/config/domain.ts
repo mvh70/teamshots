@@ -71,21 +71,30 @@ export function getClientBrandInfo(): ClientBrandInfo {
     }
   }
 
+  // Helper to match domain with or without .com (for local dev)
+  const matchesDomain = (domain: string) =>
+    hostname === domain || hostname === domain.replace(/\.com$/, '')
+
   // Individual domains
-  if (hostname === INDIVIDUAL_DOMAIN) {
+  if (matchesDomain(INDIVIDUAL_DOMAIN)) {
     return { brandName: 'IndividualShots', isIndividual: true }
   }
-  if (hostname === INDIVIDUAL_DOMAIN_2) {
+  if (matchesDomain(INDIVIDUAL_DOMAIN_2)) {
     return { brandName: 'PhotoShotsPro', isIndividual: true }
   }
-  if (hostname === COUPLES_DOMAIN) {
+  if (matchesDomain(COUPLES_DOMAIN)) {
     return { brandName: 'CoupleShots', isIndividual: true }
   }
-  if (hostname === FAMILY_DOMAIN) {
+  if (matchesDomain(FAMILY_DOMAIN)) {
     return { brandName: 'FamilyShots', isIndividual: true }
   }
-  if (hostname === EXTENSION_DOMAIN) {
+  if (matchesDomain(EXTENSION_DOMAIN)) {
     return { brandName: 'RightClickFit', isIndividual: true }
+  }
+
+  // Team domain
+  if (matchesDomain(TEAM_DOMAIN)) {
+    return { brandName: 'TeamShotsPro', isIndividual: false }
   }
 
   // Default to team domain

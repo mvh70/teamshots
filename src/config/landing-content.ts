@@ -149,11 +149,18 @@ function normalizeDomain(domain?: string): string | null {
  */
 export function getLandingConfig(domain?: string): LandingConfig {
   const normalizedDomain = normalizeDomain(domain)
-  
-  if (normalizedDomain && LANDING_CONFIGS[normalizedDomain]) {
-    return LANDING_CONFIGS[normalizedDomain]
+
+  if (normalizedDomain) {
+    // Exact match
+    if (LANDING_CONFIGS[normalizedDomain]) {
+      return LANDING_CONFIGS[normalizedDomain]
+    }
+    // Try with .com suffix (for local dev without .com in hosts file)
+    if (LANDING_CONFIGS[`${normalizedDomain}.com`]) {
+      return LANDING_CONFIGS[`${normalizedDomain}.com`]
+    }
   }
-  
+
   return DEFAULT_LANDING_CONFIG
 }
 

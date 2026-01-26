@@ -38,13 +38,16 @@ async function getRequestDomain(): Promise<string | null> {
       return null;
     }
 
+    // Helper to match domain with or without .com (for local dev)
+    const matches = (d: string) => domain === d || domain === d.replace(/\.com$/, '');
+
     // Normalize domain to message file name (must match files in messages/{locale}/)
-    if (domain === TEAM_DOMAIN) return 'teamshotspro';
-    if (domain === INDIVIDUAL_DOMAIN) return 'individualshots';
-    if (domain === INDIVIDUAL_DOMAIN_2) return 'individualshots';
-    if (domain === COUPLES_DOMAIN) return 'coupleshotspro';
-    if (domain === FAMILY_DOMAIN) return 'familyshotspro';
-    if (domain === EXTENSION_DOMAIN) return 'rightclickfit';
+    if (matches(TEAM_DOMAIN)) return 'teamshotspro';
+    if (matches(INDIVIDUAL_DOMAIN)) return 'individualshots';
+    if (matches(INDIVIDUAL_DOMAIN_2)) return 'individualshots';
+    if (matches(COUPLES_DOMAIN)) return 'coupleshotspro';
+    if (matches(FAMILY_DOMAIN)) return 'familyshotspro';
+    if (matches(EXTENSION_DOMAIN)) return 'rightclickfit';
 
     return null;
   } catch {

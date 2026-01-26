@@ -69,6 +69,11 @@ const VARIANT_TAB_ICONS: Partial<Record<LandingVariant, Record<number, React.Rea
     2: TAB_ICONS.customize,
     3: TAB_ICONS.sparkle,
   },
+  photoshotspro: {
+    1: TAB_ICONS.upload,
+    2: TAB_ICONS.customize,
+    3: TAB_ICONS.sparkle,
+  },
   coupleshots: {
     1: TAB_ICONS.upload,
     2: TAB_ICONS.customize,
@@ -108,6 +113,15 @@ const VARIANT_IMAGES: Partial<Record<LandingVariant, Record<number, string>>> = 
     2: '/images/how-it-works/step-2-v3.png',
     3: '/images/how-it-works/step-3-v2.png',
     4: '/images/how-it-works/step-4-v2.png',
+  },
+  // PhotoShotsPro uses same images as teamshotspro, minus team management
+  // Step 1 (Upload) → teamshotspro step 3 (selfie upload)
+  // Step 2 (Customize) → teamshotspro step 1 (branding/style)
+  // Step 3 (Generate) → teamshotspro step 4 (results)
+  photoshotspro: {
+    1: '/images/how-it-works/step-3-v2.png',
+    2: '/images/how-it-works/step-1-v2.png',
+    3: '/images/how-it-works/step-4-v2.png',
   },
   individualshots: {},
   coupleshots: {},
