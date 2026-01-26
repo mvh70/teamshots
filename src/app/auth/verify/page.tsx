@@ -32,7 +32,8 @@ export default function VerifyPage() {
   const checkoutSessionId = searchParams.get('checkout_session_id') || ''
 
   // Load pending signup fields from sessionStorage (lazy initializer)
-  const [pending] = useState<{ email: string; firstName: string; password: string; userType: 'individual' | 'team' } | null>(() => {
+  // Note: This is legacy - nothing currently sets pendingSignup, but kept for backwards compatibility
+  const [pending] = useState<{ email: string; firstName: string; password: string } | null>(() => {
     if (typeof window === 'undefined') return null
     try {
       const raw = window.sessionStorage.getItem('teamshots.pendingSignup')
@@ -146,12 +147,12 @@ export default function VerifyPage() {
 
   // Handle OTP verification for normal signup
   const handleNormalVerify = async () => {
+    // Server determines userType from domain - no need to send it from client
     const payload = {
       email: pending?.email || emailParam,
       password: pending?.password || '',
       firstName: pending?.firstName || '',
       otpCode,
-      userType: pending?.userType || (tier === 'pro' ? 'team' : 'individual'),
     }
 
     const res = await fetch('/api/auth/register', {
@@ -173,9 +174,6 @@ export default function VerifyPage() {
     if (!registerData.success) {
       throw new Error((registerData.error as string) || 'Registration failed')
     }
-
-    // Clear temporary storage
-    try { window.sessionStorage.removeItem('teamshots.pendingSignup') } catch { /* ignore */ }
 
     // Sign in with password
     const signInResult = await signIn('credentials', {

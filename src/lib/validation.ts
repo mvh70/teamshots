@@ -25,12 +25,12 @@ export const nameSchema = z.string()
 
 // Registration schema (with basic validation)
 // Supports both normal signup (with password) and guest checkout (no password, user already exists)
+// Note: userType is determined server-side from domain, not accepted from client
 export const registrationSchema = z.object({
   email: emailSchema,
   password: passwordSchema.optional(), // Optional for guest checkout
   firstName: nameSchema.optional(), // Optional for guest checkout (name already set by webhook)
   lastName: nameSchema.optional(),
-  userType: z.enum(['individual', 'team']).optional(),
   teamWebsite: z.string().optional().refine(
     (val) => !val || z.string().url().safeParse(val).success,
     'Invalid website URL'

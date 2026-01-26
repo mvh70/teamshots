@@ -1,5 +1,16 @@
 import { NextRequest } from 'next/server'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
+
+/**
+ * All individual domains - used for signup type detection
+ */
+const INDIVIDUAL_DOMAINS = [
+  INDIVIDUAL_DOMAIN,      // individualshots.com
+  INDIVIDUAL_DOMAIN_2,    // photoshotspro.com
+  COUPLES_DOMAIN,         // coupleshots.com
+  FAMILY_DOMAIN,          // familyshots.com
+  EXTENSION_DOMAIN,       // rightclickfit.com
+]
 
 /**
  * Get signup type from a domain string
@@ -16,8 +27,12 @@ function getSignupTypeForDomain(domain: string): 'individual' | 'team' | null {
   if (normalized === TEAM_DOMAIN || normalized.startsWith(TEAM_DOMAIN + '.')) {
     return 'team'
   }
-  if (normalized === INDIVIDUAL_DOMAIN || normalized.startsWith(INDIVIDUAL_DOMAIN + '.')) {
-    return 'individual'
+
+  // Check all individual domains
+  for (const individualDomain of INDIVIDUAL_DOMAINS) {
+    if (normalized === individualDomain || normalized.startsWith(individualDomain + '.')) {
+      return 'individual'
+    }
   }
 
   return null

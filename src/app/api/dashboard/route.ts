@@ -136,10 +136,16 @@ export async function GET() {
 
     // OPTIMIZATION: Run all stats queries in parallel
     // OPTIMIZATION: Use query helpers for consistent WHERE conditions
+    // Exclude failed/deleted generations from counts (consistent with generations list)
+    const generationWhereWithFilters = {
+      ...buildGenerationWhere(userId, teamId),
+      status: { notIn: ['failed', 'deleted'] },
+      deleted: false,
+    }
     const [generationsCount, contextsCount, creditsUsedResult, teamMembersCount] = await Promise.all([
-      // Get user's generations count
+      // Get user's generations count (excluding failed/deleted)
       prisma.generation.count({
-        where: buildGenerationWhere(userId, teamId)
+        where: generationWhereWithFilters
       }),
       // Get active photo styles (contexts) count
       // In team mode: only count team contexts (teamId matches)
@@ -156,9 +162,9 @@ export async function GET() {
               teamId: null
             }
       }),
-      // Get credits used from generations
+      // Get credits used from generations (excluding failed/deleted)
       prisma.generation.aggregate({
-        where: buildGenerationWhere(userId, teamId),
+        where: generationWhereWithFilters,
         _sum: {
           creditsUsed: true
         }

@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
       password,
       firstName,
       lastName,
-      userType: clientUserType = 'individual',
       teamWebsite,
       otpCode,
       locale,
@@ -94,20 +93,11 @@ export async function POST(request: NextRequest) {
     const email = rawEmail.toLowerCase()
 
     // Domain-based signup type: server is authoritative
-    // If domain has a restriction, use it. Otherwise, use client's choice.
+    // userType is always determined from domain, never from client
     Logger.info('9. Determining user type from domain...')
     const domain = getRequestDomain(request)
-    const domainRestrictedUserType = getSignupTypeFromDomain(domain)
-    const userType = domainRestrictedUserType || clientUserType
-
-    if (domainRestrictedUserType && clientUserType !== domainRestrictedUserType) {
-      Logger.info('Domain override applied', {
-        domain,
-        domainRestrictedUserType,
-        clientRequestedType: clientUserType,
-        appliedUserType: userType
-      })
-    }
+    const userType = getSignupTypeFromDomain(domain) || 'individual'
+    Logger.info('User type determined from domain', { domain, userType })
 
     // Verify OTP
     Logger.info('10. Verifying OTP...')
