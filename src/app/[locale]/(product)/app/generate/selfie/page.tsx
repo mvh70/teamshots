@@ -36,7 +36,7 @@ function SelfieSelectionPageContent() {
   const router = useRouter()
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
-  const { markInFlow, setPendingGeneration, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META, visitedSteps } = useGenerationFlowState()
+  const { markInFlow, setPendingGeneration, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META, visitedSteps, completedSteps } = useGenerationFlowState()
   const [isNavigating, startNavigateTransition] = useTransition()
   const { context: onboardingContext } = useOnboardingState()
   const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
@@ -218,16 +218,35 @@ function SelfieSelectionPageContent() {
     </div>
   )
 
+  // Create a set of completed step indices for fast lookup
+  const completedStepsSet = useMemo(() => new Set(completedSteps), [completedSteps])
+
   const navigationControls = (
-    <FlowNavigation
-      variant="dots-only"
-      size="md"
-      current={navCurrentIndex}
-      total={Math.max(1, stepperTotalDots)}
-      onPrev={handleBack}
-      onNext={handleContinue}
-      stepColors={navigationStepColors}
-    />
+    <div className="flex items-center justify-center gap-4">
+      {/* Selfies indicator */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-gray-500 font-medium">{t('selfies', { default: 'Selfies' })}</span>
+        <span className={`h-3 w-3 rounded-full ${canContinue ? 'bg-brand-secondary' : 'bg-brand-primary'}`} />
+      </div>
+
+      <div className="h-4 w-px bg-gray-200" />
+
+      {/* Customization dots - show actual progress from completed steps */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-gray-500 font-medium">{t('customize', { default: 'Customize' })}</span>
+        <div className="flex items-center gap-1">
+          {customizationStepsMeta?.stepKeys?.map((key, idx) => {
+            const isCompleted = completedStepsSet.has(idx)
+            return (
+              <span
+                key={`progress-dot-${key}`}
+                className={`h-2.5 w-2.5 rounded-full ${isCompleted ? 'bg-brand-secondary' : 'bg-gray-300'}`}
+              />
+            )
+          })}
+        </div>
+      </div>
+    </div>
   )
 
   const statusBadgeContent = {
@@ -290,7 +309,7 @@ function SelfieSelectionPageContent() {
         onNavigateToDashboard={() => router.push('/app/dashboard')}
         isGenerating={isNavigating}
         customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={visitedSteps}
+        visitedEditableSteps={completedSteps}
       />
 
       <SwipeableContainer

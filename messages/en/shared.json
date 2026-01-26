@@ -715,7 +715,9 @@
         "noTeamCreditsMessage": "Your team has no credits available for team generations. Contact your team admin to request credits or use your personal credits instead.",
         "requestCredits": "Request credits",
         "usePersonalCredits": "Use personal credits",
-        "backToSelfies": "Go back to selfies"
+        "backToSelfies": "Go back to selfies",
+        "selfies": "Selfies",
+        "customize": "Customize"
       },
       "profile": {
         "pro": "PRO",
@@ -1505,7 +1507,9 @@
       },
       "continueToCustomize": "Continue to customize",
       "continuing": "Continuing...",
-      "selectMoreSelfies": "Select at least {count} selfies to continue"
+      "selectMoreSelfies": "Select at least {count} selfies to continue",
+      "selfies": "Selfies",
+      "customize": "Customize"
     },
     "customize": {
       "title": "Customize your photo",
@@ -1768,7 +1772,8 @@
       "legend": {
         "editableChip": "Editable",
         "lockedChip": "Pre-set by team admin",
-        "presetChip": "Preset active"
+        "presetChip": "Preset active",
+        "needsSelection": "Choose one"
       },
       "lockedSections": {
         "teaser": {
@@ -2792,6 +2797,7 @@
         "navigation": {
           "selfies": "Selfies",
           "back": "Back",
+          "previous": "Previous",
           "next": "Next",
           "generate": "Generate"
         }

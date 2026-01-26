@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface TooltipProps {
   content: string
@@ -9,20 +10,58 @@ interface TooltipProps {
   className?: string
 }
 
-export default function Tooltip({ 
-  content, 
-  children, 
+export default function Tooltip({
+  content,
+  children,
   position = 'top',
-  className = '' 
+  className = ''
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
 
-  const positionClasses = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2'
-  }
+  useEffect(() => {
+    if (isVisible && triggerRef.current) {
+      const triggerRect = triggerRef.current.getBoundingClientRect()
+      const tooltipEl = tooltipRef.current
+
+      // Default positioning
+      let top = 0
+      let left = 0
+
+      // Get tooltip dimensions (estimate if not yet rendered)
+      const tooltipWidth = tooltipEl?.offsetWidth || 200
+      const tooltipHeight = tooltipEl?.offsetHeight || 40
+      const gap = 8
+
+      switch (position) {
+        case 'top':
+          top = triggerRect.top - tooltipHeight - gap
+          left = triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2
+          break
+        case 'bottom':
+          top = triggerRect.bottom + gap
+          left = triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2
+          break
+        case 'left':
+          top = triggerRect.top + triggerRect.height / 2 - tooltipHeight / 2
+          left = triggerRect.left - tooltipWidth - gap
+          break
+        case 'right':
+          top = triggerRect.top + triggerRect.height / 2 - tooltipHeight / 2
+          left = triggerRect.right + gap
+          break
+      }
+
+      // Keep tooltip within viewport
+      const padding = 8
+      left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding))
+      top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding))
+
+      setTooltipPosition({ top, left })
+    }
+  }, [isVisible, position])
 
   const arrowClasses = {
     top: 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent',
@@ -34,28 +73,35 @@ export default function Tooltip({
   return (
     <div className={`relative inline-block ${className}`}>
       <div
+        ref={triggerRef}
+        className="inline-flex"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
-        className="cursor-help"
       >
         {children}
       </div>
-      
-      {isVisible && (
+
+      {isVisible && typeof document !== 'undefined' && createPortal(
         <div
+          ref={tooltipRef}
           role="tooltip"
-          className={`absolute z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap pointer-events-none animate-fade-in ${positionClasses[position]}`}
+          style={{
+            position: 'fixed',
+            top: tooltipPosition.top,
+            left: tooltipPosition.left,
+          }}
+          className="z-[10001] px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg max-w-xs pointer-events-none animate-fade-in"
         >
           {content}
-          <div 
+          <div
             className={`absolute w-0 h-0 border-4 ${arrowClasses[position]}`}
             aria-hidden="true"
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
 }
-

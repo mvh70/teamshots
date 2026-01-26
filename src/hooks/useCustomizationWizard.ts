@@ -115,20 +115,14 @@ export function useCustomizationWizard({
       .map((step, idx) => step.type === 'locked' ? idx : -1)
       .filter(idx => idx >= 0)
 
-    // Extract step names for tooltips
-    const stepNames = allNumberedSteps.map(step => {
-      if (step.type === 'editable' || step.type === 'locked') {
-        return step.category?.label ?? ''
-      }
-      return ''
+    // Extract step names for tooltips (editable steps only, for dock dots)
+    const stepNames = editableNumberedSteps.map(step => {
+      return step.category?.label ?? ''
     })
 
-    // Extract step keys for visited step lookup
-    const stepKeys = allNumberedSteps.map(step => {
-      if (step.type === 'editable' || step.type === 'locked') {
-        return step.category?.key ?? ''
-      }
-      return ''
+    // Extract step keys for visited step lookup (editable steps only)
+    const stepKeys = editableNumberedSteps.map(step => {
+      return step.category?.key ?? ''
     })
 
     return {

@@ -613,6 +613,9 @@ export default function UserManagement() {
                 Credits
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Seats
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Packages
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -675,6 +678,15 @@ export default function UserManagement() {
                       {user.totalCredits}
                     </button>
                   </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {user.team ? (
+                    <span className="font-medium">
+                      {user.team.activeSeats}/{user.team.totalSeats}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-1">

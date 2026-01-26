@@ -274,24 +274,46 @@ export default function FlowProgressDock({
   const renderCustomizationDots = () => {
     if (!customizationStepsMeta || customizationStepsMeta.editableSteps === 0) return null
 
-    const { editableSteps } = customizationStepsMeta
+    const { editableSteps, stepNames } = customizationStepsMeta
+
+    // Check if we have valid stepNames (must be array with matching length)
+    const hasValidStepNames = Array.isArray(stepNames) && stepNames.length === editableSteps
 
     return (
-      <div className="flex items-center justify-center gap-1.5 mt-1">
+      <div className="flex items-center justify-center gap-2 mt-1">
         {Array.from({ length: editableSteps }).map((_, idx) => {
           const isVisited = visitedSet.has(idx)
-          return (
+          // Only show tooltip if we have valid step name
+          const stepName = hasValidStepNames && stepNames[idx] ? stepNames[idx] : null
+
+          // Wrap dot in a slightly larger hit area for better hover detection
+          const dotWithHitArea = (
             <span
-              key={`dot-${idx}`}
-              className={`
-                block h-2 w-2 rounded-full transition-all duration-300
-                ${isVisited
-                  ? 'bg-brand-secondary'
-                  : 'bg-gray-300'
-                }
-              `}
-            />
+              className="inline-flex items-center justify-center p-1 -m-1 cursor-help"
+              title={stepName || undefined}
+            >
+              <span
+                className={`
+                  block h-2 w-2 rounded-full transition-all duration-300
+                  ${isVisited
+                    ? 'bg-brand-secondary'
+                    : 'bg-gray-300'
+                  }
+                `}
+              />
+            </span>
           )
+
+          // Only wrap in Tooltip if we have a valid step name
+          if (stepName) {
+            return (
+              <Tooltip key={`dot-${idx}`} content={stepName} position="top">
+                {dotWithHitArea}
+              </Tooltip>
+            )
+          }
+
+          return <span key={`dot-${idx}`}>{dotWithHitArea}</span>
         })}
       </div>
     )

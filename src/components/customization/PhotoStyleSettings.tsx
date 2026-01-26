@@ -7,7 +7,9 @@ import {
   LockClosedIcon,
   SparklesIcon,
   CameraIcon,
-  UserIcon
+  UserIcon,
+  CheckIcon,
+  CursorArrowRaysIcon
 } from '@heroicons/react/24/outline'
 import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
 import { ScrollAwareHeader } from '@/components/generation/layout'
@@ -128,8 +130,6 @@ interface PhotoStyleSettingsProps {
   onStepMetaChange?: (meta: CustomizationStepsMeta) => void
   /** Optional header to show above the flow header on mobile (e.g., app header with hamburger menu) */
   topHeader?: React.ReactNode
-  /** Category key to highlight with pulsing border (desktop only) */
-  highlightedField?: string | null
   /** When provided, exposes navigation methods to parent via callback */
   onNavigationReady?: (methods: { goNext: () => void; goPrev: () => void; goToStep: (index: number) => void }) => void
   /** Hide inline navigation arrows (when parent provides external navigation in sticky footer) */
@@ -176,7 +176,6 @@ export default function PhotoStyleSettings({
   onSwipeBack,
   onStepMetaChange,
   topHeader,
-  highlightedField,
   onNavigationReady,
   hideInlineNavigation = false,
   onStepIndicatorChange
@@ -609,6 +608,28 @@ export default function PhotoStyleSettings({
     return isUserChoiceSetting(category, categorySettings) ? 'user-choice' : 'predefined'
   }
 
+  // Check if a category has a value set (for completion indicator)
+  const categoryHasValue = (category: CategoryType): boolean => {
+    const settings = (value as Record<string, unknown>)[category]
+    if (!settings) return false
+
+    // Special case: branding - "No Logo" is a valid default selection
+    if (category === 'branding') {
+      return true
+    }
+
+    // Special case: clothingColors - check if any colors are set
+    if (category === 'clothingColors') {
+      const colorSettings = settings as { value?: Record<string, unknown>; colors?: Record<string, unknown> }
+      const colors = colorSettings?.value || colorSettings?.colors
+      return !!(colors?.topLayer || colors?.baseLayer || colors?.bottom || colors?.shoes)
+    }
+
+    // Standard check: has a value property that is not undefined
+    const settingsWithValue = settings as { value?: unknown }
+    return settingsWithValue?.value !== undefined
+  }
+
 
   const renderCategoryCard = (category: CategoryConfig) => {
     const Icon = category.icon
@@ -618,7 +639,7 @@ export default function PhotoStyleSettings({
     // When showToggles is true (admin setting style), nothing is locked
     const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined
     const isLocked = isLockedByPreset
-    const isHighlighted = highlightedField === category.key
+    const hasValueSet = categoryHasValue(category.key)
     const chipLabel = isUserChoice
       ? t('legend.editableChip', { default: 'Editable' })
       : isLockedByPreset
@@ -636,7 +657,6 @@ export default function PhotoStyleSettings({
               ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
               : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
         } ${isLockedByPreset ? 'opacity-75' : ''}`}
-        style={isHighlighted ? { outline: '3px solid rgba(99, 102, 241, 0.5)', outlineOffset: '2px' } : undefined}
       >
         {/* Category Header */}
         <div
@@ -646,7 +666,7 @@ export default function PhotoStyleSettings({
               : 'p-3 md:p-4 border-b border-gray-200/80'
           }`}
         >
-          <div className="flex items-center justify-between gap-3 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Left side: Icon, title, and current value */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className={`p-2 rounded-lg flex-shrink-0 ${
@@ -671,19 +691,29 @@ export default function PhotoStyleSettings({
                   }`}>
                     {t(`categories.${category.key}.title`, { default: category.label })}
                   </h3>
-                  {/* Help tooltip */}
-                  <Tooltip 
-                    content={t(`tooltips.${category.key}`, { default: category.description })}
-                    position="top"
-                  >
-                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-all duration-200 cursor-help" />
-                  </Tooltip>
-                  {/* Status badge - only show for locked items to reduce visual noise */}
+                  {/* Status badge - for locked items */}
                   {!showToggles && isLockedByPreset && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 shadow-sm transition-all duration-200 bg-gradient-to-r from-red-50 to-orange-50 text-red-700 border border-red-200">
                       <LockClosedIcon className="h-3.5 w-3.5 text-red-600" aria-hidden="true" />
                       {t('legend.lockedChip', { default: 'Locked' })}
                     </span>
+                  )}
+                  {/* Completion indicator - for editable (user-choice) items */}
+                  {!showToggles && isUserChoice && (
+                    hasValueSet ? (
+                      // Completed: solid green checkmark badge
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 shadow-sm flex-shrink-0 transition-all duration-200">
+                        <CheckIcon className="h-4 w-4 text-white stroke-[2.5]" aria-hidden="true" />
+                      </span>
+                    ) : (
+                      // Needs selection: animated circle with icon (bounces up and down)
+                      // Wrapper with padding gives room for bounce animation without clipping
+                      <span className="inline-flex items-center justify-center py-1 -my-1 flex-shrink-0 overflow-visible">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border-2 border-amber-400 bg-amber-50 animate-bounce">
+                          <CursorArrowRaysIcon className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
+                        </span>
+                      </span>
+                    )
                   )}
                 </div>
                 {/* Show description */}

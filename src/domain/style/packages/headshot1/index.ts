@@ -1,4 +1,5 @@
-import { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
+import { PhotoStyleSettings, CategoryType, ExpressionType, PoseType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
+import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
 import { getDefaultPresetSettings } from '../standard-settings'
 import { getValueOrDefault } from '../shared/utils'
@@ -53,16 +54,18 @@ const AVAILABLE_CLOTHING_STYLES = [
 ]
 
 const HEADSHOT1_PRESET = CORPORATE_HEADSHOT
-const HEADSHOT1_PRESET_DEFAULTS = getDefaultPresetSettings(HEADSHOT1_PRESET)
 
-const DEFAULTS = {
-  ...HEADSHOT1_PRESET_DEFAULTS,
-  clothingColors: predefined({
-    topLayer: 'Dark red',
-    baseLayer: 'White',
-    shoes: 'brown',
-    bottom: 'Gray'
-  }),
+// HeadShot1 is "all settings customizable" - use userChoice() for visible categories
+const DEFAULTS: PhotoStyleSettings = {
+  presetId: HEADSHOT1_PRESET.id,
+  // Visible categories - all user-choice for full customization
+  background: userChoice<BackgroundValue>(), // User picks background
+  branding: userChoice<BrandingValue>(), // User picks branding
+  pose: userChoice<PoseValue>({ type: HEADSHOT1_PRESET.defaults.pose.type as PoseType }), // User can change pose
+  clothing: userChoice<ClothingValue>(), // User picks clothing style
+  clothingColors: userChoice<ClothingColorValue>(), // User picks colors
+  expression: userChoice<ExpressionValue>({ type: (HEADSHOT1_PRESET.defaults.expression || 'genuine_smile') as ExpressionType }), // User can change expression
+  // Non-visible settings - predefined
   shotType: predefined({ type: 'medium-shot' as const }),
   aspectRatio: '1:1' as const, // Square format for headshots
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts

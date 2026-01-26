@@ -28,6 +28,36 @@ const DEFAULT_INTRO_FLAGS: IntroSeenFlags = {
 
 const CUSTOMIZATION_META_KEY = 'customizationStepsMeta'
 const VISITED_STEPS_KEY = 'visitedCustomizationSteps'
+const COMPLETED_STEPS_KEY = 'completedCustomizationSteps'
+
+// Custom event name for notifying other hook instances about completed steps
+const COMPLETED_STEPS_CHANGED_EVENT = 'completedStepsChanged'
+
+function readCompletedSteps(): number[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = sessionStorage.getItem(COMPLETED_STEPS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.every(n => typeof n === 'number')) {
+      return parsed
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return []
+}
+
+function writeCompletedSteps(steps: number[]): void {
+  if (typeof window === 'undefined') return
+  if (steps.length > 0) {
+    sessionStorage.setItem(COMPLETED_STEPS_KEY, JSON.stringify(steps))
+  } else {
+    sessionStorage.removeItem(COMPLETED_STEPS_KEY)
+  }
+  // Dispatch custom event to notify other hook instances in the same page
+  window.dispatchEvent(new CustomEvent(COMPLETED_STEPS_CHANGED_EVENT))
+}
 
 function readVisitedSteps(): number[] {
   if (typeof window === 'undefined') return []
@@ -71,6 +101,13 @@ function readCustomizationMeta(): CustomizationStepsMeta | null {
       typeof parsed.allSteps === 'number' &&
       Array.isArray(parsed.lockedSteps)
     ) {
+      // Validate that stepNames is present and has the right length
+      // If it's missing or has wrong length, clear the cached data and return null
+      // This forces a fresh computation from PhotoStyleSettings
+      if (!Array.isArray(parsed.stepNames) || parsed.stepNames.length !== parsed.editableSteps) {
+        sessionStorage.removeItem(CUSTOMIZATION_META_KEY)
+        return null
+      }
       return parsed
     }
   } catch {
@@ -122,6 +159,11 @@ function getInitialVisitedSteps(): number[] {
   return readVisitedSteps()
 }
 
+function getInitialCompletedSteps(): number[] {
+  if (typeof window === 'undefined') return []
+  return readCompletedSteps()
+}
+
 function getInitialCustomizationMeta(): CustomizationStepsMeta | null {
   if (typeof window === 'undefined') return null
   return readCustomizationMeta()
@@ -134,6 +176,7 @@ export function useGenerationFlowState() {
   const [hydrated, setHydrated] = useState(false)
   const [customizationStepsMeta, setCustomizationStepsMetaState] = useState<CustomizationStepsMeta | null>(getInitialCustomizationMeta)
   const [visitedSteps, setVisitedStepsState] = useState<number[]>(getInitialVisitedSteps)
+  const [completedSteps, setCompletedStepsState] = useState<number[]>(getInitialCompletedSteps)
 
   const refreshFlags = useCallback(() => {
     if (typeof window === 'undefined') return DEFAULT_FLAGS
@@ -158,15 +201,23 @@ export function useGenerationFlowState() {
     setIntroFlags(refreshIntroFlags())
     setCustomizationStepsMetaState(readCustomizationMeta())
     setVisitedStepsState(readVisitedSteps())
+    setCompletedStepsState(readCompletedSteps())
     setHydrated(true)
 
     // Listen for custom events to sync state across hook instances in the same page
     const handleVisitedStepsChange = () => {
       setVisitedStepsState(readVisitedSteps())
     }
+    const handleCompletedStepsChange = () => {
+      setCompletedStepsState(readCompletedSteps())
+    }
 
     window.addEventListener(VISITED_STEPS_CHANGED_EVENT, handleVisitedStepsChange)
-    return () => window.removeEventListener(VISITED_STEPS_CHANGED_EVENT, handleVisitedStepsChange)
+    window.addEventListener(COMPLETED_STEPS_CHANGED_EVENT, handleCompletedStepsChange)
+    return () => {
+      window.removeEventListener(VISITED_STEPS_CHANGED_EVENT, handleVisitedStepsChange)
+      window.removeEventListener(COMPLETED_STEPS_CHANGED_EVENT, handleCompletedStepsChange)
+    }
   }, [refreshFlags, refreshIntroFlags])
 
   const markInFlow = useCallback(
@@ -240,6 +291,14 @@ export function useGenerationFlowState() {
     []
   )
 
+  const setCompletedSteps = useCallback(
+    (steps: number[]) => {
+      writeCompletedSteps(steps)
+      setCompletedStepsState(steps)
+    },
+    []
+  )
+
   const markSelfieTipsSeen = useCallback(() => {
     writeIntroFlag('seenSelfieTips', true)
     setIntroFlags(refreshIntroFlags())
@@ -265,7 +324,8 @@ export function useGenerationFlowState() {
       markSeenSelfieTips: markSelfieTipsSeen,
       markSeenCustomizationIntro: markCustomizationIntroSeen,
       setCustomizationStepsMeta,
-      setVisitedSteps
+      setVisitedSteps,
+      setCompletedSteps
     }),
     [
       markInFlow,
@@ -276,6 +336,7 @@ export function useGenerationFlowState() {
       refreshFlags,
       markSelfieTipsSeen,
       markCustomizationIntroSeen,
+      setCompletedSteps,
       setCustomizationStepsMeta,
       setVisitedSteps
     ]
@@ -297,9 +358,10 @@ export function useGenerationFlowState() {
       hasSeenSelfieTips,
       hasSeenCustomizationIntro,
       customizationStepsMeta: resolvedCustomizationMeta,
-      visitedSteps
+      visitedSteps,
+      completedSteps
     }),
-    [flags, introFlags, hydrated, inFlow, hasSeenSelfieTips, hasSeenCustomizationIntro, resolvedCustomizationMeta, visitedSteps]
+    [flags, introFlags, hydrated, inFlow, hasSeenSelfieTips, hasSeenCustomizationIntro, resolvedCustomizationMeta, visitedSteps, completedSteps]
   )
 
   // Combine state and actions - stable reference when neither changes

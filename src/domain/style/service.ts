@@ -126,3 +126,7 @@ export async function createOrUpdateStyle(params: {
 export async function setActiveStyle(params: { styleId: string }): Promise<void> {
   await fetch(`/api/styles/${encodeURIComponent(params.styleId)}/activate`, { method: 'POST' })
 }
+
+export async function clearActiveStyle(params: { styleId: string }): Promise<void> {
+  await fetch(`/api/styles/${encodeURIComponent(params.styleId)}/activate`, { method: 'DELETE' })
+}

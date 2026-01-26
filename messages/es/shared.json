@@ -720,7 +720,9 @@
         "noTeamCreditsMessage": "Tu equipo no tiene créditos disponibles para generaciones de equipo. Contacta al administrador del equipo para solicitar créditos o usa tus créditos personales.",
         "requestCredits": "Solicitar créditos",
         "usePersonalCredits": "Usar créditos personales",
-        "backToSelfies": "Volver a selfies"
+        "backToSelfies": "Volver a selfies",
+        "selfies": "Selfies",
+        "customize": "Personalizar"
       },
       "profile": {
         "pro": "PRO",
@@ -1512,7 +1514,9 @@
       },
       "continueToCustomize": "Continuar a personalizar",
       "continuing": "Continuando...",
-      "selectMoreSelfies": "Selecciona al menos {count} selfies para continuar"
+      "selectMoreSelfies": "Selecciona al menos {count} selfies para continuar",
+      "selfies": "Selfies",
+      "customize": "Personalizar"
     },
     "customize": {
       "title": "Personaliza tu foto",
@@ -1777,7 +1781,8 @@
       "legend": {
         "editableChip": "Editable",
         "lockedChip": "Preestablecido por admin del equipo",
-        "presetChip": "Preset activo"
+        "presetChip": "Preset activo",
+        "needsSelection": "Elige uno"
       },
       "lockedSections": {
         "teaser": {
@@ -2808,6 +2813,7 @@
         "navigation": {
           "selfies": "Selfies",
           "back": "Atrás",
+          "previous": "Anterior",
           "next": "Siguiente",
           "generate": "Generar"
         }

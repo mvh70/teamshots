@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
@@ -16,7 +16,7 @@ import { BRAND_CONFIG } from '@/config/brand'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { jsonFetcher } from '@/lib/fetcher'
-import { loadStyleByContextId } from '@/domain/style/service'
+import { loadStyleByContextId, setActiveStyle, clearActiveStyle } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import GenerateButton from '@/components/generation/GenerateButton'
@@ -27,7 +27,8 @@ import { calculatePhotosFromCredits } from '@/domain/pricing'
 import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
-import { FlowProgressDock, FlowNavigation } from '@/components/generation/navigation'
+import { FlowProgressDock } from '@/components/generation/navigation'
+import type { CustomizationStepsMeta } from '@/lib/customizationSteps'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import Header from '@/app/[locale]/(product)/app/components/Header'
@@ -80,7 +81,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setCustomizationStepsMeta,
     customizationStepsMeta,
     visitedSteps,
-    setVisitedSteps
+    setVisitedSteps,
+    setCompletedSteps
   } = useGenerationFlowState()
   const isMobile = useMobileViewport()
   const { context: onboardingContext } = useOnboardingState()
@@ -95,6 +97,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   
   const personalFallbackLabel = t('fallbackPersonalStyle', { default: 'Personal Style' })
   const teamFallbackLabel = t('fallbackTeamStyle', { default: 'Team Style' })
+
+  // LocalStorage key for persisting selected package when no context is active
+  const SELECTED_PACKAGE_KEY = 'teamshots_selected_package'
 
   // Style state from server data
   const [activeContext, setActiveContext] = useState<ContextOption | null>(initialData.styleData.activeContext)
@@ -134,6 +139,29 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     })
   }, [])
   
+  // Restore selected package from localStorage on mount (when no context is active)
+  useEffect(() => {
+    // Only restore if no active context from server
+    if (initialData.styleData.activeContext) return
+
+    try {
+      const savedPackageId = localStorage.getItem(SELECTED_PACKAGE_KEY)
+      if (savedPackageId && savedPackageId !== selectedPackageId) {
+        // Verify the package is valid and owned
+        const isOwnedPackage = initialData.ownedPackages?.some(p => p.packageId === savedPackageId)
+        if (isOwnedPackage) {
+          const pkg = getPackageConfig(savedPackageId)
+          setSelectedPackageId(savedPackageId)
+          setPhotoStyleSettings(pkg.defaultSettings)
+          setOriginalContextSettings(pkg.defaultSettings)
+        }
+      }
+    } catch {
+      // Ignore localStorage errors (e.g., in private browsing mode)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run only on mount
+
   // Plan info from server data
   const { isFreePlan, isProUser, isTeamAdmin, isTeamMember } = initialData.planInfo
   const subscriptionTier = initialData.planInfo.tier
@@ -411,7 +439,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // This prevents auto-proceed from using stale cached sessionStorage values
   const hasReceivedFreshMeta = React.useRef(false)
 
-  const handleStepMetaChange = useCallback((meta: { editableSteps: number; allSteps: number; lockedSteps: number[] }) => {
+  const handleStepMetaChange = useCallback((meta: CustomizationStepsMeta) => {
     hasReceivedFreshMeta.current = true
     setCustomizationStepsMeta(meta)
   }, [setCustomizationStepsMeta])
@@ -548,6 +576,26 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     )
   }, [photoStyleSettings, originalContextSettings, effectivePackageId])
 
+  // Compute value-based visited steps (a step is "done" if it has a value, not just visited)
+  // This aligns the dock progress dots with the card badges
+  const valueBasedVisitedSteps = React.useMemo(() => {
+    if (!customizationStepsMeta?.stepKeys) return []
+    const uneditedSet = new Set(uneditedFields)
+    const visited: number[] = []
+    customizationStepsMeta.stepKeys.forEach((key, index) => {
+      // Step is "done" if it's NOT in the unedited list
+      if (!uneditedSet.has(key)) {
+        visited.push(index)
+      }
+    })
+    return visited
+  }, [customizationStepsMeta?.stepKeys, uneditedFields])
+
+  // Persist completed steps to flow state so other pages can show progress
+  React.useEffect(() => {
+    setCompletedSteps(valueBasedVisitedSteps)
+  }, [valueBasedVisitedSteps, setCompletedSteps])
+
   const hasVisitedClothingColorsIfEditable = React.useMemo(() => {
     if (!isMobile) return true
 
@@ -561,41 +609,28 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
   }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
 
-  // Check if all editable steps have been visited (user has reviewed all options)
-  // This matches the invited user flow logic where visiting all steps = customization complete
-  const allEditableStepsVisited = React.useMemo(() => {
-    if (!customizationStepsMeta || customizationStepsMeta.editableSteps === 0) return true
+  // Customization is complete only when all fields have values set
+  // (not just visited - user must actually make selections)
+  const isCustomizationComplete = !hasUneditedFields
 
-    if (isMobile) {
-      // On mobile, use visitedMobileSteps (Set<string>)
-      return visitedMobileSteps.size >= customizationStepsMeta.editableSteps
-    } else {
-      // On desktop, use visitedSteps (number[])
-      return visitedSteps.length >= customizationStepsMeta.editableSteps
-    }
-  }, [customizationStepsMeta, isMobile, visitedMobileSteps, visitedSteps])
-
-  // Customization is complete if either:
-  // 1. All editable steps have been visited (user reviewed everything), OR
-  // 2. All values have been explicitly changed from original
-  const isCustomizationComplete = allEditableStepsVisited || !hasUneditedFields
-
-  // Compute visited step indices for progress dots based on visitedMobileSteps (source of truth)
-  // This ensures dots match the generate button state, not stale persisted data
-  const computedVisitedIndices = React.useMemo(() => {
+  // Compute visited step indices for mobile progress dots based on VALUE (not just visited)
+  // This ensures mobile dots match the card badges - a step is "done" if it has a value
+  const valueBasedVisitedIndicesMobile = React.useMemo(() => {
     const indices: number[] = [0] // Index 0 is selfie (always visited when on customization page)
 
     if (customizationStepsMeta?.stepKeys) {
-      // Convert visited step keys to indices (shifted by 1 for selfie at index 0)
+      const uneditedSet = new Set(uneditedFields)
+      // Convert value-based steps to indices (shifted by 1 for selfie at index 0)
       customizationStepsMeta.stepKeys.forEach((key, idx) => {
-        if (visitedMobileSteps.has(key)) {
+        // Step is "done" if it's NOT in the unedited list (has a value)
+        if (!uneditedSet.has(key)) {
           indices.push(idx + 1) // +1 because selfie is at index 0
         }
       })
     }
 
     return indices
-  }, [visitedMobileSteps, customizationStepsMeta?.stepKeys])
+  }, [customizationStepsMeta?.stepKeys, uneditedFields])
 
   const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && isCustomizationComplete && hasVisitedClothingColorsIfEditable
 
@@ -722,10 +757,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             isGenerating={isGenerating || isPending}
             customizationStepsMeta={customizationStepsMeta}
             visitedEditableSteps={
-              // When customization is complete (all steps visited OR all values changed), mark all steps as visited
-              isCustomizationComplete && customizationStepsMeta?.editableSteps && customizationStepsMeta.editableSteps > 0
-                ? Array.from({ length: customizationStepsMeta.editableSteps }, (_, i) => i)
-                : visitedSteps
+              // Use value-based visited steps: a step is "done" if it has a value, not just visited
+              // This aligns the dock progress dots with the card badges
+              valueBasedVisitedSteps
             }
           />
       
@@ -887,9 +921,15 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                     onChange={async (e) => {
                       const value = e.target.value
                       if (value === 'freestyle') {
+                        // Clear server-side active context if one exists
+                        if (activeContext?.id) {
+                          clearActiveStyle({ styleId: activeContext.id }).catch(() => {})
+                        }
                         setActiveContext(null)
                         const fallbackPackage = getPackageConfig(fallbackPackageId)
                         setSelectedPackageId(fallbackPackageId)
+                        // Persist package selection to localStorage
+                        try { localStorage.setItem(SELECTED_PACKAGE_KEY, fallbackPackageId) } catch {}
                         // Freestyle packages are always user-choice, so merge saved settings and colors
                         let newSettings = mergeSavedStyleSettings(fallbackPackage.defaultSettings)
                         newSettings = mergeSavedColors(newSettings)
@@ -899,8 +939,14 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                         hasUserMadeChangesRef.current = true
                       } else if (value.startsWith('package_')) {
                         const pkgId = value.replace('package_', '')
+                        // Clear server-side active context if one exists
+                        if (activeContext?.id) {
+                          clearActiveStyle({ styleId: activeContext.id }).catch(() => {})
+                        }
                         setActiveContext(null)
                         setSelectedPackageId(pkgId)
+                        // Persist package selection to localStorage
+                        try { localStorage.setItem(SELECTED_PACKAGE_KEY, pkgId) } catch {}
                         const pkg = getPackageConfig(pkgId)
                         // Packages are always user-choice, so merge saved settings and colors
                         let newSettings = mergeSavedStyleSettings(pkg.defaultSettings)
@@ -912,6 +958,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                       } else {
                         const selectedContext = availableContexts.find(ctx => ctx.id === value)
                         if (selectedContext) {
+                          // Clear package selection from localStorage (context takes precedence)
+                          try { localStorage.removeItem(SELECTED_PACKAGE_KEY) } catch {}
+                          // Persist the selected style so it's restored on page reload
+                          setActiveStyle({ styleId: selectedContext.id }).catch(() => {
+                            // Silently ignore errors - the style will work for this session
+                          })
                           const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
                           const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
                           const effectiveType = isProUser ? (generationType ?? 'personal') : 'personal'
@@ -1014,7 +1066,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               className="hidden md:block"
               noContainer
               onStepMetaChange={handleStepMetaChange}
-              highlightedField={uneditedFields.length > 0 ? uneditedFields[0] : undefined}
             />
           </div>
 
@@ -1034,68 +1085,91 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-3 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
             {/* Labeled navigation buttons row */}
             <div className="flex items-center justify-between pb-3">
-              {/* Back to Selfies */}
-              <button
-                type="button"
-                onClick={() => router.push('/app/generate/selfie')}
-                className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="text-sm font-medium">
-                  {tNav('selfies', { default: 'Selfies' })}
-                </span>
-              </button>
-
-              {/* Forward - Generate or Next */}
-              {canGenerate ? (
+              {/* Back button - Selfies on first step, Previous on other steps */}
+              {(stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1 ? (
                 <button
                   type="button"
-                  onClick={onProceed}
-                  disabled={isGenerating || isPending}
-                  className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition"
+                  onClick={() => router.push('/app/generate/selfie')}
+                  className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
                 >
-                  <span className="text-sm font-semibold">{tNav('generate', { default: 'Generate' })}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
+                  <span className="text-sm font-medium">
+                    {tNav('selfies', { default: 'Selfies' })}
+                  </span>
                 </button>
               ) : (
                 <button
                   type="button"
+                  onClick={() => navMethodsRef.current?.goPrev()}
+                  className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="text-sm font-medium">
+                    {tNav('previous', { default: 'Previous' })}
+                  </span>
+                </button>
+              )}
+
+              {/* Forward - Next (when not on last step), nothing on last step (use big Generate button) */}
+              {(stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1) ? (
+                <button
+                  type="button"
                   onClick={() => navMethodsRef.current?.goNext()}
-                  disabled={(stepIndicatorProps?.currentAllStepsIndex ?? 0) >= ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)}
-                  className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition ${
-                    (stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)
-                      ? 'bg-brand-primary text-white hover:brightness-110'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
+                  className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition bg-brand-primary text-white hover:brightness-110"
                 >
                   <span className="text-sm font-medium">{tNav('next', { default: 'Next' })}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
-              )}
+              ) : null}
             </div>
 
-            {/* Progress dots */}
-            <div className="pb-3">
-              <FlowNavigation
-                variant="dots-only"
-                size="md"
-                current={stepIndicatorProps?.currentAllStepsIndex ?? 0}
-                total={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
-                onPrev={() => router.push('/app/generate/selfie')}
-                onNext={() => navMethodsRef.current?.goNext()}
-                stepColors={stepIndicatorProps ? {
-                  lockedSteps: stepIndicatorProps.lockedSteps,
-                  // Use computedVisitedIndices based on visitedMobileSteps (source of truth)
-                  // This ensures dots match the generate button state
-                  visitedEditableSteps: computedVisitedIndices
-                } : undefined}
-              />
+            {/* Progress indicators - Selfies and Customization separated */}
+            <div className="pb-3 flex items-center justify-center gap-4">
+              {/* Selfies indicator */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{t('selfies', { default: 'Selfies' })}</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-brand-secondary" />
+              </div>
+
+              <div className="h-4 w-px bg-gray-200" />
+
+              {/* Customization dots */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{t('customize', { default: 'Customize' })}</span>
+                <div className="flex items-center gap-1">
+                  {customizationStepsMeta?.stepKeys?.map((key, idx) => {
+                    const hasValue = !uneditedFields.includes(key)
+                    const isLocked = customizationStepsMeta.lockedSteps?.includes(idx + 1) // +1 for selfie offset
+                    const isCurrent = stepIndicatorProps?.currentAllStepsIndex === idx + 1
+
+                    if (isLocked) {
+                      return (
+                        <LockClosedIcon
+                          key={`progress-lock-${key}`}
+                          className={`h-3 w-3 ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}
+                        />
+                      )
+                    }
+
+                    return (
+                      <span
+                        key={`progress-dot-${key}`}
+                        className={`
+                          rounded-full transition-all duration-300
+                          ${isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'}
+                          ${hasValue ? 'bg-brand-secondary' : 'bg-brand-primary'}
+                        `}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Generate button or credits hint */}
