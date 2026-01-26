@@ -44,13 +44,9 @@ export async function POST(request: NextRequest) {
       ? await prisma.user.findUnique({ where: { id: session.user.id } })
       : null;
 
-    // Create or retrieve Stripe customer
-    let stripeCustomerId = user?.stripeCustomerId || undefined;
-    if (!unauth && user && !stripeCustomerId) {
-      const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
-      await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } });
-      stripeCustomerId = customer.id;
-    }
+    // Note: We no longer pass customer ID to checkout session because Stripe ignores
+    // customer_email when customer is provided. The webhook will create/link the Stripe
+    // customer after successful payment using the userId from metadata.
 
     // Enforce business rules before creating session
     if (!unauth && user) {
@@ -99,7 +95,15 @@ export async function POST(request: NextRequest) {
     // (so success screens can show), but we'll add finalDestination param for post-success redirect
     let safeReturnUrl = `${baseUrl}/${locale}/app/dashboard`;
     try {
-      if (preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
+      // In development, trust the preferredReturnUrl if it's a valid URL on a local domain
+      // In production, verify it matches one of our allowed domains
+      const isDev = process.env.NODE_ENV !== 'production';
+      const preferredHost = preferredReturnUrl ? new URL(preferredReturnUrl).host : '';
+      const isLocalDev = isDev && (preferredHost.includes('localhost') || preferredHost.endsWith(':3000'));
+      const baseHost = new URL(baseUrl).host;
+      const hostsMatch = preferredHost === baseHost;
+
+      if (preferredReturnUrl && (isLocalDev || hostsMatch)) {
         // Strip hash to avoid losing search params when we add ours
         const urlWithoutHash = preferredReturnUrl.split('#')[0];
         // Ensure locale is present in the URL
@@ -309,9 +313,10 @@ export async function POST(request: NextRequest) {
 
     // Build checkout session parameters
     // Note: We apply discounts server-side via price_data, not via Stripe's discount system
+    // For email pre-fill: only pass customer_email (not customer) because Stripe ignores
+    // customer_email when customer is provided. We track the user via metadata.userId instead.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      customer: stripeCustomerId,
-      customer_email: unauth ? (email as string | undefined) : undefined,
+      customer_email: user?.email || (unauth ? (email as string | undefined) : undefined),
       payment_method_types: ['card'],
       mode: 'payment', // All purchases are now one-time payments
       success_url: successUrl,

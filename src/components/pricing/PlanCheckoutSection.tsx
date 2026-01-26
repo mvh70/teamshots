@@ -13,6 +13,8 @@ interface PlanCheckoutSectionProps {
   ctaText: string
   isPopular?: boolean
   className?: string
+  /** If true, allows guest checkout without authentication. Default true for public pricing pages. */
+  unauth?: boolean
 }
 
 export default function PlanCheckoutSection({
@@ -24,6 +26,7 @@ export default function PlanCheckoutSection({
   ctaText,
   isPopular = false,
   className = '',
+  unauth = true,
 }: PlanCheckoutSectionProps) {
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
   const [promoDiscount, setPromoDiscount] = useState<PromoCodeDiscount | null>(null)
@@ -93,7 +96,7 @@ export default function PlanCheckoutSection({
       <CheckoutButton
         type="plan"
         priceId={priceId}
-        unauth={true}
+        unauth={unauth}
         metadata={{
           planTier,
           planPeriod,

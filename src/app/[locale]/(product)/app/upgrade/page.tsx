@@ -6,10 +6,10 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
-import { CheckoutButton } from '@/components/ui'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
 import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
+import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
 import { normalizePlanTierForUI } from '@/domain/subscription/utils'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 import { fetchAccountMode, type AccountMode } from '@/domain/account/accountMode'
@@ -163,7 +163,7 @@ export default function UpgradePage() {
     }
   }, [isSuccess, successType])
 
-  // Checkout handled via CheckoutButton components below
+  // Checkout handled via PlanCheckoutSection components below
 
   // Determine which plans to show based on selected tier
   const plansToShow = useMemo(() => {
@@ -228,33 +228,37 @@ export default function UpgradePage() {
           plansToShow.length === 2 ? 'md:grid-cols-2' :
           'md:grid-cols-1'
         }`}>
-          {plansToShow.map((plan) => (
-            <PricingCard
-              key={plan.id}
-              {...plan}
-              ctaSlot={
-                <CheckoutButton
-                  loadingText={tAll('common.loading', { default: 'Loading...' })}
-                  type="plan"
-                  priceId={
-                    plan.id === 'individual'
-                      ? PRICING_CONFIG.individual.stripePriceId
-                      : PRICING_CONFIG.vip.stripePriceId
-                  }
-                  metadata={{
-                    planTier: plan.id === 'individual' ? 'individual' : 'vip',
-                    planPeriod: 'small'
-                  }}
-                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
-                  useBrandCtaColors
-                >
-                  {t('plans.' + plan.id + '.cta', { totalPhotos: plan.totalPhotos })}
-                </CheckoutButton>
-              }
-              popularLabelKey={(plan.id === 'individual') ? "pricing.mostPopular" : undefined}
-              className="h-full"
-            />
-          ))}
+          {plansToShow.map((plan) => {
+            const priceId = plan.id === 'individual'
+              ? PRICING_CONFIG.individual.stripePriceId
+              : PRICING_CONFIG.vip.stripePriceId
+            const originalAmount = plan.id === 'individual'
+              ? PRICING_CONFIG.individual.price
+              : PRICING_CONFIG.vip.price
+            const planTier = plan.id === 'individual' ? 'individual' : 'vip'
+            const planPeriod = 'small'
+
+            return (
+              <PricingCard
+                key={plan.id}
+                {...plan}
+                ctaSlot={
+                  <PlanCheckoutSection
+                    planId={plan.id}
+                    priceId={priceId}
+                    originalAmount={originalAmount}
+                    planTier={planTier}
+                    planPeriod={planPeriod}
+                    ctaText={t('plans.' + plan.id + '.cta', { totalPhotos: plan.totalPhotos })}
+                    isPopular={'popular' in plan && plan.popular}
+                    unauth={false}
+                  />
+                }
+                popularLabelKey={(plan.id === 'individual') ? "pricing.mostPopular" : undefined}
+                className="h-full"
+              />
+            )
+          })}
         </div>
       )}
 

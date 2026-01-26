@@ -111,41 +111,27 @@ export default function TeamGenerationsPage() {
         setCountsLoading(false)
       }
     }
-    
+
     void fetchCounts()
   }, []) // Fetch once on mount
-  
-  // Guard: redirect users without pro tier/team access away from team page
-  // Pro subscribers can access team features even without a teamId
-  const [redirecting, setRedirecting] = useState(false)
-  const [shouldRedirect, setShouldRedirect] = useState(false)
-  
+
+  // Fetch subscription tier for display purposes (regeneration count, etc.)
   useEffect(() => {
-    const checkAccess = async () => {
+    const fetchTier = async () => {
       if (!session?.user?.id) return
-      
-      // Fetch account mode to determine if user has pro access
       try {
         const response = await fetch('/api/account/mode')
         if (response.ok) {
           const accountMode = await response.json()
-          // Store subscription tier for regeneration count
           setSubscriptionTier(accountMode.subscriptionTier)
           setSubscriptionPeriod(accountMode.subscriptionPeriod)
-          // Only redirect if user is NOT pro (individual mode only)
-          if (accountMode.mode === 'individual' && !redirecting) {
-            setShouldRedirect(true)
-            setRedirecting(true)
-            window.location.href = '/app/generations/personal'
-          }
         }
       } catch (err) {
-        console.error('Failed to check account mode:', err)
+        console.error('Failed to fetch account mode:', err)
       }
     }
-    
-    checkAccess()
-  }, [session?.user?.id, redirecting])
+    void fetchTier()
+  }, [session?.user?.id])
   
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
@@ -270,11 +256,6 @@ export default function TeamGenerationsPage() {
       window.clearTimeout(timer)
     }
   }, [failureToast])
-
-  // If redirecting, show nothing to prevent flash of content
-  if (redirecting || shouldRedirect) {
-    return null
-  }
 
   // Build photo style options dynamically from existing generations
   const styleOptions = useMemo(() => Array.from(new Set(

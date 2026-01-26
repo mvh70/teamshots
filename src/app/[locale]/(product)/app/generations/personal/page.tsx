@@ -17,7 +17,6 @@ import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
-import { useDomain } from '@/contexts/DomainContext'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
@@ -25,7 +24,6 @@ export default function PersonalGenerationsPage() {
   const toastMessages = useTranslations('generations.toasts')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
-  const { isIndividualDomain } = useDomain()
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
@@ -39,77 +37,20 @@ export default function PersonalGenerationsPage() {
   const imageLoadedRef = useRef(false)
   const { href: buyCreditsHref } = useBuyCreditsLink()
   
-  // Team functionality lives on the team page. Pro accounts and invited team members should not access personal generations.
-  // Exception: On individual-only domains (photoshotspro.com), never redirect to team - team features don't exist.
+  // Fetch subscription tier for display purposes (regeneration count, etc.)
   useEffect(() => {
-    // On individual domains, never redirect to team generations
-    if (isIndividualDomain) {
-      // Just fetch subscription tier for regeneration count
-      const fetchTier = async () => {
-        if (!session?.user?.id) return
-        try {
-          const accountMode = await fetchAccountMode()
-          setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
-          setSubscriptionPeriod(accountMode.subscriptionPeriod as PlanPeriod | null)
-        } catch (error) {
-          console.warn('Failed to fetch account mode', error)
-        }
-      }
-      void fetchTier()
-      return
-    }
-
-    let cancelled = false
-
-    const enforcePersonalAccess = async () => {
-      const userId = session?.user?.id
-      const userRole = session?.user?.role
-      const userTeamId = session?.user?.person?.teamId
-
-      if (!userId) {
-        return
-      }
-
+    const fetchTier = async () => {
+      if (!session?.user?.id) return
       try {
         const accountMode = await fetchAccountMode()
-        if (cancelled) return
-
-        // Store subscription tier for regeneration count
         setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
         setSubscriptionPeriod(accountMode.subscriptionPeriod as PlanPeriod | null)
-
-        if (accountMode.mode === 'pro') {
-          window.location.href = '/app/generations/team'
-          return
-        }
       } catch (error) {
-        console.warn('Failed to resolve account mode for personal generations', error)
-        try {
-          const response = await fetch('/api/dashboard/stats')
-          if (!cancelled && response.ok) {
-            const data = await response.json()
-            if (data.userRole?.isTeamAdmin || data.userRole?.isTeamMember) {
-              window.location.href = '/app/generations/team'
-              return
-            }
-          }
-        } catch (fallbackError) {
-          console.warn('Failed to validate team role for personal generations', fallbackError)
-        }
-      }
-
-      // Invited members should stay on the team experience even if the account mode lookup reports individual.
-      if (!cancelled && userRole === 'team_member' && userTeamId) {
-        window.location.href = '/app/generations/team'
+        console.warn('Failed to fetch account mode', error)
       }
     }
-
-    void enforcePersonalAccess()
-
-    return () => {
-      cancelled = true
-    }
-  }, [session?.user?.id, session?.user?.role, session?.user?.person?.teamId, isIndividualDomain])
+    void fetchTier()
+  }, [session?.user?.id])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {
