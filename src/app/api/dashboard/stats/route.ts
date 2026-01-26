@@ -36,15 +36,15 @@ export async function GET() {
       pendingInvites: 0
     }
 
-    // Get user's generations count
+    // Get user's generations count (excluding failed/deleted)
     const generationsCount = await prisma.generation.count({
       where: {
         OR: [
           // Personal generations
-          { 
-            person: { 
-              userId: session.user.id 
-            } 
+          {
+            person: {
+              userId: session.user.id
+            }
           },
           // Team generations (if user is part of a team)
           ...(teamId ? [{
@@ -52,7 +52,9 @@ export async function GET() {
               teamId: teamId
             }
           }] : [])
-        ]
+        ],
+        status: { notIn: ['failed', 'deleted'] },
+        deleted: false,
       }
     })
 
