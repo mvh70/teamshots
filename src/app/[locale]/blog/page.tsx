@@ -10,8 +10,14 @@ import { getBlogPostsForVariant } from '@/lib/cms';
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blog' });
+  const headersList = await headers();
+  const host = headersList.get('host') || headersList.get('x-forwarded-host');
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  // Fallback to teamshotspro if host missing (unlikely in prod) but good for safety
+  const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com';
 
   return constructMetadata({
+    baseUrl,
     path: '/blog',
     locale,
     title: t('title'),

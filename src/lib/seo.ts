@@ -1,9 +1,8 @@
 import { Metadata } from 'next'
 import { routing } from '@/i18n/routing'
 
-export const BASE_URL = 'https://teamshotspro.com'
-
 type ConstructMetadataParams = {
+    baseUrl: string    // The base URL of the current domain (e.g. "https://teamshotspro.com")
     path?: string      // e.g. "/pricing" or "/blog/my-post"
     title: string
     description?: string
@@ -17,6 +16,7 @@ type ConstructMetadataParams = {
  * Enforces HTTPS and non-www domain (teamshotspro.com).
  */
 export function constructMetadata({
+    baseUrl,
     path = '',
     title,
     description,
@@ -27,13 +27,13 @@ export function constructMetadata({
     // Ensure path starts with slash if not empty
     const cleanPath = path.startsWith('/') ? path : `/${path}`
 
-    // Construct canonical URL (always HTTPS, always teamshotspro.com, always English path structure for default)
+    // Construct canonical URL (always HTTPS, uses passed baseUrl, always English path structure for default)
     // detailed logic:
-    // - en: https://teamshotspro.com/path
-    // - es: https://teamshotspro.com/es/path
+    // - en: https://domain.com/path
+    // - es: https://domain.com/es/path
     const canonicalUrl = locale === 'en'
-        ? `${BASE_URL}${cleanPath}`
-        : `${BASE_URL}/${locale}${cleanPath}`
+        ? `${baseUrl}${cleanPath}`
+        : `${baseUrl}/${locale}${cleanPath}`
 
     return {
         title,
@@ -47,8 +47,8 @@ export function constructMetadata({
         alternates: {
             canonical: canonicalUrl,
             languages: {
-                'en': `${BASE_URL}${cleanPath}`,
-                'es': `${BASE_URL}/es${cleanPath}`,
+                'en': `${baseUrl}${cleanPath}`,
+                'es': `${baseUrl}/es${cleanPath}`,
             },
         },
         robots: {
@@ -62,6 +62,7 @@ export function constructMetadata({
  * Helper for dynamic blog posts where slugs might differ by language
  */
 export function constructBlogMetadata({
+    baseUrl,
     enSlug,
     esSlug,
     locale,
@@ -69,6 +70,7 @@ export function constructBlogMetadata({
     description,
     image,
 }: {
+    baseUrl: string
     enSlug: string
     esSlug?: string // Optional, falls back to enSlug if not provided
     locale: string
@@ -80,8 +82,8 @@ export function constructBlogMetadata({
     const path = `/blog/${currentSlug}`
 
     const currentUrl = locale === 'en'
-        ? `${BASE_URL}/blog/${enSlug}`
-        : `${BASE_URL}/${locale}/blog/${currentSlug}`
+        ? `${baseUrl}/blog/${enSlug}`
+        : `${baseUrl}/${locale}/blog/${currentSlug}`
 
     return {
         title,
@@ -95,8 +97,8 @@ export function constructBlogMetadata({
         alternates: {
             canonical: currentUrl,
             languages: {
-                'en': `${BASE_URL}/blog/${enSlug}`,
-                'es': `${BASE_URL}/es/blog/${esSlug || enSlug}`,
+                'en': `${baseUrl}/blog/${enSlug}`,
+                'es': `${baseUrl}/es/blog/${esSlug || enSlug}`,
             },
         },
     }

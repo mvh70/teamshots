@@ -70,7 +70,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = locale === 'es' && post.spanishTitle ? post.spanishTitle : post.title
   const description = locale === 'es' && post.spanishDescription ? post.spanishDescription : post.metaDescription
 
+  const protocol = headersList.get('x-forwarded-proto') || 'https'
+  const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com'
+
   const baseMetadata = constructMetadata({
+    baseUrl,
     path: `/blog/${slug}`,
     locale,
     title,

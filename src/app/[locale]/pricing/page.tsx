@@ -20,8 +20,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'metadata' });
   const headersList = await headers();
   const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
 
   return constructMetadata({
+    baseUrl,
     path: '/pricing',
     locale,
     title: `Pricing | ${brand.name}`,
