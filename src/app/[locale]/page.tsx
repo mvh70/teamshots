@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { constructMetadata } from '@/lib/seo';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import dynamic from 'next/dynamic';
@@ -23,32 +24,16 @@ export interface LandingProps {
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
-  const headersList = await headers();
-  const brand = getBrand(headersList);
-  const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
-  const baseUrl = `${protocol}://${host}`;
 
-  return {
+  return constructMetadata({
+    path: '/',
+    locale,
     title: t('title'),
     description: t('description'),
-    alternates: {
-      canonical: locale === 'en' ? baseUrl : `${baseUrl}/${locale}`,
-      languages: {
-        'en': baseUrl,
-        'es': `${baseUrl}/es`,
-      },
-    },
-    openGraph: {
-      title: t('title'),
-      description: t('description'),
-      url: locale === 'en' ? baseUrl : `${baseUrl}/${locale}`,
-    },
-  };
+  });
 }
 
 const LANDING_COMPONENTS: Record<LandingVariant, React.ComponentType<LandingProps>> = {
@@ -66,8 +51,8 @@ export default async function Page() {
   const host = headersList.get('host') || headersList.get('x-forwarded-host');
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
   const variant = getLandingVariant(domain);
-  
+
   const LandingComponent = LANDING_COMPONENTS[variant] || TeamShotsLanding;
-  
+
   return <LandingComponent supportEmail={brand.contact.support} variant={variant} />;
 }

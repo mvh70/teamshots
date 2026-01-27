@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
     let inviteTeamId: string | null = null
     let inviteContextId: string | null = null
     let handoffPersonId: string | null = null
-    
+
     if (!session?.user?.id && token) {
       const inviteData = await validateInviteToken(token)
       if (!inviteData) {
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
       inviteTeamId = inviteData.teamId
       inviteContextId = inviteData.contextId
     }
-    
+
     // Validate handoff token for mobile selfie upload flow
     if (!session?.user?.id && !token && handoffToken) {
       const handoffResult = await validateMobileHandoffToken(handoffToken)
@@ -228,7 +228,7 @@ export async function GET(req: NextRequest) {
     // Also allow selfie access via handoff token
     let allowAccessWithoutOwnership = false
     const effectivePersonId = invitePersonId || handoffPersonId
-    
+
     // Special case: Allow access to files from freepackage context for all logged-in users
     // Freepackage is a shared context that all free plan users should be able to access
     let isFreepackageContext = false
@@ -240,7 +240,7 @@ export async function GET(req: NextRequest) {
         isFreepackageContext = true
       }
     }
-    
+
     if (!ownership) {
       if (effectivePersonId && (key.startsWith(`backgrounds/${effectivePersonId}/`) || key.startsWith(`logos/${effectivePersonId}/`) || key.startsWith(`outfits/${effectivePersonId}/`))) {
         allowAccessWithoutOwnership = true
@@ -280,10 +280,59 @@ export async function GET(req: NextRequest) {
     }
     const buffer = Buffer.concat(chunks)
 
+    // Determine file extension from content type or key
+    const getExtensionFromContentType = (contentType: string): string => {
+      const mimeToExt: Record<string, string> = {
+        'image/png': '.png',
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'image/webp': '.webp',
+        'image/gif': '.gif',
+        'image/svg+xml': '.svg',
+        'video/mp4': '.mp4',
+        'video/quicktime': '.mov',
+        'application/pdf': '.pdf',
+      }
+      return mimeToExt[contentType.toLowerCase()] || ''
+    }
+
+    // Generate a friendly filename for downloads
+    const generateFilename = (): string => {
+      const contentType = response.ContentType || 'application/octet-stream'
+      const ext = getExtensionFromContentType(contentType) ||
+        key.substring(key.lastIndexOf('.')) || '.png'
+
+      // Determine file type from key path for better naming
+      let prefix = 'file'
+      if (key.startsWith('generations/')) {
+        prefix = 'headshot'
+      } else if (key.startsWith('selfies/')) {
+        prefix = 'selfie'
+      } else if (key.startsWith('backgrounds/')) {
+        prefix = 'background'
+      } else if (key.startsWith('logos/')) {
+        prefix = 'logo'
+      } else if (key.startsWith('outfits/')) {
+        prefix = 'outfit'
+      }
+
+      // Extract a short identifier from the key (last part before extension)
+      const keyParts = key.split('/')
+      const filename = keyParts[keyParts.length - 1]
+      const shortId = filename.replace(/\.[^.]+$/, '').slice(-8)
+
+      // Format: type-shortid.ext (e.g., headshot-abc12345.png)
+      return `${prefix}-${shortId}${ext}`
+    }
+
+    const downloadFilename = generateFilename()
+
     const headers: Record<string, string> = {
       'Content-Type': response.ContentType || 'application/octet-stream',
       'Cache-Control': 'public, max-age=31536000, immutable',
       'CDN-Cache-Control': 'public, max-age=31536000, immutable',
+      // Content-Disposition: inline allows browser to display, filename provides save suggestion
+      'Content-Disposition': `inline; filename="${downloadFilename}"`,
     }
 
     if (typeof response.ContentLength === 'number') {

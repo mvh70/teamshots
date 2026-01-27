@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { constructMetadata } from '@/lib/seo'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getBrand } from '@/config/brand'
@@ -69,26 +70,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = locale === 'es' && post.spanishTitle ? post.spanishTitle : post.title
   const description = locale === 'es' && post.spanishDescription ? post.spanishDescription : post.metaDescription
 
-  return {
+  const baseMetadata = constructMetadata({
+    path: `/blog/${slug}`,
+    locale,
     title,
     description,
+  })
+
+  return {
+    ...baseMetadata,
     openGraph: {
-      title,
-      description,
+      ...baseMetadata.openGraph,
       type: 'article',
       publishedTime: post.publishedAt || undefined,
       authors: ['Matthieu van Haperen'],
     },
     alternates: {
-      canonical: locale === 'es' ? `/es/blog/${slug}` : `/blog/${slug}`,
+      ...baseMetadata.alternates,
       languages: spanishAvailable
-        ? {
-            en: `/blog/${slug}`,
-            es: `/es/blog/${slug}`,
-          }
-        : {
-            en: `/blog/${slug}`,
-          },
+        ? baseMetadata.alternates!.languages
+        : { 'en': baseMetadata.alternates!.languages!['en'] },
     },
   }
 }
@@ -214,10 +215,10 @@ export default async function BlogPostPage({ params }: Props) {
     faqTitle: locale === 'es' ? 'Preguntas Frecuentes' : 'Frequently Asked Questions',
     heroImage: post.heroImagePath
       ? {
-          alt: title,
-          caption: { en: '', es: '' },
-          src: `/api/cms/images${post.heroImagePath}`,
-        }
+        alt: title,
+        caption: { en: '', es: '' },
+        src: `/api/cms/images${post.heroImagePath}`,
+      }
       : undefined,
     datePublished: post.publishedAt || new Date().toISOString(),
     author: {

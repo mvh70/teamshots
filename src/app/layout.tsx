@@ -30,13 +30,6 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: '/favicon.ico',
     },
     referrer: 'strict-origin-when-cross-origin',
-    alternates: {
-      canonical: baseUrl,
-      languages: {
-        'en': baseUrl,
-        'es': `${baseUrl}/es`,
-      },
-    },
     openGraph: {
       type: 'website',
       siteName: brandConfig.name,
@@ -79,15 +72,8 @@ export default function RootLayout({
         <meta httpEquiv="Permissions-Policy" content="camera=(self)" />
         {/* Force protocol detection for Safari */}
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-        {/* Performance optimizations */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="overflow-x-hidden bg-gray-50">
-        <Script
-          src="/safari-compatibility.js"
-          strategy="beforeInteractive"
-        />
         {/* Server-side session fetch to avoid client auth race */}
         <SessionWrapper>
           <PostHogProvider>{children}</PostHogProvider>

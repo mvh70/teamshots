@@ -1,17 +1,22 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { constructMetadata } from '@/lib/seo';
 import { getLandingVariant } from '@/config/landing-content';
 import { BLOG_POSTS } from '@/config/blog';
 import { BlogContent } from '@/components/blog';
 import { getBlogPostsForVariant } from '@/lib/cms';
 
-export async function generateMetadata() {
-  const t = await getTranslations('blog');
-  return {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'blog' });
+
+  return constructMetadata({
+    path: '/blog',
+    locale,
     title: t('title'),
     description: t('description'),
-  };
+  });
 }
 
 /**
