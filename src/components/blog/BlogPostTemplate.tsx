@@ -6,6 +6,7 @@ import { getBaseUrl } from '@/lib/url';
 import {
   ArticleJsonLd,
   FaqJsonLd,
+  BreadcrumbJsonLd,
   AuthorBox,
   TldrSection,
   Breadcrumb,
@@ -204,6 +205,14 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
       )}
 
       {/* Breadcrumb */}
+      <BreadcrumbJsonLd
+        baseUrl={baseUrl}
+        items={[
+          { label: locale === 'es' ? 'Inicio' : 'Home', href: '/' },
+          { label: 'Blog', href: '/blog' },
+          { label: breadcrumb },
+        ]}
+      />
       <Breadcrumb
         items={[
           { label: locale === 'es' ? 'Inicio' : 'Home', href: '/' },

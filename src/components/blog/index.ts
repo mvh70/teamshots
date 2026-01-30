@@ -1,4 +1,4 @@
-export { ArticleJsonLd, FaqJsonLd } from './JsonLd';
+export { ArticleJsonLd, FaqJsonLd, BreadcrumbJsonLd } from './JsonLd';
 export { AuthorBox } from './AuthorBox';
 export { TldrSection } from './TldrSection';
 export { Breadcrumb } from './Breadcrumb';

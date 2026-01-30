@@ -67,6 +67,32 @@ export function ArticleJsonLd({
   );
 }
 
+interface BreadcrumbJsonLdProps {
+  items: Array<{ label: string; href?: string }>;
+  baseUrl: string;
+}
+
+export function BreadcrumbJsonLd({ items, baseUrl }: BreadcrumbJsonLdProps) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.label,
+      ...(item.href && { item: `${baseUrl}${item.href}` }),
+    })),
+  };
+
+  return (
+    <Script
+      id="breadcrumb-schema"
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 export function FaqJsonLd({ items }: FaqJsonLdProps) {
   const jsonLd = {
     '@context': 'https://schema.org',
