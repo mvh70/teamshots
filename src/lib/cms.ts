@@ -64,6 +64,7 @@ export function getPublishedBlogPosts(brandId: string): CMSBlogPost[] {
       WHERE cs.brandId = ?
         AND cs.contentType = 'blog'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
       ORDER BY cs.publishedAt DESC
     `
 
@@ -103,6 +104,7 @@ export function getPublishedSolutions(brandId: string): CMSBlogPost[] {
       WHERE cs.brandId = ?
         AND cs.contentType = 'vertical'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
       ORDER BY cs.publishedAt DESC
     `
 
@@ -151,6 +153,7 @@ export function getAllPublishedSlugs(brandId: string): {
       WHERE cs.brandId = ?
         AND cs.contentType = 'blog'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
     `
 
     const solutionQuery = `
@@ -163,6 +166,7 @@ export function getAllPublishedSlugs(brandId: string): {
       WHERE cs.brandId = ?
         AND cs.contentType = 'vertical'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
     `
 
     const blogRows = db.prepare(blogQuery).all(brandId) as Array<{
@@ -303,6 +307,7 @@ export function getBlogPostBySlug(brandId: string, slug: string, locale: string)
         AND cs.canonicalSlug = ?
         AND cs.contentType = 'blog'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
     `
 
     const post = db.prepare(query).get(brandId, slug) as CMSBlogPostFull | undefined
@@ -360,6 +365,7 @@ export function getAllBlogSlugs(brandId: string): string[] {
       WHERE cs.brandId = ?
         AND cs.contentType = 'blog'
         AND cv.status = 'published'
+        AND cs.status != 'archived'
     `
 
     const rows = db.prepare(query).all(brandId) as Array<{ slug: string }>
