@@ -13,6 +13,8 @@ export interface V3Step1aEvalInput {
   imageBase64: string
   selfieReferences: ReferenceImage[]
   selfieComposite?: BaseReferenceImage
+  faceComposite?: BaseReferenceImage // Split face composite
+  bodyComposite?: BaseReferenceImage // Split body composite
   expectedWidth: number
   expectedHeight: number
   aspectRatioConfig: { id: string; width: number; height: number }
@@ -49,6 +51,8 @@ export async function executeV3Step1aEval(
     imageBase64,
     selfieReferences,
     selfieComposite,
+    faceComposite,
+    bodyComposite,
     expectedWidth,
     expectedHeight,
     generationPrompt,
@@ -251,7 +255,7 @@ export async function executeV3Step1aEval(
   )
 
   const evalPromptText = baseInstructions.join('\n')
-  
+
   // Log the evaluation prompt (improvement #11)
   logPrompt('V3 Step 1a Eval', evalPromptText, input.generationId)
 
@@ -280,6 +284,37 @@ Generation prompt used:\n${generationPrompt}`
       base64: selfieComposite.base64,
       description: selfieComposite.description ?? 'Composite reference containing labeled selfies and brand placement guidance.'
     })
+  } else {
+    // If no combined composite, try splits
+    if (faceComposite) {
+      evalImages.push({
+        mimeType: faceComposite.mimeType,
+        base64: faceComposite.base64,
+        description: faceComposite.description ?? 'FACE REFERENCE'
+      })
+    }
+    if (bodyComposite) {
+      evalImages.push({
+        mimeType: bodyComposite.mimeType,
+        base64: bodyComposite.base64,
+        description: bodyComposite.description ?? 'BODY REFERENCE'
+      })
+    }
+  }
+
+  // FALLBACK: If NO composites at all, we MUST supply individual selfies
+  // to prevent "Cannot determine without reference selfies" error
+  const hasAnyComposite = !!selfieComposite || !!faceComposite || !!bodyComposite
+  if (!hasAnyComposite && selfieReferences.length > 0) {
+    // Labels are only shown on composite images, not individual selfies
+    for (let i = 0; i < selfieReferences.length; i += 1) {
+      const selfie = selfieReferences[i]
+      evalImages.push({
+        mimeType: selfie.mimeType,
+        base64: selfie.base64,
+        description: `Reference selfie ${i + 1}`
+      })
+    }
   }
 
   if (garmentCollageReference) {

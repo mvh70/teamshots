@@ -2379,11 +2379,11 @@ export default function TeamPage() {
             </Link>
           ) : credits.team === 0 ? (
             <Link
-              href="/app/top-up"
+              href="/app/upgrade"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-indigo-600"
             >
               <PlusIcon className="h-5 w-5" />
-              {t('buttons.buyCredits')}
+              {t('photos.buyMoreSeats')}
             </Link>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
@@ -3243,7 +3243,7 @@ export default function TeamPage() {
               </Link>
             ) : credits.team === 0 ? (
               <Link
-                href="/app/top-up"
+                href="/app/upgrade"
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
                 style={{
                   background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
@@ -3256,7 +3256,7 @@ export default function TeamPage() {
                 }}
               >
                 <PlusIcon className="h-4.5 w-4.5" />
-                {t('buttons.buyCredits')}
+                {t('photos.buyMoreSeats')}
               </Link>
             ) : (
               <button

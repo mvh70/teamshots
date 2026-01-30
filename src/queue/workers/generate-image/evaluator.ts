@@ -28,6 +28,16 @@ export interface ImageEvaluationInput {
     mimeType: string
     description?: string
   }
+  faceComposite?: {
+    base64: string
+    mimeType: string
+    description?: string
+  }
+  bodyComposite?: {
+    base64: string
+    mimeType: string
+    description?: string
+  }
   logoReference?: {
     base64: string
     mimeType: string
@@ -93,6 +103,8 @@ export async function evaluateGeneratedImage({
   labelInstruction,
   selfieReferences,
   compositeReference,
+  faceComposite,
+  bodyComposite,
   logoReference,
   isClothingLogo = false,
   backgroundReference
@@ -240,7 +252,7 @@ export async function evaluateGeneratedImage({
         ? ''
         : '   - Partial obscuring by the person or foreground elements adds depth and should be answered YES.'
     )
-    
+
     // Only add clothing overflow check when logo is specifically for clothing
     if (isClothingLogo) {
       baseInstructions.push(
@@ -321,6 +333,29 @@ export async function evaluateGeneratedImage({
     parts.push({
       inlineData: { mimeType: compositeReference.mimeType, data: compositeReference.base64 }
     })
+  } else {
+    // If no combined composite, check for split composites
+    if (faceComposite) {
+      parts.push({
+        text:
+          faceComposite.description ??
+          'FACE COMPOSITE REFERENCE: Use this specific composite for identity verification. The subject\'s face should look like this.'
+      })
+      parts.push({
+        inlineData: { mimeType: faceComposite.mimeType, data: faceComposite.base64 }
+      })
+    }
+
+    if (bodyComposite) {
+      parts.push({
+        text:
+          bodyComposite.description ??
+          'BODY COMPOSITE REFERENCE: Use this for body structure and clothing fit verification.'
+      })
+      parts.push({
+        inlineData: { mimeType: bodyComposite.mimeType, data: bodyComposite.base64 }
+      })
+    }
   }
 
   if (backgroundReference) {
@@ -343,7 +378,9 @@ export async function evaluateGeneratedImage({
 
   // Optimization: If a composite is provided, the AI can use that for identity verification.
   // We only send individual selfies if no composite is available (e.g. V2 workflow).
-  if (!compositeReference && selfieReferences.length > 0) {
+  // CHECK: If we have EITHER combined composite OR split composites, we skip individual selfies
+  const hasReferenceComposites = !!compositeReference || !!faceComposite || !!bodyComposite
+  if (!hasReferenceComposites && selfieReferences.length > 0) {
     parts.push({
       text: 'Reference selfies provided for comparison:'
     })
@@ -415,9 +452,8 @@ export async function evaluateGeneratedImage({
       ? `Dimension mismatch (expected ${expectedWidth}x${expectedHeight}px, actual ${actualWidth ?? 'unknown'}x${actualHeight ?? 'unknown'}px)`
       : ''
     const aspectIssue = aspectMismatch
-      ? `Aspect ratio mismatch (expected ≈${expectedRatio.toFixed(4)}, actual ${
-          actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
-        })`
+      ? `Aspect ratio mismatch (expected ≈${expectedRatio.toFixed(4)}, actual ${actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
+      })`
       : ''
     structuredEvaluation.explanations.dimensions_and_aspect_correct =
       [dimIssue, aspectIssue].filter(Boolean).join('; ')

@@ -184,7 +184,6 @@ export async function createTeamVerificationRequest(
         data: {
           name: extractDomainFromUrl(teamWebsite),
           website: teamWebsite,
-          domain: verification.websiteDomain,
           adminId: adminUserId,
         }
       })
@@ -195,7 +194,6 @@ export async function createTeamVerificationRequest(
         data: {
           name: extractDomainFromUrl(teamWebsite),
           website: teamWebsite,
-          domain: verification.websiteDomain,
           adminId: adminUserId,
         }
       })
@@ -233,13 +231,6 @@ export async function verifyTeamEmail(
     if (!isValidOTP) {
       return false
     }
-
-    await prisma.team.update({
-      where: { id: teamId },
-      data: {
-        domain: extractDomainFromEmail(teamEmail),
-      }
-    })
 
     return true
   } catch (error) {

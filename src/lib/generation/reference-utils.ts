@@ -199,7 +199,7 @@ export async function buildSplitSelfieComposites({
 }): Promise<{
   faceComposite: ReferenceImage | null
   bodyComposite: ReferenceImage | null
-  combinedComposite: ReferenceImage // Fallback for when no types available
+  combinedComposite: ReferenceImage | null // Only built when no split composites exist
 }> {
   // Categorize selfie keys by type
   const faceTypes = ['front_view', 'side_view']
@@ -258,32 +258,35 @@ export async function buildSplitSelfieComposites({
   }
 
   // Build combined composite only when NO split composites exist (fallback for unclassified selfies)
-  let combinedComposite: ReferenceImage
-
   const hasAnySplitComposite = faceComposite !== null || bodyComposite !== null
 
   if (hasAnySplitComposite) {
-    Logger.debug('Split selfie composites: Split composite exists, skipping combined composite build', {
+    Logger.debug('Split selfie composites: Split composites exist, no combined composite needed', {
       generationId,
       hasFaceComposite: faceComposite !== null,
       hasBodyComposite: bodyComposite !== null
     })
-    // Use face or body as placeholder (won't actually be used since split composites exist)
-    combinedComposite = faceComposite || bodyComposite!
-  } else {
-    Logger.debug('Split selfie composites: No split composites, building combined composite', {
-      generationId,
-      totalSelfies: selfieKeys.length
-    })
-    combinedComposite = await buildSelfieComposite({
-      keys: selfieKeys,
-      getSelfieBuffer,
-      generationId,
-      title: 'SUBJECT',
-      labelPrefix: 'SELFIE',
-      description: 'REFERENCE: Composite image containing vertically stacked subject selfies.'
-    })
+    // Return null for combined - split composites are sufficient
+    return {
+      faceComposite,
+      bodyComposite,
+      combinedComposite: null
+    }
   }
+
+  // No split composites - build combined composite as fallback
+  Logger.debug('Split selfie composites: No split composites, building combined composite', {
+    generationId,
+    totalSelfies: selfieKeys.length
+  })
+  const combinedComposite = await buildSelfieComposite({
+    keys: selfieKeys,
+    getSelfieBuffer,
+    generationId,
+    title: 'SUBJECT',
+    labelPrefix: 'SELFIE',
+    description: 'SELFIE COMPOSITE: Reference images of the subject for building their likeness.'
+  })
 
   return {
     faceComposite,
@@ -345,9 +348,9 @@ export async function buildBackgroundComposite({
 }): Promise<ReferenceImage> {
   const margin = 20
   const spacing = 10
-  
+
   const additionalAssets: Array<{ label: string; buffer: Buffer }> = []
-  
+
   // Add custom background
   if (customBackgroundReference) {
     const bgBuffer = Buffer.from(customBackgroundReference.base64, 'base64')
@@ -356,7 +359,7 @@ export async function buildBackgroundComposite({
       buffer: bgBuffer
     })
   }
-  
+
   // Add logo
   if (logoReference) {
     const logoBuffer = Buffer.from(logoReference.base64, 'base64')
@@ -365,21 +368,21 @@ export async function buildBackgroundComposite({
       buffer: logoBuffer
     })
   }
-  
+
   // Reuse the asset stacking logic
   // Since we don't have selfies here, we only stack assets
   const elements: Array<Record<string, unknown>> = []
   let currentY = margin
   let maxContentWidth = 0
-  
+
   // Create title
   const titleOverlay = await createTextOverlayDynamic('Background References', 32, '#000000', 12)
   const titleMetadata = await sharp(titleOverlay).metadata()
   const titleHeight = titleMetadata.height ?? 0
   const titleWidth = titleMetadata.width ?? 0
-  
+
   maxContentWidth = Math.max(maxContentWidth, titleWidth)
-  
+
   // Process assets
   const assetEntries = []
   for (const asset of additionalAssets) {
@@ -403,7 +406,7 @@ export async function buildBackgroundComposite({
       labelHeight
     })
   }
-  
+
   // Add title to composite
   elements.push({
     input: titleOverlay,
@@ -411,7 +414,7 @@ export async function buildBackgroundComposite({
     top: currentY
   })
   currentY += titleHeight + spacing
-  
+
   // Add assets to composite
   for (const entry of assetEntries) {
     const imageLeft = margin + Math.floor((maxContentWidth - entry.imageWidth) / 2)
@@ -424,7 +427,7 @@ export async function buildBackgroundComposite({
 
     currentY += entry.imageHeight + entry.labelHeight + spacing + 5
   }
-  
+
   const canvasWidth = margin * 2 + maxContentWidth
   const canvasHeight = currentY + margin
 
@@ -441,7 +444,7 @@ export async function buildBackgroundComposite({
     .toBuffer()
 
   const compositeBase64 = compositeBuffer.toString('base64')
-  
+
   // Save debug file
   try {
     const filename = `bg-composite-${generationId}.png`
@@ -475,11 +478,11 @@ export async function buildCollectiveReferenceImages(
   for (let index = 0; index < selfieKeys.length; index += 1) {
     const key = selfieKeys[index]
     const selfieBuffer = await getSelfieBuffer(key)
-    
+
     // Apply EXIF orientation to ensure correct display
     const selfieSharp = sharp(selfieBuffer)
     const selfieMetadata = await selfieSharp.metadata()
-    
+
     // Rotate based on EXIF orientation if present
     // Orientation values: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
     let orientedBuffer = selfieBuffer
@@ -492,7 +495,7 @@ export async function buildCollectiveReferenceImages(
       } else if (selfieMetadata.orientation === 8) {
         rotationAngle = 90
       }
-      
+
       if (rotationAngle !== 0) {
         orientedBuffer = await selfieSharp
           .rotate(rotationAngle)
@@ -500,7 +503,7 @@ export async function buildCollectiveReferenceImages(
           .toBuffer()
       }
     }
-    
+
     const pngSelfie = await sharp(orientedBuffer).png().toBuffer()
     references.push({
       mimeType: 'image/png',
@@ -539,7 +542,8 @@ export async function buildDefaultReferencePayload({
   shotDescription,
   aspectRatioDescription,
   aspectRatioSize,
-  workflowVersion // Maintained for backward compatibility, but v3 is now required
+  workflowVersion, // Maintained for backward compatibility, but v3 is now required
+  skipSelfieComposite = false // NEW: Option to skip default composite if split composites are used
 }: {
   styleSettings: PhotoStyleSettings
   selfieKeys: string[]
@@ -550,6 +554,7 @@ export async function buildDefaultReferencePayload({
   aspectRatioDescription: string
   aspectRatioSize: { width: number; height: number }
   workflowVersion?: 'v3'
+  skipSelfieComposite?: boolean
 }): Promise<{ referenceImages: ReferenceImage[]; labelInstruction?: string }> {
   // V3 workflow is required
   if (workflowVersion && workflowVersion !== 'v3') {
@@ -568,16 +573,19 @@ export async function buildDefaultReferencePayload({
   // V3: Asset downloads (logos, backgrounds) are handled by element preparation (step 0)
   // This only builds selfie composite
 
-  const composite = await buildSelfieComposite({
-    keys: selfieKeys,
-    getSelfieBuffer,
-    generationId,
-    title: 'SUBJECT',
-    labelPrefix: 'SELFIE',
-    description: 'REFERENCE: Composite image containing vertically stacked subject selfies.'
-  })
-
-  referenceImages.push(composite)
+  if (!skipSelfieComposite) {
+    const composite = await buildSelfieComposite({
+      keys: selfieKeys,
+      getSelfieBuffer,
+      generationId,
+      title: 'SUBJECT',
+      labelPrefix: 'SELFIE',
+      description: 'REFERENCE: Composite image containing vertically stacked subject selfies.'
+    })
+    referenceImages.push(composite)
+  } else {
+    Logger.info('Skipping default selfie composite generation (split composites used check)', { generationId })
+  }
 
   // V3: Custom backgrounds are handled by BackgroundElement.prepare() in step 0
 

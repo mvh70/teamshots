@@ -57,6 +57,9 @@ import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
 const IndustrySelector = dynamic(() => import('@/domain/style/elements/industry/IndustrySelector'), {
   loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
 })
+const PresetSelector = dynamic(() => import('@/domain/style/elements/preset/PresetSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
 import { getPackageConfig } from '@/domain/style/packages'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 
@@ -279,7 +282,7 @@ export default function PhotoStyleSettings({
         }
         return userHex
       }
-      
+
       // Try default color
       const defaultHex = normalizeColor(defaultColor)
       if (defaultHex) {
@@ -293,7 +296,7 @@ export default function PhotoStyleSettings({
         }
         return defaultHex
       }
-      
+
       return fallbackColors[key]
     }
 
@@ -446,7 +449,8 @@ export default function PhotoStyleSettings({
       'expression',
       'industry',
       'lighting',
-      'pose'
+      'pose',
+      'preset'
     ] as const
 
     // Skip categories that don't have element configs (like aspectRatio)
@@ -467,13 +471,13 @@ export default function PhotoStyleSettings({
     if (!(newSettings as Record<string, unknown>)[category]) {
       const packageDefaultValue = (packageDefaults as Record<string, unknown>)[category]
       const defaultValue = (DEFAULT_PHOTO_STYLE_SETTINGS as Record<string, unknown>)[category]
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(newSettings as any)[category] =
-        packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ; (newSettings as any)[category] =
+          packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
     }
 
     // Get the current setting to preserve its value when toggling
-    const currentSetting = (newSettings as Record<string, unknown>)[category] as 
+    const currentSetting = (newSettings as Record<string, unknown>)[category] as
       { mode?: string; value?: unknown; type?: string } | undefined
 
     // Get the new value from the element config as a fallback for default values
@@ -485,7 +489,7 @@ export default function PhotoStyleSettings({
     // Preserve existing value when toggling modes
     // This ensures user settings aren't lost when switching between predefined and user-choice
     let newValue = defaultValue
-    
+
     // All categories now use the ElementSetting pattern (mode + value)
     // Keep the existing value, just change the mode
     if (currentSetting && 'mode' in currentSetting && currentSetting.value !== undefined) {
@@ -502,7 +506,7 @@ export default function PhotoStyleSettings({
 
     // Update the setting
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(newSettings as any)[category] = newValue
+    ; (newSettings as any)[category] = newValue
 
     // Special post-processing for certain categories
     if (category === 'shotType') {
@@ -519,11 +523,11 @@ export default function PhotoStyleSettings({
     if (!showToggles && readonlyPredefined && isCategoryPredefined(category)) {
       return
     }
-    
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newSettings: any = { ...value }
     newSettings[category] = settings
-    
+
     if (category === 'shotType') {
       syncAspectRatioWithShotType(newSettings, settings as ShotTypeSettings)
     }
@@ -650,45 +654,40 @@ export default function PhotoStyleSettings({
       <div
         key={category.key}
         id={`${category.key}-settings`}
-        className={`w-full max-w-full overflow-hidden transition-all duration-300 ease-out ${
-          isPredefined
-            ? 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-            : isUserChoice
-              ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
-              : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-        } ${isLockedByPreset ? 'opacity-75' : ''}`}
+        className={`w-full max-w-full overflow-hidden transition-all duration-300 ease-out ${isPredefined
+          ? 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
+          : isUserChoice
+            ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
+            : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
+          } ${isLockedByPreset ? 'opacity-75' : ''}`}
       >
         {/* Category Header */}
         <div
-          className={`${
-            isPredefined
-              ? 'p-3 md:p-4 border-b border-gray-200/80'
-              : 'p-3 md:p-4 border-b border-gray-200/80'
-          }`}
+          className={`${isPredefined
+            ? 'p-3 md:p-4 border-b border-gray-200/80'
+            : 'p-3 md:p-4 border-b border-gray-200/80'
+            }`}
         >
           <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Left side: Icon, title, and current value */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className={`p-2 rounded-lg flex-shrink-0 ${
-                isUserChoice 
-                  ? 'bg-brand-primary/10' 
-                  : isLockedByPreset 
-                    ? 'bg-red-50' 
-                    : 'bg-gray-50'
-              }`}>
-                <Icon className={`h-5 w-5 md:h-5 md:w-5 flex-shrink-0 ${
-                  isUserChoice 
-                    ? 'text-brand-primary' 
-                    : isLockedByPreset 
-                      ? 'text-red-600' 
-                      : 'text-gray-600'
-                }`} />
+              <div className={`p-2 rounded-lg flex-shrink-0 ${isUserChoice
+                ? 'bg-brand-primary/10'
+                : isLockedByPreset
+                  ? 'bg-red-50'
+                  : 'bg-gray-50'
+                }`}>
+                <Icon className={`h-5 w-5 md:h-5 md:w-5 flex-shrink-0 ${isUserChoice
+                  ? 'text-brand-primary'
+                  : isLockedByPreset
+                    ? 'text-red-600'
+                    : 'text-gray-600'
+                  }`} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className={`text-base md:text-lg font-bold ${
-                    isUserChoice ? 'text-gray-900' : 'text-gray-900'
-                  }`}>
+                  <h3 className={`text-base md:text-lg font-bold ${isUserChoice ? 'text-gray-900' : 'text-gray-900'
+                    }`}>
                     {t(`categories.${category.key}.title`, { default: category.label })}
                   </h3>
                   {/* Status badge - for locked items */}
@@ -736,12 +735,10 @@ export default function PhotoStyleSettings({
                     }}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 flex-shrink-0"
                   >
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 flex-shrink-0 shadow-inner ${
-                      isPredefined ? 'bg-brand-primary shadow-brand-primary/30' : 'bg-gray-300'
-                    }`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-all duration-300 ${
-                        isPredefined ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 flex-shrink-0 shadow-inner ${isPredefined ? 'bg-brand-primary shadow-brand-primary/30' : 'bg-gray-300'
+                      }`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-all duration-300 ${isPredefined ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
                     </div>
                     <span className={`hidden md:inline ${isPredefined ? 'text-brand-primary' : 'text-gray-600'}`}>
                       {isPredefined
@@ -750,7 +747,7 @@ export default function PhotoStyleSettings({
                       }
                     </span>
                   </button>
-                  <Tooltip 
+                  <Tooltip
                     content={t('tooltips.predefinedToggle', { default: 'Predefined locks this for all team members. User Choice lets each person customize.' })}
                     position="top"
                   >
@@ -770,11 +767,10 @@ export default function PhotoStyleSettings({
             </div>
           }
         >
-          <div className={`${
-            isPredefined
-              ? 'p-3 md:p-5'
-              : 'p-3 md:p-5'
-          }`}>
+          <div className={`${isPredefined
+            ? 'p-3 md:p-5'
+            : 'p-3 md:p-5'
+            }`}>
             {category.key === 'background' && (
               <BackgroundSelector
                 value={value.background || userChoice()}
@@ -852,6 +848,16 @@ export default function PhotoStyleSettings({
               />
             )}
 
+            {category.key === 'preset' && (
+              <PresetSelector
+                value={value.preset || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('preset', settings)}
+                availablePresets={pkg.presets}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              />
+            )}
+
             {category.key === 'pose' && (
               <PoseSelector
                 value={value.pose || { mode: 'user-choice', value: undefined }}
@@ -896,11 +902,11 @@ export default function PhotoStyleSettings({
   // Determine initial editable state based on originalContextSettings or initial value
   // This preserves the ordering even when users make changes
   // Use the centralized hook for wizard logic
-  const { 
-    mobileSteps, 
-    currentEditableCategories, 
-    currentLockedCategories, 
-    customizationStepMeta 
+  const {
+    mobileSteps,
+    currentEditableCategories,
+    currentLockedCategories,
+    customizationStepMeta
   } = useCustomizationWizard({
     value,
     originalContextSettings: originalContextSettings || initialValueRef.current, // Fallback to initial value if no context
@@ -910,22 +916,22 @@ export default function PhotoStyleSettings({
     mobileExtraSteps,
     allCategories
   })
-  
+
   const lockedSectionsVisible = true
 
   const totalMobileSteps = mobileSteps.length
   const currentMobileStep = mobileSteps[activeMobileStep]
-  
+
   // All steps that count toward dots (exclude intro-type steps)
   const allNumberedSteps = React.useMemo(() => {
     return mobileSteps.filter(step => step.type !== 'intro' && step.type !== 'selfie-tips')
   }, [mobileSteps])
-  
+
   // Only editable steps count toward "Step X of Y"
   const editableNumberedSteps = React.useMemo(() => {
     return allNumberedSteps.filter(step => step.type === 'editable')
   }, [allNumberedSteps])
-  
+
   const totalEditableSteps = editableNumberedSteps.length
 
   // customizationStepMeta is now provided by the hook, but we need to pass it to the effect
@@ -938,7 +944,7 @@ export default function PhotoStyleSettings({
     if (!currentMobileStep || currentMobileStep.type === 'intro' || currentMobileStep.type === 'selfie-tips') {
       return -1 // Not a numbered step
     }
-    
+
     return allNumberedSteps.findIndex(step => {
       if (step.type === 'custom' && currentMobileStep.type === 'custom') {
         return step.custom?.id === currentMobileStep.custom?.id
@@ -972,7 +978,7 @@ export default function PhotoStyleSettings({
   // When on a locked step, show the last editable step number we completed
   const currentNumberedStepIndex = React.useMemo(() => {
     if (currentAllStepsIndex < 0) return 0
-    
+
     // If we're on a locked step, find the last editable step before this position
     // This shows the progress through editable steps even when viewing locked steps
     if (currentMobileStep?.type === 'locked') {
@@ -1000,7 +1006,7 @@ export default function PhotoStyleSettings({
       // If no editable step found before, show 0 (means we haven't completed any editable steps yet)
       return lastEditableIndex >= 0 ? lastEditableIndex + 1 : 0
     }
-    
+
     // For editable steps, find position in editable steps list
     const editableIndex = editableNumberedSteps.findIndex(step => {
       if (step.type === 'custom' && currentMobileStep?.type === 'custom') {
@@ -1013,10 +1019,10 @@ export default function PhotoStyleSettings({
     })
     return editableIndex >= 0 ? editableIndex + 1 : 0
   }, [currentMobileStep, editableNumberedSteps, allNumberedSteps, currentAllStepsIndex])
-  
+
   // Show step indicator on all numbered steps (editable and locked)
-  const isNumberedStep = currentMobileStep && 
-    currentMobileStep.type !== 'intro' && 
+  const isNumberedStep = currentMobileStep &&
+    currentMobileStep.type !== 'intro' &&
     currentMobileStep.type !== 'selfie-tips' &&
     allNumberedSteps.some(step => {
       if (step.type === 'custom' && currentMobileStep.type === 'custom') {
@@ -1027,7 +1033,7 @@ export default function PhotoStyleSettings({
       }
       return false
     })
-  
+
   // Removed unused completedMobileSteps - can be re-added if progress tracking is needed
 
   React.useEffect(() => {
@@ -1041,7 +1047,7 @@ export default function PhotoStyleSettings({
       return prev
     })
   }, [mobileSteps.length])
-  
+
   // Track previous step identity to prevent infinite update loops
   // (currentMobileStep contains JSX which creates new objects on every render)
   const prevStepIdentity = React.useRef<{ type: string | null, id: string | null, index: number }>({ type: null, id: null, index: -1 })
@@ -1050,7 +1056,7 @@ export default function PhotoStyleSettings({
       const currentType = currentMobileStep?.type ?? null
       const currentId = currentMobileStep?.custom?.id ?? currentMobileStep?.category?.key ?? null
       const prev = prevStepIdentity.current
-      
+
       // Only call callback if the step identity actually changed
       if (prev.type !== currentType || prev.id !== currentId || prev.index !== activeMobileStep) {
         prevStepIdentity.current = { type: currentType, id: currentId, index: activeMobileStep }
@@ -1082,9 +1088,9 @@ export default function PhotoStyleSettings({
   const mapStepIndicatorIndexToMobileStep = React.useCallback((indicatorIndex: number): number | null => {
     if (indicatorIndex === 0) {
       // Index 0 is selfie - find it in mobileSteps (could be in mobileExtraSteps)
-      const selfieIndex = mobileSteps.findIndex(step => 
+      const selfieIndex = mobileSteps.findIndex(step =>
         step.type === 'custom' && (
-          step.custom?.id === 'selfie-selection' || 
+          step.custom?.id === 'selfie-selection' ||
           step.custom?.id === 'selfie'
         )
       )
@@ -1174,10 +1180,10 @@ export default function PhotoStyleSettings({
                         : currentMobileStep.type === 'selfie-tips'
                           ? t('mobile.banner.selfieTipsHeading', { default: 'Selfie tips' })
                           : currentMobileStep.type === 'intro'
-                          ? t('mobile.banner.introHeading', { default: 'Meet your photo style controls' })
-                          : currentMobileStep.type === 'custom' && currentMobileStep.custom
-                            ? currentMobileStep.custom.title
-                            : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
+                            ? t('mobile.banner.introHeading', { default: 'Meet your photo style controls' })
+                            : currentMobileStep.type === 'custom' && currentMobileStep.custom
+                              ? currentMobileStep.custom.title
+                              : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
                       : t('sections.customizable', { default: 'Customize Your Style' }),
                     // Hide step indicator in header when external navigation is used (hideInlineNavigation)
                     // The progress indicator is shown in the sticky footer instead
@@ -1207,8 +1213,8 @@ export default function PhotoStyleSettings({
                       const hasNoBorder = step.type === 'custom' && step.custom?.noBorder
                       const isActiveStep = idx === activeMobileStep
                       return (
-                        <div 
-                          key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`} 
+                        <div
+                          key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`}
                           className={`w-full flex-shrink-0 pb-4 px-4 max-w-full transition-opacity duration-300 ${isActiveStep ? 'opacity-100' : 'opacity-0'}`}
                         >
                           <div className={`${hasNoBorder ? '' : 'rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm'} w-full max-w-full overflow-hidden`}>
@@ -1256,9 +1262,9 @@ export default function PhotoStyleSettings({
                               stepColors={
                                 stepIndicatorProps
                                   ? {
-                                      lockedSteps: stepIndicatorProps.lockedSteps,
-                                      visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
-                                    }
+                                    lockedSteps: stepIndicatorProps.lockedSteps,
+                                    visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
+                                  }
                                   : undefined
                               }
                             />
@@ -1312,7 +1318,7 @@ export default function PhotoStyleSettings({
                 </CardGrid>
               </div>
             )}
-            
+
             {currentLockedCategories.length > 0 && (
               <>
                 {currentEditableCategories.length > 0 && (
@@ -1323,7 +1329,7 @@ export default function PhotoStyleSettings({
                     t={t}
                   />
                 )}
-                
+
                 {lockedSectionsVisible && (
                   <div className="space-y-6">
                     {/* Team Presets Header - prominent section divider */}
@@ -1344,7 +1350,7 @@ export default function PhotoStyleSettings({
                     </div>
                     <CardGrid gap="lg">
                       {currentLockedCategories.map((cat, idx) => (
-                        <div 
+                        <div
                           key={cat.key}
                           className="animate-fade-in"
                           style={{ animationDelay: `${idx * 100}ms` }}

@@ -1929,6 +1929,10 @@
         "industry": {
           "title": "Industry",
           "description": "Select your industry for tailored professional styling"
+        },
+        "preset": {
+          "title": "Preset",
+          "description": "Choose a professional shot preset"
         }
       },
       "background": {
@@ -2214,6 +2218,82 @@
           "thumbs_up": {
             "label": "Thumbs Up",
             "description": "Enthusiastic and approachable pose with thumbs up gesture"
+          }
+        }
+      },
+      "preset": {
+        "title": "Preset",
+        "subtitle": "Choose a professional shot preset",
+        "predefined": "Predefined",
+        "selectPlaceholder": "Choose a preset",
+        "categoryLabel": "Category",
+        "styleLabel": "Style",
+        "categories": {
+          "linkedin": {
+            "label": "LinkedIn"
+          },
+          "dating": {
+            "label": "Dating"
+          },
+          "cv": {
+            "label": "CV / Applications"
+          },
+          "personal_brand": {
+            "label": "Personal Brand"
+          },
+          "speaker": {
+            "label": "Speaker / Author"
+          },
+          "executive": {
+            "label": "Executive"
+          },
+          "team": {
+            "label": "Team Page"
+          },
+          "social": {
+            "label": "Social Media"
+          }
+        },
+        "presets": {
+          "LINKEDIN_NEUTRAL_STUDIO": {
+            "label": "Neutral Studio",
+            "description": "Clean studio headshot optimized for LinkedIn profiles. Trustworthy and professional."
+          },
+          "LINKEDIN_MODERN_OFFICE": {
+            "label": "Modern Office",
+            "description": "Contemporary office setting for LinkedIn. Approachable yet professional."
+          },
+          "DATING_LIFESTYLE_CAFE": {
+            "label": "Lifestyle Café",
+            "description": "Warm, approachable café setting perfect for dating profiles. Friendly and authentic."
+          },
+          "DATING_OUTDOOR_GOLDEN_HOUR": {
+            "label": "Outdoor Golden Hour",
+            "description": "Natural outdoor lighting at golden hour. Warm, inviting, and authentic."
+          },
+          "CV_MINIMALIST_WHITE": {
+            "label": "Minimalist White",
+            "description": "Clean minimalist background for CVs and formal applications. Professional and neutral."
+          },
+          "PERSONAL_BRAND_URBAN_CREATIVE": {
+            "label": "Urban Creative",
+            "description": "Urban creative setting for personal branding. Modern and dynamic."
+          },
+          "SPEAKER_CONFERENCE_STAGE": {
+            "label": "Conference Stage",
+            "description": "Dramatic stage lighting for speakers, authors, and thought leaders. Authoritative and commanding."
+          },
+          "EXECUTIVE_DARK_STUDIO": {
+            "label": "Dark Studio",
+            "description": "Authoritative C-suite portrait with dramatic lighting. Conveys power and leadership."
+          },
+          "TEAM_PAGE_CORPORATE": {
+            "label": "Corporate",
+            "description": "Consistent, bright team photo for company websites. Standardized look for all team members."
+          },
+          "SOCIAL_MEDIA_LIFESTYLE": {
+            "label": "Lifestyle",
+            "description": "Warm, approachable photo for Instagram and social media. Authentic and engaging."
           }
         }
       }

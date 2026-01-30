@@ -48,5 +48,70 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  return originalGET(request)
+  const response = await originalGET(request)
+
+  // Inject impersonation metadata into session responses
+  // useSession() calls /api/auth/session which goes through the standard
+  // JWT→session callback chain. The custom auth() in src/auth.ts handles
+  // impersonation for server components, but the client-side session
+  // endpoint doesn't know about the impersonation cookie.
+  const isSessionEndpoint = request.nextUrl.pathname.endsWith('/session')
+  if (isSessionEndpoint) {
+    try {
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      const impersonateUserId = cookieStore.get('impersonate_user_id')?.value
+
+      if (impersonateUserId && response.ok) {
+        const sessionData = await response.json()
+
+        if (sessionData?.user) {
+          // Verify the actual admin session has isAdmin flag
+          // The session data here is the admin's real session (JWT-based)
+          if (sessionData.user.isAdmin) {
+            const { prisma } = await import('@/lib/prisma')
+            const impersonatedUser = await prisma.user.findUnique({
+              where: { id: impersonateUserId },
+              select: { id: true, email: true, role: true, isAdmin: true, locale: true }
+            })
+
+            if (impersonatedUser && !impersonatedUser.isAdmin) {
+              const person = await prisma.person.findUnique({
+                where: { userId: impersonatedUser.id },
+                include: {
+                  team: { select: { id: true, name: true, adminId: true } }
+                }
+              })
+
+              // Override session with impersonated user data
+              const originalUserId = sessionData.user.id
+              sessionData.user = {
+                ...sessionData.user,
+                id: impersonatedUser.id,
+                email: impersonatedUser.email,
+                name: person?.firstName || impersonatedUser.email,
+                role: impersonatedUser.role,
+                locale: impersonatedUser.locale,
+                impersonating: true,
+                originalUserId,
+                person: person ? {
+                  id: person.id,
+                  firstName: person.firstName,
+                  lastName: person.lastName,
+                  teamId: person.teamId,
+                  team: person.team
+                } : undefined
+              }
+            }
+          }
+
+          return NextResponse.json(sessionData)
+        }
+      }
+    } catch {
+      // If injection fails, return the original response
+    }
+  }
+
+  return response
 }

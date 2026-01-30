@@ -31,7 +31,7 @@ import {
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
-  selfieComposite: ReferenceImage
+  selfieComposite?: ReferenceImage
   faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
   bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
@@ -63,7 +63,7 @@ export interface V3Step1aOutput {
   clothingLogoReference?: BaseReferenceImage // Logo used in generation (for Step 2 evaluation)
   backgroundLogoReference?: BaseReferenceImage // Logo for background/elements (for Step 3 composition)
   backgroundBuffer?: Buffer
-  selfieComposite: BaseReferenceImage
+  selfieComposite?: BaseReferenceImage
   faceComposite?: BaseReferenceImage // Split face composite for Step 2 refinement
   bodyComposite?: BaseReferenceImage // Split body composite for Step 2 refinement
   reused?: boolean // Whether this asset was reused from cache
@@ -81,7 +81,7 @@ async function prepareAllReferences({
   preparedAssets
 }: {
   selfieReferences: ReferenceImage[]
-  selfieComposite: ReferenceImage
+  selfieComposite?: ReferenceImage
   styleSettings: PhotoStyleSettings
   downloadAsset: DownloadAssetFn
   generationId?: string
@@ -90,16 +90,18 @@ async function prepareAllReferences({
   referenceImages: BaseReferenceImage[]
   logoReference?: BaseReferenceImage
   logoReferenceForEval?: BaseReferenceImage
-  selfieComposite: BaseReferenceImage
+  selfieComposite?: BaseReferenceImage
 }> {
   // 1. Log info about provided selfie composite
-  Logger.debug('V3 Step 1a: Using provided selfie composite reference', {
-    generationId,
-    selfieCount: selfieReferences.length,
-    selfieLabels: selfieReferences.map(ref => ref.label || 'NO_LABEL'),
-    compositeMimeType: selfieComposite.mimeType,
-    compositeBase64Length: selfieComposite.base64.length
-  })
+  if (selfieComposite) {
+    Logger.debug('V3 Step 1a: Using provided selfie composite reference', {
+      generationId,
+      selfieCount: selfieReferences.length,
+      selfieLabels: selfieReferences.map(ref => ref.label || 'NO_LABEL'),
+      compositeMimeType: selfieComposite.mimeType,
+      compositeBase64Length: selfieComposite.base64.length
+    })
+  }
 
   // 2. Check if clothing overlay is being used (from ClothingOverlayElement)
   // If overlay exists, skip logo loading FOR GENERATION (overlay already has logo)
@@ -158,7 +160,10 @@ async function prepareAllReferences({
   // 5. Assemble reference array - selfies and optional logo
   // Format frame removed from Step 1a to avoid AI reproducing borders
   // Step 2 will handle final framing
-  const referenceImages: BaseReferenceImage[] = [selfieComposite]
+  const referenceImages: BaseReferenceImage[] = []
+  if (selfieComposite) {
+    referenceImages.push(selfieComposite)
+  }
 
   if (logoReference) {
     referenceImages.push(logoReference)
@@ -206,6 +211,8 @@ async function composeElementContributions(
       teamId: generationContext.teamId,
       generationId: generationContext.generationId,
       preparedAssets: generationContext.preparedAssets, // Pass prepared assets from step 0
+      hasFaceComposite: generationContext.hasFaceComposite, // Whether face composite is available
+      hasBodyComposite: generationContext.hasBodyComposite, // Whether body composite is available
     },
     existingContributions: [],
   }
@@ -363,7 +370,7 @@ export async function executeV3Step1a(
     // Exclude selfie composite (it's in preparedReferences already)
     return !desc.includes('composite image containing') && !desc.includes('stacked subject selfies')
   })
-  
+
   // Determine if we have any split composites
   // If we have ANY split composite, the combined composite is redundant:
   // - If we have both face + body: combined is just face + body stacked differently
@@ -375,10 +382,10 @@ export async function executeV3Step1a(
   // Filter out combined selfie composite from preparedReferences when we have any split composite
   const filteredPreparedReferences = hasAnySplitComposite
     ? preparedReferences.filter(ref => {
-        const desc = ref.description?.toLowerCase() || ''
-        // Remove the combined composite (it contains "stacked" or "composite image containing")
-        return !desc.includes('stacked subject selfies') && !desc.includes('composite image containing')
-      })
+      const desc = ref.description?.toLowerCase() || ''
+      // Remove the combined composite (it contains "stacked" or "composite image containing")
+      return !desc.includes('stacked subject selfies') && !desc.includes('composite image containing')
+    })
     : preparedReferences
 
   const referenceImages = [
@@ -577,16 +584,16 @@ export async function executeV3Step1a(
     // Section 1: Intro & Task
     `You are a world-class professional photographer creating ${shotTypeIntroContext} from the attached selfies.`,
     '',
-
-    // Section 2: HARD CONSTRAINTS
-    // NOTE: Identity, accessories, and equipment rules now come from SubjectElement and LightingElement
-    ...hardConstraints,
-
-    // Section 3: Composition JSON
-    'Scene Specifications:',
-    jsonPrompt,
-    '',
   ]
+
+  // Section 2: HARD CONSTRAINTS
+  // Note: Identity source is now in the JSON payload under subject.identity
+  structuredPrompt.push(...hardConstraints)
+
+  // Section 3: Composition JSON
+  structuredPrompt.push('Scene Specifications:')
+  structuredPrompt.push(jsonPrompt)
+  structuredPrompt.push('')
 
   // Section 3.5: Demographics context (if available)
   const demographicsPrompt = demographics ? formatDemographicsForPrompt(demographics, 'person') : undefined
@@ -596,15 +603,13 @@ export async function executeV3Step1a(
   }
 
   // Section 4: Technical Requirements
-  // NOTE: Skin texture, hair, lighting, catchlights rules now come from SubjectElement and LightingElement
+  // Identity rules come from SubjectElement, keep only essential output requirements
   structuredPrompt.push('Technical Requirements:')
-  if (!elementContributions) {
-    // Fallback if element composition not available
-    structuredPrompt.push('- Realistic skin texture and hair (high-frequency details, natural imperfections, stray hairs).')
-    structuredPrompt.push('- Neutral, even lighting (no harsh shadows). Final scene lighting applied in Step 2.')
-    structuredPrompt.push('- Catchlights in eyes must be present and realistic.')
-    structuredPrompt.push(`- Output: ${aspectRatioConfig.width}x${aspectRatioConfig.height}px (${aspectRatioConfig.id || aspectRatio}). Fill canvas edge-to-edge.`)
-  }
+  structuredPrompt.push(`- Output: ${aspectRatioConfig.width}x${aspectRatioConfig.height}px. Fill canvas edge-to-edge.`)
+  structuredPrompt.push('- Skin: realistic texture with pores and natural imperfections')
+  structuredPrompt.push('- Hair: individual strands with natural stray hairs')
+  structuredPrompt.push('- Eyes: sharp focus with realistic catchlights')
+  structuredPrompt.push('- Anatomy: no distorted hands, extra fingers, or malformed limbs')
 
   // Add element-specific must follow rules (filter out redundant framing rules)
   if (effectiveMustFollowRules && effectiveMustFollowRules.length > 0) {
@@ -622,56 +627,15 @@ export async function executeV3Step1a(
   // Section 5: Freedom Rules
   structuredPrompt.push('')
   structuredPrompt.push('Creative Latitude:')
-  structuredPrompt.push('- Optimize lighting/shadows for realistic 3D volume and texture.')
-  structuredPrompt.push('- Subtle color grading to enhance professional appearance.')
+  structuredPrompt.push('- Optimize lighting/shadows for realistic 3D volume and texture')
+  structuredPrompt.push('- Subtle color grading to enhance professional appearance')
 
-  // Add element-specific freedom rules (using effective rules from element composition or fallback)
+  // Add element-specific freedom rules
   if (effectiveFreedomRules && effectiveFreedomRules.length > 0) {
     for (const rule of effectiveFreedomRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }
-
-  // Add reference image usage instructions
-  // NOTE: Selfie/face/body composite instructions now come from SubjectElement via element composition
-  const instructionLines: string[] = [
-    '\n\nReference images are supplied with clear labels. Follow each resource precisely:',
-    '- **Neutral background:** Solid flat neutral grey background (#808080) only. No gradients, no props, no environment, and no text.',
-    '- **Focus on person:** Prioritize identity, expression, pose, clothing accuracy, and correct framing. Keep the subject consistent with the JSON camera + lighting so Step 2 can composite cleanly.'
-  ]
-
-  // Add garment collage instructions if present (hasGarmentCollage computed earlier)
-  if (hasGarmentCollage) {
-    // Check if we have structured garment analysis from Step 0
-    const hasGarmentAnalysis = !!garmentAnalysisFromStep0
-
-    if (hasGarmentAnalysis) {
-      instructionLines.push(
-        '- **Garment Collage + Analysis:** Dress the person in the EXACT clothing items shown in the garment collage reference. The JSON `wardrobe.garmentAnalysis` section provides a detailed breakdown of each clothing item including category, type, color, material, and layering. Use BOTH the visual collage reference AND this structured data to ensure accurate clothing reproduction.',
-        '- **Clothing Details:** Follow the garmentAnalysis.items array for precise item descriptions. Each item includes primary/secondary colors, pattern type, material, and notable details like buttons, pockets, or logos.',
-        '- **Layering Order:** Follow the garmentAnalysis.layering description for how items should be worn over each other.'
-      )
-    } else {
-      instructionLines.push(
-        '- **Garment Collage:** Dress the person in the EXACT clothing items shown in the garment collage reference. Match the style, fit, and details of each garment precisely. Use the clothing_colors specified in the subject JSON for accurate color rendering (these are user-adjusted hex values and must be respected). Ensure professional fit and styling appropriate for business attire.'
-      )
-    }
-
-    // Add specific instruction to ignore lower body parts of the collage for tighter shots
-    if (['medium-close-up', 'close-up', 'extreme-close-up', 'medium-shot'].includes(shotDescription)) {
-      instructionLines.push(
-        `- **Shot Constraints vs Collage:** Since the requested shot is ${shotDescription.toUpperCase().replace('-', ' ')}, you must IGNORE any lower body garments (pants, shoes, skirts) visible in the garment collage. Focus ONLY on the upper body clothing (shirt, jacket, tie, etc.) that fits within the frame.`
-      )
-    }
-  }
-
-  if (logoReference) {
-    instructionLines.push(
-      '- **Branding:** Place the logo exactly once on the clothing following the BRANDING guidance from the reference assets. The logo should be part of the person\'s appearance.'
-    )
-  }
-
-  structuredPrompt.push(...instructionLines)
 
   if (evaluationFeedback?.suggestedAdjustments) {
     structuredPrompt.push(`\n\nADJUSTMENTS FROM PREVIOUS ATTEMPT:\n${evaluationFeedback.suggestedAdjustments}`)
@@ -681,7 +645,7 @@ export async function executeV3Step1a(
 
   // Log prompt (improvement #10) - consolidated logging
   logPrompt('V3 Step 1a', compositionPrompt, generationId)
-  
+
   // Log reference images summary
   Logger.info('V3 Step 1a: References', {
     count: referenceImages.length,
@@ -808,11 +772,11 @@ export async function executeV3Step1a(
   }
 
   // Prepare assets for Step 2 and Step 3
-  
+
   // 1. Keep clothing logo reference for evaluation (authorizes logo on clothing)
   // Use logoReferenceForEval which is set even when clothing overlay handles generation
   const clothingLogoRef = logoReferenceForEval
-  
+
   // 2. Load custom background if specified (for Step 3)
   let backgroundBuffer: Buffer | undefined
   const bgValue = styleSettings.background?.value

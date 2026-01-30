@@ -23,25 +23,11 @@ export async function GET() {
     // Check if user owns a team (is admin)
     const ownedTeam = await prisma.team.findFirst({
       where: { adminId: session.user.id },
-      select: {
-        id: true,
-        totalSeats: true,
-        activeSeats: true,
-        admin: {
-          select: { planPeriod: true }
-        }
-      }
+      select: { id: true }
     })
 
     if (ownedTeam) {
-      // Seats model is determined by admin's planPeriod
-      const isSeatsModel = ownedTeam.admin.planPeriod === 'seats'
-      seatInfo = {
-        totalSeats: ownedTeam.totalSeats,
-        activeSeats: ownedTeam.activeSeats,
-        availableSeats: Math.max(0, ownedTeam.totalSeats - ownedTeam.activeSeats),
-        isSeatsModel
-      }
+      seatInfo = await getTeamSeatInfo(ownedTeam.id)
     }
     
     return NextResponse.json({ subscription, seatInfo })

@@ -1,12 +1,9 @@
-import { PhotoStyleSettings, CategoryType, ExpressionType, PoseType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
+import { PhotoStyleSettings, CategoryType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
 import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
-import { getDefaultPresetSettings } from '../standard-settings'
-import { getValueOrDefault } from '../shared/utils'
-import { CORPORATE_HEADSHOT } from '../defaults'
 import * as backgroundElement from '../../elements/background'
-import * as branding from '../../elements/branding'
-import * as clothing from '../../elements/clothing'
+import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
+import { deserialize as clothingDeserialize } from '../../elements/clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
@@ -18,57 +15,61 @@ const VISIBLE_CATEGORIES: CategoryType[] = [
   'pose',
   'clothing',
   'clothingColors',
-  'expression']
+  'expression'
+]
 
 const AVAILABLE_BACKGROUNDS = [
-  'office', 
-  'tropical-beach', 
-  'busy-city', 
-  'neutral', 
-  'gradient', 
-  'custom']
+  'office',
+  'tropical-beach',
+  'busy-city',
+  'neutral',
+  'gradient',
+  'custom'
+]
 
 const AVAILABLE_POSES = [
   'classic_corporate',
   'slimming_three_quarter',
   'power_cross',
-  //'approachable_lean',
   'candid_over_shoulder',
   'seated_engagement',
-  //'jacket_reveal',
-  //'thumbs_up'
 ]
+
 const AVAILABLE_EXPRESSIONS = [
   'genuine_smile',
   'soft_smile',
   'neutral_serious',
   'laugh_joy',
-  //'contemplative',
-  //'confident'
 ]
 
 const AVAILABLE_CLOTHING_STYLES = [
   'business',
   'startup'
-  // 'black-tie' excluded from this package
 ]
 
-const HEADSHOT1_PRESET = CORPORATE_HEADSHOT
-
+// Package defaults - complete configuration for all categories
+// This is the source of truth for this package - no external dependencies
 // HeadShot1 is "all settings customizable" - use userChoice() for visible categories
+//
+// LIGHTING & CAMERA: Derived automatically from the user's background choice.
+// See BACKGROUND_ENVIRONMENT_MAP in elements/background/config.ts for the mapping.
+// Example: 'neutral' → studio environment → soft diffused lighting, 85mm portrait lens
+//          'office' → indoor environment → natural window light
+//          'tropical-beach' → outdoor environment → natural daylight
 const DEFAULTS: PhotoStyleSettings = {
-  presetId: HEADSHOT1_PRESET.id,
+  presetId: 'corporate-headshot',
   // Visible categories - all user-choice for full customization
-  background: userChoice<BackgroundValue>(), // User picks background
-  branding: userChoice<BrandingValue>(), // User picks branding
-  pose: userChoice<PoseValue>({ type: HEADSHOT1_PRESET.defaults.pose.type as PoseType }), // User can change pose
-  clothing: userChoice<ClothingValue>(), // User picks clothing style
-  clothingColors: userChoice<ClothingColorValue>(), // User picks colors
-  expression: userChoice<ExpressionValue>({ type: (HEADSHOT1_PRESET.defaults.expression || 'genuine_smile') as ExpressionType }), // User can change expression
+  background: userChoice<BackgroundValue>(),
+  branding: userChoice<BrandingValue>(),
+  pose: userChoice<PoseValue>({ type: 'slimming_three_quarter' }),
+  clothing: userChoice<ClothingValue>(),
+  clothingColors: userChoice<ClothingColorValue>(),
+  expression: userChoice<ExpressionValue>({ type: 'genuine_smile' }),
   // Non-visible settings - predefined
   shotType: predefined({ type: 'medium-shot' as const }),
-  aspectRatio: '1:1' as const, // Square format for headshots
-  subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
+  filmType: predefined({ type: 'clinical-modern' }),
+  aspectRatio: '1:1' as const,
+  subjectCount: '1' as const
 }
 
 export const headshot1: ClientStylePackage = {
@@ -83,8 +84,8 @@ export const headshot1: ClientStylePackage = {
   availableExpressions: AVAILABLE_EXPRESSIONS,
   availableClothingStyles: AVAILABLE_CLOTHING_STYLES,
   defaultSettings: DEFAULTS,
-  defaultPresetId: HEADSHOT1_PRESET.id,
-  presets: { [HEADSHOT1_PRESET.id]: HEADSHOT1_PRESET },
+  defaultPresetId: 'corporate-headshot',
+  presets: {},  // No preset dependency - package is self-contained
   promptBuilder: () => {
     throw new Error('promptBuilder is deprecated - use server-side buildGenerationPayload instead')
   },
@@ -128,8 +129,8 @@ export const headshot1: ClientStylePackage = {
       // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
       // Note: aspectRatio is derived from preset/shotType, not a direct user input
       const backgroundResult = backgroundElement.deserialize(inner)
-      const brandingResult = branding.deserialize(inner)
-      const clothingResult = clothing.deserialize(inner, DEFAULTS.clothing)
+      const brandingResult = brandingDeserialize(inner)
+      const clothingResult = clothingDeserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)

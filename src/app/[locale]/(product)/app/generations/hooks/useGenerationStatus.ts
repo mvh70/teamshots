@@ -24,12 +24,6 @@ export interface GenerationStatus {
 
   // Progress tracking
   userApproved: boolean
-  adminApproved: boolean
-
-  // Moderation
-  moderationScore?: number
-  moderationPassed: boolean
-  moderationDate?: string
 
   // Error information
   errorMessage?: string

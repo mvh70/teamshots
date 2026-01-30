@@ -7,12 +7,22 @@ export type BackgroundModifier = 'bright' | 'shade' | 'dim' | 'overcast' | 'tung
  * Available background types
  */
 export type BackgroundType =
+  // User-selectable backgrounds (headshot1, freepackage, outfit1)
   | 'office'
   | 'neutral'
   | 'gradient'
   | 'custom'
   | 'tropical-beach'
   | 'busy-city'
+  // Standard-shots preset backgrounds
+  | 'cafe'
+  | 'outdoor'
+  | 'solid'
+  | 'urban'
+  | 'stage'
+  | 'dark_studio'
+  | 'team_bright'
+  | 'lifestyle'
 
 /**
  * Background value - the actual background configuration (no 'user-choice')

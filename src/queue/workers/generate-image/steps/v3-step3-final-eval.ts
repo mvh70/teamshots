@@ -15,7 +15,9 @@ import { logPrompt } from '../utils/logging'
 export interface V3Step3FinalInput {
   refinedBuffer: Buffer
   refinedBase64: string
-  selfieComposite: BaseReferenceImage
+  selfieComposite?: BaseReferenceImage
+  faceComposite?: BaseReferenceImage
+  bodyComposite?: BaseReferenceImage
   expectedWidth: number
   expectedHeight: number
   aspectRatio: string
@@ -73,10 +75,10 @@ async function composeElementContributions(
  * Reuses the selfie composite from Step 1 instead of rebuilding it
  */
 export async function executeV3Step3(
-  input: V3Step3FinalInput, 
+  input: V3Step3FinalInput,
   debugMode = false
 ): Promise<Step8Output> {
-  const { refinedBuffer, refinedBase64, selfieComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt, styleSettings } = input
+  const { refinedBuffer, refinedBase64, selfieComposite, faceComposite, bodyComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt, styleSettings } = input
 
   // Logging handled by logPrompt
 
@@ -100,7 +102,7 @@ export async function executeV3Step3(
   // Get image metadata
   const sharp = (await import('sharp')).default
   const metadata = await refinedBuffer ? await sharp(refinedBuffer).metadata() : { width: null, height: null }
-  
+
   // Extract branding info from prompt if present
   let brandingInfo: { position?: string; placement?: string } | undefined
   if (generationPrompt) {
@@ -119,12 +121,12 @@ export async function executeV3Step3(
       })
     }
   }
-  
+
   // Inlined Evaluation Logic (replacing evaluateFinalImage)
   const modelName = STAGE_MODEL.EVALUATION
 
   Logger.debug('V3 Step 3: Evaluating final image', { modelName })
-  
+
   const actualWidth = metadata.width
   const actualHeight = metadata.height
 
@@ -146,21 +148,20 @@ export async function executeV3Step3(
   // Check for selfie duplicate (simplified check, assuming selfieComposite is the reference)
   // Since we pass the composite, we don't do per-selfie dupe check here unless we unpack it.
   // But V3 usually passes composite. Let's assume no exact base64 match for composite vs output.
-  
+
   // Auto-reject if dimension/aspect fails (despite format frame reference in Step 2)
   if (dimensionMismatch || aspectMismatch) {
     const dimIssue = dimensionMismatch
       ? `Dimension mismatch (expected ${expectedWidth}x${expectedHeight}px, actual ${actualWidth ?? 'unknown'}x${actualHeight ?? 'unknown'}px)`
       : ''
     const aspectIssue = aspectMismatch
-      ? `Aspect ratio mismatch (expected ${aspectRatio} ≈${expectedRatio.toFixed(4)}, actual ${
-          actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
-        })`
+      ? `Aspect ratio mismatch (expected ${aspectRatio} ≈${expectedRatio.toFixed(4)}, actual ${actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
+      })`
       : ''
     const reason = [dimIssue, aspectIssue].filter(Boolean).join('; ')
-    
+
     Logger.warn('V3 Step 3: Dimension/aspect check failed', { reason })
-    
+
     return {
       evaluation: {
         status: 'Not Approved',
@@ -169,7 +170,7 @@ export async function executeV3Step3(
       }
     }
   }
-  
+
   const instructions = [
     `You are evaluating the final refined image for face similarity, characteristic preservation, person prominence, and overall quality.`,
     `Answer each question with ONLY: YES (criterion met), NO (criterion failed), UNCERTAIN (cannot determine)`,
@@ -262,15 +263,38 @@ export async function executeV3Step3(
   }
 
   const evalPromptText = instructions.join('\n')
-  
+
   // Log the evaluation prompt
   logPrompt('V3 Step 3 Eval', evalPromptText, input.generationId)
 
   // Build reference images array for multi-modal evaluation
   const evalImages: GeminiReferenceImage[] = [
-    { mimeType: 'image/png', base64: refinedBase64, description: 'Final refined image to evaluate' },
-    { mimeType: selfieComposite.mimeType, base64: selfieComposite.base64, description: selfieComposite.description || 'Selfie composite reference' }
+    { mimeType: 'image/png', base64: refinedBase64, description: 'Final refined image to evaluate' }
   ]
+
+  if (selfieComposite) {
+    evalImages.push({
+      mimeType: selfieComposite.mimeType,
+      base64: selfieComposite.base64,
+      description: selfieComposite.description || 'Selfie composite reference'
+    })
+  } else {
+    // If no combined composite, try splits
+    if (faceComposite) {
+      evalImages.push({
+        mimeType: faceComposite.mimeType,
+        base64: faceComposite.base64,
+        description: faceComposite.description || 'FACE REFERENCE'
+      })
+    }
+    if (bodyComposite) {
+      evalImages.push({
+        mimeType: bodyComposite.mimeType,
+        base64: bodyComposite.base64,
+        description: bodyComposite.description || 'BODY REFERENCE'
+      })
+    }
+  }
 
   // Add logo reference if branding evaluation is needed
   if (brandingInfo && logoReference) {
@@ -501,12 +525,12 @@ function parseFinalEvaluation(text: string) {
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
     }
-    
+
     // Add branding_placement if present in response
     if (parsed.branding_placement !== undefined) {
       result.branding_placement = normalizeYesNoUncertain(parsed.branding_placement)
     }
-    
+
     return result
   } catch (error) {
     Logger.warn('Failed to parse final evaluation JSON', {
@@ -526,7 +550,7 @@ function normalizeYesNoUncertain(value: unknown): 'YES' | 'NO' | 'UNCERTAIN' {
 
 function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   const suggestions: string[] = []
-  
+
   for (const criterion of failedCriteria) {
     if (criterion.includes('face_similarity')) {
       suggestions.push('Improve face matching to selfie references')
@@ -544,7 +568,7 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
       suggestions.push('Improve image quality')
     }
   }
-  
+
   return suggestions.join('; ')
 }
 

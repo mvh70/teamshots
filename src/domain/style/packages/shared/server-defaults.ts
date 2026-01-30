@@ -1,40 +1,32 @@
 /**
  * Server Defaults Pattern for Package Settings
- * 
- * This module implements the correct priority hierarchy for style settings:
- * 
- * 1. Preset Defaults (base layer)
- *    - Base settings from presets like CORPORATE_HEADSHOT
- *    - Provides sensible defaults for all categories
- * 
- * 2. Package Defaults (middle layer)
- *    - Settings defined by the package for ALL categories
- *    - Overwrites preset defaults to establish package baseline
- *    - Example: pose='jacket_reveal', shotType='medium-shot', background='gradient'
- * 
- * 3. User/Admin Settings (top layer)
+ *
+ * Simple two-layer hierarchy:
+ *
+ * 1. Package Defaults (base layer)
+ *    - Each package defines complete settings in defaultSettings
+ *    - This is the single source of truth for the package
+ *    - Example: pose, shotType, aspectRatio, expression, etc.
+ *
+ * 2. User Settings (top layer)
  *    - Settings that users customize through the UI
  *    - ONLY applied for categories in visibleCategories
  *    - Overwrites package defaults for visible categories only
- *    - Example: If 'expression' is visible, user can choose 'contemplative'
- * 
+ *
  * Key Insight:
- * - Package defaults apply to ALL categories (visible and non-visible)
+ * - Package defaultSettings defines ALL categories (visible and non-visible)
  * - User settings only override visible categories
  * - Non-visible categories remain at package defaults (users can't change them)
- * 
+ *
  * Usage:
  * ```typescript
- * // In buildGenerationPayload:
- * 
- * // 1. Get preset defaults (base layer)
- * const { settings: presetDefaults } = applyStandardPreset(presetId, {}, presets)
- * 
- * // 2. Apply package defaults for ALL categories (middle layer)
- * const withPackageDefaults = ensureServerDefaults(packageConfig, presetDefaults)
- * 
- * // 3. Apply user settings for visible categories only (top layer)
- * const finalSettings = mergeUserSettings(withPackageDefaults, userSettings, visibleCategories)
+ * // In BasePackageServer.resolveEffectiveSettings:
+ *
+ * // 1. Start with package defaults (source of truth)
+ * const baseSettings = { ...pkg.defaultSettings }
+ *
+ * // 2. Apply user settings for visible categories only
+ * const finalSettings = mergeUserSettings(baseSettings, userSettings, visibleCategories)
  * ```
  */
 
@@ -73,73 +65,6 @@ export function getValueOrDefault<T>(value: T | undefined | { type?: string }, d
   }
   
   return value as T
-}
-
-/**
- * Applies package defaults for ALL categories, overwriting preset defaults.
- * 
- * This is step 2 of the 3-step priority hierarchy:
- * 1. Preset defaults (base)
- * 2. Package defaults (middle) ← THIS FUNCTION
- * 3. User settings for visible categories (top)
- * 
- * Package defaults apply to ALL categories and serve as the package's standard configuration.
- * User settings will then override only the visible categories in step 3.
- * 
- * @param packageConfig - Package configuration with defaultSettings
- * @param settings - Base settings (usually from preset defaults)
- * @returns Settings with package defaults applied for ALL categories
- */
-export function ensureServerDefaults(
-  packageConfig: { defaultSettings: PhotoStyleSettings; visibleCategories: CategoryType[] },
-  settings: PhotoStyleSettings
-): PhotoStyleSettings {
-  const result = { ...settings }
-  
-  // Apply ALL package defaults, overwriting preset defaults
-  // This gives the package control over its baseline configuration
-  
-  if (packageConfig.defaultSettings.pose) {
-    result.pose = packageConfig.defaultSettings.pose
-  }
-  
-  if (packageConfig.defaultSettings.shotType) {
-    result.shotType = packageConfig.defaultSettings.shotType
-  }
-  
-  if (packageConfig.defaultSettings.background) {
-    result.background = packageConfig.defaultSettings.background
-  }
-  
-  if (packageConfig.defaultSettings.branding) {
-    result.branding = packageConfig.defaultSettings.branding
-  }
-  
-  if (packageConfig.defaultSettings.clothing) {
-    result.clothing = packageConfig.defaultSettings.clothing
-  }
-  
-  if (packageConfig.defaultSettings.clothingColors) {
-    result.clothingColors = packageConfig.defaultSettings.clothingColors
-  }
-
-  if (packageConfig.defaultSettings.customClothing) {
-    result.customClothing = packageConfig.defaultSettings.customClothing
-  }
-
-  if (packageConfig.defaultSettings.expression) {
-    result.expression = packageConfig.defaultSettings.expression
-  }
-  
-  if (packageConfig.defaultSettings.lighting) {
-    result.lighting = packageConfig.defaultSettings.lighting
-  }
-
-  if (packageConfig.defaultSettings.aspectRatio) {
-    result.aspectRatio = packageConfig.defaultSettings.aspectRatio
-  }
-
-  return result
 }
 
 /**

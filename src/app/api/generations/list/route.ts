@@ -28,10 +28,6 @@ type GenerationWithRelations = {
   generatedPhotoKeys: string[];
   acceptedPhotoKey: string | null;
   userApproved: boolean;
-  adminApproved: boolean;
-  moderationScore: number | null;
-  moderationPassed: boolean;
-  moderationDate: Date | null;
   errorMessage: string | null;
   createdAt: Date;
   completedAt: Date | null;
@@ -257,15 +253,9 @@ export async function GET(request: NextRequest) {
       maxRegenerations: generation.maxRegenerations,
       remainingRegenerations: generation.remainingRegenerations,
       userApproved: generation.userApproved,
-      adminApproved: generation.adminApproved,
-      
+
       // Job status for processing generations
       jobStatus: jobStatusMap.get(generation.id) || null,
-      
-      // Moderation
-      moderationScore: generation.moderationScore,
-      moderationPassed: generation.moderationPassed,
-      moderationDate: generation.moderationDate,
       
       // Error information
       errorMessage: generation.errorMessage,

@@ -29,51 +29,84 @@ async function run() {
   // The person's identity comes from the selfies, not the prompt
   // NOTE: wardrobe must be at root level (not inside subject) for evaluator to find accessories
   const customPrompt = {
-    subject: {
-      pose: {
-        body_angle: "Mid-air jump, body angled diagonally",
-        arms: "Arms spread wide for balance and expression of freedom",
-        head_position: "Head tilted back slightly",
-        legs: "Knees tucked up, capturing weightlessness"
-      },
-      expression: "Ecstatic joy, mouth wide open in a shout of joy, eyes squeezed shut in happiness"
-    },
-    // Wardrobe at root level so evaluator can find accessories
-    wardrobe: {
-      style: "streetwear",
-      top_layer: "Mustard yellow corduroy jacket with visible ribbed texture, worn open, billowing slightly from movement",
-      base_layer: "Black graphic t-shirt with a stylized circular 'eye' or 'lens' logo in white and green",
-      bottom: "Light-wash blue denim jeans, slim fit, showing slight creasing at the knees",
-      shoes: "Classic black canvas high-top sneakers with white laces and white rubber soles",
-      // Accessories here are AUTHORIZED - evaluator checks wardrobe.accessories
-      accessories: ["Black baseball cap worn forward", "Thick-framed yellow-tinted retro sunglasses"]
-    },
     scene: {
       environment: {
-        location_type: "Minimalist two-tone urban wall",
-        left_section: "Bright lemon yellow painted wall with subtle stucco-like texture (vertical strip)",
-        right_section: "Deep coral-red to crimson painted wall, rough matte masonry texture with visible scuffs"
+        description: "Chaotic and euphoric Holi Festival atmosphere. The air is thick with exploding clouds of vibrant colored powder (Gulal). The background is a swirling abstraction of neon pink, marigold orange, and cyan smoke, creating a dreamlike, hyper-saturated canvas.",
+        location_type: "outdoor_festival_daylight"
       }
     },
-    framing: {
-      shot_type: "full-body",
-      composition: "Low-angle shot looking up to enhance jump height, off-center composition",
-      camera_angle: "Dynamic mid-air capture"
-    },
     camera: {
-      lens: "35mm wide-angle lens to capture the scale of the jump",
-      aperture: "f/5.6 for deep depth of field",
-      shutter_speed: "1/2000 sec to freeze fast motion without blur"
+      lens: {
+        focal_length_mm: 85,
+        character: "sharp portrait lens with creamy bokeh"
+      },
+      settings: {
+        aperture: "f/1.8",
+        iso: 200,
+        shutter_speed: "1/1000s"
+      },
+      positioning: {
+        distance_from_subject_ft: 4,
+        subject_to_background_ft: 15,
+        height: "slightly below eye level, tilting up"
+      },
+      color: {
+        white_balance_kelvin: 5600,
+        grading_notes: "Hyper-saturated, high contrast, 'Candy' color palette"
+      }
     },
     lighting: {
-      source: "Bright direct natural daylight, high-sun position",
-      shadows: "Soft but distinct shadows beneath subject onto the red wall, emphasizing distance from ground"
+      quality: "Bright, High-Key",
+      direction: "Global illumination with strong backlighting",
+      setup: [
+        "Sunlight Key (High overhead)",
+        "Strong Backlight/Rim Light (illuminating the airborne dust particles)",
+        "Reflected Color Fill (The colored powder acts as a diffuser, casting colored light onto the skin)"
+      ],
+      color_temperature: "Daylight balanced",
+      description: "Vibrant outdoor lighting. The sun backlights the hair and smoke clouds, creating a halo effect. Shadows are filled with cool ambient blue tones.",
+      note: "Focus on the interaction between light and particulate matter (dust)."
     },
     rendering: {
-      style: "Technicolor-inspired high saturation, high contrast to make colors pop",
-      tones: "Warm and vibrant with color-block pop-art influence",
-      vibe: "Energetic, urban, optimistic, high-fashion streetwear aesthetic"
-    }
+      quality_tier: "standard_v1",
+      safety_mode: "strict",
+      style_mode: "vibrant_digital_art"
+    },
+    framing: {
+      shot_type: "close-up",
+      crop_points: "Framing cuts off at the mid-chest/shoulders. Top of the frame allows for wild, messy hair. The focus is tightly locked on the face and sunglasses.",
+      composition: "Central composition. The subject looks directly at the camera, dominating the center third."
+    },
+    subject: {
+      pose: {
+        description: "Front-facing, ecstatic energy",
+        body_angle: "Square to camera",
+        head_position: "Facing forward, chin tilted slightly up",
+        chin_technique: "Projected forward in laughter",
+        shoulder_position: "Relaxed",
+        weight_distribution: "Centered",
+        arms: "Not visible (or barely implied at edges)"
+      },
+      expression: {
+        type: "euphoric_joy",
+        description: "Broad, open-mouthed smile showing teeth, radiating pure happiness. The subject is the person from the selfies."
+      },
+      wardrobe: {
+        style: "festival_casual",
+        details: "Wayfarer-style sunglasses with reflective orange/gold mirrored lenses. A simple grey t-shirt visible at the neckline.",
+        accessories: "Classic dark-rimmed sunglasses reflecting a crowd of exuberant people celebrating Holi festival in a cloud of colored powder.",
+        makeup_fx: "Heavy application of colored powder. Specifics: Cyan/Blue powder covers the forehead and nose bridge. Purple/Violet powder coats the thick beard. Neon pink dusts the hair tips.",
+        notes: "The skin texture should show powder granules clinging to pores and hair."
+      }
+    },
+    // Root level wardrobe for evaluator/worker compatibility
+    wardrobe: {
+      style: "festival_casual",
+      top_layer: "simple grey t-shirt",
+      accessories: ["Wayfarer-style sunglasses with reflective orange/gold mirrored lenses showing a crowd of people celebrating Holi"],
+      makeup_fx: "Heavy application of colored powder (Cyan/Blue on forehead, Purple on beard, Neon pink on hair)"
+    },
+    prompt: "Vibrant, euphoric Holi Festival close-up of the subject from selfies. Bursting clouds of neon pink, cyan, and marigold Gulal powder swirl around. The subject radiates pure happiness with a broad open-mouthed laugh, wearing mirrored gold Wayfarer sunglasses that reflect a crowd of exuberant people celebrating Holi festival in a cloud of colored powder. Cyan and pink powder dusts their skin, beard, and hair with visible granules. High-key backlighting creates a halo effect through the dust particulate. Saturated 'Candy' color palette, vibrant and hyper-real digital art aesthetic, 85mm lens bokeh."
   }
 
   console.log('Looking up person for user:', userId)
@@ -232,7 +265,7 @@ async function run() {
       currentAttempt: 1,
       maxAttempts: 1,
       debugMode: true,
-      persistWorkflowState: async () => {},
+      persistWorkflowState: async () => { },
       intermediateStorage: {
         saveBuffer: async (buffer: Buffer, meta: { fileName: string; description?: string; mimeType?: string }) => {
           const filePath = path.join(outputDir, meta.fileName)

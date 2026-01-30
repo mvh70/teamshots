@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -23,6 +24,10 @@ export default function TeamGenerationsPage() {
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const { isIndividualDomain } = useDomain()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const isNewGeneration = searchParams.get('new_generation') === 'true'
+  const [isWaitingForNewGeneration, setIsWaitingForNewGeneration] = useState(isNewGeneration)
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const [rolesLoaded, setRolesLoaded] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
@@ -71,7 +76,7 @@ export default function TeamGenerationsPage() {
   // This prevents the delay of showing "me" first, then switching to "team"
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters('team')
   const filterInitializedRef = useRef(false)
-  
+
   // Adjust filter based on team admin status once roles have been loaded
   // Initialize filter based on user role - intentional one-time initialization
   /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
@@ -132,7 +137,7 @@ export default function TeamGenerationsPage() {
     }
     void fetchTier()
   }, [session?.user?.id])
-  
+
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {
@@ -162,6 +167,46 @@ export default function TeamGenerationsPage() {
     handleGenerationFailed
   )
 
+  const filteredAndSortedGenerated = useMemo(() => {
+    // First apply the standard filters (timeframe, context)
+    let filtered = filterGenerated(generated)
+
+    // If in folder view and a person is selected, filter to that person only
+    if (viewMode === 'folders' && selectedPersonId) {
+      filtered = filtered.filter(g => g.personId === selectedPersonId)
+    }
+
+    // Sort by person name first, then by date (newest first)
+    return filtered.sort((a, b) => {
+      const personA = a.personFirstName || 'Unknown'
+      const personB = b.personFirstName || 'Unknown'
+
+      // First compare by person name
+      const nameCompare = personA.localeCompare(personB)
+      if (nameCompare !== 0) return nameCompare
+
+      // Then by date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [generated, filterGenerated, viewMode, selectedPersonId])
+
+  const filteredGenerated = filteredAndSortedGenerated
+
+  // Turn off waiting when we have data
+  useEffect(() => {
+    if (isWaitingForNewGeneration && filteredGenerated.length > 0) {
+      setIsWaitingForNewGeneration(false)
+    }
+  }, [filteredGenerated.length, isWaitingForNewGeneration])
+
+  // Safety timeout
+  useEffect(() => {
+    if (isWaitingForNewGeneration) {
+      const timer = setTimeout(() => setIsWaitingForNewGeneration(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [isWaitingForNewGeneration])
+
   // Listen for generation image load events
   useEffect(() => {
     const handleImageLoaded = () => {
@@ -180,10 +225,10 @@ export default function TeamGenerationsPage() {
     if (loading || !onboardingContext._loaded) {
       return
     }
-    
+
     // Only check for completed generations (status === 'completed')
     const completedGenerations = generated.filter(g => g.status === 'completed')
-    
+
     // If there are no completed generations, nothing to do
     if (completedGenerations.length === 0) {
       return
@@ -193,7 +238,7 @@ export default function TeamGenerationsPage() {
     if (!imageLoadedRef.current) {
       return
     }
-    
+
     // Check if tour has been completed using database (onboarding context)
     const completedTours = onboardingContext.completedTours || []
     const pendingTours = onboardingContext.pendingTours || []
@@ -214,7 +259,7 @@ export default function TeamGenerationsPage() {
     const newCompletedGenerations = completedGenerations.filter(
       g => !processedCompletedGenIdsRef.current.has(g.id)
     )
-    
+
     // If there are new completed generations, mark them as processed
     if (newCompletedGenerations.length > 0) {
       newCompletedGenerations.forEach(g => {
@@ -263,47 +308,24 @@ export default function TeamGenerationsPage() {
   )), [generated])
 
   // Filter and sort generations
-  const filteredAndSortedGenerated = useMemo(() => {
-    // First apply the standard filters (timeframe, context)
-    let filtered = filterGenerated(generated)
-    
-    // If in folder view and a person is selected, filter to that person only
-    if (viewMode === 'folders' && selectedPersonId) {
-      filtered = filtered.filter(g => g.personId === selectedPersonId)
-    }
-    
-    // Sort by person name first, then by date (newest first)
-    return filtered.sort((a, b) => {
-      const personA = a.personFirstName || 'Unknown'
-      const personB = b.personFirstName || 'Unknown'
-      
-      // First compare by person name
-      const nameCompare = personA.localeCompare(personB)
-      if (nameCompare !== 0) return nameCompare
-      
-      // Then by date (newest first)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-  }, [generated, filterGenerated, viewMode, selectedPersonId])
 
-  const filteredGenerated = filteredAndSortedGenerated
 
   // Group generations by person for image view with headers
   const groupedByPerson = useMemo(() => {
     const groups: { personId: string; personName: string; generations: typeof filteredGenerated }[] = []
     let currentGroup: typeof groups[0] | null = null
-    
+
     filteredGenerated.forEach(g => {
       const personId = g.personId || 'unknown'
       const personName = g.personFirstName || 'Unknown'
-      
+
       if (!currentGroup || currentGroup.personId !== personId) {
         currentGroup = { personId, personName, generations: [] }
         groups.push(currentGroup)
       }
       currentGroup.generations.push(g)
     })
-    
+
     return groups
   }, [filteredGenerated])
 
@@ -313,7 +335,7 @@ export default function TeamGenerationsPage() {
 
   // Show upsell window only if no credits AND no existing generations
   // Also wait for subscriptionPeriod to be known (to correctly determine credit source)
-  if (!creditsLoading && subscriptionPeriod !== null && !hasCredits && filteredGenerated.length === 0 && !loading) {
+  if (!creditsLoading && subscriptionPeriod !== null && !hasCredits && filteredGenerated.length === 0 && !loading && !isWaitingForNewGeneration) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -400,9 +422,9 @@ export default function TeamGenerationsPage() {
           {/* Admin User Filter - only for team admins (pro users) */}
           {isTeamAdmin && (
             <div className="relative">
-              <select 
-                value={userFilter} 
-                onChange={(e) => setUserFilter(e.target.value)} 
+              <select
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
               >
                 <option value="me">My generations</option>
@@ -417,9 +439,9 @@ export default function TeamGenerationsPage() {
           )}
           {isTeamAdmin && userFilter === 'team' && teamUsers.length > 0 && (
             <div className="relative">
-              <select 
-                value={selectedUserId} 
-                onChange={(e) => setSelectedUserId(e.target.value)} 
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
               >
                 <option value="all">{tg('filters.allUsers')}</option>
@@ -437,9 +459,9 @@ export default function TeamGenerationsPage() {
 
           {/* Timeframe filter - Enhanced dropdown */}
           <div className="relative">
-            <select 
-              value={timeframe} 
-              onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} 
+            <select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value as 'all' | '7d' | '30d')}
               className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
             >
               <option value="all">{tg('filters.allTime')}</option>
@@ -452,13 +474,13 @@ export default function TeamGenerationsPage() {
               </svg>
             </div>
           </div>
-          
+
           {/* Style filter - Enhanced dropdown */}
           {styleOptions.length > 0 && (
             <div className="relative">
-              <select 
-                value={context} 
-                onChange={(e) => setContext(e.target.value)} 
+              <select
+                value={context}
+                onChange={(e) => setContext(e.target.value)}
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
               >
                 <option value="all">{tg('filters.allPhotoStyles')}</option>
@@ -481,11 +503,10 @@ export default function TeamGenerationsPage() {
                 setViewMode('images')
                 setSelectedPersonId(null)
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                viewMode === 'images' 
-                  ? 'bg-brand-primary text-white' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${viewMode === 'images'
+                ? 'bg-brand-primary text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -497,11 +518,10 @@ export default function TeamGenerationsPage() {
                 setViewMode('folders')
                 setSelectedPersonId(null)
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                viewMode === 'folders' 
-                  ? 'bg-brand-primary text-white' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${viewMode === 'folders'
+                ? 'bg-brand-primary text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -523,7 +543,7 @@ export default function TeamGenerationsPage() {
       {/* Content */}
       {viewMode === 'folders' && !selectedPersonId ? (
         // Folder View - Show person folders with counts from API
-        countsLoading ? (
+        countsLoading || loading || isWaitingForNewGeneration ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
           </div>
@@ -599,9 +619,9 @@ export default function TeamGenerationsPage() {
                     {/* Person's images grid */}
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
                       {group.generations.map(item => (
-                        <GenerationCard 
-                          key={item.id} 
-                          item={item} 
+                        <GenerationCard
+                          key={item.id}
+                          item={item}
                           currentUserId={currentUserId}
                           onImageClick={(src) => setLightboxImage({ src, personName: group.personName })}
                         />
@@ -610,7 +630,7 @@ export default function TeamGenerationsPage() {
                   </div>
                 ))}
               </div>
-              
+
               {/* Load More Button */}
               {pagination?.hasNextPage && (
                 <div className="text-center mt-6">
@@ -623,7 +643,7 @@ export default function TeamGenerationsPage() {
                   </button>
                 </div>
               )}
-              
+
               {/* Pagination Info */}
               {pagination && (
                 <div className="text-center text-sm text-gray-600 mt-4">
@@ -632,14 +652,21 @@ export default function TeamGenerationsPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-16 bg-white rounded-lg border">
-              <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
-              <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-              <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
-            </div>
+            (loading || isWaitingForNewGeneration) ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white rounded-lg border">
+                <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
+                <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
+                <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
+              </div>
+            )
           )}
         </>
       )}
+
       {failureToast && (
         <Toast
           message={failureToast}
@@ -650,7 +677,7 @@ export default function TeamGenerationsPage() {
 
       {/* Lightbox Modal */}
       {lightboxImage && (
-        <Lightbox 
+        <Lightbox
           src={lightboxImage.src}
           alt={`${lightboxImage.personName}'s photo`}
           label={`${lightboxImage.personName}'s photo`}

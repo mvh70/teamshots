@@ -18,16 +18,29 @@ export const BACKGROUND_TYPES = [
 ] as const
 
 /**
- * Maps background types to their environment classification
- * Used for camera settings derivation
+ * Maps background types to their environment classification.
+ * Used by LightingElement and CameraSettingsElement to derive appropriate settings.
+ *
+ * This is the key link: background type → environment → lighting/camera derivation
  */
 export const BACKGROUND_ENVIRONMENT_MAP: Record<string, BackgroundEnvironment> = {
+  // User-selectable backgrounds (headshot1, freepackage, outfit1)
   'neutral': 'studio',
   'gradient': 'studio',
   'office': 'indoor',
   'tropical-beach': 'outdoor',
   'busy-city': 'outdoor',
-  'custom': 'indoor' // Default for custom backgrounds
+  'custom': 'indoor',
+
+  // Standard-shots preset backgrounds
+  'cafe': 'indoor',
+  'outdoor': 'outdoor',
+  'solid': 'studio',
+  'urban': 'outdoor',
+  'stage': 'indoor',
+  'dark_studio': 'studio',
+  'team_bright': 'studio',
+  'lifestyle': 'outdoor',
 }
 
 /**

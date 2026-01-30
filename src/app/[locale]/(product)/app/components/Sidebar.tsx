@@ -13,7 +13,7 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
-  AdjustmentsHorizontalIcon,
+  PaintBrushIcon,
   UserIcon,
   CameraIcon,
   ChevronLeftIcon,
@@ -46,7 +46,7 @@ type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange
 import { 
   HomeIcon as HomeIconSolid,
   UsersIcon as UsersIconSolid,
-  AdjustmentsHorizontalIcon as AdjustmentsHorizontalIconSolid,
+  PaintBrushIcon as PaintBrushIconSolid,
   UserIcon as UserIconSolid,
   CameraIcon as CameraIconSolid,
   PhotoIcon as PhotoIconSolid,
@@ -427,8 +427,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
     {
       name: t('nav.personalPhotoStyles'),
       href: '/app/styles/personal',
-      icon: AdjustmentsHorizontalIcon,
-      iconSolid: AdjustmentsHorizontalIconSolid,
+      icon: PaintBrushIcon,
+      iconSolid: PaintBrushIconSolid,
       current: pathname === '/app/styles/personal',
       showFor: ['user', 'team_member', 'team_admin'],
       id: 'sidebar-personal-styles-nav',
@@ -452,8 +452,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
     {
       name: t('nav.teamPhotoStyles'),
       href: '/app/styles/team',
-      icon: AdjustmentsHorizontalIcon,
-      iconSolid: AdjustmentsHorizontalIconSolid,
+      icon: PaintBrushIcon,
+      iconSolid: PaintBrushIconSolid,
       current: pathname === '/app/styles/team',
       showFor: ['team_admin', 'team_member'], // Pro users will have effective role 'team_member'
       id: 'sidebar-team-styles-nav',

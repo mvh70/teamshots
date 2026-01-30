@@ -16,6 +16,7 @@ import './expression/metadata'
 import './industry/metadata'
 import './lighting/metadata'
 import './shot-type/metadata'
+import './preset/metadata'
 
 // Re-export the registry utilities
 export {

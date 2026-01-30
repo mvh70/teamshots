@@ -86,14 +86,14 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   // when liveGeneration exists but jobStatus is null (happens when generation completes)
   const currentJobStatus = liveGeneration !== null ? liveGeneration.jobStatus : item.jobStatus
   const currentStatus = liveGeneration?.status || item.status
-  
+
   // Extract generated key from live generation if available
   // The API returns generatedImageUrls as URLs, so we need to extract the key from the URL
   const extractKeyFromUrl = (url: string): string | null => {
     if (!url) return null
     try {
       // Handle both absolute and relative URLs
-      const urlObj = url.startsWith('http') 
+      const urlObj = url.startsWith('http')
         ? new URL(url)
         : new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
       const key = urlObj.searchParams.get('key')
@@ -121,7 +121,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     }
     return null
   }
-  
+
   // Get generated key from live generation or fall back to item
   // The API now returns generatedPhotoKeys directly, so we use those instead of extracting from URLs
   const liveGeneratedKey = liveGeneration?.generatedPhotoKeys?.[0]
@@ -135,7 +135,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       generatedImageUrls: liveGeneration?.generatedImageUrls
     })
   }
-  
+
   // Use live keys when available, otherwise fall back to static item data
   // Also check if we have URLs but extraction failed - in that case, we can still use the URL directly
   const hasGeneratedImageUrl = liveGeneration?.generatedImageUrls?.[0] && !liveGeneratedKey
@@ -197,7 +197,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       // Set a timeout to force refresh after 5 seconds
       // This prevents infinite spinner if polling stopped prematurely
       waitingForKeysTimeoutRef.current = setTimeout(() => {
-        console.warn('[GenerationCard] Timeout waiting for keys, forcing page reload', { 
+        console.warn('[GenerationCard] Timeout waiting for keys, forcing page reload', {
           generationId: item.id,
           currentStatus,
           hasLiveGeneration: !!liveGeneration,
@@ -265,7 +265,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   // - Array references change but contents are identical
   useEffect(() => {
     const keyActuallyChanged = previousAfterKeyRef.current !== null &&
-                               previousAfterKeyRef.current !== normalizedAfterKey
+      previousAfterKeyRef.current !== normalizedAfterKey
 
     if (keyActuallyChanged) {
       // Key changed to a different value - reset loading state
@@ -344,7 +344,8 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     }
   }, [loadedGenerated, currentStatus, isIncomplete, item.id])
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (isRegenerating) return
 
     // Track regenerate click
@@ -363,13 +364,13 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       const body = token
         ? JSON.stringify({ generationId: item.id })
         : JSON.stringify({
-            contextId: item.contextId,
-            prompt: t('actions.retryPrompt'),
-            generationType: item.generationType,
-            isRegeneration: true,
-            originalGenerationId: item.id,
-            workflowVersion: 'v3', // Use V3 workflow (4-step with parallel person/background generation)
-          })
+          contextId: item.contextId,
+          prompt: t('actions.retryPrompt'),
+          generationType: item.generationType,
+          isRegeneration: true,
+          originalGenerationId: item.id,
+          workflowVersion: 'v3', // Use V3 workflow (4-step with parallel person/background generation)
+        })
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -385,7 +386,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       }
 
       await response.json()
-      
+
       // Optionally refresh the page or show success message
       window.location.reload()
     } catch (error) {
@@ -396,7 +397,8 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     }
   }
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
     // Only show confirmation dialog for original photos with regenerations left
     // For regenerated images or originals with 0 regenerations, delete directly
     if (item.isOriginal && item.remainingRegenerations > 0) {
@@ -408,14 +410,14 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
 
   const handleDeleteConfirm = async () => {
     if (isDeleting) return
-    
+
     setIsDeleting(true)
     try {
       // Use token-based API if token is provided, otherwise use session-based API
       const apiUrl = token
         ? `/api/team/member/generations/${item.id}?token=${encodeURIComponent(token)}`
         : `/api/generations/${item.id}`
-      
+
       const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
@@ -438,7 +440,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       setIsDeleting(false)
     }
   }
-  
+
   // Check if generation is incomplete
   // isIncomplete is now defined above with live data
 
@@ -514,221 +516,234 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   const getDisplayImageUrl = () => {
     if (effectiveAcceptedKey) return buildImageUrl(effectiveAcceptedKey, afterRetryCount, token)
     if (effectiveGeneratedKey) return buildImageUrl(effectiveGeneratedKey, afterRetryCount, token)
+    if (hasGeneratedImageUrl && liveGeneration?.generatedImageUrls?.[0]) {
+      return liveGeneration.generatedImageUrls[0] + (token ? `&token=${encodeURIComponent(token)}` : '')
+    }
     return null
   }
 
   return (
-    <div 
-      className="relative rounded-lg border border-gray-200 bg-white cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => {
-        const imageUrl = getDisplayImageUrl()
-        if (imageUrl && onImageClick && !isIncomplete && !isFailed) {
-          onImageClick(imageUrl)
-        }
-      }}
+    <div
+      className="relative rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
     >
-        <div className="relative aspect-square overflow-hidden rounded-t-lg" ref={photoContainerRef}>
+      <div
+        className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
+        ref={photoContainerRef}
+        onClick={(e) => {
+          // Robust image URL retrieval with fallback for live generations
+          const basicUrl = getDisplayImageUrl()
+          const imageUrl = basicUrl || (liveGeneration?.generatedImageUrls?.[0] ?
+            (liveGeneration.generatedImageUrls[0] + (token ? `&token=${encodeURIComponent(token)}` : '')) : null)
+
+          if (imageUrl && onImageClick && !isIncomplete && !isFailed) {
+            onImageClick(imageUrl)
+          }
+        }}
+      >
         {/* Image container */}
         <div
           ref={containerRef}
           className="absolute inset-0 bg-gray-50 overflow-hidden select-none"
         >
-        {/* BACKGROUND: Single selfie or collage of multiple input selfies */}
-        {Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
-          <div className="absolute inset-0 grid bg-gray-200"
-            style={{
-              gridTemplateColumns: item.inputSelfieUrls.length <= 2 ? 'repeat(2, 1fr)'
-                : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
-                : item.inputSelfieUrls.length <= 6 ? 'repeat(3, 1fr)'
-                : 'repeat(3, 1fr)',
-              gridTemplateRows: item.inputSelfieUrls.length <= 2 ? 'repeat(1, 1fr)'
-                : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
-                : item.inputSelfieUrls.length <= 6 ? 'repeat(2, 1fr)'
-                : 'repeat(3, 1fr)'
-            }}
-          >
-            {item.inputSelfieUrls.slice(0, 9).map((url, idx) => (
-              <div key={`${item.id}-input-${idx}`} className="relative overflow-hidden">
-                <Image
-                  src={url}
-                  alt="input selfie"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Image
-            src={beforeSrc}
-            alt="selfie"
-            fill
-            className="object-cover"
-            unoptimized
-            onError={() => {
-              if (beforeRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
-                setBeforeRetryCount(prev => prev + 1)
-                return
-              }
-              setBeforeImageError(true)
-              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
-            }}
-            onLoadingComplete={() => {
-              if (beforeRetryCount !== 0) {
-                setBeforeRetryCount(0)
-              }
-            }}
-          />
-        )}
-
-        {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
-        {isFailed ? (
-          // Error state for failed generation
-          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-            <div className="text-center px-4">
-              <div className="mx-auto mb-3">
-                <svg className="w-12 h-12 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-gray-900 mb-1">
-                {t('toasts.generationFailed', { default: 'We couldn\'t finish that photo. The photo credits have been returned to your balance.' })}
-              </p>
-              {currentJobStatus?.failedReason && (
-                <p className="text-xs text-gray-500 mt-2">
-                  {currentJobStatus.failedReason}
-                </p>
-              )}
-            </div>
-          </div>
-        ) : isWaitingForKeys ? (
-          // Status is completed but waiting for image keys to arrive
-          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-            <div className="text-center px-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-              <p className="text-xs text-gray-600 whitespace-pre-line">
-                {t('finalizing', { default: 'Finalizing...' })}
-              </p>
-            </div>
-          </div>
-        ) : isIncomplete ? (
-          // Placeholder for incomplete generation - show full spinner
-          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-            <div className="text-center px-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-              <p className="text-xs text-gray-600 whitespace-pre-line">
-                {currentJobStatus?.message || t('generating', { default: 'Generating...' })}
-              </p>
-            </div>
-          </div>
-        ) : (
-          // Generated image with progress reveal
-          <div
-            className="absolute inset-0"
-            style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
-          >
-            <div
-              ref={scrollContainerRef}
-              className="w-full h-full overflow-y-auto overflow-x-hidden relative"
-              onScroll={determineScrollability}
-            >
-              {/* Loading spinner overlay */}
-              {!loadedGenerated && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100/60 z-10">
-                  <LoadingSpinner />
-                </div>
-              )}
-              {/* Use native img for flexible intrinsic sizing and scrolling */}
-              {/* Scale to container width; allow vertical scroll if taller than square */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-              ref={imgRef}
-              src={afterSrc}
-              alt="generated"
-                className="block w-full h-auto"
-              id={`generated-photo-${item.id}`}
-              data-onborda="generated-photo"
-              onLoad={() => {
-                setLoadedGenerated(true)
-                if (afterRetryCount !== 0) {
-                  setAfterRetryCount(0)
-                }
-                // Measure after image lays out
-                requestAnimationFrame(determineScrollability)
+          {/* BACKGROUND: Single selfie or collage of multiple input selfies */}
+          {Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
+            <div className="absolute inset-0 grid bg-gray-200"
+              style={{
+                gridTemplateColumns: item.inputSelfieUrls.length <= 2 ? 'repeat(2, 1fr)'
+                  : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
+                    : item.inputSelfieUrls.length <= 6 ? 'repeat(3, 1fr)'
+                      : 'repeat(3, 1fr)',
+                gridTemplateRows: item.inputSelfieUrls.length <= 2 ? 'repeat(1, 1fr)'
+                  : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
+                    : item.inputSelfieUrls.length <= 6 ? 'repeat(2, 1fr)'
+                      : 'repeat(3, 1fr)'
               }}
-              // NOTE: onLoadStart is NOT a valid event for <img> elements (only for video/audio/XHR)
-              // React may silently ignore it or cause unexpected behavior, so we removed it.
-              // The loadedGenerated state is now managed purely through the effect and onLoad.
+            >
+              {item.inputSelfieUrls.slice(0, 9).map((url, idx) => (
+                <div key={`${item.id}-input-${idx}`} className="relative overflow-hidden">
+                  <Image
+                    src={url}
+                    alt="input selfie"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Image
+              src={beforeSrc}
+              alt="selfie"
+              fill
+              className="object-cover"
+              unoptimized
               onError={() => {
-                if (afterRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
-                  setAfterRetryCount(prev => prev + 1)
+                if (beforeRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+                  setBeforeRetryCount(prev => prev + 1)
                   return
                 }
-                setAfterImageError(true)
-                setLoadedGenerated(true) // Hide spinner on error too
-                console.warn('Generated image failed to load, may not be migrated to Backblaze yet:', item.generatedKey)
+                setBeforeImageError(true)
+                console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
+              }}
+              onLoadingComplete={() => {
+                if (beforeRetryCount !== 0) {
+                  setBeforeRetryCount(0)
+                }
               }}
             />
+          )}
+
+          {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
+          {isFailed ? (
+            // Error state for failed generation
+            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+              <div className="text-center px-4">
+                <div className="mx-auto mb-3">
+                  <svg className="w-12 h-12 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-gray-900 mb-1">
+                  {t('toasts.generationFailed', { default: 'We couldn\'t finish that photo. The photo credits have been returned to your balance.' })}
+                </p>
+                {currentJobStatus?.failedReason && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    {currentJobStatus.failedReason}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : isWaitingForKeys ? (
+            // Status is completed but waiting for image keys to arrive
+            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+              <div className="text-center px-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
+                <p className="text-xs text-gray-600 whitespace-pre-line">
+                  {t('finalizing', { default: 'Finalizing...' })}
+                </p>
+              </div>
+            </div>
+          ) : isIncomplete ? (
+            // Placeholder for incomplete generation - show full spinner
+            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+              <div className="text-center px-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
+                <p className="text-xs text-gray-600 whitespace-pre-line">
+                  {currentJobStatus?.message || t('generating', { default: 'Generating...' })}
+                </p>
+              </div>
+            </div>
+          ) : (
+            // Generated image with progress reveal
+            <div
+              className="absolute inset-0"
+              style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+            >
+              <div
+                ref={scrollContainerRef}
+                className="w-full h-full overflow-y-auto overflow-x-hidden relative"
+                onScroll={determineScrollability}
+              >
+                {/* Loading spinner overlay */}
+                {!loadedGenerated && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100/60 z-10">
+                    <LoadingSpinner />
+                  </div>
+                )}
+                {/* Use native img for flexible intrinsic sizing and scrolling */}
+                {/* Scale to container width; allow vertical scroll if taller than square */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={imgRef}
+                  src={afterSrc}
+                  alt="generated"
+                  className="block w-full h-auto"
+                  id={`generated-photo-${item.id}`}
+                  data-onborda="generated-photo"
+                  onLoad={() => {
+                    setLoadedGenerated(true)
+                    if (afterRetryCount !== 0) {
+                      setAfterRetryCount(0)
+                    }
+                    // Measure after image lays out
+                    requestAnimationFrame(determineScrollability)
+                  }}
+                  // NOTE: onLoadStart is NOT a valid event for <img> elements (only for video/audio/XHR)
+                  // React may silently ignore it or cause unexpected behavior, so we removed it.
+                  // The loadedGenerated state is now managed purely through the effect and onLoad.
+                  onError={() => {
+                    if (afterRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+                      setAfterRetryCount(prev => prev + 1)
+                      return
+                    }
+                    setAfterImageError(true)
+                    setLoadedGenerated(true) // Hide spinner on error too
+                    console.warn('Generated image failed to load, may not be migrated to Backblaze yet:', item.generatedKey)
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
-        {/* Scroll hint arrow when content overflows */}
-        {!isIncomplete && canScrollDown && (
-          <button
-            onClick={() => {
-              const el = scrollContainerRef.current
-              if (el) {
-                el.scrollBy({ top: 100, behavior: 'smooth' })
-              }
-            }}
-            className="absolute bottom-2 right-2 bg-white/80 hover:bg-white text-gray-700 rounded-full shadow p-1 cursor-pointer transition-colors animate-bounce"
-            aria-label="Scroll down"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        )}
+          {/* Scroll hint arrow when content overflows */}
+          {!isIncomplete && canScrollDown && (
+            <button
+              onClick={() => {
+                const el = scrollContainerRef.current
+                if (el) {
+                  el.scrollBy({ top: 100, behavior: 'smooth' })
+                }
+              }}
+              className="absolute bottom-2 right-2 bg-white/80 hover:bg-white text-gray-700 rounded-full shadow p-1 cursor-pointer transition-colors animate-bounce"
+              aria-label="Scroll down"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          )}
 
-        {/* Handle knob (also used to start drag) - only show if not incomplete */}
-        {!isIncomplete && (
-          <button
-            onMouseDown={onMouseDown}
-            onTouchStart={onTouchStart}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white shadow border border-gray-300 flex items-center justify-center text-xs z-10"
-            style={{ left: `${pos}%` }}
-            aria-label="Drag slider"
-            id={`slider-button-${item.id}`}
-          >
-            ⇆
-          </button>
-        )}
+          {/* Handle knob (also used to start drag) - only show if not incomplete */}
+          {!isIncomplete && (
+            <button
+              onMouseDown={onMouseDown}
+              onTouchStart={onTouchStart}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white shadow border border-gray-300 flex items-center justify-center text-xs z-10"
+              style={{ left: `${pos}%` }}
+              aria-label="Drag slider"
+              id={`slider-button-${item.id}`}
+            >
+              ⇆
+            </button>
+          )}
 
-        {/* Processing label - only shown during generation */}
-        {isIncomplete && (
-          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-brand-cta text-white">Processing</span>
-        )}
+          {/* Processing label - only shown during generation */}
+          {isIncomplete && (
+            <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-brand-cta text-white">Processing</span>
+          )}
 
-        {/* Generation Rating - Overlay on photo, only for own generations */}
-        {!isIncomplete && item.isOwnGeneration && (
-          <div className="absolute bottom-2 left-2 z-20" data-onborda="feedback-rating">
-            <GenerationRating
-              generationId={item.id}
-              token={token}
-              generationStatus={currentStatus}
-              photoContainerRef={photoContainerRef} // Pass the ref here
-            />
-          </div>
-        )}
+          {/* Generation Rating - Overlay on photo, only for own generations */}
+          {!isIncomplete && item.isOwnGeneration && (
+            <div className="absolute bottom-2 left-2 z-20" data-onborda="feedback-rating">
+              <GenerationRating
+                generationId={item.id}
+                token={token}
+                generationStatus={currentStatus}
+                photoContainerRef={photoContainerRef} // Pass the ref here
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Info icon with hover popup - positioned outside all overflow-hidden containers */}
       {!isIncomplete && (
         <div className="absolute top-2 left-2 z-30 group">
-          <button className="w-6 h-6 rounded-full bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors">
+          <button
+            className="w-6 h-6 rounded-full bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -770,7 +785,8 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
             ) : (
               <>
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation()
                     if (!imageKey) return
                     try {
                       const downloadUrl = buildImageUrl(imageKey, 0, token)
@@ -799,17 +815,17 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                   id={`download-button-${item.id}`}
                   data-onborda="download-button"
                 >
-                  <svg 
-                    className="w-4 h-4" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
                   {/* Popover tooltip */}
@@ -819,7 +835,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                   </div>
                 </button>
                 {item.remainingRegenerations > 0 && (
-                  <button 
+                  <button
                     onClick={handleRegenerate}
                     disabled={isRegenerating}
                     className="relative group text-sm text-brand-secondary hover:text-brand-secondary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-secondary/10 transition-colors"
@@ -831,17 +847,17 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                         <div className="animate-spin rounded-full h-3 w-3 border-b border-brand-secondary"></div>
                       </div>
                     ) : (
-                      <svg 
-                        className="w-4 h-4" 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                         />
                       </svg>
                     )}
@@ -854,7 +870,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                 )}
                 {/* Only show delete button if user owns this generation */}
                 {item.isOwnGeneration === true && (
-                  <button 
+                  <button
                     onClick={handleDeleteClick}
                     disabled={isDeleting}
                     className="relative group text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50 transition-colors"
@@ -866,17 +882,17 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                         <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600"></div>
                       </div>
                     ) : (
-                      <svg 
-                        className="w-4 h-4" 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
                     )}

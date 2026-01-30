@@ -13,7 +13,9 @@ export type AIModelId =
   | 'gemini-2.5-flash-image-openrouter' // Image generation via OpenRouter
   | 'gemini-3-pro'           // Gemini 3 Pro text model
   | 'gemini-3-pro-image'     // Gemini 3 Pro Image (via REST API)
+  | 'grok-4-fast'            // Grok-4 Fast via OpenRouter (cost-effective evaluation)
   | 'nano-banana'            // Replicate fallback
+
 
 export interface TokenBasedPricing {
   type: 'token'
@@ -50,8 +52,8 @@ export const AI_COST_CONFIG = {
       provider: 'vertex',  // Default primary provider (can fallback to gemini-rest or replicate)
       pricing: {
         type: 'token',
-        inputPer1MTokens: 0.075,  // $0.075 per 1M input tokens
-        outputPer1MTokens: 0.30,  // $0.30 per 1M output tokens
+        inputPer1MTokens: 0.30,
+        outputPer1MTokens: 2.50,
       },
       description: 'Gemini 2.5 Flash for text evaluation and analysis',
     } satisfies ModelConfig,
@@ -63,9 +65,9 @@ export const AI_COST_CONFIG = {
       provider: 'vertex',  // Default primary provider (can fallback to gemini-rest, openrouter, or replicate)
       pricing: {
         type: 'token',
-        inputPer1MTokens: 0.075,
-        outputPer1MTokens: 0.30,
-        perImageGenerated: 0.039, // $0.039 per image generated
+        inputPer1MTokens: 0.30,
+        outputPer1MTokens: 2.50,
+        perImageGenerated: 0.039, // Keep per-image cost
       },
       description: 'Gemini 2.5 Flash for image generation',
     } satisfies ModelConfig,
@@ -76,8 +78,8 @@ export const AI_COST_CONFIG = {
       provider: 'openrouter',
       pricing: {
         type: 'token',
-        inputPer1MTokens: 0.075,
-        outputPer1MTokens: 0.30,
+        inputPer1MTokens: 0.30,
+        outputPer1MTokens: 2.50,
         perImageGenerated: 0.039,
       },
       description: 'Gemini 2.5 Flash image generation via OpenRouter (assumes parity pricing)',
@@ -119,7 +121,20 @@ export const AI_COST_CONFIG = {
       },
       description: 'Nano Banana on Replicate (fallback)',
     } satisfies ModelConfig,
+
+    // Grok-4 Fast via OpenRouter (cost-effective evaluation)
+    'grok-4-fast': {
+      id: 'grok-4-fast',
+      provider: 'openrouter',
+      pricing: {
+        type: 'token',
+        inputPer1MTokens: 0.20,  // $0.20 per 1M input tokens
+        outputPer1MTokens: 0.50, // $0.50 per 1M output tokens
+      },
+      description: 'Grok-4 Fast for cost-effective evaluation via OpenRouter',
+    } satisfies ModelConfig,
   },
+
 
   // Default token estimates for different operation types
   estimates: {

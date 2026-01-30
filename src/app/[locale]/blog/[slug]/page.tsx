@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { constructMetadata } from '@/lib/seo'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getBrand } from '@/config/brand'
 import { getBaseUrl } from '@/lib/url'
@@ -9,6 +9,7 @@ import { BlogPostTemplate, type BlogPostContent } from '@/components/blog'
 import {
   getBlogPostBySlug,
   getAllBlogSlugs,
+  getRedirectForSlug,
   variantToBrandId,
 } from '@/lib/cms'
 
@@ -27,8 +28,8 @@ type Props = {
 export async function generateStaticParams() {
   const params: Array<{ locale: string; slug: string }> = []
 
-  // Get slugs for each brand
-  const brands = ['teamshots-pro', 'headshot-one']
+  // Get slugs for each brand that may have blog content
+  const brands = ['teamshotspro', 'headshot-one', 'photoshotspro', 'duo-snaps', 'kin-frame', 'rightclick-fit']
 
   for (const brandId of brands) {
     const slugs = getAllBlogSlugs(brandId)
@@ -60,6 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
+    // If redirect exists, metadata won't be used (redirect happens in page component)
     return { title: 'Not Found' }
   }
 
@@ -145,8 +147,9 @@ function markdownToHtml(markdown: string): string {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     // Links
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline">$1</a>')
-    // Lists
+    // Lists (markdown "- " and unicode "• " bullets)
     .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/^• (.*$)/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="list-disc pl-6 mb-4">$&</ul>')
     // Blockquotes
     .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 italic text-gray-600">$1</blockquote>')
@@ -179,6 +182,11 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
+    // Check if this slug has been consolidated/redirected
+    const redirectSlug = getRedirectForSlug(brandId, slug)
+    if (redirectSlug) {
+      permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+    }
     notFound()
   }
 

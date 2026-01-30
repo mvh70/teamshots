@@ -1,11 +1,9 @@
-import { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
+import { PhotoStyleSettings, CategoryType, BackgroundValue, ExpressionValue, PoseValue } from '@/types/photo-style'
+import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
-import { getDefaultPresetSettings } from '../standard-settings'
-import { getValueOrDefault } from '../shared/utils'
-import { CORPORATE_HEADSHOT } from '../defaults'
 import * as backgroundElement from '../../elements/background'
-import * as branding from '../../elements/branding'
-import * as customClothing from '../../elements/custom-clothing'
+import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
+import { deserializeCustomClothing } from '../../elements/custom-clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
@@ -20,7 +18,8 @@ const VISIBLE_CATEGORIES: CategoryType[] = [
   'clothingColors',
   'pose',
   'expression',
-  'shotType']
+  'shotType'
+]
 
 const AVAILABLE_BACKGROUNDS = [
   'office',
@@ -28,13 +27,13 @@ const AVAILABLE_BACKGROUNDS = [
   'busy-city',
   'neutral',
   'gradient',
-  'custom']
+  'custom'
+]
 
 const AVAILABLE_POSES = [
   'classic_corporate',
   'slimming_three_quarter',
   'power_cross',
-  //'approachable_lean',
   'candid_over_shoulder',
   'seated_engagement'
 ]
@@ -48,17 +47,29 @@ const AVAILABLE_EXPRESSIONS = [
   'confident'
 ]
 
-const OUTFIT1_PRESET = CORPORATE_HEADSHOT
-const OUTFIT1_PRESET_DEFAULTS = getDefaultPresetSettings(OUTFIT1_PRESET)
-
-const DEFAULTS = {
-  ...OUTFIT1_PRESET_DEFAULTS,
+// Package defaults - complete configuration for all categories
+// This is the source of truth for this package - no external dependencies
+//
+// LIGHTING & CAMERA: Derived automatically from the user's background choice.
+// See BACKGROUND_ENVIRONMENT_MAP in elements/background/config.ts for the mapping.
+// Example: 'neutral' → studio environment → soft diffused lighting
+//          'office' → indoor environment → natural window light
+const DEFAULTS: PhotoStyleSettings = {
+  presetId: 'corporate-headshot',
+  // Visible categories - user can customize these
+  background: userChoice<BackgroundValue>(),
+  branding: userChoice<BrandingValue>(),
+  pose: userChoice<PoseValue>({ type: 'slimming_three_quarter' }),
+  expression: userChoice<ExpressionValue>({ type: 'genuine_smile' }),
   customClothing: {
     mode: 'predefined' as const,
     value: undefined
   },
   clothingColors: userChoice<ClothingColorValue>(),
   shotType: predefined({ type: 'medium-close-up' as const }),
+  filmType: predefined({ type: 'kodak-editorial' }),
+  // Non-visible settings - package standards
+  aspectRatio: '4:5' as const,
   subjectCount: '1' as const
 }
 
@@ -73,8 +84,8 @@ export const outfit1: ClientStylePackage = {
   availablePoses: AVAILABLE_POSES,
   availableExpressions: AVAILABLE_EXPRESSIONS,
   defaultSettings: DEFAULTS,
-  defaultPresetId: OUTFIT1_PRESET.id,
-  presets: { [OUTFIT1_PRESET.id]: OUTFIT1_PRESET },
+  defaultPresetId: 'corporate-headshot',
+  presets: {},  // No preset dependency - package is self-contained
   promptBuilder: () => {
     throw new Error('promptBuilder is deprecated - use server-side buildGenerationPayload instead')
   },
@@ -119,8 +130,8 @@ export const outfit1: ClientStylePackage = {
 
       // Deserialize categories
       const backgroundResult = backgroundElement.deserialize(inner)
-      const brandingResult = branding.deserialize(inner)
-      const customClothingResult = customClothing.deserializeCustomClothing(
+      const brandingResult = brandingDeserialize(inner)
+      const customClothingResult = deserializeCustomClothing(
         typeof inner.customClothing === 'string'
           ? inner.customClothing
           : JSON.stringify(inner.customClothing || DEFAULTS.customClothing)

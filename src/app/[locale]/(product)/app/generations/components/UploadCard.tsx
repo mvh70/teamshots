@@ -10,7 +10,6 @@ export type UploadListItem = {
   uploadedKey: string
   validated: boolean
   createdAt: string
-  usedInGenerationId?: string
   hasGenerations?: boolean // New field to indicate if selfie has any generations
   selected?: boolean // Selection state
 }

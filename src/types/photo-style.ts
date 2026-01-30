@@ -13,6 +13,7 @@ import type { ClothingColorSettings, ClothingColorValue } from '../domain/style/
 import type { BackgroundSettings, BackgroundType, BackgroundValue } from '../domain/style/elements/background/types'
 import type { CustomClothingSettings } from '../domain/style/elements/custom-clothing/types'
 import type { IndustrySettings, IndustryType, IndustryValue } from '../domain/style/elements/industry/types'
+import type { FilmTypeSettings, FilmType, FilmTypeValue } from '../domain/style/elements/rendering/film-type/types'
 
 export { PoseSettings, PoseType, PoseValue }
 export { ClothingSettings, ClothingType, ClothingValue }
@@ -26,6 +27,7 @@ export { ClothingColorSettings, ClothingColorValue }
 export { BackgroundSettings, BackgroundType, BackgroundValue }
 export { CustomClothingSettings }
 export { IndustrySettings, IndustryType, IndustryValue }
+export { FilmTypeSettings, FilmType, FilmTypeValue }
 
 export interface StyleSettings {
   type: 'preset' | 'user-choice'
@@ -70,6 +72,11 @@ export interface PhotoStyleSettings {
   usageContext?: UsageContextSetting
   customPrompt?: string
   industry?: IndustrySettings
+  filmType?: FilmTypeSettings
+  preset?: {
+    mode: 'predefined' | 'user-choice'
+    value?: { presetId: string }
+  }
 }
 
 // Helper types for form handling
@@ -86,6 +93,8 @@ export type CategoryType =
   | 'lighting'
   | 'pose'
   | 'industry'
+  | 'filmType'
+  | 'preset'
 
 export interface CategoryToggle {
   category: CategoryType
@@ -138,5 +147,9 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     value: undefined
   },
   subjectCount: '1',
-  usageContext: 'general'
+  usageContext: 'general',
+  filmType: {
+    mode: 'predefined',
+    value: undefined
+  }
 }

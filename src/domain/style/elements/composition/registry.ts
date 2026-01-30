@@ -266,8 +266,20 @@ class ElementCompositionRegistry {
    * @throws Error if circular dependency detected
    */
   getRelevantElements(context: ElementContext): StyleElement[] {
+    const { packageContext } = context
+    const activeElements = packageContext?.activeElements
+
     const relevantElements = Array.from(this.elements.values()).filter((element) => {
       try {
+        // If package specifies activeElements, only those elements can contribute
+        // This gives packages full control over which elements run
+        if (activeElements && !activeElements.includes(element.id)) {
+          console.log(
+            `[ElementComposition] Skipping ${element.id} - not in package's activeElements`
+          )
+          return false
+        }
+
         return element.isRelevantForPhase(context)
       } catch (error) {
         console.error(

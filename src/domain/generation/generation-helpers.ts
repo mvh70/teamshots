@@ -63,7 +63,7 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
       demographics, // Pass aggregated demographics from selfies
       prompt,
       providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL'),
+        model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'), // Default to flash-image if env not set
         numVariations: 4,
         workflowVersion,
         debugMode,

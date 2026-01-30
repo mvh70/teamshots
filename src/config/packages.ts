@@ -47,7 +47,7 @@ export const PACKAGES_CONFIG = {
       description: 'Free photo style package with background and branding customization options. Perfect for getting started.',
       price: 0, // Free
     } as PackageMetadata,
-    
+
     // Individual-focused packages (photoshotspro.com)
     linkedin: {
       id: 'linkedin',
@@ -70,7 +70,7 @@ export const PACKAGES_CONFIG = {
       price: 0, // Free (included with signup)
       audience: 'individual',
     } as PackageMetadata,
-    
+
     // Couple-focused packages (coupleshotspro.com / duosnaps.com)
     couple: {
       id: 'couple',
@@ -88,13 +88,22 @@ export const PACKAGES_CONFIG = {
       price: 0,
       audience: 'family',
     } as PackageMetadata,
+
+    // Standard Use Case Packages (New)
+    'standard-shots': {
+      id: 'standard-shots',
+      name: 'Standard Shots',
+      description: 'Proven success formulas for LinkedIn, Dating, CV, and Personal Branding. One-click professional results.',
+      price: 0,
+      audience: 'individual',
+    } as PackageMetadata,
   },
-  
+
   // Default package granted on signup (users "own" this but may be restricted to freepackage during trial)
   // Note: Domain-specific defaults are in landing-content.ts
   // Runtime access control in actions.ts enforces freepackage for users on free trial
   defaultPlanPackage: 'headshot1' as const,
-  
+
   // Package purchase prices (for future purchases)
   prices: {
     headshot1: 0, // Free
@@ -105,6 +114,7 @@ export const PACKAGES_CONFIG = {
     casual: 0, // Free
     couple: 0, // Free
     family: 0, // Free
+    'standard-shots': 0, // Free
   },
 } as const
 

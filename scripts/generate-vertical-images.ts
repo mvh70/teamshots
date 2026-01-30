@@ -29,8 +29,8 @@ async function run() {
   const { getS3BucketName, createS3Client, getS3Key } = await import('../src/lib/s3-client')
   const { GetObjectCommand, PutObjectCommand } = await import('@aws-sdk/client-s3')
   const { imageGenerationQueue } = await import('../src/queue')
-  const industryConfig = await import('../src/domain/style/packages/industry-headshot/industry-config')
-  const AVAILABLE_INDUSTRIES = industryConfig.AVAILABLE_INDUSTRIES
+  const industryStyles = await import('../src/domain/style/elements/industry/industry-styles')
+  const AVAILABLE_INDUSTRIES = industryStyles.AVAILABLE_INDUSTRIES
   type IndustryType = typeof AVAILABLE_INDUSTRIES[number]
   const fs = await import('fs/promises')
 

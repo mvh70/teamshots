@@ -24,7 +24,8 @@ const VALID_CATEGORIES: Set<CategoryType> = new Set([
   'expression',
   'shotType',
   'lighting',
-  'industry'
+  'industry',
+  'preset'
 ])
 
 /**

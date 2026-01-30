@@ -1,8 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
-import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
+import { AI_CONFIG, STAGE_MODEL, type ModelName } from '../config'
 import type { ReferenceImage, EvaluationFeedback } from '@/types/generation'
 
 interface EvaluatePersonInput {
@@ -23,16 +22,14 @@ export async function evaluatePersonGeneration(
 ): Promise<EvaluationFeedback> {
   const { imageBase64, imageIndex, generationPrompt, selfieReferences, logoReference, brandingPosition, garmentCollageReference } = input
 
+  // Model selection - supports both Gemini and Grok models via OpenRouter
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+  const modelName: ModelName = (evalModel as ModelName) || STAGE_MODEL.EVALUATION
 
   Logger.debug('Evaluating person generation (Step 1)', {
     modelName,
     imageIndex
   })
-
-  const model = await getVertexGenerativeModel(modelName)
 
   // Extract inherent accessories from wardrobe - these are authorized by the clothing style
   let authorizedAccessories: string[] = []
@@ -126,49 +123,71 @@ export async function evaluatePersonGeneration(
     '}'
   )
 
-  const parts: Part[] = [{ text: instructions.join('\n') }]
+  // Build images array for multi-provider text generation
+  const images: GeminiReferenceImage[] = []
 
-  parts.push({ text: `Generation prompt used:\n${generationPrompt}` })
-  parts.push({ text: `Step 1 candidate image ${imageIndex + 1}` })
-  parts.push({ inlineData: { mimeType: 'image/png', data: imageBase64 } })
+  // Add generated image to evaluate
+  images.push({
+    base64: imageBase64,
+    mimeType: 'image/png',
+    description: `Step 1 candidate image ${imageIndex + 1}`
+  })
 
+  // Add selfie references
   for (const selfie of selfieReferences) {
-    parts.push({ text: `Reference ${selfie.description || 'selfie'}` })
-    parts.push({ inlineData: { mimeType: selfie.mimeType, data: selfie.base64 } })
+    images.push({
+      base64: selfie.base64,
+      mimeType: selfie.mimeType,
+      description: `Reference ${selfie.description || 'selfie'}`
+    })
   }
 
+  // Add garment collage if provided
   if (garmentCollageReference) {
-    parts.push({ text: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories' })
-    parts.push({ inlineData: { mimeType: garmentCollageReference.mimeType, data: garmentCollageReference.base64 } })
+    images.push({
+      base64: garmentCollageReference.base64,
+      mimeType: garmentCollageReference.mimeType,
+      description: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories'
+    })
   }
 
+  // Add logo if branding on clothing
   if (logoReference && brandingPosition === 'clothing') {
-    parts.push({ text: logoReference.description ?? 'Official branding/logo asset for clothing' })
-    parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
+    images.push({
+      base64: logoReference.base64,
+      mimeType: logoReference.mimeType,
+      description: logoReference.description ?? 'Official branding/logo asset for clothing'
+    })
   }
 
-  const contents: Content[] = [{ role: 'user', parts }]
+  // Build full prompt text
+  const promptText = instructions.join('\n') + `\n\nGeneration prompt used:\n${generationPrompt}`
 
   if (debugMode) {
-    const evalPromptText = instructions.join('\n') + `\n\nGeneration prompt used:\n${generationPrompt}`
     Logger.info('V2 DEBUG - Step 2 Evaluation Prompt:', {
       step: 2,
       evaluationType: 'person_generation',
-      prompt: evalPromptText.substring(0,8000) + (evalPromptText.length > 8000 ? '...(truncated)' : ''),
-      promptLength: evalPromptText.length,
+      prompt: promptText.substring(0, 8000) + (promptText.length > 8000 ? '...(truncated)' : ''),
+      promptLength: promptText.length,
       imageCount: 1,
       selfieCount: selfieReferences.length
     })
   }
 
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
+    // Use multi-provider text generation (supports Gemini, Grok via OpenRouter)
+    const result = await generateTextWithGemini(promptText, images, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION'
     })
 
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    Logger.debug('V3 Step 1 Eval: Provider used', {
+      provider: result.providerUsed,
+      model: modelName,
+      evalAttempt: 1
+    })
+
+    const textPart = result.text
 
     if (textPart) {
       const hasBranding = !!(logoReference && brandingPosition === 'clothing')
@@ -191,8 +210,8 @@ export async function evaluatePersonGeneration(
           evaluation.no_unauthorized_accessories === 'YES' &&
           (!logoReference || brandingPosition !== 'clothing' ||
             (evaluation.branding_logo_matches === 'YES' &&
-             evaluation.branding_positioned_correctly === 'YES' &&
-             evaluation.branding_scene_aligned === 'YES'))
+              evaluation.branding_positioned_correctly === 'YES' &&
+              evaluation.branding_scene_aligned === 'YES'))
 
         const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
 
@@ -262,7 +281,7 @@ function normalizeYesNoUncertain(value: unknown): 'YES' | 'NO' | 'UNCERTAIN' {
 
 function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   const suggestions: string[] = []
-  
+
   for (const criterion of failedCriteria) {
     if (criterion.includes('person_present')) {
       suggestions.push('Ensure the person is clearly visible and well-defined in the frame')
@@ -286,7 +305,7 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
       suggestions.push('Integrate logo naturally into clothing with proper lighting, perspective, and fabric contours')
     }
   }
-  
+
   return suggestions.join('; ')
 }
 

@@ -96,7 +96,7 @@ export async function executeV3Step2(
     resolution,
     originalPrompt
   } = input
-  
+
   // Logging handled by logPrompt
 
   // Get expected dimensions from aspect ratio, scaled by resolution
@@ -104,7 +104,7 @@ export async function executeV3Step2(
   const resolutionMultiplier = resolution === '4K' ? 4 : resolution === '2K' ? 2 : 1
   const expectedWidth = aspectRatioConfig.width * resolutionMultiplier
   const expectedHeight = aspectRatioConfig.height * resolutionMultiplier
-  
+
   // Parse original prompt and extract scene/camera/lighting/rendering (exclude subject)
   const promptObj = JSON.parse(originalPrompt)
 
@@ -219,11 +219,11 @@ export async function executeV3Step2(
   let subjectReference = null
   if (promptObj.subject) {
     const subject = promptObj.subject as Record<string, unknown>
-    
+
     // Only include pose, expression, and minimal wardrobe context (style only, not colors)
     // This helps the model understand framing/scale without duplicating Step 1a details
     const minimalSubject: Record<string, unknown> = {}
-    
+
     if (subject.pose) {
       minimalSubject.pose = subject.pose
     }
@@ -245,7 +245,7 @@ export async function executeV3Step2(
 
     subjectReference = JSON.stringify(minimalSubject, null, 2)
   }
-    
+
   // Build the structured prompt for background composition
   const structuredPrompt = [
     // Section 1: Intro & Task
@@ -268,7 +268,7 @@ export async function executeV3Step2(
     // Section 2: Scene Specifications
     'Scene, Camera, Lighting & Rendering Specifications:',
     jsonPrompt,
-    
+
     // Section 2b: Subject Reference (for context only - helps AI understand intended scale/positioning)
     ...(subjectReference ? [
       '',
@@ -340,7 +340,7 @@ export async function executeV3Step2(
   if (elementContributions?.freedom && elementContributions.freedom.length > 0) {
     // Filter out rules that conflict with our hard constraints
     const safetyFilters = ['background scale', 'background positioning', 'adjust background', 'modify background']
-    const filteredFreedom = elementContributions.freedom.filter(rule => 
+    const filteredFreedom = elementContributions.freedom.filter(rule =>
       !safetyFilters.some(filter => rule.toLowerCase().includes(filter))
     )
     if (filteredFreedom.length > 0) {
@@ -351,7 +351,7 @@ export async function executeV3Step2(
       }
     }
   }
-  
+
   // Add evaluator feedback/comments if provided
   if (evaluatorComments && evaluatorComments.length > 0) {
     structuredPrompt.push('', 'Refinement Instructions (from previous evaluations):')
@@ -359,7 +359,7 @@ export async function executeV3Step2(
       structuredPrompt.push(`- ${comment}`)
     }
   }
-  
+
   structuredPrompt.push(
     '',
     // Section 4: Quality Guidelines
@@ -371,7 +371,7 @@ export async function executeV3Step2(
   )
 
   const compositionPrompt = structuredPrompt.join('\n')
-  
+
   // Debug prompt logging handled by logPrompt() below
 
   // Build format frame reference
@@ -380,16 +380,16 @@ export async function executeV3Step2(
     height: expectedHeight,
     aspectRatioDescription: aspectRatio
   })
-  
+
   // Build reference images array
   const referenceImages: ReferenceImage[] = [
     {
-      description: 'BASE IMAGE - This is the person you MUST use. Take this person EXACTLY as shown - same pose, same expression, same clothing, same body position, same framing. Do NOT regenerate or modify the person. Only remove the grey background and composite onto the new background.',
+      description: 'BASE IMAGE - This is the primary source. Composite this person EXACTLY as shown into the background. Do NOT redraw, regeneration, or modify the person\'s face, body, or clothing. The person must look IDENTICAL to this image, just on the new background.',
       base64: personBuffer.toString('base64'),
       mimeType: 'image/png'
     }
   ]
-  
+
   // Add background - either from Step 1b or user's custom background
   if (backgroundBuffer) {
     referenceImages.push({
@@ -398,7 +398,7 @@ export async function executeV3Step2(
       mimeType: 'image/png'
     })
   }
-  
+
   // Add format frame reference
   referenceImages.push(formatFrame)
 
@@ -442,7 +442,7 @@ export async function executeV3Step2(
   // Add face and body composites for identity refinement
   if (faceCompositeReference) {
     referenceImages.push({
-      description: 'FACE REFERENCE - CRITICAL: The final face MUST match this reference. Modify head shape, facial structure, proportions, jawline, cheekbones, nose, eyes to match these selfies. Preserve only the expression and eye direction from BASE IMAGE.',
+      description: 'FACE REFERENCE - Use for identity verification only. The face in "BASE IMAGE" is already generated from this reference. Ensure the final face maintains this identity, but do NOT redraw features that are already correct in "BASE IMAGE".',
       base64: faceCompositeReference.base64,
       mimeType: faceCompositeReference.mimeType
     })
@@ -450,7 +450,7 @@ export async function executeV3Step2(
 
   if (bodyCompositeReference) {
     referenceImages.push({
-      description: 'BODY REFERENCE - CRITICAL: The body proportions MUST match this reference. Adjust shoulder width, torso shape, arm thickness to match. Preserve only the pose and clothing from BASE IMAGE.',
+      description: 'BODY REFERENCE - Use for body structure verification. Ensure the final body proportions align with this reference. Prioritize the pose and clothing from "BASE IMAGE".',
       base64: bodyCompositeReference.base64,
       mimeType: bodyCompositeReference.mimeType
     })
@@ -465,13 +465,13 @@ export async function executeV3Step2(
     })
   }
   */
-  
+
   // Log reference images summary
   Logger.info('V3 Step 2: References', {
     count: referenceImages.length,
     types: referenceImages.map(img => img.description?.split(' ')[0] || 'unknown').join(', ')
   })
-  
+
   // Generate with Gemini (track both success and failure for cost accounting)
   // Use low denoising strength (approx 0.25 to 0.35) to fix lighting spill and shadows
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
@@ -508,11 +508,11 @@ export async function executeV3Step2(
     }
     throw error
   }
-  
+
   if (!generationResult.images.length) {
     throw new Error('V3 Step 2: Gemini returned no images')
   }
-  
+
   // Convert all images to PNG buffers and select the best one
   const allPngBuffers = await Promise.all(
     generationResult.images.map(img => sharp(img).png().toBuffer())
@@ -553,7 +553,7 @@ export async function executeV3Step2(
   }
 
   const base64 = pngBuffer.toString('base64')
-  
+
   logStepResult('V3 Step 2', {
     success: true,
     provider: generationResult.providerUsed,
@@ -585,7 +585,7 @@ export async function executeV3Step2(
       })
     }
   }
-  
+
   return {
     refinedBuffer: pngBuffer,
     refinedBase64: base64,

@@ -10,3 +10,6 @@ export * from './prompt'
 // Deserialization
 export * from './deserializer'
 
+// StyleElement for composition
+export { expressionElement, ExpressionElement } from './element'
+

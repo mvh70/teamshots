@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
@@ -103,6 +104,14 @@ export async function POST(request: NextRequest) {
       })
     }
     
+    // Clear impersonation cookie if present
+    try {
+      const cookieStore = await cookies()
+      cookieStore.delete('impersonate_user_id')
+    } catch {
+      // Ignore cookie errors
+    }
+
     // Return success - NextAuth's signOut will handle cookie clearing
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -95,3 +95,8 @@ chrome-extension/**
 
 /*.md
 /*.jpeg
+
+# generated content
+generated-images/
+# next-agents-md
+.next-docs/

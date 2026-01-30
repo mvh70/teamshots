@@ -468,8 +468,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
               adminId: userId || '',
               creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
               totalSeats: seats,
-              activeSeats: 0, // Admin must self-assign a seat via the team dashboard
-              isLegacyCredits: false,
             }
           });
 
@@ -491,7 +489,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             data: {
               totalSeats: { increment: seats },
               creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
-              isLegacyCredits: false,
             }
           });
           Logger.info('Added seats to existing team', { userId, teamId, seats });

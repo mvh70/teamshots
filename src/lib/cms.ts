@@ -121,14 +121,14 @@ export function getPublishedSolutions(brandId: string): CMSBlogPost[] {
  */
 export function variantToBrandId(variant: LandingVariant): string {
   const mapping: Record<LandingVariant, string> = {
-    teamshotspro: 'teamshots-pro',
+    teamshotspro: 'teamshotspro',
     individualshots: 'headshot-one',
     photoshotspro: 'photoshotspro',
     coupleshots: 'duo-snaps',
     familyshots: 'kin-frame',
     rightclickfit: 'rightclick-fit',
   }
-  return mapping[variant] || 'teamshots-pro'
+  return mapping[variant] || 'teamshotspro'
 }
 
 /**
@@ -311,6 +311,37 @@ export function getBlogPostBySlug(brandId: string, slug: string, locale: string)
     return post || null
   } catch (error) {
     console.error('Failed to read blog post from CMS:', error)
+    return null
+  }
+}
+
+/**
+ * Check if a slug has a redirect (e.g. from consolidated/deprecated content)
+ * Returns the target slug if a redirect exists, null otherwise.
+ */
+export function getRedirectForSlug(brandId: string, slug: string): string | null {
+  try {
+    const db = new Database(DB_PATH, { readonly: true })
+
+    const query = `
+      SELECT redirectTo
+      FROM ContentMigration
+      WHERE brandId = ?
+        AND redirectFrom = ?
+        AND redirectTo IS NOT NULL
+        AND status = 'complete'
+      LIMIT 1
+    `
+
+    const row = db.prepare(query).get(brandId, `/blog/${slug}`) as { redirectTo: string } | undefined
+    db.close()
+
+    if (!row) return null
+
+    // redirectTo is stored as "/blog/target-slug" — extract just the slug
+    return row.redirectTo.replace(/^\/blog\//, '')
+  } catch (error) {
+    console.error('Failed to check redirect for slug:', error)
     return null
   }
 }

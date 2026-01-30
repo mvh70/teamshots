@@ -219,12 +219,6 @@ export async function GET(
       
       // Progress tracking
       userApproved: generation.userApproved,
-      adminApproved: generation.adminApproved,
-      
-      // Moderation
-      moderationScore: generation.moderationScore,
-      moderationPassed: generation.moderationPassed,
-      moderationDate: generation.moderationDate,
       
       // Error information
       errorMessage: generation.errorMessage,

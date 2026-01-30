@@ -11,7 +11,6 @@
 import type { CategoryType, PhotoStyleSettings } from '@/types/photo-style'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 import type { StyleElement } from '../elements/base/StyleElement'
-import type { StandardPresetConfig } from './defaults'
 
 /**
  * Package metadata for discovery and compatibility
@@ -107,7 +106,7 @@ export interface ClientStylePackage {
   availableClothingStyles?: string[]
   defaultSettings: PhotoStyleSettings
   defaultPresetId: string
-  presets?: Record<string, StandardPresetConfig>
+  presets?: Record<string, unknown>
 
   promptBuilder: (
     settings: PhotoStyleSettings,
@@ -126,12 +125,7 @@ export interface ClientStylePackage {
 
   extractUiSettings: (rawStyleSettings: Record<string, unknown>) => PhotoStyleSettings
 
-  resolveStandardPreset?: (
-    preset: StandardPresetConfig,
-    styleSettings: PhotoStyleSettings
-  ) => StandardPresetConfig
-
-  // --- NEW: Enhanced fields for plugin architecture ---
+  // --- Enhanced fields for plugin architecture ---
 
   /** Feature flag to enable/disable this package */
   featureFlag?: string

@@ -32,7 +32,7 @@ import { AssetService } from '@/domain/services/AssetService'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 
 // Import shared utilities
-import { 
+import {
   type ReferenceImage
 } from './utils/reference-builder'
 import {
@@ -112,7 +112,7 @@ export interface V3WorkflowInput {
   backgroundAssetId?: string // Background asset ID for fingerprinting
   logoAssetId?: string // Logo asset ID for fingerprinting
   demographics?: import('@/domain/selfie/selfieDemographics').DemographicProfile // Aggregated demographics
-  selfieComposite: ReferenceImage
+  selfieComposite?: ReferenceImage
   faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
   bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
@@ -154,12 +154,12 @@ async function analyzeLightingFromImage(imageBuffer: Buffer): Promise<string> {
     // Use a fast multimodal model for analysis
     const modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-1.5-flash-002')
     const model = await getVertexGenerativeModel(modelName)
-    
+
     const parts: Part[] = [
       { text: "Analyze the lighting in this image. Is the primary light source coming from the left, right, top, or is it soft/dispersed? Return ONLY a short phrase describing the lighting direction (e.g., 'lighting coming from the left', 'soft dispersed lighting'). Do not include any other text." },
       { inlineData: { mimeType: 'image/png', data: imageBuffer.toString('base64') } }
     ]
-    
+
     const result = await model.generateContent({ contents: [{ role: 'user', parts }] })
     const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
     return text.trim() || 'soft dispersed lighting'
@@ -200,18 +200,18 @@ async function determineLighting(
   // 2. Generated Background Logic
   const sceneDesc = (promptObj.scene?.description || '').toLowerCase()
   const bgType = (bgValue?.type || '').toLowerCase()
-  
+
   // Outdoor / Nature
   if (bgType === 'outdoor' || sceneDesc.includes('outdoor') || sceneDesc.includes('outside') || sceneDesc.includes('park') || sceneDesc.includes('nature') || sceneDesc.includes('sky')) {
     return 'soft dispersed natural lighting'
   }
-  
+
   // Office / Indoor with Window
   if (bgType === 'office' || sceneDesc.includes('office') || sceneDesc.includes('indoor') || sceneDesc.includes('window')) {
     const side = Math.random() > 0.5 ? 'left' : 'right'
     return `natural window light coming from the ${side}`
   }
-  
+
   // Default (Studio / Neutral / Gradient / Other)
   const side = Math.random() > 0.5 ? 'left' : 'right'
   return `soft studio lighting coming from the ${side}`
@@ -250,7 +250,7 @@ async function generatePersonWithRetry({
 }: {
   job: Job
   processedSelfieReferences: ReferenceImage[]
-  selfieComposite: ReferenceImage
+  selfieComposite?: ReferenceImage
   faceComposite?: ReferenceImage // Split face composite (front_view + side_view selfies)
   bodyComposite?: ReferenceImage // Split body composite (partial_body + full_body selfies)
   styleSettings: PhotoStyleSettings
@@ -274,8 +274,8 @@ async function generatePersonWithRetry({
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
   intermediateStorage: IntermediateStorageHandlers
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
-}): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
-  let step1Output: { imageBuffer: Buffer; imageBase64: string; allImageBuffers: Buffer[]; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; reused?: boolean } | undefined
+}): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite?: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
+  let step1Output: { imageBuffer: Buffer; imageBase64: string; allImageBuffers: Buffer[]; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite?: BaseReferenceImage; faceComposite?: BaseReferenceImage; bodyComposite?: BaseReferenceImage; reused?: boolean } | undefined
   let evaluationFeedback: EvaluationFeedback | undefined
   const evaluatorComments: string[] = []
 
@@ -353,10 +353,10 @@ async function generatePersonWithRetry({
     // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
     const intermediateS3Upload = (selfieAssetIds && selfieAssetIds.length > 0)
       ? await intermediateStorage.saveBuffer(step1Output.imageBuffer, {
-          fileName: `step1a-person-eval-${attempt}-${Date.now()}.png`,
-          description: `V3 Step 1a person eval attempt ${attempt}`,
-          mimeType: 'image/png'
-        })
+        fileName: `step1a-person-eval-${attempt}-${Date.now()}.png`,
+        description: `V3 Step 1a person eval attempt ${attempt}`,
+        mimeType: 'image/png'
+      })
       : undefined
 
     // Extract garment collage - check both referenceImages (from buildGenerationPayload)
@@ -386,6 +386,8 @@ async function generatePersonWithRetry({
           imageBase64: step1Output!.imageBase64,
           selfieReferences: processedSelfieReferences,
           selfieComposite,
+          faceComposite,
+          bodyComposite,
           expectedWidth: step1aExpectedWidth,
           expectedHeight: step1aExpectedHeight,
           aspectRatioConfig,
@@ -410,7 +412,7 @@ async function generatePersonWithRetry({
     // Build feedback for next attempt if needed
     const evaluation = step2Output.evaluation
     evaluationFeedback = buildEvaluationFeedback(evaluation)
-    
+
     // Collect evaluator comments for Step 2
     if (evaluationFeedback.suggestedAdjustments) {
       evaluatorComments.push(evaluationFeedback.suggestedAdjustments)
@@ -485,9 +487,9 @@ async function generateBackgroundWithRetry({
   //
   // To re-enable Step 1b: Comment out lines 465-470 and uncomment lines 472-659
   // ============================================================================
-  
+
   const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
-  
+
   Logger.info('V3 Step 1b: Skipping background generation (Step 1b disabled)', {
     backgroundType: styleSettings.background?.value?.type,
     brandingPosition: brandingValue?.position,
@@ -764,19 +766,19 @@ export async function executeV3Workflow({
     if (!promptObj.lighting) {
       promptObj.lighting = {}
     }
-    
+
     // Only determine if not explicitly provided
     if (!promptObj.lighting.direction) {
       const direction = await determineLighting(styleSettings, promptObj, downloadAsset, generationId)
       promptObj.lighting.direction = direction
-      
+
       // Update prompt string with injected lighting
       prompt = JSON.stringify(promptObj)
       Logger.debug('V3: Injected consistent lighting direction', { generationId, direction })
     }
   } catch (error) {
-    Logger.warn('V3: Failed to parse/inject lighting into prompt', { 
-      generationId, 
+    Logger.warn('V3: Failed to parse/inject lighting into prompt', {
+      generationId,
       error: error instanceof Error ? error.message : String(error)
     })
     // Continue with original prompt if parsing fails
@@ -883,8 +885,8 @@ export async function executeV3Workflow({
       const preparedLogo = preparedAssets.get('branding-logo')
       if (preparedLogo?.data.metadata?.preparedLogoS3Key) {
         const preparedKey = preparedLogo.data.metadata.preparedLogoS3Key as string
-        // Update branding settings with prepared logo key for future regenerations
-        ;(styleSettings.branding.value as { preparedLogoKey?: string }).preparedLogoKey = preparedKey
+          // Update branding settings with prepared logo key for future regenerations
+          ; (styleSettings.branding.value as { preparedLogoKey?: string }).preparedLogoKey = preparedKey
         Logger.info('V3 Step 0: Stored preparedLogoKey in branding settings for regeneration reuse', {
           generationId,
           preparedLogoKey: preparedKey,
@@ -1025,10 +1027,10 @@ export async function executeV3Workflow({
 
     const backgroundImage = generatedOutput.backgroundBuffer
       ? await intermediateStorage.saveBuffer(generatedOutput.backgroundBuffer, {
-          fileName: `step1a-background-${Date.now()}.png`,
-          description: 'V3 Step 1a custom background',
-          mimeType: 'image/png'
-        })
+        fileName: `step1a-background-${Date.now()}.png`,
+        description: 'V3 Step 1a custom background',
+        mimeType: 'image/png'
+      })
       : undefined
 
     const patch: V3WorkflowState = {
@@ -1071,9 +1073,9 @@ export async function executeV3Workflow({
             }
           }
         }
-        
+
         // Cache is incomplete - fall through to regenerate
-        Logger.info('V3 Step 1b: Cached state incomplete, will regenerate', { 
+        Logger.info('V3 Step 1b: Cached state incomplete, will regenerate', {
           generationId,
           hasBuffer: !!backgroundBuffer,
           hasLogoRef: !!backgroundLogoReference
@@ -1168,30 +1170,30 @@ export async function executeV3Workflow({
       }
     }
 
-      const patch: V3WorkflowState = {
-        step1b: {
-          backgroundImage,
-          backgroundAssetId: backgroundAssetIdResult,
-          backgroundLogoReference: generatedOutput.backgroundLogoReference,
-          evaluatorComments: generatedOutput.evaluatorComments
-        }
+    const patch: V3WorkflowState = {
+      step1b: {
+        backgroundImage,
+        backgroundAssetId: backgroundAssetIdResult,
+        backgroundLogoReference: generatedOutput.backgroundLogoReference,
+        evaluatorComments: generatedOutput.evaluatorComments
       }
+    }
 
-      if (!state?.composites?.background && generatedOutput.compositeReference) {
-        const compositeReference = await intermediateStorage.saveBuffer(
-          Buffer.from(generatedOutput.compositeReference.base64, 'base64'),
-          {
-            fileName: `step1b-composite-${Date.now()}.png`,
-            description: generatedOutput.compositeReference.description,
-            mimeType: generatedOutput.compositeReference.mimeType ?? 'image/png'
-          }
-        )
-
-        patch.composites = {
-          ...(patch.composites ?? {}),
-          background: compositeReference
+    if (!state?.composites?.background && generatedOutput.compositeReference) {
+      const compositeReference = await intermediateStorage.saveBuffer(
+        Buffer.from(generatedOutput.compositeReference.base64, 'base64'),
+        {
+          fileName: `step1b-composite-${Date.now()}.png`,
+          description: generatedOutput.compositeReference.description,
+          mimeType: generatedOutput.compositeReference.mimeType ?? 'image/png'
         }
+      )
+
+      patch.composites = {
+        ...(patch.composites ?? {}),
+        background: compositeReference
       }
+    }
 
     return {
       output: generatedOutput,
@@ -1340,6 +1342,8 @@ export async function executeV3Workflow({
         refinedBuffer: step2Output.refinedBuffer,
         refinedBase64: step2Output.refinedBase64,
         selfieComposite: step1aOutput.selfieComposite,
+        faceComposite: step1aOutput.faceComposite,
+        bodyComposite: step1aOutput.bodyComposite,
         expectedWidth: scaledExpectedWidth,
         expectedHeight: scaledExpectedHeight,
         aspectRatio,
@@ -1371,28 +1375,28 @@ export async function executeV3Workflow({
 
   if (step3Output.evaluation.status !== 'Approved') {
     Logger.warn('V3 Step 3: Final evaluation not approved', { reason: step3Output.evaluation.reason })
-    
+
     // Get actual image dimensions for evaluation details
     const sharp = (await import('sharp')).default
     const metadata = await sharp(step2Output.refinedBuffer).metadata()
     const actualWidth = metadata.width ?? null
     const actualHeight = metadata.height ?? null
-    
+
     // Calculate dimension and aspect ratio mismatches
     const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
     const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
     const expectedRatio = expectedWidth / expectedHeight
     const actualRatio = actualWidth && actualHeight && actualHeight !== 0 ? actualWidth / actualHeight : null
-    
+
     const dimensionMismatch =
       actualWidth === null ||
       actualHeight === null ||
       Math.abs(actualWidth - expectedWidth) > DIMENSION_TOLERANCE_PX ||
       Math.abs(actualHeight - expectedHeight) > DIMENSION_TOLERANCE_PX
-    
+
     const aspectMismatch =
       actualRatio === null ? true : Math.abs(actualRatio - expectedRatio) > ASPECT_RATIO_TOLERANCE
-    
+
     // Construct ImageEvaluationResult from EvaluationFeedback
     const evaluationResult: ImageEvaluationResult = {
       status: step3Output.evaluation.status,
@@ -1408,7 +1412,7 @@ export async function executeV3Workflow({
         autoReject: step3Output.evaluation.failedCriteria?.some(c => c.includes('face_similarity') || c.includes('characteristic_preservation')) || false
       }
     }
-    
+
     // Throw specific error that carries the image data for support notification
     throw new EvaluationFailedError(
       `V3 Step 3 final evaluation failed: ${step3Output.evaluation.reason}`,

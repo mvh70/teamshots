@@ -109,6 +109,14 @@ export interface ElementContext {
   // All user settings
   settings: PhotoStyleSettings
 
+  // Package information for element filtering
+  packageContext?: {
+    // Package ID (e.g., 'standard-shots', 'headshot1')
+    packageId: string
+    // Elements explicitly allowed by this package (if undefined, all relevant elements contribute)
+    activeElements?: string[]
+  }
+
   // Generation context data
   generationContext: {
     selfieS3Keys: string[]

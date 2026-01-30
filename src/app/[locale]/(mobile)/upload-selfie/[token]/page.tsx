@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
@@ -85,6 +86,9 @@ export default function UploadSelfiePage() {
   const isMobileDevice = useSyncExternalStore(subscribeToViewport, getIsMobileSnapshot, getServerSnapshot)
   const loadingSelfies = pendingSelfieRequests > 0
   const prevQueueCountRef = useRef<number>(0)
+
+  // Send heartbeat so desktop detects an active mobile session
+  useHeartbeat(context ? token : null)
 
   // Get upload endpoints based on token type (pass tokenType to avoid double validation)
   const { uploadEndpoint, saveEndpoint, isReady } = useUploadSelfieEndpoints(token, context?.tokenType)

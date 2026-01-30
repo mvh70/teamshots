@@ -1,2 +1,1 @@
-export { subject } from './prompt'
-
+export { subjectElement } from './element'

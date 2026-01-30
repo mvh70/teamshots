@@ -10,7 +10,6 @@ model User {
   id                   String               @id @default(cuid())
   email                String               @unique
   password             String?
-  emailVerified        DateTime?
   locale               String               @default("en")
   signupDomain         String? // Domain user signed up from (e.g., "teamshotspro.com", "photoshotspro.com")
   subscriptionStatus   String?
@@ -32,7 +31,6 @@ model User {
   refreshTokens        RefreshToken[]
   sessions             Session[]
   convertedFromInvite  TeamInvite?
-  transactions         Transaction[]
   subscriptionChanges  SubscriptionChange[]
   userPackages         UserPackage[]
   revokedTokens        RevokedToken[]
@@ -52,8 +50,6 @@ model Person {
   userId              String?              @unique
   teamId              String?
   inviteToken         String?              @unique
-  invitedAt           DateTime?
-  inviteAcceptedAt    DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   onboardingState     String?              @default("not_started") // "not_started", "in_progress", "completed"
@@ -77,20 +73,14 @@ model Team {
   id                   String               @id @default(cuid())
   name                 String?
   website              String?
-  domain               String?
   adminId              String
-  subscriptionStatus   String?
-  stripeCustomerId     String?              @unique
-  stripeSubscriptionId String?              @unique
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   activeContextId      String?              @unique
 
   // Seats-based pricing
   totalSeats           Int                  @default(0)
-  activeSeats          Int                  @default(0)
   creditsPerSeat       Int                  @default(100)
-  isLegacyCredits      Boolean              @default(false)
 
   activeContext        Context?             @relation("ActiveContext", fields: [activeContextId], references: [id])
   admin                User                 @relation("TeamAdmin", fields: [adminId], references: [id], onDelete: Cascade)
@@ -103,7 +93,6 @@ model Team {
   zapierApiKeys        ZapierApiKey[]
 
   @@index([adminId])
-  @@index([domain])
 }
 
 model Context {
@@ -140,10 +129,6 @@ model Generation {
   contextId              String?
   generatedPhotoKeys     String[]
   personId               String
-  adminApproved          Boolean   @default(false)
-  moderationDate         DateTime?
-  moderationPassed       Boolean   @default(false)
-  moderationScore        Float?
   userApproved           Boolean   @default(false)
   creditSource           String    @default("individual")
   deleted                Boolean   @default(false)
@@ -159,8 +144,7 @@ model Generation {
 
   // Outfit transfer fields
   generationType     String  @default("headshot") // 'headshot' | 'outfit_transfer'
-  outfitReferenceKey String? // S3 key for outfit image (deprecated - use outfitAssetId)
-  outfitAssetId      String? // Asset ID for outfit image (preferred)
+  outfitAssetId      String? // Asset ID for outfit image
 
   context     Context?   @relation(fields: [contextId], references: [id])
   person      Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -183,7 +167,6 @@ model Selfie {
   personId           String
   key                String // Legacy S3 key - prefer assetId
   validated          Boolean   @default(false)
-  usedInGenerationId String?
   selected           Boolean   @default(false)
   createdAt          DateTime  @default(now())
   fitnessApproved    Boolean   @default(false)
@@ -207,24 +190,6 @@ model Selfie {
   @@index([isPublic])
   @@index([personId, createdAt])
   @@index([selected])
-}
-
-model Transaction {
-  id              String   @id @default(cuid())
-  userId          String
-  type            String
-  amount          Float
-  creditsDelta    Int
-  stripePaymentId String?
-  stripeInvoiceId String?
-  description     String?
-  createdAt       DateTime @default(now())
-  creditSource    String?
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@index([createdAt])
 }
 
 model WaitlistSignup {
@@ -370,6 +335,7 @@ model TeamInvite {
   personId           String?             @unique
   convertedUserId    String?             @unique
   contextId          String?
+  mobileLastSeenAt   DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   creditTransactions CreditTransaction[]

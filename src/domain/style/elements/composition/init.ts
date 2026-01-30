@@ -1,47 +1,47 @@
 /**
  * Element Composition System Initialization
  *
- * DEPRECATED: Elements now self-register on import!
- *
- * This file is maintained for backward compatibility only.
- * Simply importing element modules will trigger their auto-registration.
- *
- * @deprecated - Elements self-register. Import element modules directly instead.
+ * Imports all elements to trigger their self-registration.
+ * All elements are now consolidated in their original element folders.
  */
 
 import { compositionRegistry } from './registry'
 
-// Import all elements to trigger their self-registration
-// Import dependencies before elements that depend on them to avoid timing warnings
-import './camera/ShotTypeElement'
-import './camera/AspectRatioElement'
-import './camera/CameraSettingsElement'
-import './clothing/ClothingElement'        // Before branding (branding depends on clothing)
-import './clothing/ClothingColorsElement'
-import './clothing/ClothingOverlayElement'
-import './clothing/CustomClothingElement'
-import './branding/BrandingElement'        // After clothing
-import './background/BackgroundElement'
-import './subject/ExpressionElement'
-import './subject/PoseElement'
-import './subject/SubjectElement'
-import './lighting/LightingElement'
+// Import all elements from their primary locations
+// These auto-register on import
+
+// Camera elements
+import '../camera-settings/element'
+import '../shot-type/element'
+import '../aspect-ratio/element'
+
+// Clothing elements
+import '../clothing/element'
+import '../clothing/overlay-element'
+import '../clothing-colors/element'
+import '../custom-clothing/element'
+
+// Branding
+import '../branding/element'
+
+// Subject
+import '../subject/element'
+
+// Expression, pose, background, lighting
+import '../expression/element'
+import '../pose/element'
+import '../background/element'
+import '../lighting/element'
 
 /**
- * Initialize the element composition system by importing all elements
- *
- * DEPRECATED: This function is now a no-op. Elements self-register on import.
- * Kept for backward compatibility.
- *
- * @deprecated - Use direct element imports instead
+ * Initialize the element composition system
+ * @deprecated - Elements self-register on import
  */
 export function initializeElementComposition(): void {
-  // Elements have already self-registered via import-time side effects
   console.log(
-    `[ElementComposition] ${compositionRegistry.count} elements registered via auto-registration:`,
+    `[ElementComposition] ${compositionRegistry.count} elements registered:`,
     compositionRegistry.getAll().map((e) => `${e.id} (priority: ${e.priority})`)
   )
 }
 
-// Call for backward compatibility
 initializeElementComposition()

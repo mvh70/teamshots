@@ -39,7 +39,7 @@ export function GenerationRating({
 }: GenerationRatingProps) {
   const t = useTranslations('feedback')
   const { track } = useAnalytics()
-  
+
   // All hooks must be declared at the top, before any conditional returns
   const [rating, setRating] = useState<Rating | ''>('')
   const [showForm, setShowForm] = useState(false)
@@ -141,7 +141,7 @@ export function GenerationRating({
 
     // Check on scroll
     form.addEventListener('scroll', checkScrollability)
-    
+
     // Check when form content changes
     const resizeObserver = new ResizeObserver(checkScrollability)
     resizeObserver.observe(form)
@@ -204,7 +204,7 @@ export function GenerationRating({
       const wasAlreadySubmitted = submitted
       setSubmitted(true)
       setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
-      const message = wasAlreadySubmitted 
+      const message = wasAlreadySubmitted
         ? t('rating.updated')
         : t('rating.submitted')
       console.log('[GenerationRating] Setting toast message (thumbs up):', {
@@ -309,7 +309,7 @@ export function GenerationRating({
       setSubmitted(true)
       setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
       setShowForm(false)
-      const message = wasAlreadySubmitted 
+      const message = wasAlreadySubmitted
         ? t('rating.updated')
         : t('rating.submitted')
       console.log('[GenerationRating] Setting toast message (thumbs down):', {
@@ -356,26 +356,30 @@ export function GenerationRating({
         {!showForm ? (
           <>
             <button
-              onClick={handleThumbsUp}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleThumbsUp()
+              }}
               disabled={loading}
-              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${
-                (submitted && rating === 'up') || rating === 'up'
-                  ? 'text-brand-secondary-hover bg-brand-secondary-light/90'
-                  : 'text-gray-600 hover:text-brand-secondary-hover hover:bg-white'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${(submitted && rating === 'up') || rating === 'up'
+                ? 'text-brand-secondary-hover bg-brand-secondary-light/90'
+                : 'text-gray-600 hover:text-brand-secondary-hover hover:bg-white'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               aria-label={t('rating.up')}
               title={t('rating.up')}
             >
               <ThumbsUp className="w-5 h-5" />
             </button>
             <button
-              onClick={handleThumbsDown}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleThumbsDown()
+              }}
               disabled={loading}
-              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${
-                (submitted && rating === 'down') || rating === 'down'
-                  ? 'text-red-600 bg-red-50/90'
-                  : 'text-gray-600 hover:text-red-600 hover:bg-white'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${(submitted && rating === 'down') || rating === 'down'
+                ? 'text-red-600 bg-red-50/90'
+                : 'text-gray-600 hover:text-red-600 hover:bg-white'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               aria-label={t('rating.down')}
               title={t('rating.down')}
             >
@@ -385,6 +389,7 @@ export function GenerationRating({
         ) : (
           <form
             ref={formRef}
+            onClick={(e) => e.stopPropagation()}
             onSubmit={handleSubmitFeedback}
             className="bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 min-w-[280px] max-w-sm max-h-[320px] overflow-y-auto relative"
           >

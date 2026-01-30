@@ -287,6 +287,14 @@ export async function cleanupExpiredHandoffTokens(): Promise<number> {
 }
 
 /**
+ * Returns true if the given timestamp is within the threshold of "now",
+ * meaning the mobile device was recently active.
+ */
+export function isRecentlyActive(lastSeen: Date | null, thresholdMs = 15_000): boolean {
+  return lastSeen != null && (Date.now() - lastSeen.getTime()) < thresholdMs
+}
+
+/**
  * Get the status of a handoff token (for desktop polling)
  */
 export async function getHandoffTokenStatus(token: string): Promise<{
@@ -312,13 +320,8 @@ export async function getHandoffTokenStatus(token: string): Promise<{
 
     const now = new Date()
     const valid = handoffToken.expiresAt > now && handoffToken.absoluteExpiry > now
-    // Device is "connected" when the token has been used (validated) from mobile
-    // Note: deviceId binding was removed in commit 30db0db to fix device mismatch issues
-    // We detect usage by checking if lastUsedAt differs from createdAt (lastUsedAt has @default(now()) in schema)
-    // The validate endpoint updates lastUsedAt, so if it differs from createdAt by more than 1 second, the token was used
-    const wasUsed = handoffToken.lastUsedAt && handoffToken.createdAt &&
-      (handoffToken.lastUsedAt.getTime() - handoffToken.createdAt.getTime() > 1000)
-    const deviceConnected = !!wasUsed
+    // Device is "connected" when lastUsedAt was recently updated by the heartbeat
+    const deviceConnected = isRecentlyActive(handoffToken.lastUsedAt)
 
     return {
       valid,

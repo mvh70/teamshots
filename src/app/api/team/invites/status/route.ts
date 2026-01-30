@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isRecentlyActive } from '@/lib/mobile-handoff'
 
 export const runtime = 'nodejs'
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         personId: true,
+        mobileLastSeenAt: true,
         updatedAt: true
       }
     })
@@ -53,8 +55,7 @@ export async function GET(request: NextRequest) {
       valid: true,
       selfieCount,
       lastUploadAt: latestSelfie?.createdAt?.toISOString() || null,
-      // Device is "connected" if any selfies exist or invite was recently updated
-      deviceConnected: selfieCount > 0
+      deviceConnected: isRecentlyActive(invite.mobileLastSeenAt)
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

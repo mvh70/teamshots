@@ -10,3 +10,4 @@ export * from './deserializer'
 // Note: apply.ts is currently a placeholder (not exportable as module)
 export * from './prompt'
 export { CustomClothingSelector } from './CustomClothingSelector'
+export { CustomClothingElement, customClothingElement } from './element'

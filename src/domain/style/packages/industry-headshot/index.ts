@@ -8,9 +8,9 @@
 
 import type { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
 import type { ClientStylePackage } from '../types'
-import { CORPORATE_HEADSHOT } from '../defaults'
 import { predefined, userChoice } from '../../elements/base/element-types'
-import { AVAILABLE_INDUSTRIES, type IndustryType } from './industry-config'
+import { AVAILABLE_INDUSTRIES } from '../../elements/industry/industry-styles'
+import type { IndustryType } from '../../elements/industry/types'
 
 // Only industry is visible - all other settings are derived from industry selection
 const VISIBLE_CATEGORIES: CategoryType[] = ['industry']
@@ -20,14 +20,21 @@ export { AVAILABLE_INDUSTRIES, type IndustryType }
 
 /**
  * Default settings for industry-headshot package
+ *
+ * This is the source of truth for this package - no external dependencies.
+ * Background, clothing, pose, and expression are derived from industry selection
+ * in the server-side buildGenerationPayload.
  */
 const DEFAULT_SETTINGS: PhotoStyleSettings = {
-  presetId: CORPORATE_HEADSHOT.id,
-  shotType: predefined({ type: 'medium-shot' }),
-  subjectCount: '1',
-  // Industry is user-selectable - defaults to law-firms if not set
+  presetId: 'corporate-headshot',
+  // Visible category - user selects industry
   industry: userChoice({ type: 'law-firms' }),
-  // Background, clothing, pose, expression are derived from industry in server.ts
+  // Non-visible settings - package standards
+  shotType: predefined({ type: 'medium-shot' }),
+  filmType: predefined({ type: 'clinical-modern' }),
+  aspectRatio: '1:1' as const,
+  subjectCount: '1' as const,
+  // Note: background, clothing, pose, expression are derived from industry in server.ts
 }
 
 export const industryHeadshot: ClientStylePackage = {
@@ -42,8 +49,8 @@ export const industryHeadshot: ClientStylePackage = {
   availableExpressions: ['genuine_smile', 'soft_smile', 'neutral_serious'],
   availableClothingStyles: ['business', 'startup'],
   defaultSettings: DEFAULT_SETTINGS,
-  defaultPresetId: CORPORATE_HEADSHOT.id,
-  presets: { [CORPORATE_HEADSHOT.id]: CORPORATE_HEADSHOT },
+  defaultPresetId: 'corporate-headshot',
+  presets: {},  // No preset dependency - package derives all settings from industry selection
 
   metadata: {
     author: 'TeamShots',

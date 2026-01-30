@@ -1938,6 +1938,10 @@
         "industry": {
           "title": "Industria",
           "description": "Selecciona tu industria para un estilo profesional adaptado"
+        },
+        "preset": {
+          "title": "Preajuste",
+          "description": "Elige un preajuste profesional"
         }
       },
       "background": {
@@ -2223,6 +2227,82 @@
           "thumbs_up": {
             "label": "Pulgar Arriba",
             "description": "Pose entusiasta y accesible con gesto de pulgar arriba"
+          }
+        }
+      },
+      "preset": {
+        "title": "Preajuste",
+        "subtitle": "Elige un preajuste profesional",
+        "predefined": "Predefinido",
+        "selectPlaceholder": "Elige un preajuste",
+        "categoryLabel": "Categoría",
+        "styleLabel": "Estilo",
+        "categories": {
+          "linkedin": {
+            "label": "LinkedIn"
+          },
+          "dating": {
+            "label": "Citas"
+          },
+          "cv": {
+            "label": "CV / Solicitudes"
+          },
+          "personal_brand": {
+            "label": "Marca Personal"
+          },
+          "speaker": {
+            "label": "Orador / Autor"
+          },
+          "executive": {
+            "label": "Ejecutivo"
+          },
+          "team": {
+            "label": "Página de Equipo"
+          },
+          "social": {
+            "label": "Redes Sociales"
+          }
+        },
+        "presets": {
+          "LINKEDIN_NEUTRAL_STUDIO": {
+            "label": "Estudio Neutro",
+            "description": "Retrato de estudio limpio optimizado para perfiles de LinkedIn. Confiable y profesional."
+          },
+          "LINKEDIN_MODERN_OFFICE": {
+            "label": "Oficina Moderna",
+            "description": "Entorno de oficina contemporáneo para LinkedIn. Accesible y profesional."
+          },
+          "DATING_LIFESTYLE_CAFE": {
+            "label": "Estilo Café",
+            "description": "Ambiente cálido y acogedor de cafetería perfecto para perfiles de citas. Amigable y auténtico."
+          },
+          "DATING_OUTDOOR_GOLDEN_HOUR": {
+            "label": "Exterior Hora Dorada",
+            "description": "Iluminación natural al aire libre en hora dorada. Cálido, acogedor y auténtico."
+          },
+          "CV_MINIMALIST_WHITE": {
+            "label": "Minimalista Blanco",
+            "description": "Fondo minimalista limpio para CVs y solicitudes formales. Profesional y neutro."
+          },
+          "PERSONAL_BRAND_URBAN_CREATIVE": {
+            "label": "Urbano Creativo",
+            "description": "Ambiente urbano creativo para marca personal. Moderno y dinámico."
+          },
+          "SPEAKER_CONFERENCE_STAGE": {
+            "label": "Escenario de Conferencia",
+            "description": "Iluminación dramática de escenario para oradores, autores y líderes de pensamiento. Autoritario y dominante."
+          },
+          "EXECUTIVE_DARK_STUDIO": {
+            "label": "Estudio Oscuro",
+            "description": "Retrato ejecutivo autoritario con iluminación dramática. Transmite poder y liderazgo."
+          },
+          "TEAM_PAGE_CORPORATE": {
+            "label": "Corporativo",
+            "description": "Foto de equipo consistente y brillante para sitios web de empresas. Aspecto estandarizado para todos los miembros."
+          },
+          "SOCIAL_MEDIA_LIFESTYLE": {
+            "label": "Estilo de Vida",
+            "description": "Foto cálida y accesible para Instagram y redes sociales. Auténtico y atractivo."
           }
         }
       }

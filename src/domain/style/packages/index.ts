@@ -2,13 +2,13 @@ import { headshot1 } from './headshot1'
 import { outfit1 } from './outfit1'
 import { freepackage } from './freepackage'
 import { industryHeadshot } from './industry-headshot'
+import { standardShots } from './standard-shots'
 import { validateAllPackages } from './validation'
 
 // Load element metadata registry
 import '@/domain/style/elements'
 
 // Re-export types from centralized types file
-export type { StandardPresetConfig, StandardPresetDefaults } from './defaults'
 export type {
   ClientStylePackage,
   ServerStylePackage,
@@ -32,6 +32,7 @@ export const CLIENT_PACKAGES: Record<string, ClientStylePackage> = {
   [freepackage.id]: freepackage,
   [outfit1.id]: outfit1,
   [industryHeadshot.id]: industryHeadshot,
+  [standardShots.id]: standardShots,
 }
 
 // Validate all packages at module load time (only in Node.js environment)

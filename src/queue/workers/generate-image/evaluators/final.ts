@@ -1,8 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
-import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
+import { AI_CONFIG, STAGE_MODEL, type ModelName } from '../config'
 import type { ReferenceImage, EvaluationFeedback } from '@/types/generation'
 
 const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
@@ -21,11 +20,10 @@ export async function evaluateFinalImage(
   brandingInfo?: { position?: string; placement?: string }
 ): Promise<EvaluationFeedback> {
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+  const modelName: ModelName = (evalModel as ModelName) || STAGE_MODEL.EVALUATION
+
   Logger.debug('Evaluating final image (Step 8)', { modelName })
-  
+
   // Calculate dimension and aspect ratio checks
   const expectedRatio = expectedWidth / expectedHeight
   const actualRatio =
@@ -50,14 +48,13 @@ export async function evaluateFinalImage(
       ? `Dimension mismatch (expected ${expectedWidth}x${expectedHeight}px, actual ${actualWidth ?? 'unknown'}x${actualHeight ?? 'unknown'}px)`
       : ''
     const aspectIssue = aspectMismatch
-      ? `Aspect ratio mismatch (expected ${aspectRatioId} ≈${expectedRatio.toFixed(4)}, actual ${
-          actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
-        })`
+      ? `Aspect ratio mismatch (expected ${aspectRatioId} ≈${expectedRatio.toFixed(4)}, actual ${actualRatio !== null ? actualRatio.toFixed(4) : 'unknown'
+      })`
       : ''
     const reason = [dimIssue, aspectIssue].filter(Boolean).join('; ')
-    
+
     Logger.warn('Step 8: Dimension/aspect check failed', { reason })
-    
+
     return {
       status: 'Not Approved',
       reason,
@@ -67,17 +64,17 @@ export async function evaluateFinalImage(
 
   if (selfieDuplicate) {
     const reason = `Generated image matches reference selfie ${matchingReference?.description ?? 'unknown'} exactly (base64 match)`
-    
+
     Logger.warn('Step 8: Selfie duplicate detected', { reason })
-    
+
     return {
       status: 'Not Approved',
       reason,
       failedCriteria: [reason]
     }
   }
-  
-  const model = await getVertexGenerativeModel(modelName)
+
+
 
   const instructions = [
     `You are evaluating the final refined image for face similarity and overall quality.`,
@@ -154,44 +151,56 @@ export async function evaluateFinalImage(
     )
   }
 
-  const parts: Part[] = [{ text: instructions.join('\n') }]
 
-  parts.push({ text: 'Final refined image to evaluate' })
-  parts.push({ inlineData: { mimeType: 'image/png', data: imageBase64 } })
+  // Build images array for multi-provider text generation
+  const images: GeminiReferenceImage[] = []
 
+  // Add generated image to evaluate
+  images.push({
+    base64: imageBase64,
+    mimeType: 'image/png',
+    description: 'Final refined image to evaluate'
+  })
+
+  // Add selfie references
   for (const selfie of selfieReferences) {
-    parts.push({ text: `Reference ${selfie.description || 'selfie'}` })
-    parts.push({ inlineData: { mimeType: selfie.mimeType, data: selfie.base64 } })
+    images.push({
+      base64: selfie.base64,
+      mimeType: selfie.mimeType,
+      description: `Reference ${selfie.description || 'selfie'}`
+    })
   }
 
-  // Add logo reference if branding evaluation is needed
+  // Add branding reference if applicable
   if (brandingInfo && logoReference) {
-    parts.push({ text: logoReference.description || 'Reference logo for branding evaluation' })
-    parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
+    images.push({
+      base64: logoReference.base64,
+      mimeType: logoReference.mimeType,
+      description: logoReference.description || 'Reference logo for branding evaluation'
+    })
   }
 
-  const contents: Content[] = [{ role: 'user', parts }]
+  const promptText = instructions.join('\n')
 
   if (debugMode) {
-    const evalPromptText = instructions.join('\n')
     Logger.info('V2 DEBUG - Step 8 Evaluation Prompt:', {
       step: 8,
       evaluationType: 'final_image',
-      prompt: evalPromptText.substring(0, 3000) + (evalPromptText.length > 3000 ? '...(truncated)' : ''),
-      promptLength: evalPromptText.length,
+      prompt: promptText.substring(0, 3000) + (promptText.length > 3000 ? '...(truncated)' : ''),
+      promptLength: promptText.length,
       imageCount: 1,
       selfieCount: selfieReferences.length
     })
   }
 
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
+    // Use multi-provider text generation (supports Gemini, Grok via OpenRouter)
+    const result = await generateTextWithGemini(promptText, images, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION'
     })
 
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    const textPart = result.text
 
     if (textPart) {
       const evaluation = parseFinalEvaluation(textPart)
@@ -206,7 +215,7 @@ export async function evaluateFinalImage(
           evaluation.face_similarity === 'YES' &&
           evaluation.characteristic_preservation === 'YES' &&
           evaluation.overall_quality === 'YES'
-        
+
         const brandingApproved = (brandingInfo && logoReference)
           ? evaluation.branding_placement === 'YES'
           : true // If no branding required, consider it approved
@@ -277,12 +286,12 @@ function parseFinalEvaluation(text: string) {
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
     }
-    
+
     // Add branding_placement if present in response
     if (parsed.branding_placement !== undefined) {
       result.branding_placement = normalizeYesNoUncertain(parsed.branding_placement)
     }
-    
+
     return result
   } catch (error) {
     Logger.warn('Failed to parse final evaluation JSON', {
@@ -302,7 +311,7 @@ function normalizeYesNoUncertain(value: unknown): 'YES' | 'NO' | 'UNCERTAIN' {
 
 function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   const suggestions: string[] = []
-  
+
   for (const criterion of failedCriteria) {
     if (criterion.includes('face_similarity')) {
       suggestions.push('Improve face matching to selfie references; ensure specific characteristics are preserved')
@@ -317,7 +326,7 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
       suggestions.push('Improve overall image quality and remove any visible defects')
     }
   }
-  
+
   return suggestions.join('; ')
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { calculateActiveSeats } from '@/domain/pricing/seats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -67,8 +68,7 @@ export async function GET(_request: NextRequest) {
           select: {
             id: true,
             name: true,
-            totalSeats: true,
-            activeSeats: true
+            totalSeats: true
           }
         }
       },
@@ -138,6 +138,15 @@ export async function GET(_request: NextRequest) {
       })
     }
 
+    // Calculate active seats dynamically for all teams
+    const teamIds = users.map(u => u.teams[0]?.id).filter((id): id is string => !!id)
+    const activeSeatsMap = new Map<string, number>()
+    await Promise.all(
+      teamIds.map(async (teamId) => {
+        activeSeatsMap.set(teamId, await calculateActiveSeats(teamId))
+      })
+    )
+
     // Combine all data
     const userData: UserData[] = users.map(u => {
       const person = u.person
@@ -161,7 +170,7 @@ export async function GET(_request: NextRequest) {
         id: u.teams[0].id,
         name: u.teams[0].name,
         totalSeats: u.teams[0].totalSeats,
-        activeSeats: u.teams[0].activeSeats
+        activeSeats: activeSeatsMap.get(u.teams[0].id) ?? 0
       } : undefined
 
       return {

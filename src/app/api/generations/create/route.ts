@@ -59,6 +59,8 @@ const createGenerationSchema = z.object({
   contextId: z.string().optional(),
   styleSettings: z.object({
     packageId: z.string().optional(), // Package folder name (e.g., 'headshot1', 'freepackage', 'outfit1')
+    presetId: z.string().optional(), // Preset ID (e.g., 'LINKEDIN_MODERN_OFFICE') - top-level field
+    preset: z.any().optional(), // Preset wrapper with mode and value (e.g., { mode: 'user-choice', value: { presetId: '...' } })
     style: z.any().optional(), // Allow any type since it might be an object
     background: z.any().optional(),
     branding: z.any().optional(),
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
       return addCorsHeaders(
         NextResponse.json(
           { error: 'Generation rate limit exceeded. Please try again later.' },
-          { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
+          { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) } }
         ),
         origin
       )
@@ -136,9 +138,9 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
-    
+
     const { selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
-    
+
     // Determine workflow version
     const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
 
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
     if (isRegeneration && originalGenerationId) {
       const originalGeneration = await prisma.generation.findFirst({
         where: { id: originalGenerationId },
-        select: { 
+        select: {
           personId: true,
           person: {
             select: {
@@ -168,9 +170,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Get user person for authorization
-      const userPerson = await prisma.person.findUnique({ 
-        where: { userId: session.user.id }, 
-        select: { id: true, teamId: true } 
+      const userPerson = await prisma.person.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true, teamId: true }
       })
 
       if (!userPerson) {
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
       // Verify authorization
       const isOwner = originalGeneration.personId === userPerson.id
       const isSameTeam = Boolean(userPerson.teamId && originalGeneration.person.teamId && userPerson.teamId === originalGeneration.person.teamId)
-      
+
       if (!isOwner && !isSameTeam) {
         await SecurityLogger.logSuspiciousActivity(session.user.id, 'unauthorized_regeneration_attempt', { generationId: originalGenerationId })
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
@@ -223,8 +225,8 @@ export async function POST(request: NextRequest) {
           }
         })
       } catch (error) {
-        Logger.error('Session-based regeneration error', { 
-          error: error instanceof Error ? error.message : String(error) 
+        Logger.error('Session-based regeneration error', {
+          error: error instanceof Error ? error.message : String(error)
         })
         return NextResponse.json(
           { error: error instanceof Error ? error.message : 'Failed to start regeneration' },
@@ -245,27 +247,27 @@ export async function POST(request: NextRequest) {
     const [foundByIds, foundByKeys] = await Promise.all([
       requestedIds.length > 0
         ? prisma.selfie.findMany({
-            where: { id: { in: requestedIds } },
-            select: {
-              id: true,
-              key: true,
-              personId: true,
-              classification: true, // Include classification for split composite building
-              person: { select: { userId: true, teamId: true } }
-            }
-          })
+          where: { id: { in: requestedIds } },
+          select: {
+            id: true,
+            key: true,
+            personId: true,
+            classification: true, // Include classification for split composite building
+            person: { select: { userId: true, teamId: true } }
+          }
+        })
         : Promise.resolve([]),
       requestedKeys.length > 0
         ? prisma.selfie.findMany({
-            where: { key: { in: requestedKeys } },
-            select: {
-              id: true,
-              key: true,
-              personId: true,
-              classification: true, // Include classification for split composite building
-              person: { select: { userId: true, teamId: true } }
-            }
-          })
+          where: { key: { in: requestedKeys } },
+          select: {
+            id: true,
+            key: true,
+            personId: true,
+            classification: true, // Include classification for split composite building
+            person: { select: { userId: true, teamId: true } }
+          }
+        })
         : Promise.resolve([])
     ])
 
@@ -309,7 +311,7 @@ export async function POST(request: NextRequest) {
             })
           selfies.push(...additionalSelfies)
         }
-      } catch {}
+      } catch { }
     }
 
     // Enforce same person and ownership/team authorization
@@ -326,9 +328,9 @@ export async function POST(request: NextRequest) {
         where: { id: firstPersonId },
         select: { userId: true, teamId: true, inviteToken: true, team: { select: { adminId: true } } }
       }),
-      prisma.person.findUnique({ 
-        where: { userId: session.user.id }, 
-        select: { id: true, teamId: true } 
+      prisma.person.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true, teamId: true }
       })
     ])
 
@@ -386,31 +388,31 @@ export async function POST(request: NextRequest) {
 
     // Validate package ownership
     const requestedPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
-    
+
     // Free package is always accessible to everyone (no ownership check needed)
     if (requestedPackageId !== 'freepackage') {
-      type PrismaWithUserPackage = typeof prisma & { 
-        userPackage: { 
+      type PrismaWithUserPackage = typeof prisma & {
+        userPackage: {
           findFirst: (...args: unknown[]) => Promise<{ id: string } | null>
-        } 
+        }
       }
       const prismaEx = prisma as unknown as PrismaWithUserPackage
-      
+
       // For team generations, check if team admin owns the package
       // For personal generations, check if user owns the package
       let userIdToCheck = session.user.id
       if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
         // Team member using team credits - check team admin's package ownership
         // Fetch team to get adminId
-          const team = await prisma.team.findUnique({
+        const team = await prisma.team.findUnique({
           where: { id: ownerPerson.teamId },
-            select: { adminId: true }
-          })
-          if (team?.adminId) {
-            userIdToCheck = team.adminId
+          select: { adminId: true }
+        })
+        if (team?.adminId) {
+          userIdToCheck = team.adminId
         }
       }
-      
+
       const hasPackage = await prismaEx.userPackage.findFirst({
         where: {
           userId: userIdToCheck,
@@ -440,7 +442,7 @@ export async function POST(request: NextRequest) {
         where: { id: contextId },
         select: { id: true, name: true, settings: true }
       })
-      
+
       // If not found by ID, try to find by name
       if (!context) {
         context = await prisma.context.findFirst({
@@ -448,7 +450,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, name: true, settings: true }
         })
       }
-      
+
       if (context) {
         resolvedContextId = context.id
         // Use the full settings object instead of just stylePreset string
@@ -469,9 +471,9 @@ export async function POST(request: NextRequest) {
         // Get detailed credit information for error message
         const creditSummary = await CreditService.getCreditBalanceSummary(session.user.id, userContext)
 
-      if (enforcedCreditSource === 'individual') {
+        if (enforcedCreditSource === 'individual') {
           return NextResponse.json(
-            { 
+            {
               error: 'Insufficient individual credits',
               required: PRICING_CONFIG.credits.perGeneration,
               available: creditSummary.individual,
@@ -480,17 +482,17 @@ export async function POST(request: NextRequest) {
             },
             { status: 402 }
           )
-      } else {
+        } else {
           // Team credits insufficient
           const personAllocation = await getPersonCreditBalance(primarySelfie.personId)
           return NextResponse.json(
-            { 
+            {
               error: 'Insufficient team credits',
               required: PRICING_CONFIG.credits.perGeneration,
               available: creditSummary.team,
               personAllocation,
-              message: personAllocation > 0 
-                ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.' 
+              message: personAllocation > 0
+                ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.'
                 : 'The team has insufficient credits. Contact your team admin.',
               redirectTo: '/en/app'
             },
@@ -505,64 +507,64 @@ export async function POST(request: NextRequest) {
     // 3 types: Individual, VIP, Invited (not on a plan, credits assigned by team admin)
     let maxRegenerations = 1 // Default for new generations (individual tier)
 
-      // Check if person was invited (has inviteToken) - they're not on a plan
-      if (ownerPerson.inviteToken && ownerPerson.teamId) {
-        // Invited users get regeneration count from their team admin's plan
-        const team = await prisma.team.findUnique({
-          where: { id: ownerPerson.teamId },
-          select: {
-            admin: {
-              select: {
-                planPeriod: true,
-                planTier: true
-              }
+    // Check if person was invited (has inviteToken) - they're not on a plan
+    if (ownerPerson.inviteToken && ownerPerson.teamId) {
+      // Invited users get regeneration count from their team admin's plan
+      const team = await prisma.team.findUnique({
+        where: { id: ownerPerson.teamId },
+        select: {
+          admin: {
+            select: {
+              planPeriod: true,
+              planTier: true
             }
           }
-        })
+        }
+      })
 
-        if (team?.admin) {
-          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod as PlanPeriod | null
-          const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier as PlanTier | null
+      if (team?.admin) {
+        const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod as PlanPeriod | null
+        const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier as PlanTier | null
 
-          // Determine team admin's PricingTier from tier+period to get regeneration count
-          const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
-          maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
+        // Determine team admin's PricingTier from tier+period to get regeneration count
+        const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
+        maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
+      } else {
+        // Fallback if team admin not found - use individual as default
+        maxRegenerations = getRegenerationCount('individual')
+      }
+    } else if (session.user.id) {
+      // Check user's subscription to determine plan
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id }
+      })
+      const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
+      const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
+
+      let pricingTier: PricingTier = 'free' // Default fallback
+
+      if (userPlanTier === 'individual') {
+        // Individual user - check period for VIP vs regular
+        if (userPlanPeriod === 'large') {
+          pricingTier = 'vip'
         } else {
-          // Fallback if team admin not found - use individual as default
-          maxRegenerations = getRegenerationCount('individual')
-        }
-      } else if (session.user.id) {
-        // Check user's subscription to determine plan
-        const user = await prisma.user.findUnique({
-          where: { id: session.user.id }
-        })
-        const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
-        const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
-
-        let pricingTier: PricingTier = 'free' // Default fallback
-
-        if (userPlanTier === 'individual') {
-          // Individual user - check period for VIP vs regular
-          if (userPlanPeriod === 'large') {
-            pricingTier = 'vip'
-          } else {
-            pricingTier = 'individual'
-          }
-        }
-        // Pro tier with seats-based pricing
-        else if (userPlanTier === 'pro' && userPlanPeriod === 'seats') {
-          pricingTier = 'individual' // Use individual regenerations for seats
-        }
-        // Default for other pro tiers
-        else if (userPlanTier === 'pro') {
           pricingTier = 'individual'
         }
-
-        maxRegenerations = getRegenerationCount(pricingTier)
-      } else {
-        // No user session - default to free
-        maxRegenerations = getRegenerationCount('free')
       }
+      // Pro tier with seats-based pricing
+      else if (userPlanTier === 'pro' && userPlanPeriod === 'seats') {
+        pricingTier = 'individual' // Use individual regenerations for seats
+      }
+      // Default for other pro tiers
+      else if (userPlanTier === 'pro') {
+        pricingTier = 'individual'
+      }
+
+      maxRegenerations = getRegenerationCount(pricingTier)
+    } else {
+      // No user session - default to free
+      maxRegenerations = getRegenerationCount('free')
+    }
 
     // Handle generation grouping (for new generations only)
     // Note: Regenerations are handled early with RegenerationService
@@ -620,7 +622,7 @@ export async function POST(request: NextRequest) {
         Logger.debug('Skipping free package enforcement for invited user')
       } else if (packageId === 'freepackage') {
         let shouldEnforceFreeStyle = false
-        
+
         // Check if user is on free plan
         if (session.user.id) {
           const userBasic = await prisma.user.findUnique({ where: { id: session.user.id } })
@@ -629,7 +631,7 @@ export async function POST(request: NextRequest) {
             shouldEnforceFreeStyle = true
           }
         }
-        
+
         // If using team credits, also check if team admin is on free plan
         if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
           const team = await prisma.team.findUnique({
@@ -638,7 +640,7 @@ export async function POST(request: NextRequest) {
               admin: true
             }
           })
-          
+
           if (team?.admin) {
             const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
             if (adminPlanPeriod === 'free') {
@@ -646,7 +648,7 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-        
+
         if (shouldEnforceFreeStyle) {
           type PrismaWithAppSetting = typeof prisma & { appSetting: { findUnique: (...args: unknown[]) => Promise<{ key: string; value: string } | null> } }
           const prismaEx = prisma as unknown as PrismaWithAppSetting
@@ -667,12 +669,12 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       Logger.error('Failed to enforce free package style', { error: e instanceof Error ? e.message : String(e) })
     }
-    
+
     // Serialize style settings with package info (for new generations)
     // Note: Regenerations are handled early with RegenerationService
     const pkg = getPackageConfig(resolvedPackageId)
     let serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettingsObj)
-      
+
     // Normalize potential UI variants after serialization
     try {
       const clothing = (serializedStyleSettings['clothing'] as { colors?: unknown } | undefined)
@@ -682,8 +684,8 @@ export async function POST(request: NextRequest) {
         serializedStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
         // keep clothing.colors as-is for backward compatibility; do not delete
       }
-    } catch {}
-    
+    } catch { }
+
     // Persist style settings and also embed selected selfie keys for future regenerations
     serializedStyleSettings = {
       ...serializedStyleSettings,
@@ -770,7 +772,7 @@ export async function POST(request: NextRequest) {
           type: 'selfie',
         })
         selfieAssetIds.push(asset.id)
-        
+
         // Link selfie to asset if not already linked
         const selfie = selfies.find((s: SelfieType) => s.key === key)
         if (selfie) {
@@ -853,6 +855,13 @@ export async function POST(request: NextRequest) {
         selfieTypeMap[s.key] = s.selfieType
       }
     }
+
+    Logger.debug('Selfie classification results', {
+      totalSelfies: selfies.length,
+      mappedSelfies: Object.keys(selfieTypeMap).length,
+      types: Object.values(selfieTypeMap),
+      rawSelfieTypes: selfies.map(s => ({ id: s.id, type: s.selfieType }))
+    })
 
     // Fetch aggregated demographics from selfies
     const selfieIdsForDemographics = selfies.map((s: SelfieType) => s.id)

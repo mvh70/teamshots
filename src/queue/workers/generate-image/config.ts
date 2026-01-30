@@ -7,13 +7,13 @@
 export const RETRY_CONFIG = {
   /** Maximum number of rate limit retries before giving up */
   MAX_RATE_LIMIT_RETRIES: 3,
-  
+
   /** Sleep duration when rate limited (milliseconds) */
   RATE_LIMIT_SLEEP_MS: 60000, // 60 seconds
-  
+
   /** Maximum local generation attempts for V1 workflow */
   MAX_LOCAL_GENERATION_ATTEMPTS: 2,
-  
+
   /** Wait time before retry message is visible (milliseconds) */
   RETRY_MESSAGE_DELAY_MS: 2000
 } as const
@@ -22,22 +22,22 @@ export const RETRY_CONFIG = {
 export const COMPOSITION_CONFIG = {
   /** Margin around composite image (pixels) */
   MARGIN: 20,
-  
+
   /** Spacing between selfies in composite (pixels) */
   SELFIE_SPACING: 10,
-  
+
   /** Font size for title text (pixels) */
   TITLE_FONT_SIZE: 32,
-  
+
   /** Font size for label text (pixels) */
   LABEL_FONT_SIZE: 24,
-  
+
   /** Text color for labels */
   LABEL_COLOR: '#000000',
-  
+
   /** Margin around text overlays (pixels) */
   TEXT_MARGIN: 12,
-  
+
   /** Margin around label text (pixels) */
   LABEL_TEXT_MARGIN: 8
 } as const
@@ -196,6 +196,15 @@ export const MODEL_CONFIG = {
       replicate: null, // Text-only, no Replicate equivalent
     },
   },
+  /** Grok-4 Fast - Cost-effective evaluation model with vision */
+  'grok-4-fast': {
+    providers: {
+      vertex: null, // Only available via OpenRouter/xAI
+      rest: null,
+      openrouter: 'x-ai/grok-4-fast',
+      replicate: null,
+    },
+  },
 } as const
 
 /** Canonical model names */
@@ -208,7 +217,7 @@ export const STAGE_MODEL = {
   STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName, // EXPERIMENT: Gemini 3 @ 1K for both steps
   STEP_1B_BACKGROUND: 'gemini-2.5-flash-image' as ModelName,
   STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
-  EVALUATION: 'gemini-2.5-flash' as ModelName,
+  EVALUATION: 'grok-4-fast' as ModelName,
   GARMENT_ANALYSIS: 'gemini-2.5-flash' as ModelName,
   SELFIE_CLASSIFICATION: 'gemini-2.5-flash' as ModelName,
 } as const

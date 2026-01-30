@@ -1,8 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
-import { getVertexGenerativeModel } from '../gemini'
-import { AI_CONFIG } from '../config'
-import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
+import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
+import { AI_CONFIG, STAGE_MODEL, type ModelName } from '../config'
 import type { ReferenceImage, EvaluationFeedback } from '@/types/generation'
 
 interface EvaluateCompositionInput {
@@ -21,19 +20,17 @@ export async function evaluateComposition(
   debugMode = false
 ): Promise<EvaluationFeedback> {
   const { imageBase64, imageIndex, generationPrompt, personReference, backgroundReference, logoReference } = input
-  
+
+  // Model selection - supports both Gemini and Grok models via OpenRouter
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
-  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
-  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+  const modelName: ModelName = (evalModel as ModelName) || STAGE_MODEL.EVALUATION
+
   Logger.debug('Evaluating composition (Step 5)', {
     modelName,
     imageIndex,
     hasBackground: !!backgroundReference,
     hasLogo: !!logoReference
   })
-  
-  const model = await getVertexGenerativeModel(modelName)
 
   const instructions = [
     `You are evaluating Step 5 of image generation: Person + background composition.`,
@@ -128,34 +125,50 @@ export async function evaluateComposition(
     '}'
   )
 
-  const parts: Part[] = [{ text: instructions.join('\n') }]
 
-  parts.push({ text: `Generation prompt used:\n${generationPrompt}` })
-  parts.push({ text: `Step 5 candidate image ${imageIndex + 1}` })
-  parts.push({ inlineData: { mimeType: 'image/png', data: imageBase64 } })
+  // Build images array for multi-provider text generation
+  const images: GeminiReferenceImage[] = []
 
-  parts.push({ text: personReference.description ?? 'Person reference from Step 1' })
-  parts.push({ inlineData: { mimeType: personReference.mimeType, data: personReference.base64 } })
+  // Add generated image to evaluate
+  images.push({
+    base64: imageBase64,
+    mimeType: 'image/png',
+    description: `Step 5 candidate image ${imageIndex + 1}`
+  })
 
+  // Add person reference
+  images.push({
+    base64: personReference.base64,
+    mimeType: personReference.mimeType,
+    description: personReference.description ?? 'Person reference from Step 1'
+  })
+
+  // Add background reference if exists
   if (backgroundReference) {
-    parts.push({ text: backgroundReference.description ?? 'Background reference' })
-    parts.push({ inlineData: { mimeType: backgroundReference.mimeType, data: backgroundReference.base64 } })
+    images.push({
+      base64: backgroundReference.base64,
+      mimeType: backgroundReference.mimeType,
+      description: backgroundReference.description ?? 'Background reference'
+    })
   }
 
+  // Add branding reference if exists
   if (logoReference) {
-    parts.push({ text: logoReference.description ?? 'Branding reference' })
-    parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
+    images.push({
+      base64: logoReference.base64,
+      mimeType: logoReference.mimeType,
+      description: logoReference.description ?? 'Branding reference'
+    })
   }
 
-  const contents: Content[] = [{ role: 'user', parts }]
+  const promptText = instructions.join('\n') + `\n\nGeneration prompt used:\n${generationPrompt}`
 
   if (debugMode) {
-    const evalPromptText = instructions.join('\n') + `\n\nGeneration prompt used:\n${generationPrompt}`
     Logger.info('V2 DEBUG - Step 6 Evaluation Prompt:', {
       step: 6,
       evaluationType: 'composition',
-      prompt: evalPromptText.substring(0, 3000) + (evalPromptText.length > 3000 ? '...(truncated)' : ''),
-      promptLength: evalPromptText.length,
+      prompt: promptText.substring(0, 3000) + (promptText.length > 3000 ? '...(truncated)' : ''),
+      promptLength: promptText.length,
       imageCount: 1,
       hasPersonReference: !!personReference,
       hasBackgroundReference: !!backgroundReference,
@@ -164,13 +177,19 @@ export async function evaluateComposition(
   }
 
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
+    // Use multi-provider text generation (supports Gemini, Grok via OpenRouter)
+    const result = await generateTextWithGemini(promptText, images, {
+      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+      stage: 'EVALUATION'
     })
 
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    Logger.debug('V3 Step 2 Eval: Provider used', {
+      provider: result.providerUsed,
+      model: modelName,
+      evalAttempt: 1
+    })
+
+    const textPart = result.text
 
     if (textPart) {
       const evaluation = parseCompositionEvaluation(textPart, !!backgroundReference, !!logoReference)
@@ -190,10 +209,10 @@ export async function evaluateComposition(
           evaluation.person_background_coherence === 'YES' &&
           evaluation.no_visible_artifacts === 'YES' &&
           (!backgroundReference || evaluation.custom_background_matches === 'YES') &&
-          (!logoReference || 
+          (!logoReference ||
             (evaluation.branding_logo_matches === 'YES' &&
-             evaluation.branding_positioned_correctly === 'YES' &&
-             evaluation.branding_scene_aligned === 'YES'))
+              evaluation.branding_positioned_correctly === 'YES' &&
+              evaluation.branding_scene_aligned === 'YES'))
 
         const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
 
@@ -264,7 +283,7 @@ function normalizeYesNoUncertain(value: unknown): 'YES' | 'NO' | 'UNCERTAIN' | '
 
 function generateAdjustmentSuggestions(failedCriteria: string[]): string {
   const suggestions: string[] = []
-  
+
   for (const criterion of failedCriteria) {
     if (criterion.includes('natural_integration')) {
       suggestions.push('Improve blending between person and background; ensure consistent lighting and perspective')
@@ -288,7 +307,7 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
       suggestions.push('Integrate logo naturally into scene with proper lighting, perspective, and surface contours')
     }
   }
-  
+
   return suggestions.join('; ')
 }
 

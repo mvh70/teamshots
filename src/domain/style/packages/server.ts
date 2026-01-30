@@ -2,6 +2,7 @@ import { headshot1Server } from './headshot1/server'
 import { outfit1Server } from './outfit1/server'
 import { freepackageServer } from './freepackage/server'
 import { industryHeadshotServer } from './industry-headshot/server'
+import { standardShotsServer } from './standard-shots/server'
 import { Logger } from '@/lib/logger'
 
 // Import new registry and types
@@ -56,6 +57,15 @@ async function registerCorePackages(): Promise<void> {
     })
   }
 
+  // Register standard-shots (always available)
+  try {
+    await packageRegistry.register(standardShotsServer, { skipValidation: false })
+  } catch (error) {
+    Logger.error('[ServerPackages] Failed to register standard-shots', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+
   Logger.info('[ServerPackages] Core packages registered', {
     count: packageRegistry.count,
     packages: packageRegistry.getIds(),
@@ -68,6 +78,7 @@ export const SERVER_PACKAGES: Record<string, ServerStylePackage> = {
   [freepackageServer.id]: freepackageServer,
   [outfit1Server.id]: outfit1Server,
   [industryHeadshotServer.id]: industryHeadshotServer,
+  [standardShotsServer.id]: standardShotsServer,
 }
 
 /**

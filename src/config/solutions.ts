@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
  *
- * This file is generated from teamshots-marketing/config/brands/teamshots-pro/content-silo.json
+ * This file is generated from teamshots-marketing/config/brands/teamshotspro/content-silo.json
  * Run: npx tsx src/generators/sync-solutions.ts (from teamshots-marketing directory)
  *
  * Last generated: 2026-01-14T10:50:39.856Z

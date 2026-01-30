@@ -36,7 +36,6 @@ function mapGeneration(g: Record<string, unknown>): GenerationListItem {
     costCredits: (g.creditsUsed as number) ?? 0,
     isOwnGeneration: g.isOwnGeneration,
     generationType: g.generationType,
-    adminApproved: g.adminApproved,
     maxRegenerations: g.maxRegenerations,
     remainingRegenerations: g.remainingRegenerations,
     isOriginal: g.isOriginal,
