@@ -137,11 +137,13 @@ function markdownToHtml(markdown: string): string {
     }
   )
 
+  const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
   return result
     // Headers
-    .replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-8 mb-4">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mt-8 mb-4">$1</h1>')
+    .replace(/^### (.*$)/gm, (_, t) => `<h3 id="${slugify(t)}" class="text-xl font-semibold mt-6 mb-3">${t}</h3>`)
+    .replace(/^## (.*$)/gm, (_, t) => `<h2 id="${slugify(t)}" class="text-2xl font-bold mt-8 mb-4">${t}</h2>`)
+    .replace(/^# (.*$)/gm, (_, t) => `<h1 id="${slugify(t)}" class="text-3xl font-bold mt-8 mb-4">${t}</h1>`)
     // Bold and italic
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
