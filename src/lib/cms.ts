@@ -29,6 +29,7 @@ export type CMSBlogPost = {
   publishedAt: string | null
   brandId: string
   contentType: string
+  category: string | null
   wordCount: number
   // Spanish translation
   spanishSlug: string | null
@@ -53,6 +54,7 @@ export function getPublishedBlogPosts(brandId: string): CMSBlogPost[] {
         cs.publishedAt,
         cs.brandId,
         cs.contentType,
+        cs.category,
         cv.wordCount,
         t.localizedSlug as spanishSlug,
         t.title as spanishTitle,
@@ -216,7 +218,7 @@ export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): Bl
   return {
     slug: cmsPost.slug,
     allowedVariants: [variant],
-    category: 'guides' as BlogPostCategory, // Default category, could be stored in CMS
+    category: (cmsPost.category || 'guides') as BlogPostCategory,
     title: cmsPost.title,
     description: cmsPost.metaDescription,
     meta: cmsPost.spanishTitle
