@@ -2,13 +2,20 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import PricingCard from '@/components/pricing/PricingCard'
 import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
+import PricingCard from '@/components/pricing/PricingCard'
 import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
+import BeforeAfterSlider from '@/components/BeforeAfterSlider'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import type { LandingVariant } from '@/config/landing-content'
+
+// Before/after sample images for visual proof
+const SAMPLE_IMAGES = [
+  { before: '/samples/before-4.webp', after: '/samples/after-4.webp' },
+  { before: '/samples/before-5.webp', after: '/samples/after-5.webp' },
+];
 
 // Helper to calculate total photos (styles × variations)
 function getTotalPhotos(credits: number, regenerations: number): number {
@@ -42,6 +49,8 @@ export default function PricingContent({ variant }: PricingContentProps) {
 
   // Seats-based pricing for TeamShotsPro
   if (variant === 'teamshotspro') {
+    // Team-specific FAQ keys - includes pricing-specific questions
+    const teamFaqKeys = ['refund', 'turnaround', 'requirements', 'consistency', 'addSeatsLater', 'unusedCredits'] as const;
 
     return (
       <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
@@ -56,37 +65,83 @@ export default function PricingContent({ variant }: PricingContentProps) {
             </p>
           </div>
 
-          {/* Pricing Cards Grid */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
-            {/* Seats Pricing Card */}
-            <SeatsPricingCard unauth={true} />
+          {/* Pricing Section - Lead with what users came for */}
+          <div className="max-w-5xl mx-auto mb-16">
+            {/* Main Pricing Card - Full width emphasis */}
+            <div className="mb-8">
+              <SeatsPricingCard unauth={true} />
+            </div>
 
-            {/* Free Trial Card */}
-            <PricingCard
-              id="free"
-              price="Free"
-              credits={PRICING_CONFIG.freeTrial.pro}
-              regenerations={PRICING_CONFIG.regenerations.free}
-              pricePerPhoto={formatPrice(getPricePerPhoto('free'))}
-              ctaMode="link"
-              href="/auth/signup"
-            />
-          </div>
-
-          {/* Personal Plan Redirect */}
-          <div className="text-center mt-12 pt-8 border-t border-bg-gray-200">
-            <p className="text-base text-text-body">
-              Looking for a personal plan?{' '}
+            {/* Free Trial - Subordinate, supporting element */}
+            <div className="text-center">
+              <p className="text-text-body mb-3">
+                {t('seats.freeTrialPrompt')}
+              </p>
               <a
-                href="https://portreya.com"
-                className="text-brand-primary font-semibold hover:underline transition-all"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/auth/signup"
+                className="inline-flex items-center gap-2 text-brand-primary hover:text-brand-primary-hover font-semibold transition-colors"
               >
-                Visit Portreya.com
+                {t('seats.tryFreeLink')}
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </a>
-            </p>
+            </div>
           </div>
+
+          {/* Visual Proof Section - Moved below pricing */}
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl lg:text-3xl font-display font-bold text-text-dark mb-2">
+                {t('seats.visualProof.title')}
+              </h2>
+              <p className="text-text-body">
+                {t('seats.visualProof.subtitle')}
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {SAMPLE_IMAGES.map((sample, index) => (
+                <div key={index} className="rounded-2xl overflow-hidden shadow-depth-lg">
+                  <BeforeAfterSlider
+                    beforeSrc={sample.before}
+                    afterSrc={sample.after}
+                    alt={`Professional headshot transformation example ${index + 1}`}
+                    size="md"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Guarantee Badge */}
+          <div className="flex justify-center mb-16">
+            <div className="inline-flex items-center gap-3 bg-green-50 border border-green-200 rounded-full px-6 py-3">
+              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span className="font-semibold text-green-800">{t('seats.guarantee')}</span>
+            </div>
+          </div>
+
+          {/* FAQ Section for Teams */}
+          <div className="max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-12 text-text-dark">
+              {t('seats.faq.title')}
+            </h2>
+            <div className="space-y-6">
+              {teamFaqKeys.map((faqKey) => (
+                <div key={faqKey} className="bg-bg-white rounded-2xl p-6 lg:p-8 shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
+                  <h3 className="text-lg lg:text-xl font-bold mb-3 text-text-dark font-display">
+                    {t(`seats.faq.${faqKey}.question`)}
+                  </h3>
+                  <p className="text-base lg:text-lg text-text-body leading-relaxed">
+                    {t(`seats.faq.${faqKey}.answer`)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
     );

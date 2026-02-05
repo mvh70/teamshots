@@ -21,17 +21,25 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     rules: {
       userAgent: '*',
       allow: [
-        '/',          // English (default locale, no prefix)
-        '/es/',       // Spanish locale
+        '/',                      // English (default locale, no prefix)
+        '/es/',                   // Spanish locale
+        '/pricing',               // Pricing page
+        '/blog',                  // Blog index
+        '/blog/',                 // Blog posts
+        '/solutions/',            // Solutions pages
+        '/headshot-cost-calculator', // Calculator tool
+        '/legal/',                // Legal pages
       ],
       disallow: [
-        '/app/',      // App routes (authenticated)
-        '/api/',      // API routes
-        '/auth/',     // Auth pages (no need to index)
-        '/invite/',   // Invite pages (private)
-        '/invite-dashboard/', // Private invite dashboards
-        '/dashboard/', // Dashboard (authenticated)
-        '/cdn-cgi/',   // Cloudflare email protection
+        '/app/',                  // App routes (authenticated)
+        '/api/',                  // API routes
+        '/auth/',                 // Auth pages (no need to index)
+        '/invite/',               // Invite pages (private)
+        '/invite-dashboard/',     // Private invite dashboards
+        '/dashboard/',            // Dashboard (authenticated)
+        '/cdn-cgi/',              // Cloudflare email protection
+        '/upload/',               // Upload pages (private)
+        '/upload-selfie/',        // Mobile upload pages (private)
       ],
     },
     sitemap: `${cleanBaseUrl}/sitemap.xml`,

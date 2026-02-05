@@ -1,4 +1,117 @@
 {
+  "costCalculator": {
+    "meta": {
+      "title": "Headshot Cost Calculator - Compare AI vs Traditional Photography",
+      "description": "Calculate and compare the true cost of corporate headshots. See how much your team can save with AI headshots vs traditional photography, including hidden costs."
+    },
+    "hero": {
+      "title": "Stop Overpaying for Team Headshots",
+      "subtitle": "See exactly how much you'll save switching from traditional photographers to AI-generated headshots."
+    },
+    "teamSize": {
+      "label": "Team size",
+      "people": "people",
+      "avgCost": "Average TeamShotsPro cost:",
+      "perPerson": "/person",
+      "total": "TeamShotsPro total"
+    },
+    "savings": {
+      "estimated": "Estimated savings",
+      "gap": "Estimated gap",
+      "comparedTo": "compared to {amount} traditional",
+      "lessThan": "less than traditional photography",
+      "whySwitch": "Why teams switch",
+      "benefits": {
+        "noScheduling": "No scheduling or coordination needed",
+        "commercialRights": "Full commercial rights included",
+        "consistentBranding": "Consistent branding across your team"
+      }
+    },
+    "cta": {
+      "primary": "Get 3 Professional Headshots Free",
+      "secondary": "Get 3 Free Headshots",
+      "noCreditCard": "No credit card required",
+      "potentialSavings": "potential savings"
+    },
+    "largeTeam": {
+      "title": "Large team?",
+      "link": "Contact us for volume pricing"
+    },
+    "beforeAfter": {
+      "title": "Real results from selfies",
+      "selfie": "Selfie",
+      "aiHeadshot": "AI Headshot",
+      "dragToCompare": "Drag to compare · Same person, studio result in 60 seconds",
+      "previousSample": "Previous sample",
+      "nextSample": "Next sample"
+    },
+    "traditional": {
+      "title": "Traditional photography costs",
+      "subtitle": "Here's what you'd typically pay",
+      "total": "Total",
+      "photographer": "Photographer",
+      "employeeTime": "Employee time",
+      "retouching": "Retouching",
+      "adminExtras": "Admin + extras",
+      "customize": "Customize assumptions",
+      "hideDetails": "Hide details",
+      "cost": "Cost"
+    },
+    "assumptions": {
+      "photographerRate": {
+        "title": "Photographer rate",
+        "rateLabel": "Rate per person",
+        "perPerson": "/person"
+      },
+      "employeeTime": {
+        "title": "Employee session time",
+        "tooltip": "Travel to studio + waiting + session + review",
+        "hourlyLabel": "Hourly rate",
+        "perHour": "/hour",
+        "minutesLabel": "Minutes per person",
+        "minutes": "minutes"
+      },
+      "adminCoordination": {
+        "title": "Admin coordination",
+        "hourlyLabel": "Hourly rate",
+        "perHour": "/hour",
+        "hoursLabel": "Coordination hours",
+        "hours": "hours"
+      },
+      "retouching": {
+        "title": "Retouching",
+        "costLabel": "Cost per person",
+        "perPerson": "/person"
+      }
+    },
+    "extras": {
+      "label": "Include usage rights & travel fees (+$350 avg)",
+      "description": "Many photographers charge extra for commercial usage and travel."
+    },
+    "disclaimer": "Estimates based on industry averages. Adjust assumptions to match your situation.",
+    "faq": {
+      "q1": {
+        "question": "How much do professional headshots cost per person?",
+        "answer": "Traditional professional headshots typically cost $150-400 per person, including photographer fees, session time, and retouching. With TeamShotsPro AI headshots, the cost starts at $29 per person for teams, with volume discounts available for larger groups."
+      },
+      "q2": {
+        "question": "What are the hidden costs of traditional corporate photography?",
+        "answer": "Hidden costs include: employee time away from work ($50+/hour × 30-60 minutes per person), administrative coordination (4+ hours of scheduling), retouching fees ($35+ per person), usage rights fees, and travel expenses. These can easily double the quoted photographer rate."
+      },
+      "q3": {
+        "question": "How much can teams save with AI headshots?",
+        "answer": "Teams typically save 70-85% compared to traditional photography. For a 25-person team, traditional photography costs around $6,000-8,000 when including all hidden costs, while AI headshots cost approximately $500-700 total."
+      },
+      "q4": {
+        "question": "Do AI headshots include commercial usage rights?",
+        "answer": "Yes, TeamShotsPro includes full commercial usage rights with every plan at no extra cost. Traditional photographers often charge $350+ extra for commercial usage rights and travel fees."
+      },
+      "q5": {
+        "question": "How long does it take to get AI headshots?",
+        "answer": "AI headshots are generated in approximately 60 seconds after uploading a selfie. Traditional photography requires scheduling (often weeks in advance), the session itself (30-60 minutes), and waiting for retouched photos (1-2 weeks)."
+      }
+    }
+  },
   "landing": {
     "teamshotspro": {
       "hero": {
@@ -8,11 +121,11 @@
         "subtitle": "Set your brand style and generate professional headshots for every team member. Consistent quality across your entire company.",
         "subtitleBold": "100% on-brand, 0% hassle.",
         "subtitleMain": "Turn individual selfies into a unified team look in under a minute. No photographer, no scheduling, no waiting hours for results.",
-        "finalCtaTitle": "Ready to transform your team photos?",
-        "finalCtaSubtitle": "See 3 sample headshots for your team in 60 seconds. No credit card, no commitment.",
+        "finalCtaTitle": "Your team deserves a polished, unified look",
+        "finalCtaSubtitle": "Join hundreds of teams who've upgraded their professional image. 3 free sample headshots, ready in 60 seconds.",
         "finalCtaCta": "Start Your Free Trial",
         "getStarted": "Get Started",
-        "cta": "Try Free — 3 Photos, No Card",
+        "cta": "Get Your Headshots in 60 Seconds",
         "ctaSubtext": "",
         "ctaAria": "Try free — get 3 sample photos with no credit card",
         "noCreditCard": "Test with a fixed style for free, no credit card required",
@@ -22,20 +135,20 @@
         "bookDemo": "Book a Demo",
         "bookDemoAria": "Book a demo",
         "socialProof": {
-          "headshots": "1,000+ headshots generated",
-          "teams": "10+ teams",
-          "rating": "4.9/5 average rating"
+          "speed": "60-second results",
+          "photos": "10 photos per member",
+          "guarantee": "30-day money-back guarantee"
         },
         "trustBadges": {
-          "stripeSecure": "Stripe Secure Checkout",
+          "teamsServed": "500+ Teams Served",
           "instantResults": "Results in 60 Seconds",
-          "noSubscription": "No Subscription",
-          "moneyBack": "Money-Back Guarantee"
+          "noSubscription": "One-Time Payment",
+          "moneyBack": "30-Day Guarantee"
         }
       },
       "gallery": {
-        "title": "From 'meh' selfies to LinkedIn-worthy headshots",
-        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
+        "title": "Turn any selfie into a LinkedIn-ready headshot",
+        "subtitle": "Real transformations from real professionals. Each one started with a quick selfie—no fancy camera or photographer required.",
         "cta": "Make your team look like this today"
       },
       "trust": {
@@ -108,32 +221,16 @@
         "subtitle": "Not satisfied? We regenerate for free. No questions asked.",
         "description": "Every headshot goes through automated quality checks before delivery. If any photo doesn't meet your standards, we'll regenerate it at no extra cost. Studio-quality results that look like you, just more polished."
       },
-      "testimonials": {
-        "title": "What teams are saying",
-        "items": {
-          "1": {
-            "quote": "We needed headshots for 40 new hires across 3 offices. TeamShotsPro delivered consistent, professional results in a single afternoon — no photographer coordination needed.",
-            "name": "Sarah Chen",
-            "role": "Head of People",
-            "company": "Meridian Tech"
-          },
-          "2": {
-            "quote": "The quality genuinely surprised us. Our team photos look like we hired a professional studio, but each person just took a quick selfie from their desk.",
-            "name": "James Okwu",
-            "role": "Brand Manager",
-            "company": "Northvolt Agency"
-          },
-          "3": {
-            "quote": "I set up the brand style once, sent invite links to the team, and had a unified gallery by end of day. The whole process was remarkably smooth.",
-            "name": "Lisa Bergström",
-            "role": "Operations Director",
-            "company": "Astra Consulting"
-          }
-        }
+      "socialProof": {
+        "title": "Real results from real professionals",
+        "subtitle": "Every transformation below is a real person who used TeamShotsPro. Click their LinkedIn to verify.",
+        "verifiedBadge": "LinkedIn verified",
+        "founderNote": "TeamShotsPro founder — we use our own product",
+        "cta": "Get your professional headshot"
       },
       "faq": {
         "title": "Frequently Asked Questions",
-        "subtitle": "Everything you need to know about TeamShotsPro"
+        "subtitle": "Quick answers to help you decide"
       },
       "footer": {
         "tagline": "Professional team photos in 60 seconds",

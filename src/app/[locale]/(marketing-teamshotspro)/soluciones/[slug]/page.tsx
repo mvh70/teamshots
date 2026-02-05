@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getSolutionBySlug, SOLUTIONS } from '@/config/solutions'
+import { getSolutionBySlug } from '@/config/solutions'
 import { getEnglishSolutionSlug, SPANISH_SOLUTION_SLUGS } from '@/config/spanish-slugs'
 import { getLandingVariant } from '@/config/landing-content'
 import { getBaseUrl } from '@/lib/url'
+import { getBrand } from '@/config/brand'
 import {
   IndustryHero,
   IndustryPainPoints,
@@ -20,6 +21,7 @@ import {
   IndustryGuarantee,
   TrustLogos,
 } from '@/components/solutions'
+import { SolutionSchema } from '../../solutions/[industry]/schema'
 
 // Force dynamic rendering since we use headers() for brand detection
 export const dynamic = 'force-dynamic'
@@ -59,6 +61,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const seoDescription = t('seo.description')
   const canonical = `${baseUrl}/es/soluciones/${slug}`
 
+  // Use hero image for OG or fallback to default
+  const ogImage = solution.heroImage.startsWith('/')
+    ? `${baseUrl}${solution.heroImage}`
+    : solution.heroImage
+
   return {
     title: seoTitle,
     description: seoDescription,
@@ -70,10 +77,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     },
     openGraph: {
+      type: 'website',
+      locale: 'es_ES',
       title: seoTitle,
       description: seoDescription,
       url: canonical,
+      siteName: 'TeamShotsPro',
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${solution.label} AI Headshots - TeamShotsPro`,
+        },
+      ],
     },
+    twitter: {
+      card: 'summary_large_image',
+      title: seoTitle,
+      description: seoDescription,
+      images: [ogImage],
+      creator: '@teamshotspro',
+    },
+    keywords: [
+      `fotos profesionales ${solution.label.toLowerCase()}`,
+      `headshots IA para ${solution.label.toLowerCase()}`,
+      'fotos corporativas equipo',
+      'headshots profesionales',
+      'fotografía IA',
+      'fotos de equipo',
+    ],
   }
 }
 
@@ -105,43 +138,82 @@ export default async function SolucionesPage({ params }: Props) {
   const solution = getSolutionBySlug(englishSlug)
   if (!solution) notFound()
 
+  // Get translations for schema data
+  const baseUrl = getBaseUrl(headersList)
+  const brandName = getBrand(headersList).name
+  const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
+
+  // Extract data for schema
+  const seo = {
+    title: t('seo.title'),
+    description: t('seo.description'),
+  }
+  const faqItems = t.raw('faq.items') as Array<{ question: string; answer: string }>
+  const testimonials = t.raw('testimonials.items') as Array<{
+    quote: string;
+    author: string;
+    role: string;
+    company: string;
+  }>
+  const howItWorksSteps = t.raw('howItWorks.steps') as Array<{
+    number: string;
+    title: string;
+    description: string;
+  }>
+  const comparisonRows = t.raw('comparison.rows') as string[][]
+
   return (
-    <div className="relative space-y-0">
-      {/* Hero Section */}
-      <IndustryHero industry={englishSlug} solution={solution} locale={locale} />
+    <>
+      {/* SEO Schema Markup */}
+      <SolutionSchema
+        baseUrl={baseUrl}
+        brandName={brandName}
+        locale={locale}
+        solution={solution}
+        seo={seo}
+        faqItems={faqItems}
+        testimonials={testimonials}
+        howItWorksSteps={howItWorksSteps}
+        comparisonRows={comparisonRows}
+      />
 
-      {/* Trust Logos (only shows if logos are configured) */}
-      <TrustLogos solution={solution} locale={locale} />
+      <div className="relative space-y-0">
+        {/* Hero Section */}
+        <IndustryHero industry={englishSlug} solution={solution} locale={locale} />
 
-      {/* Pain Points */}
-      <IndustryPainPoints industry={englishSlug} />
+        {/* Trust Logos (only shows if logos are configured) */}
+        <TrustLogos solution={solution} locale={locale} />
 
-      {/* Showcase Gallery */}
-      <IndustryShowcase industry={englishSlug} solution={solution} />
+        {/* Pain Points */}
+        <IndustryPainPoints industry={englishSlug} />
 
-      {/* How It Works */}
-      <IndustryHowItWorks industry={englishSlug} />
+        {/* Showcase Gallery */}
+        <IndustryShowcase industry={englishSlug} solution={solution} />
 
-      {/* Cost Comparison vs Traditional */}
-      <IndustryComparison industry={englishSlug} />
+        {/* How It Works */}
+        <IndustryHowItWorks industry={englishSlug} />
 
-      {/* Use Cases */}
-      <IndustryUseCases industry={englishSlug} />
+        {/* Cost Comparison vs Traditional */}
+        <IndustryComparison industry={englishSlug} />
 
-      {/* Testimonials */}
-      <IndustryTestimonials industry={englishSlug} />
+        {/* Use Cases */}
+        <IndustryUseCases industry={englishSlug} />
 
-      {/* Pricing */}
-      <IndustryPricing industry={englishSlug} locale={locale} />
+        {/* Testimonials */}
+        <IndustryTestimonials industry={englishSlug} />
 
-      {/* Guarantee */}
-      <IndustryGuarantee locale={locale} />
+        {/* Pricing */}
+        <IndustryPricing industry={englishSlug} locale={locale} />
 
-      {/* FAQ */}
-      <IndustryFAQ industry={englishSlug} />
+        {/* Guarantee */}
+        <IndustryGuarantee locale={locale} />
 
-      {/* Final CTA */}
-      <IndustryFinalCTA industry={englishSlug} locale={locale} />
-    </div>
+        {/* FAQ */}
+        <IndustryFAQ industry={englishSlug} />
+
+        {/* Final CTA */}
+        <IndustryFinalCTA industry={englishSlug} locale={locale} />
+      </div>
+    </>
   )
 }

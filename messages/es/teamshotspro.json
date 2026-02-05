@@ -1,4 +1,117 @@
 {
+  "costCalculator": {
+    "meta": {
+      "title": "Calculadora de Costos de Headshots - Compara IA vs Fotografía Tradicional",
+      "description": "Calcula y compara el costo real de los retratos corporativos. Descubre cuánto puede ahorrar tu equipo con headshots de IA vs fotografía tradicional, incluyendo costos ocultos."
+    },
+    "hero": {
+      "title": "Deja de Pagar de Más por los Headshots del Equipo",
+      "subtitle": "Descubre exactamente cuánto ahorrarás al cambiar de fotógrafos tradicionales a headshots generados por IA."
+    },
+    "teamSize": {
+      "label": "Tamaño del equipo",
+      "people": "personas",
+      "avgCost": "Costo promedio de TeamShotsPro:",
+      "perPerson": "/persona",
+      "total": "Total TeamShotsPro"
+    },
+    "savings": {
+      "estimated": "Ahorro estimado",
+      "gap": "Diferencia estimada",
+      "comparedTo": "comparado con {amount} tradicional",
+      "lessThan": "menos que la fotografía tradicional",
+      "whySwitch": "Por qué los equipos cambian",
+      "benefits": {
+        "noScheduling": "Sin necesidad de agendar o coordinar",
+        "commercialRights": "Derechos comerciales completos incluidos",
+        "consistentBranding": "Marca consistente en todo tu equipo"
+      }
+    },
+    "cta": {
+      "primary": "Obtén 3 Headshots Profesionales Gratis",
+      "secondary": "Obtén 3 Headshots Gratis",
+      "noCreditCard": "Sin tarjeta de crédito",
+      "potentialSavings": "ahorro potencial"
+    },
+    "largeTeam": {
+      "title": "¿Equipo grande?",
+      "link": "Contáctanos para precios por volumen"
+    },
+    "beforeAfter": {
+      "title": "Resultados reales desde selfies",
+      "selfie": "Selfie",
+      "aiHeadshot": "Headshot IA",
+      "dragToCompare": "Arrastra para comparar · Misma persona, resultado de estudio en 60 segundos",
+      "previousSample": "Muestra anterior",
+      "nextSample": "Siguiente muestra"
+    },
+    "traditional": {
+      "title": "Costos de fotografía tradicional",
+      "subtitle": "Esto es lo que normalmente pagarías",
+      "total": "Total",
+      "photographer": "Fotógrafo",
+      "employeeTime": "Tiempo del empleado",
+      "retouching": "Retoque",
+      "adminExtras": "Admin + extras",
+      "customize": "Personalizar supuestos",
+      "hideDetails": "Ocultar detalles",
+      "cost": "Costo"
+    },
+    "assumptions": {
+      "photographerRate": {
+        "title": "Tarifa del fotógrafo",
+        "rateLabel": "Tarifa por persona",
+        "perPerson": "/persona"
+      },
+      "employeeTime": {
+        "title": "Tiempo de sesión del empleado",
+        "tooltip": "Viaje al estudio + espera + sesión + revisión",
+        "hourlyLabel": "Tarifa por hora",
+        "perHour": "/hora",
+        "minutesLabel": "Minutos por persona",
+        "minutes": "minutos"
+      },
+      "adminCoordination": {
+        "title": "Coordinación administrativa",
+        "hourlyLabel": "Tarifa por hora",
+        "perHour": "/hora",
+        "hoursLabel": "Horas de coordinación",
+        "hours": "horas"
+      },
+      "retouching": {
+        "title": "Retoque",
+        "costLabel": "Costo por persona",
+        "perPerson": "/persona"
+      }
+    },
+    "extras": {
+      "label": "Incluir derechos de uso y gastos de viaje (+$350 promedio)",
+      "description": "Muchos fotógrafos cobran extra por uso comercial y viajes."
+    },
+    "disclaimer": "Estimaciones basadas en promedios de la industria. Ajusta los supuestos según tu situación.",
+    "faq": {
+      "q1": {
+        "question": "¿Cuánto cuestan los headshots profesionales por persona?",
+        "answer": "Los headshots profesionales tradicionales típicamente cuestan $150-400 por persona, incluyendo honorarios del fotógrafo, tiempo de sesión y retoque. Con TeamShotsPro headshots de IA, el costo comienza en $29 por persona para equipos, con descuentos por volumen disponibles para grupos más grandes."
+      },
+      "q2": {
+        "question": "¿Cuáles son los costos ocultos de la fotografía corporativa tradicional?",
+        "answer": "Los costos ocultos incluyen: tiempo del empleado fuera del trabajo ($50+/hora × 30-60 minutos por persona), coordinación administrativa (4+ horas de programación), tarifas de retoque ($35+ por persona), tarifas de derechos de uso, y gastos de viaje. Estos pueden fácilmente duplicar la tarifa cotizada del fotógrafo."
+      },
+      "q3": {
+        "question": "¿Cuánto pueden ahorrar los equipos con headshots de IA?",
+        "answer": "Los equipos típicamente ahorran 70-85% comparado con la fotografía tradicional. Para un equipo de 25 personas, la fotografía tradicional cuesta alrededor de $6,000-8,000 cuando se incluyen todos los costos ocultos, mientras que los headshots de IA cuestan aproximadamente $500-700 en total."
+      },
+      "q4": {
+        "question": "¿Los headshots de IA incluyen derechos de uso comercial?",
+        "answer": "Sí, TeamShotsPro incluye derechos de uso comercial completos con cada plan sin costo adicional. Los fotógrafos tradicionales a menudo cobran $350+ extra por derechos de uso comercial y gastos de viaje."
+      },
+      "q5": {
+        "question": "¿Cuánto tiempo toma obtener headshots de IA?",
+        "answer": "Los headshots de IA se generan en aproximadamente 60 segundos después de subir una selfie. La fotografía tradicional requiere programación (a menudo semanas por adelantado), la sesión en sí (30-60 minutos), y esperar por las fotos retocadas (1-2 semanas)."
+      }
+    }
+  },
   "landing": {
     "teamshotspro": {
       "hero": {
@@ -8,11 +121,11 @@
         "subtitle": "Define tu estilo de marca y genera retratos profesionales para cada miembro. Calidad consistente en toda la empresa.",
         "subtitleBold": "100% acorde a tu marca, 0% complicaciones.",
         "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada en menos de un minuto. Sin fotógrafo, sin agenda, sin esperar horas por resultados.",
-        "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
-        "finalCtaSubtitle": "Obtén 3 retratos de muestra para tu equipo en 60 segundos. Sin tarjeta de crédito, sin compromiso.",
+        "finalCtaTitle": "Tu equipo merece una imagen profesional y unificada",
+        "finalCtaSubtitle": "Únete a cientos de equipos que han mejorado su imagen profesional. 3 retratos de muestra gratis, listos en 60 segundos.",
         "finalCtaCta": "Empieza tu prueba gratis",
         "getStarted": "Empezar",
-        "cta": "Prueba gratis — 3 fotos, sin tarjeta",
+        "cta": "Obtén tus retratos en 60 segundos",
         "ctaSubtext": "",
         "ctaAria": "Prueba gratis — obtén 3 fotos de muestra sin tarjeta de crédito",
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
@@ -22,20 +135,20 @@
         "bookDemo": "Reservar una demo",
         "bookDemoAria": "Reservar una demo",
         "socialProof": {
-          "headshots": "12,000+ headshots generados",
-          "teams": "500+ equipos",
-          "rating": "4.9/5 valoración media"
+          "speed": "Resultados en 60 segundos",
+          "photos": "10 fotos por miembro",
+          "guarantee": "Garantía de 30 días"
         },
         "trustBadges": {
-          "stripeSecure": "Pago Seguro con Stripe",
+          "teamsServed": "500+ Equipos Atendidos",
           "instantResults": "Resultados en 60 Segundos",
-          "noSubscription": "Sin Suscripción",
-          "moneyBack": "Garantía de Devolución"
+          "noSubscription": "Pago Único",
+          "moneyBack": "Garantía de 30 Días"
         }
       },
       "gallery": {
-        "title": "De selfies normales a retratos profesionales",
-        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo.",
+        "title": "Convierte cualquier selfie en un retrato profesional",
+        "subtitle": "Transformaciones reales de profesionales reales. Cada una comenzó con una selfie rápida—sin cámara profesional ni fotógrafo.",
         "cta": "Haz que tu equipo se vea así hoy"
       },
       "trust": {
@@ -108,32 +221,16 @@
         "subtitle": "¿No estás satisfecho? Regeneramos gratis. Sin preguntas.",
         "description": "Cada retrato pasa por controles de calidad automatizados antes de la entrega. Si alguna foto no cumple tus estándares, la regeneramos sin costo adicional. Resultados de calidad de estudio que se ven como tú, solo más pulidos."
       },
-      "testimonials": {
-        "title": "Lo que dicen los equipos",
-        "items": {
-          "1": {
-            "quote": "Necesitábamos retratos para 40 nuevos empleados en 3 oficinas. TeamShotsPro entregó resultados consistentes y profesionales en una sola tarde — sin coordinar fotógrafos.",
-            "name": "Sarah Chen",
-            "role": "Directora de Personas",
-            "company": "Meridian Tech"
-          },
-          "2": {
-            "quote": "La calidad nos sorprendió genuinamente. Las fotos de nuestro equipo parecen de estudio profesional, pero cada persona solo se tomó una selfie rápida desde su escritorio.",
-            "name": "James Okwu",
-            "role": "Director de Marca",
-            "company": "Northvolt Agency"
-          },
-          "3": {
-            "quote": "Configuré el estilo de marca una vez, envié los enlaces de invitación al equipo y tenía una galería unificada al final del día. Todo el proceso fue notablemente fluido.",
-            "name": "Lisa Bergström",
-            "role": "Directora de Operaciones",
-            "company": "Astra Consulting"
-          }
-        }
+      "socialProof": {
+        "title": "Resultados reales de profesionales reales",
+        "subtitle": "Cada transformación es una persona real que usó TeamShotsPro. Haz clic en su LinkedIn para verificar.",
+        "verifiedBadge": "Verificado en LinkedIn",
+        "founderNote": "Fundador de TeamShotsPro — usamos nuestro propio producto",
+        "cta": "Obtén tu retrato profesional"
       },
       "faq": {
         "title": "Preguntas Frecuentes",
-        "subtitle": "Todo lo que necesitas saber sobre TeamShotsPro"
+        "subtitle": "Respuestas rápidas para ayudarte a decidir"
       },
       "footer": {
         "tagline": "Fotos profesionales de equipo en 60 segundos",

@@ -6,9 +6,10 @@ type ConstructMetadataParams = {
     path?: string      // e.g. "/pricing" or "/blog/my-post"
     title: string
     description?: string
-    image?: string
+    image?: string     // Override for og:image, defaults to /branding/og-image.jpg
     locale?: string    // Current locale
     noIndex?: boolean
+    siteName?: string  // Override for og:site_name
 }
 
 /**
@@ -23,6 +24,7 @@ export function constructMetadata({
     image,
     locale = 'en',
     noIndex = false,
+    siteName,
 }: ConstructMetadataParams): Metadata {
     // Ensure path starts with slash if not empty
     const cleanPath = path.startsWith('/') ? path : `/${path}`
@@ -35,6 +37,13 @@ export function constructMetadata({
         ? `${baseUrl}${cleanPath}`
         : `${baseUrl}/${locale}${cleanPath}`
 
+    // Default og:image to the brand image if not provided
+    const ogImage = image || `${baseUrl}/branding/og-image.jpg`
+
+    // Derive site name from baseUrl if not provided
+    const derivedSiteName = siteName || baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, '').split('.')[0]
+    const displaySiteName = derivedSiteName.charAt(0).toUpperCase() + derivedSiteName.slice(1)
+
     return {
         title,
         description,
@@ -42,7 +51,23 @@ export function constructMetadata({
             title,
             description,
             url: canonicalUrl,
-            images: image ? [{ url: image }] : undefined,
+            siteName: displaySiteName,
+            type: 'website',
+            locale: locale === 'es' ? 'es_ES' : 'en_US',
+            images: [
+                {
+                    url: ogImage,
+                    width: 1200,
+                    height: 630,
+                    alt: title,
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [ogImage],
         },
         alternates: {
             canonical: canonicalUrl,

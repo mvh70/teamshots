@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';
 import TrustIndicators from '@/components/TrustIndicators';
@@ -13,7 +12,7 @@ import GuaranteeSection from '@/components/GuaranteeSection';
 import { TrackedLink } from '@/components/TrackedLink';
 import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
 import { FeedbackButton } from '@/components/feedback/FeedbackButton';
-import { CreditCardIcon, PhotoIcon, ShieldCheckIcon, ClockIcon, BanknotesIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, PhotoIcon, ShieldCheckIcon, ClockIcon, UserGroupIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import type { LandingVariant, LandingSections } from '@/config/landing-content';
 import type { LandingProps } from '../page';
 
@@ -31,7 +30,6 @@ export default function TeamShotsLanding({ supportEmail, variant }: LandingProps
 
   // Use domain-specific translations
   const t = useTranslations(`landing.${variant}.hero`);
-  const tTestimonials = useTranslations(`landing.${variant}.testimonials`);
 
   // Animation state
   const [heroMounted, setHeroMounted] = useState(false);
@@ -140,22 +138,22 @@ export default function TeamShotsLanding({ supportEmail, variant }: LandingProps
                 {t('cta')}
               </TrackedLink>
 
-              {/* Security & Speed Trust Badges */}
+              {/* Trust Badges - Social Proof & Value Props */}
               <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">
                 <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-                  <ShieldCheckIcon className="w-4 h-4 text-green-600" aria-hidden="true" />
-                  <span className="font-medium">{t('trustBadges.stripeSecure')}</span>
+                  <UserGroupIcon className="w-4 h-4 text-brand-primary" aria-hidden="true" />
+                  <span className="font-medium">{t('trustBadges.teamsServed')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
                   <ClockIcon className="w-4 h-4 text-brand-primary" aria-hidden="true" />
                   <span className="font-medium">{t('trustBadges.instantResults')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-                  <BanknotesIcon className="w-4 h-4 text-brand-primary" aria-hidden="true" />
+                  <CheckCircleIcon className="w-4 h-4 text-green-600" aria-hidden="true" />
                   <span className="font-medium">{t('trustBadges.noSubscription')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-                  <ShieldCheckIcon className="w-4 h-4 text-brand-primary" aria-hidden="true" />
+                  <ShieldCheckIcon className="w-4 h-4 text-green-600" aria-hidden="true" />
                   <span className="font-medium">{t('trustBadges.moneyBack')}</span>
                 </div>
               </div>
@@ -176,26 +174,6 @@ export default function TeamShotsLanding({ supportEmail, variant }: LandingProps
         </div>
       </section>
 
-      {/* Social Proof Bar */}
-      <section className="py-6 bg-bg-gray-50">
-        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm sm:text-base text-text-muted">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-text-dark">{t('socialProof.headshots')}</span>
-            </div>
-            <div className="hidden sm:block w-px h-5 bg-gray-200" aria-hidden="true" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-text-dark">{t('socialProof.teams')}</span>
-            </div>
-            <div className="hidden sm:block w-px h-5 bg-gray-200" aria-hidden="true" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-yellow-400" aria-hidden="true">★</span>
-              <span className="font-bold text-text-dark">{t('socialProof.rating')}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Sample Gallery - Team transformation examples */}
       <SampleGallery variant={variant} />
 
@@ -210,35 +188,6 @@ export default function TeamShotsLanding({ supportEmail, variant }: LandingProps
 
       {/* Pricing Preview */}
       <PricingPreview variant={variant} />
-
-      {/* Testimonials Section */}
-      <section className="py-20 sm:py-24 lg:py-32 bg-bg-white relative grain-texture">
-        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-tight">
-              {tTestimonials('title')}
-            </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {(['1', '2', '3'] as const).map((id) => (
-              <div key={id} className="bg-bg-gray-50 rounded-2xl p-8 border border-gray-200">
-                <div className="flex text-yellow-400 text-lg mb-4" aria-hidden="true">
-                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-                </div>
-                <blockquote className="text-text-body text-base leading-relaxed mb-6">
-                  &ldquo;{tTestimonials(`items.${id}.quote`)}&rdquo;
-                </blockquote>
-                <div>
-                  <p className="font-bold text-text-dark text-sm">{tTestimonials(`items.${id}.name`)}</p>
-                  <p className="text-text-muted text-sm">
-                    {tTestimonials(`items.${id}.role`)} · {tTestimonials(`items.${id}.company`)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* FAQ Section */}
       <FAQ variant={variant} supportEmail={supportEmail} />

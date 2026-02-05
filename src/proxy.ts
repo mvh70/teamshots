@@ -1,5 +1,5 @@
 import createMiddleware from 'next-intl/middleware';
-import { routing } from './i18n/routing';
+import { routing } from '@/i18n/routing';
 import { NextResponse, NextRequest } from 'next/server'
 import { getRequestHeader } from '@/lib/server-headers'
 import { auth } from '@/auth'
@@ -173,7 +173,8 @@ const intlMiddleware = createMiddleware({
   localePrefix: routing.localePrefix
 })
 
-export default async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  console.log('[PROXY] Request received:', request.nextUrl.pathname)
   try {
     // Redirect www to non-www for SEO canonicalization
     // This prevents duplicate content issues in Google Search Console
@@ -261,8 +262,16 @@ export default async function proxy(request: NextRequest) {
       }
     }
 
+    // Try manual rewrite instead of intlMiddleware to debug
+    if (request.nextUrl.pathname === '/') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/en'
+      console.log('[PROXY] Manual rewrite to:', url.toString())
+      return addSecurityHeaders(NextResponse.rewrite(url))
+    }
+
     const response = intlMiddleware(request)
-    
+
     return addSecurityHeaders(response)
   } catch (error) {
     // If middleware fails, log error but don't block the request

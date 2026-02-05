@@ -6,6 +6,7 @@ import { CheckoutButton } from '@/components/ui';
 import { PRICING_CONFIG } from '@/config/pricing';
 import PromoCodeInput, { type PromoCodeDiscount } from './PromoCodeInput';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 // Use graduated pricing from config
 const MIN_SEATS = PRICING_CONFIG.seats.minSeats;
@@ -22,6 +23,55 @@ function getSavings(seats: number): number {
   return baseTotal - actualTotal;
 }
 
+/**
+ * Calculate the breakdown of seats across pricing tiers
+ */
+function getGraduatedBreakdown(seats: number): Array<{
+  tierMin: number;
+  tierMax: number | null;
+  seatsInTier: number;
+  pricePerSeat: number;
+  subtotal: number;
+}> {
+  if (seats < MIN_SEATS) return [];
+
+  const breakdown: Array<{
+    tierMin: number;
+    tierMax: number | null;
+    seatsInTier: number;
+    pricePerSeat: number;
+    subtotal: number;
+  }> = [];
+
+  let remaining = seats;
+
+  // Process tiers from smallest to largest (reverse config order)
+  const tiersAscending = [...PRICING_CONFIG.seats.graduatedTiers].reverse();
+
+  for (const tier of tiersAscending) {
+    if (remaining <= 0) break;
+
+    const tierCapacity = tier.max === Infinity
+      ? Infinity
+      : tier.max - tier.min + 1;
+
+    const seatsInTier = Math.min(remaining, tierCapacity);
+
+    if (seatsInTier > 0) {
+      breakdown.push({
+        tierMin: tier.min,
+        tierMax: tier.max === Infinity ? null : tier.max,
+        seatsInTier,
+        pricePerSeat: tier.pricePerSeat,
+        subtotal: seatsInTier * tier.pricePerSeat,
+      });
+      remaining -= seatsInTier;
+    }
+  }
+
+  return breakdown;
+}
+
 interface SeatsPricingCardProps {
   /** For authenticated users (upgrade page) vs unauthenticated (landing) */
   unauth?: boolean;
@@ -33,6 +83,8 @@ interface SeatsPricingCardProps {
   initialSeats?: number;
   /** Current seats owned (for top-up mode) - sets minimum and shows difference */
   currentSeats?: number;
+  /** Show the tiered pricing breakdown explanation */
+  showPricingBreakdown?: boolean;
 }
 
 export default function SeatsPricingCard({
@@ -40,10 +92,13 @@ export default function SeatsPricingCard({
   returnUrl,
   className = '',
   initialSeats = 10,
-  currentSeats
+  currentSeats,
+  showPricingBreakdown = true
 }: SeatsPricingCardProps) {
   const t = useTranslations('pricing');
   const { track } = useAnalytics();
+  // Keep breakdown collapsed by default to reduce cognitive load
+  const [breakdownExpanded, setBreakdownExpanded] = useState(false);
   
   // Calculate minimum seats based on mode
   const isTopUpMode = currentSeats !== undefined && currentSeats > 0;
@@ -106,13 +161,7 @@ export default function SeatsPricingCard({
     ? promoDiscount.finalAmount / (isTopUpMode ? additionalSeats : validatedSeats)
     : pricePerSeatAtTier;
 
-  // Calculate discount percentage compared to full price (smallest tier)
-  const fullPrice = PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat;
-  const discountPercentage = fullPrice > 0 ? Math.round(((fullPrice - pricePerSeatAtTier) / fullPrice) * 100) : 0;
-  const hasDiscount = discountPercentage > 0 && !promoDiscount;
-
   const savings = getSavings(validatedSeats);
-  const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);
 
   // Track clicks on non-interactive card elements (dead clicks)
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -132,10 +181,10 @@ export default function SeatsPricingCard({
       className={`bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-4 border-brand-primary relative ${className}`}
       onClick={handleCardClick}
     >
-      {/* Popular Badge */}
+      {/* One-time payment badge - key differentiator */}
       <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-        <span className="bg-brand-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-md">
-          {t('mostPopular')}
+        <span className="bg-green-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-md">
+          {t('seats.oneTimePayment')}
         </span>
       </div>
 
@@ -150,13 +199,10 @@ export default function SeatsPricingCard({
 
         {/* Enhanced Slider */}
         <div className="relative px-2">
-          {/* Visual indicator - arrows pointing to slider */}
-          <div className="flex justify-center mb-2 text-brand-primary">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <span className="text-2xl">←</span>
-              <span>Drag slider to adjust</span>
-              <span className="text-2xl">→</span>
-            </div>
+          {/* Slider range labels */}
+          <div className="flex justify-between mb-2 text-xs text-gray-500 px-1">
+            <span>{minSeats}</span>
+            <span>200+</span>
           </div>
 
           <style>{`
@@ -246,82 +292,125 @@ export default function SeatsPricingCard({
         </div>
       </div>
 
-      {/* Pricing Display */}
+      {/* Pricing Display - Clean and focused */}
       <div className="text-center mb-6">
-        <div className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-3">
-          {t('seats.oneTimePayment')}
-        </div>
         {isTopUpMode && currentSeats > 0 && (
           <div className="text-sm text-gray-600 mb-3">
             {t('seats.currentToNew', { current: currentSeats, total: validatedSeats })}
           </div>
         )}
 
-        {/* Price breakdown: $X.XX/person × N = $XXX.XX total */}
-        <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
-          {hasDiscount && (
-            <span className="text-xl text-gray-400 line-through">
-              ${fullPrice.toFixed(2)}
-            </span>
-          )}
-          <div className="text-4xl font-bold text-gray-900">
-            ${displayPricePerSeat.toFixed(2)}
-          </div>
-          {hasDiscount && (
-            <div className="bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white whitespace-nowrap">
-              {discountPercentage}% OFF
-            </div>
-          )}
+        {/* Simple price display */}
+        <div className="text-4xl font-bold text-gray-900 mb-1">
+          ${displayPricePerSeat.toFixed(2)}
         </div>
-        <div className="text-lg font-medium text-gray-500 mb-2">{t('seats.perSeat')}</div>
+        <div className="text-lg font-medium text-gray-500 mb-3">{t('seats.perSeat')}</div>
 
-        {/* Total - de-emphasized */}
-        <div className="text-sm text-gray-400 mb-2">
+        {/* Total */}
+        <div className="text-sm text-gray-600">
           {isTopUpMode ? (
             <>{t('seats.totalForSeats', { amount: (topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: additionalSeats })}</>
           ) : (
             <span>
               {t('seats.totalLabel', { amount: total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: validatedSeats })}
-              {savings > 0 && (
-                <span className="text-green-600 font-semibold block mt-1">{t('seats.saveDollar', { amount: savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}</span>
-              )}
             </span>
           )}
         </div>
+        {/* Volume savings hint - only show when meaningful */}
+        {savings > 10 && !isTopUpMode && (
+          <div className="text-sm text-green-600 font-medium mt-1">
+            {t('seats.saveDollar', { amount: savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}
+          </div>
+        )}
       </div>
 
-      {/* Features */}
-      <ul className="space-y-3 mb-8">
-        {['photosPerSeat', 'teamManagement', 'fullCustomization', 'creditsNeverExpire', 'flexibleTeamSize'].map((feature) => (
-          <li key={feature} className="flex items-start gap-2 text-sm">
-            <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-gray-600">{t(`seats.features.${feature}`)}</span>
-          </li>
-        ))}
-      </ul>
+      {/* Tiered Pricing Breakdown - simplified, only for power users */}
+      {showPricingBreakdown && validatedSeats >= 5 && (
+        <div className="mb-6">
+          <button
+            onClick={() => setBreakdownExpanded(!breakdownExpanded)}
+            className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
+            aria-expanded={breakdownExpanded}
+          >
+            <span>{t('seats.pricingBreakdown.title')}</span>
+            {breakdownExpanded ? (
+              <ChevronUpIcon className="w-4 h-4" />
+            ) : (
+              <ChevronDownIcon className="w-4 h-4" />
+            )}
+          </button>
 
-      {/* CTA Button */}
-      <CheckoutButton
-        type="seats"
-        quantity={isTopUpMode ? additionalSeats : validatedSeats}
-        unauth={unauth}
-        metadata={{
-          planTier: 'pro',
-          planPeriod: 'seats',
-          seats: (isTopUpMode ? additionalSeats : validatedSeats).toString(),
-          isTopUp: isTopUpMode ? 'true' : 'false',
-          currentSeats: currentSeats?.toString() || '0',
-        }}
-        returnUrl={returnUrl}
-        promoCode={appliedPromoCode || undefined}
-        stripePromoCodeId={stripePromoCodeId}
-        useBrandCtaColors
-        className="w-full"
-      >
-{t('seats.buySeats', { count: isTopUpMode ? additionalSeats : validatedSeats })}
-      </CheckoutButton>
+          {breakdownExpanded && (
+            <div className="mt-2 p-4 bg-gray-50 rounded-xl text-sm">
+              {/* Simple tier reference */}
+              <div className="space-y-2">
+                {[...PRICING_CONFIG.seats.graduatedTiers].reverse().map((tier, idx) => (
+                  <div key={idx} className="flex justify-between text-gray-600">
+                    <span>
+                      {tier.max === Infinity
+                        ? t('seats.pricingBreakdown.tierLabelInfinity', { min: tier.min })
+                        : t('seats.pricingBreakdown.tierLabel', { min: tier.min, max: tier.max })
+                      }
+                    </span>
+                    <span className="font-semibold">${tier.pricePerSeat.toFixed(2)}{t('seats.pricingBreakdown.perPerson')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Key value props - reduced to essentials */}
+      <div className="flex items-center justify-center gap-4 mb-6 text-sm text-gray-600">
+        <span className="flex items-center gap-1.5">
+          <svg className="w-4 h-4 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          10 photos each
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg className="w-4 h-4 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Never expires
+        </span>
+      </div>
+
+      {/* CTA Button - Switch to "Book a Demo" for enterprise (100+ seats) */}
+      {validatedSeats >= 100 ? (
+        <a
+          href="https://calendly.com/teamshotspro/demo"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full inline-flex items-center justify-center gap-2 px-8 py-4 bg-brand-primary hover:bg-brand-primary-hover text-white font-bold rounded-xl shadow-lg transition-all duration-200"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {t('seats.bookDemo')}
+        </a>
+      ) : (
+        <CheckoutButton
+          type="seats"
+          quantity={isTopUpMode ? additionalSeats : validatedSeats}
+          unauth={unauth}
+          metadata={{
+            planTier: 'pro',
+            planPeriod: 'seats',
+            seats: (isTopUpMode ? additionalSeats : validatedSeats).toString(),
+            isTopUp: isTopUpMode ? 'true' : 'false',
+            currentSeats: currentSeats?.toString() || '0',
+          }}
+          returnUrl={returnUrl}
+          promoCode={appliedPromoCode || undefined}
+          stripePromoCodeId={stripePromoCodeId}
+          useBrandCtaColors
+          className="w-full"
+        >
+          {t('seats.buySeats', { count: isTopUpMode ? additionalSeats : validatedSeats })}
+        </CheckoutButton>
+      )}
     </div>
   );
 }

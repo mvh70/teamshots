@@ -270,7 +270,7 @@
         "description": "See the quality before you commit. No credit card required. Try it free and see the results.",
         "features": [
           "{photos} customizable photos",
-          "Fixed background and branding watermark",
+          "Sample watermark (removed on paid plans)",
           "Perfect for testing the quality"
         ],
         "cta": "Try it free"
@@ -383,18 +383,18 @@
       "selectSeats": "How many team members?",
       "seat": "team member",
       "seats": "team members",
-      "perSeat": "per additional person",
-      "pricePerSeat": "Price per additional person",
+      "perSeat": "per person",
+      "pricePerSeat": "Price per person",
       "totalPhotos": "Total photos",
       "photos": "photos",
       "savings": "You save",
-      "saveDollar": "Save ${amount}",
+      "saveDollar": "Save ${amount} with volume pricing",
       "totalLabel": "Total: ${amount} for {count} members",
       "totalForSeats": "${amount} total for {count, plural, one {# seat} other {# seats}}",
       "total": "Total",
       "cta": "Add {seats} team members for {total}",
-      "buySeats": "Buy {count, plural, one {# team member} other {# team members}}",
-      "oneTimePayment": "One-time payment • No subscription",
+      "buySeats": "Get Started with {count, plural, one {# Seat} other {# Seats}}",
+      "oneTimePayment": "One-time payment",
       "currentToNew": "Current: {current} {current, plural, one {seat} other {seats}} → New total: {total} {total, plural, one {seat} other {seats}}",
       "whatsIncluded": "What's Included",
       "volumeHint": "Add {seatsNeeded} more to unlock {nextPrice}/member (save {savingsPerSeat}/member)",
@@ -402,12 +402,60 @@
       "visitPortreya": "Visit Portreya.com",
       "features": {
         "photosPerSeat": "10 professional photos per team member",
-        "professionalQuality": "AI-powered professional quality headshots",
-        "teamManagement": "Central team management dashboard",
-        "fullCustomization": "Full customization: background, branding, pose, clothing style",
-        "creditsNeverExpire": "One-time purchase — use anytime, no expiry",
-        "flexibleTeamSize": "Scale your team anytime, add seats as you grow",
-        "support": "Email support and satisfaction guarantee"
+        "teamManagement": "Manage all team photos from one dashboard",
+        "fullCustomization": "Match your brand perfectly — backgrounds, colors, style",
+        "creditsNeverExpire": "Use anytime — credits never expire",
+        "flexibleTeamSize": "Add team members whenever you need them"
+      },
+      "volumeDiscount": "Volume discount",
+      "volumeDiscountExplained": "Price decreases as you add more team members",
+      "enterpriseCallout": "Need 100+ seats? Book a demo for custom pricing",
+      "bookDemo": "Book a Demo for Custom Pricing",
+      "freeTrialPrompt": "Not ready to commit? Try 3 free photos first.",
+      "tryFreeLink": "Start free trial — no credit card required",
+      "pricingBreakdown": {
+        "title": "How pricing works",
+        "description": "Pay less per person as your team grows. First seats cost more, additional seats get progressively cheaper.",
+        "tierLabel": "Seats {min}-{max}",
+        "tierLabelInfinity": "Seats {min}+",
+        "perPerson": "/person",
+        "yourBreakdown": "Your breakdown",
+        "seatsAtPrice": "{count} {count, plural, one {seat} other {seats}} × ${price}",
+        "subtotal": "${amount}"
+      },
+      "guarantee": "30-day money-back guarantee",
+      "guaranteeDescription": "Not satisfied? Full refund within 30 days, no questions asked.",
+      "visualProof": {
+        "title": "See the transformation",
+        "subtitle": "From casual selfies to professional headshots in 60 seconds",
+        "dragToCompare": "Drag to compare"
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "refund": {
+          "question": "What if I'm not satisfied with the results?",
+          "answer": "We offer a 30-day money-back guarantee. If you're not happy with the results, contact us for a full refund. Plus, try our free tier first to see the quality before you commit."
+        },
+        "turnaround": {
+          "question": "How quickly do we get the photos?",
+          "answer": "Each team member gets their professional headshots in about 60 seconds after uploading their selfie. No waiting days for a photographer to edit."
+        },
+        "requirements": {
+          "question": "What photo requirements are there?",
+          "answer": "Any clear photo of the face works. Selfies from smartphones are perfect. We recommend good lighting and a clear view of the face from chest up."
+        },
+        "consistency": {
+          "question": "Will all team photos look consistent?",
+          "answer": "Yes! You set the brand standards (background, clothing style, lighting) and every team member's photo follows those guidelines while still looking like them."
+        },
+        "addSeatsLater": {
+          "question": "Can I add more seats later?",
+          "answer": "Yes! You can add team members anytime at the same volume pricing. Your existing credits never expire, and new seats get the same great rate based on your total team size."
+        },
+        "unusedCredits": {
+          "question": "What happens to unused credits?",
+          "answer": "Credits never expire. If a team member doesn't use their photos right away, they can generate them whenever they're ready. No rush, no pressure."
+        }
       }
     },
     "freeBrandingText": "with fixed teamshots branding"

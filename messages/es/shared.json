@@ -280,7 +280,7 @@
         "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
         "features": [
           "{photos} fotos personalizables",
-          "Fondo fijo y marca de agua",
+          "Marca de agua de muestra (se elimina en planes de pago)",
           "Perfecto para probar la calidad"
         ],
         "cta": "Pruébalo gratis"
@@ -388,18 +388,18 @@
       "selectSeats": "¿Cuántos miembros del equipo?",
       "seat": "miembro",
       "seats": "miembros",
-      "perSeat": "por persona adicional",
-      "pricePerSeat": "Precio por persona adicional",
+      "perSeat": "por persona",
+      "pricePerSeat": "Precio por persona",
       "totalPhotos": "Total de fotos",
       "photos": "fotos",
       "savings": "Ahorras",
-      "saveDollar": "Ahorras ${amount}",
+      "saveDollar": "Ahorras ${amount} con precio por volumen",
       "totalLabel": "Total: ${amount} por {count} miembros",
       "totalForSeats": "${amount} total por {count, plural, one {# asiento} other {# asientos}}",
       "total": "Total",
       "cta": "Obtener {seats} miembros por {total}",
-      "buySeats": "Comprar {count, plural, one {# miembro} other {# miembros}}",
-      "oneTimePayment": "Pago único • Sin suscripción",
+      "buySeats": "Empezar con {count, plural, one {# Puesto} other {# Puestos}}",
+      "oneTimePayment": "Pago único",
       "currentToNew": "Actual: {current} {current, plural, one {asiento} other {asientos}} → Nuevo total: {total} {total, plural, one {asiento} other {asientos}}",
       "whatsIncluded": "Qué está incluido",
       "volumeHint": "Añade {seatsNeeded} miembros más para desbloquear {nextPrice}/miembro (ahorra {savingsPerSeat}/miembro)",
@@ -407,12 +407,60 @@
       "visitPortreya": "Visita Portreya.com",
       "features": {
         "photosPerSeat": "10 fotos profesionales por miembro del equipo",
-        "professionalQuality": "Fotos de calidad profesional con IA",
-        "teamManagement": "Panel de gestión centralizado del equipo",
-        "fullCustomization": "Personalización completa: fondo, marca, pose, estilo de ropa",
-        "creditsNeverExpire": "Compra única — úsalo cuando quieras, sin caducidad",
-        "flexibleTeamSize": "Escala tu equipo, añade miembros cuando lo necesites",
-        "support": "Soporte por correo y garantía de satisfacción"
+        "teamManagement": "Gestiona todas las fotos del equipo desde un panel",
+        "fullCustomization": "Que coincida perfectamente con tu marca — fondos, colores, estilo",
+        "creditsNeverExpire": "Úsalos cuando quieras — los créditos nunca caducan",
+        "flexibleTeamSize": "Añade miembros del equipo cuando los necesites"
+      },
+      "volumeDiscount": "Descuento por volumen",
+      "volumeDiscountExplained": "El precio disminuye al añadir más miembros",
+      "enterpriseCallout": "¿Necesitas más de 100 puestos? Agenda una demo para precios personalizados",
+      "bookDemo": "Agendar Demo para Precios Personalizados",
+      "freeTrialPrompt": "¿No estás listo para comprometerte? Prueba 3 fotos gratis primero.",
+      "tryFreeLink": "Comenzar prueba gratis — sin tarjeta de crédito",
+      "pricingBreakdown": {
+        "title": "Cómo funciona el precio",
+        "description": "Paga menos por persona a medida que crece tu equipo. Los primeros puestos cuestan más, los adicionales son progresivamente más baratos.",
+        "tierLabel": "Puestos {min}-{max}",
+        "tierLabelInfinity": "Puestos {min}+",
+        "perPerson": "/persona",
+        "yourBreakdown": "Tu desglose",
+        "seatsAtPrice": "{count} {count, plural, one {puesto} other {puestos}} × ${price}",
+        "subtotal": "${amount}"
+      },
+      "guarantee": "Garantía de devolución de 30 días",
+      "guaranteeDescription": "¿No estás satisfecho? Reembolso completo en 30 días, sin preguntas.",
+      "visualProof": {
+        "title": "Mira la transformación",
+        "subtitle": "De selfies casuales a fotos profesionales en 60 segundos",
+        "dragToCompare": "Arrastra para comparar"
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes",
+        "refund": {
+          "question": "¿Qué pasa si no estoy satisfecho con los resultados?",
+          "answer": "Ofrecemos una garantía de devolución de 30 días. Si no estás contento con los resultados, contáctanos para un reembolso completo. Además, prueba nuestro plan gratuito primero para ver la calidad antes de comprometerte."
+        },
+        "turnaround": {
+          "question": "¿Qué tan rápido recibimos las fotos?",
+          "answer": "Cada miembro del equipo recibe sus fotos profesionales en aproximadamente 60 segundos después de subir su selfie. Sin esperar días para que un fotógrafo edite."
+        },
+        "requirements": {
+          "question": "¿Qué requisitos tienen las fotos?",
+          "answer": "Cualquier foto clara del rostro funciona. Los selfies de smartphones son perfectos. Recomendamos buena iluminación y una vista clara del rostro desde el pecho hacia arriba."
+        },
+        "consistency": {
+          "question": "¿Todas las fotos del equipo se verán consistentes?",
+          "answer": "¡Sí! Tú estableces los estándares de marca (fondo, estilo de ropa, iluminación) y la foto de cada miembro del equipo sigue esas directrices mientras sigue viéndose como ellos."
+        },
+        "addSeatsLater": {
+          "question": "¿Puedo agregar más puestos después?",
+          "answer": "¡Sí! Puedes agregar miembros del equipo en cualquier momento al mismo precio por volumen. Tus créditos existentes nunca caducan, y los nuevos puestos obtienen la misma tarifa según el tamaño total de tu equipo."
+        },
+        "unusedCredits": {
+          "question": "¿Qué pasa con los créditos no utilizados?",
+          "answer": "Los créditos nunca caducan. Si un miembro del equipo no usa sus fotos de inmediato, puede generarlas cuando esté listo. Sin prisa, sin presión."
+        }
       }
     },
     "freeBrandingText": "con marca fija de teamshots"

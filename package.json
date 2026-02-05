@@ -93,7 +93,7 @@
     "mime-types": "^3.0.1",
     "next": "16.0.10",
     "next-auth": "^5.0.0-beta.29",
-    "next-intl": "^4.3.12",
+    "next-intl": "^4.8.2",
     "onborda": "^1.2.5",
     "papaparse": "^5.5.3",
     "pg": "^8.16.3",

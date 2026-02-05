@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -132,11 +132,17 @@ interface HowItWorksProps {
   variant: LandingVariant;
 }
 
+// Auto-advance interval in milliseconds
+const AUTO_ADVANCE_INTERVAL = 5000;
+// Pause duration after user interaction before resuming auto-advance
+const PAUSE_AFTER_INTERACTION = 10000;
+
 export default function HowItWorks({ variant }: HowItWorksProps) {
   // Use domain-specific translations
   const t = useTranslations(`landing.${variant}.howItWorks`);
   const [activeStep, setActiveStep] = useState(1);
   const [isVisible, setIsVisible] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const { track } = useAnalytics();
 
   // Build steps dynamically based on variant
@@ -163,6 +169,48 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
 
   // Get active step data
   const activeStepData = STEPS.find(s => s.id === activeStep) || STEPS[0];
+
+  // Ref to track pause timeout
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle user interaction - pause auto-advance temporarily
+  const handleUserInteraction = useCallback((stepId: number) => {
+    setActiveStep(stepId);
+    setIsPaused(true);
+
+    // Clear any existing timeout
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+
+    // Resume auto-advance after pause duration
+    pauseTimeoutRef.current = setTimeout(() => {
+      setIsPaused(false);
+    }, PAUSE_AFTER_INTERACTION);
+  }, []);
+
+  // Auto-advance effect
+  useEffect(() => {
+    if (!isVisible || isPaused) return;
+
+    const interval = setInterval(() => {
+      setActiveStep(current => {
+        const nextStep = current >= STEPS.length ? 1 : current + 1;
+        return nextStep;
+      });
+    }, AUTO_ADVANCE_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [isVisible, isPaused, STEPS.length]);
+
+  // Cleanup pause timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Intersection observer for visibility animation
   useEffect(() => {
@@ -206,7 +254,7 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
             <button
               key={step.id}
               onClick={() => {
-                setActiveStep(step.id);
+                handleUserInteraction(step.id);
                 track('how_it_works_tab_clicked', { step: step.id, label: step.tabLabel });
               }}
               className={`

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import Image from 'next/image';
-import { BRAND_CONFIG } from '@/config/brand';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Grid } from '@/components/ui';
+import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import type { LandingVariant } from '@/config/landing-content';
 
 interface SamplePhoto {
@@ -74,11 +73,7 @@ interface SampleGalleryProps {
 export default function SampleGallery({ variant }: SampleGalleryProps) {
   // Use domain-specific translations for title/subtitle
   const tLanding = useTranslations(`landing.${variant}.gallery`);
-  // Use legacy translations for shared content
-  const t = useTranslations('gallery');
   const { track } = useAnalytics();
-  const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({});
-  const [draggingId, setDraggingId] = useState<string | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
   // Intersection Observer for lazy loading
@@ -99,66 +94,6 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
 
     return () => observer.disconnect();
   }, []);
-
-  const handleSliderChange = (photoId: string, position: number) => {
-    setSliderPositions(prev => ({
-      ...prev,
-      [photoId]: position
-    }));
-  };
-
-  const onMouseDown = (photoId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingId(photoId);
-
-    const container = e.currentTarget.parentElement as HTMLDivElement;
-    const rect = container.getBoundingClientRect();
-
-    const onMouseMove = (e: MouseEvent) => {
-      e.preventDefault();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      handleSliderChange(photoId, percentage);
-    };
-
-    const onMouseUp = () => {
-      setDraggingId(null);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    };
-
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'ew-resize';
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
-
-  const onTouchStart = (photoId: string, e: React.TouchEvent) => {
-    e.preventDefault();
-    setDraggingId(photoId);
-
-    const container = e.currentTarget.parentElement as HTMLDivElement;
-    const rect = container.getBoundingClientRect();
-
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const x = e.touches[0].clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      handleSliderChange(photoId, percentage);
-    };
-
-    const onTouchEnd = () => {
-      setDraggingId(null);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-    };
-
-    document.addEventListener('touchmove', onTouchMove);
-    document.addEventListener('touchend', onTouchEnd);
-  };
 
   return (
     <>
@@ -187,60 +122,14 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
                   className={`group relative bg-bg-gray-50 rounded-3xl overflow-hidden shadow-depth-lg border-2 border-brand-primary-lighter/20 hover:shadow-depth-2xl hover:border-brand-primary-lighter/50 transition-all duration-500 hover:-translate-y-3 ${index === 1 ? 'lg:mt-8' : '' // Stagger middle item on desktop
                     }`}
                 >
-                  {/* Interactive Before/After Slider */}
-                  <div
-                    className="relative aspect-square bg-bg-gray-50 overflow-hidden cursor-ew-resize"
-                  >
-                    {/* Background: After image (now background so left = Before) */}
-                    <Image
-                      src={`${photo.after}?v=4`}
-                      alt={`${photo.alt} - After`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 350px"
-                      loading="lazy"
-                    />
-
-                    {/* Foreground: Before image clipped to slider position */}
-                    <div className="absolute inset-0">
-                      <Image
-                        src={`${photo.before}?v=3`}
-                        alt={`${photo.alt} - Before`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 350px"
-                        loading="lazy"
-                        style={{ clipPath: `inset(0 ${100 - (sliderPositions[photo.id] || 50)}% 0 0)` }}
-                      />
-                    </div>
-
-                    {/* Slider handle */}
-                    <button
-                      onMouseDown={(e) => onMouseDown(photo.id, e)}
-                      onTouchStart={(e) => onTouchStart(photo.id, e)}
-                      className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-bg-white shadow-depth-lg border-2 border-brand-primary/30 flex items-center justify-center text-sm z-20 select-none ${draggingId === photo.id
-                        ? 'cursor-ew-resize scale-105'
-                        : 'hover:shadow-depth-xl hover:scale-110 transition-all duration-300 active:scale-95'
-                        }`}
-                      style={{
-                        left: `${sliderPositions[photo.id] || 50}%`,
-                        transition: draggingId === photo.id ? 'none' : undefined
-                      }}
-                      aria-label="Drag slider"
-                    >
-                      <span className="text-brand-primary font-bold">⇄</span>
-                    </button>
-
-                    {/* Always-visible Before/After labels */}
-                    <div className="pointer-events-none z-10">
-                      <div className="absolute top-4 left-4 bg-brand-cta text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-depth-md border-2 border-white/30">
-                        {t('before')}
-                      </div>
-                      <div className="absolute top-4 right-4 bg-brand-secondary text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-depth-md border-2 border-white/30">
-                        {t('after')}
-                      </div>
-                    </div>
-                  </div>
+                  {/* Interactive Before/After Slider - uses shared component */}
+                  <BeforeAfterSlider
+                    beforeSrc={`${photo.before}?v=3`}
+                    afterSrc={`${photo.after}?v=4`}
+                    alt={photo.alt}
+                    size="sm"
+                    sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 350px"
+                  />
 
                   {/* Attribution with Enhanced Styling */}
                   {photo.attribution && (

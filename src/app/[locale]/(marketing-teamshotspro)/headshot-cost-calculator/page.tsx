@@ -1,0 +1,104 @@
+import type { Metadata } from 'next';
+import { constructMetadata } from '@/lib/seo';
+import { headers } from 'next/headers';
+import { routing } from '@/i18n/routing';
+import { getBrand } from '@/config/brand';
+import { getTranslations } from 'next-intl/server';
+import CostCalculator from './CostCalculator';
+import { CostCalculatorSchema } from './schema';
+
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
+
+  const t = await getTranslations({ locale, namespace: 'costCalculator' });
+
+  const baseMetadata = constructMetadata({
+    baseUrl,
+    path: '/headshot-cost-calculator',
+    locale,
+    title: t('meta.title'),
+    description: t('meta.description'),
+  });
+
+  // Locale-specific keywords
+  const keywords = locale === 'es'
+    ? [
+        'calculadora de costos de headshots',
+        'precios de retratos corporativos',
+        'costo de headshots con IA',
+        'costo de headshots de equipo',
+        'precio de retrato profesional',
+        'comparación de costos de fotografía',
+        'IA vs fotografía tradicional',
+        'ROI de headshots empresariales',
+      ]
+    : [
+        'headshot cost calculator',
+        'corporate headshot pricing',
+        'AI headshots cost',
+        'team headshot cost',
+        'professional headshot price',
+        'photography cost comparison',
+        'AI vs traditional photography',
+        'business headshot ROI',
+      ];
+
+  return {
+    ...baseMetadata,
+    keywords,
+    openGraph: {
+      ...baseMetadata.openGraph,
+      type: 'website',
+      locale: locale === 'es' ? 'es_ES' : 'en_US',
+      images: [
+        {
+          url: `${baseUrl}/branding/og-image.jpg`,
+          width: 1200,
+          height: 630,
+          alt: t('meta.title'),
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('meta.title'),
+      description: t('meta.description'),
+      images: [`${baseUrl}/branding/og-image.jpg`],
+    },
+    other: {
+      'og:price:amount': '29',
+      'og:price:currency': 'USD',
+    },
+  };
+}
+
+export default async function HeadshotCostCalculatorPage({ params }: Props) {
+  const { locale } = await params;
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
+
+  const t = await getTranslations({ locale, namespace: 'costCalculator' });
+
+  return (
+    <>
+      <CostCalculatorSchema baseUrl={baseUrl} brandName={brand.name} locale={locale} t={t} />
+      <CostCalculator />
+    </>
+  );
+}

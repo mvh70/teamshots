@@ -38,6 +38,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/legal/terms',
   ]
 
+  // TeamShotsPro-specific marketing routes
+  const teamshotsproRoutes = [
+    '/headshot-cost-calculator',
+  ]
+
+  // Add TeamShotsPro-specific routes
+  if (variant === 'teamshotspro') {
+    for (const route of teamshotsproRoutes) {
+      for (const locale of routing.locales) {
+        const path = locale === 'en' ? route : `/${locale}${route}`
+        entries.push({
+          url: `${baseUrl}${path}`,
+          lastModified: new Date(),
+          changeFrequency: 'weekly',
+          priority: 0.9,
+        })
+      }
+    }
+  }
+
   // Add shared routes for all locales
   for (const route of sharedRoutes) {
     for (const locale of routing.locales) {

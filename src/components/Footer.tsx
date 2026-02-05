@@ -96,9 +96,6 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
             </span>
           </div>
 
-          <p className="text-gray-400 text-sm mb-2">
-            {tFooter('companyInfo')}
-          </p>
           <p className="text-gray-400 text-sm">
             {tFooter('copyright')}
           </p>

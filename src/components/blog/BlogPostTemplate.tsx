@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from '@/i18n/routing';
 import { InlineCTA } from '@/components/blog/InlineCTA';
-import { BeforeAfterSlider } from '@/components/onboarding/BeforeAfterSlider';
+import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getBrand } from '@/config/brand';
@@ -106,13 +106,18 @@ function renderHtmlWithBeforeAfter(html: string) {
       );
     }
 
+    const decodedBeforeLabel = decodeHtml(beforeAlt) || 'Before';
+    const decodedAfterLabel = decodeHtml(afterAlt) || 'After';
     parts.push(
       <div key={`ba-${match.index}`} className="not-prose my-8">
         <BeforeAfterSlider
-          beforeImage={decodeHtml(beforeSrc)}
-          afterImage={decodeHtml(afterSrc)}
-          beforeLabel={decodeHtml(beforeAlt) || 'Before'}
-          afterLabel={decodeHtml(afterAlt) || 'After'}
+          beforeSrc={decodeHtml(beforeSrc)}
+          afterSrc={decodeHtml(afterSrc)}
+          alt={`${decodedBeforeLabel} vs ${decodedAfterLabel}`}
+          beforeLabel={decodedBeforeLabel}
+          afterLabel={decodedAfterLabel}
+          aspectRatio="4/3"
+          size="md"
         />
       </div>
     );
