@@ -1,11 +1,16 @@
-import createNextIntlPlugin from 'next-intl/plugin';
+import path from 'node:path';
 
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+const requestConfigPath = './src/i18n/request.ts';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
+  turbopack: {
+    resolveAlias: {
+      'next-intl/config': requestConfigPath,
+    },
+  },
   experimental: {
     // optimizeCss disabled - requires @parcel/watcher native bindings that fail in Nixpacks builds
     // optimizeCss: true,
@@ -17,6 +22,12 @@ const nextConfig = {
       // NOTE: Do NOT add '@/domain/style/elements' here - it has side-effect imports
       // for registering element metadata that get skipped when this optimization is applied
     ],
+  },
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias ??= {};
+    config.resolve.alias['next-intl/config'] = path.resolve(process.cwd(), requestConfigPath);
+    return config;
   },
   images: {
     // Enable Next.js image optimization
@@ -127,4 +138,4 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default nextConfig;
