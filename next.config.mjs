@@ -7,7 +7,8 @@ const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   experimental: {
-    optimizeCss: true,
+    // optimizeCss disabled - requires @parcel/watcher native bindings that fail in Nixpacks builds
+    // optimizeCss: true,
     scrollRestoration: true,
     optimizePackageImports: [
       '@heroicons/react',
