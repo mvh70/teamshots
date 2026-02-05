@@ -83,7 +83,6 @@
     "bullmq": "^5.61.0",
     "color-name-list": "^13.25.0",
     "concurrently": "^8.2.2",
-    "critters": "^0.0.23",
     "dompurify": "^3.3.0",
     "file-type": "^21.0.0",
     "ioredis": "^5.8.1",
