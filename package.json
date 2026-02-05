@@ -143,6 +143,8 @@
     "@types/react-dom": "19.2.3"
   },
   "optionalDependencies": {
+    "@img/sharp-libvips-linux-x64": "1.2.4",
+    "@img/sharp-linux-x64": "0.34.5",
     "@parcel/watcher": "^2.5.6",
     "@parcel/watcher-linux-x64-glibc": "^2.5.6"
   }
