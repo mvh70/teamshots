@@ -1,23 +1,48 @@
 import { getPostHog } from '@/lib/posthog'
+import { getClientBrandInfo } from '@/config/domain'
+
+// Cache brand info to avoid repeated DOM lookups
+let cachedBrand: string | null = null
+
+/**
+ * Get the current brand name for analytics tracking.
+ * Caches the result since brand doesn't change during a session.
+ */
+function getBrandForTracking(): string {
+  if (cachedBrand) return cachedBrand
+  if (typeof window === 'undefined') return 'unknown'
+
+  const { brandName } = getClientBrandInfo()
+  cachedBrand = brandName
+  return brandName
+}
 
 /**
  * Track a custom event in PostHog and GTM (for GA4)
  * Use this for funnel analysis and understanding user behavior
+ *
+ * Automatically includes `brand` property with every event for multi-tenant analytics.
  */
 export const track = (event: string, properties?: Record<string, unknown>) => {
   if (typeof window === 'undefined') return
 
+  const brand = getBrandForTracking()
+  const enrichedProperties = {
+    brand,
+    ...properties,
+  }
+
   // PostHog
   const posthog = getPostHog()
   if (posthog?.__loaded) {
-    posthog.capture(event, properties)
+    posthog.capture(event, enrichedProperties)
   }
 
   // GTM dataLayer for GA4
   if (window.dataLayer) {
     window.dataLayer.push({
       event,
-      ...properties,
+      ...enrichedProperties,
     })
   }
 }

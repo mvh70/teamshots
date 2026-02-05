@@ -1,38 +1,43 @@
 {
   "landing": {
-    "photoshotspro": {
+    "portreya": {
       "hero": {
         "badge": "AI-Powered Headshots",
-        "titleMain": "Professional Headshots",
-        "titleLine1": "Professional Headshots",
-        "titleLine2": "From One Selfie",
-        "titleHighlightTime": "in 60 seconds",
-        "subtitleMain": "Turn a casual photo into a studio-quality headshot instantly.",
-        "subtitle": "Perfect for LinkedIn, resumes, and personal branding. ",
+        "tagline": "AI-Powered Headshots",
+        "titleMain": "Turn any selfie into a headshot people think you paid $200 for",
+        "titleLine1": "Turn any selfie into a headshot",
+        "titleLine2": "people think you paid",
+        "titleHighlight": "$200",
+        "titleLine3": "for",
+        "subtitle": "Upload one photo. Get 4 studio-quality headshots in 60 seconds. Free to try — no credit card.",
         "subtitleBold": "No studio, no photographer, just AI.",
-        "cta": "Create Your Headshot",
-        "ctaAria": "Create your professional headshot now",
+        "subtitleMain": "Upload one photo. Get 4 studio-quality headshots in 60 seconds. Free to try — no credit card.",
+        "cta": "Upload Your Selfie — It's Free",
+        "ctaAria": "Upload your selfie to get a free headshot preview",
         "ctaSubtext": "Get your professional headshots in a preset style when you sign up. No commitment, no credit card.",
         "noCreditCard": "Try with a fixed style for free, no credit card",
         "noCreditCardLine": "No credit card required",
         "freeGenerationsLine": "Free preview generation",
-        "finalCtaTitle": "Upgrade your professional image today.",
-        "finalCtaSubtitle": "Join thousands of professionals who switched to AI headshots.",
-        "getStarted": "Get Started",
+        "finalCtaTitle": "See what your headshot could look like",
+        "finalCtaSubtitle": "Upload a selfie. Get a free preview in 60 seconds. No credit card.",
+        "finalCta": "Try It Free",
+        "getStarted": "Try Free",
+        "tryFree": "Try Free",
         "trustBadges": {
           "stripeSecure": "Stripe Secure Checkout",
           "instantResults": "Results in 60 Seconds",
           "noSubscription": "No Subscription",
-          "moneyBack": "Money-Back Guarantee"
+          "moneyBack": "Money-Back Guarantee",
+          "photosPrivate": "Photos Stay Private"
         }
       },
       "gallery": {
         "title": "From casual selfies to professional headshots",
-        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles.",
-        "cta": "Try it yourself today"
+        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, professional profiles, and business use.",
+        "cta": "Upload Your Selfie — It's Free"
       },
       "trust": {
-        "title": "Why people choose PhotoShotsPro",
+        "title": "Why people choose Portreya",
         "subtitle": "Professional headshots made simple - no studio, no waiting, just amazing photos",
         "badges": {
           "industryTemplates": {
@@ -41,7 +46,15 @@
           },
           "qualityControl": {
             "title": "Quality guaranteed with automatic fixes",
-            "description": "Photos that fail our quality standards get automatically regenerated. Plus you get free retries based on your plan to perfect your results. Unlike other services where you pay per attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+            "description": "Photos that fail our quality standards get automatically regenerated. Plus you get free retries based on your plan to perfect your results."
+          },
+          "speed": {
+            "title": "Results in 60 seconds",
+            "description": "Upload your selfie and get 4 studio-quality headshot variations back in under a minute. No queues, no waiting."
+          },
+          "privacy": {
+            "title": "Your photos stay private",
+            "description": "Photos are processed securely and never shared. Delete your data at any time from your account settings."
           }
         }
       },
@@ -57,42 +70,109 @@
           "customize": "Customize",
           "generate": "Generate"
         },
-        "tryForFree": "Try for Free",
+        "tryForFree": "Try Free",
         "bookDemo": "Book a Demo",
         "freePhotosLine": "Free preview generation included",
         "noCreditCardLine": "No credit card required",
         "steps": {
           "1": {
             "title": "Upload your selfie",
-            "description": "Any clear photo of your face works. Selfies, casual photos - we work with what you have.",
+            "description": "Any clear photo of your face works. Selfies, casual photos — we work with what you have.",
             "duration": "30s"
           },
           "2": {
             "title": "Choose your style",
-            "description": "Select from LinkedIn professional, dating profile, business casual, and more.",
+            "description": "Select from LinkedIn professional, business casual, and more.",
             "duration": "30s"
           },
           "3": {
             "title": "Get 4 professional photos",
-            "description": "Receive 4 stunning variations in 60 seconds. Download your favorites instantly.",
+            "description": "Receive 4 studio-quality variations in 60 seconds. Download your favorites instantly.",
             "duration": "60s"
+          }
+        }
+      },
+      "pricing": {
+        "label": "Pricing",
+        "title": "Simple, one-time pricing",
+        "subtitle": "No subscriptions. Pay once, get your headshots.",
+        "tiers": {
+          "free": {
+            "name": "Free Trial",
+            "description": "See your headshot before paying",
+            "features": {
+              "headshots": "1 preview headshot",
+              "style": "Fixed style",
+              "noCreditCard": "No credit card"
+            },
+            "cta": "Try Free"
+          },
+          "individual": {
+            "name": "Professional",
+            "description": "Best for job seekers",
+            "price": "$19.99",
+            "priceLabel": "one-time",
+            "features": {
+              "headshots": "4 professional headshots",
+              "customization": "Full style customization",
+              "retries": "Free retry included",
+              "guarantee": "Money-back guarantee"
+            },
+            "cta": "Upload Your Selfie — It's Free",
+            "badge": "Most Popular"
+          },
+          "vip": {
+            "name": "VIP",
+            "description": "Best for teams & power users",
+            "price": "$199.99",
+            "priceLabel": "one-time",
+            "features": {
+              "headshots": "25 customizable headshots",
+              "team": "Unlimited team members",
+              "retries": "3 free retries per photo",
+              "guarantee": "Money-back guarantee"
+            },
+            "cta": "Upload Your Selfie — It's Free"
           }
         }
       },
       "faq": {
         "title": "Frequently Asked Questions",
-        "subtitle": "Everything you need to know about PhotoShotsPro"
+        "subtitle": "Everything you need to know about Portreya",
+        "stillHaveQuestions": "Still have questions?",
+        "questions": {
+          "1": {
+            "q": "Will it look like me or like a generic AI face?",
+            "a": "It will look like you. Our AI preserves your facial features, bone structure, and expression. What changes is the lighting, background, and attire — the things a professional photographer would control in a studio."
+          },
+          "2": {
+            "q": "What if my only photo is a bad selfie?",
+            "a": "That's fine. Our AI works with casual selfies, phone photos, even webcam screenshots. As long as your face is clearly visible and not obscured by sunglasses or hats, you'll get great results."
+          },
+          "3": {
+            "q": "What's your refund policy?",
+            "a": "We offer a money-back guarantee on all paid plans. If the quality doesn't meet your expectations, contact us and we'll refund your purchase."
+          },
+          "4": {
+            "q": "Can I use these headshots commercially?",
+            "a": "Yes. All generated headshots are yours to use anywhere: LinkedIn, resumes, company websites, social media, or any other personal or professional purpose."
+          },
+          "5": {
+            "q": "What resolution are the headshots?",
+            "a": "Generated headshots are high-resolution (1024x1024) and suitable for digital use on LinkedIn, websites, and social profiles."
+          }
+        }
       },
       "footer": {
         "tagline": "Professional headshots in 60 seconds",
-        "copyright": "© 2026 PhotoShotsPro. All rights reserved.",
+        "copyright": "\u00a9 2026 Portreya. All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"
       }
     }
   },
   "metadata": {
-    "title": "PhotoShotsPro - Professional AI Headshots",
+    "title": "Portreya - Professional AI Headshots",
     "description": "Create professional LinkedIn headshots from a single selfie in 60 seconds. No photographer required."
   },
   "auth": {

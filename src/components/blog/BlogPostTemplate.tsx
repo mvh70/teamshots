@@ -1,4 +1,7 @@
+import React from 'react';
 import { Link } from '@/i18n/routing';
+import { InlineCTA } from '@/components/blog/InlineCTA';
+import { BeforeAfterSlider } from '@/components/onboarding/BeforeAfterSlider';
 import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getBrand } from '@/config/brand';
@@ -19,6 +22,19 @@ import {
 function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
   try {
     const schema = JSON.parse(schemaJson);
+
+    // Support array or @graph formats by emitting a single JSON-LD block
+    if (Array.isArray(schema) || schema['@graph']) {
+      return (
+        <Script
+          id="schema"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(schema),
+          }}
+        />
+      );
+    }
 
     // Handle both wrapped format { article: {...}, faq: {...} } and direct format
     const hasArticle = schema.article || schema['@type'] === 'Article';
@@ -62,6 +78,58 @@ function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
   }
 }
 
+const beforeAfterPlaceholderRegex = /<div data-before-src="([^"]+)" data-after-src="([^"]+)" data-before-alt="([^"]*)" data-after-alt="([^"]*)"><\/div>/g;
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function renderHtmlWithBeforeAfter(html: string) {
+  const parts: Array<React.JSX.Element> = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  beforeAfterPlaceholderRegex.lastIndex = 0;
+
+  while ((match = beforeAfterPlaceholderRegex.exec(html)) !== null) {
+    const [full, beforeSrc, afterSrc, beforeAlt, afterAlt] = match;
+    const chunk = html.slice(lastIndex, match.index);
+
+    if (chunk.trim()) {
+      parts.push(
+        <div key={`html-${match.index}`} dangerouslySetInnerHTML={{ __html: chunk }} />
+      );
+    }
+
+    parts.push(
+      <div key={`ba-${match.index}`} className="not-prose my-8">
+        <BeforeAfterSlider
+          beforeImage={decodeHtml(beforeSrc)}
+          afterImage={decodeHtml(afterSrc)}
+          beforeLabel={decodeHtml(beforeAlt) || 'Before'}
+          afterLabel={decodeHtml(afterAlt) || 'After'}
+        />
+      </div>
+    );
+
+    lastIndex = match.index + full.length;
+  }
+
+  const remaining = html.slice(lastIndex);
+  if (remaining.trim()) {
+    parts.push(
+      <div key={`html-${lastIndex}`} dangerouslySetInnerHTML={{ __html: remaining }} />
+    );
+  }
+
+  return parts;
+}
+
 export interface BlogPostContent {
   // Required metadata
   slug: string;
@@ -82,12 +150,24 @@ export interface BlogPostContent {
   faqs?: Array<{ question: string; answer: string }>;
   faqTitle?: string;
 
+  // Inline CTAs inserted at structural positions
+  inlineCtas?: {
+    afterTldr?: { headline: string; description: string; buttonText: string; href: string };
+    midContent?: { headline: string; description: string; buttonText: string; href: string };
+  };
+
   // CTA section
   cta?: {
     title: string;
     description: string;
     button: string;
     href?: string;
+    socialProof?: {
+      metric: string;
+      metricEs?: string;
+      description: string;
+      descriptionEs?: string;
+    };
   };
 
   // Author info
@@ -144,6 +224,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
   const headerList = await headers();
   const brandConfig = getBrand(headerList);
   const baseUrl = getBaseUrl(headerList);
+  const brandCta = brandConfig.cta;
 
   const {
     slug,
@@ -174,11 +255,36 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
   const defaultCta = {
     title: locale === 'es' ? `¿Listo para comenzar con ${brandConfig.name}?` : `Ready to get started with ${brandConfig.name}?`,
     description: locale === 'es' ? 'Genera headshots profesionales con IA en 60 segundos.' : 'Generate professional AI headshots in 60 seconds.',
-    button: locale === 'es' ? `Prueba ${brandConfig.name} Gratis →` : `Try ${brandConfig.name} Free →`,
-    href: '/',
+    button: locale === 'es'
+      ? (brandCta.primaryTextEs || brandCta.primaryText)
+      : brandCta.primaryText,
+    href: brandCta.pricingHref || brandCta.primaryHref,
+    socialProof: brandCta.socialProof,
   };
 
-  const ctaContent = cta || defaultCta;
+  const ctaContent = {
+    ...defaultCta,
+    ...cta,
+    href: cta?.href || defaultCta.href,
+    button: cta?.button || defaultCta.button,
+    socialProof: cta?.socialProof || defaultCta.socialProof,
+  };
+
+  const defaultInlineCta = {
+    headline: locale === 'es'
+      ? `Headshots profesionales desde $10.49`
+      : `Professional headshots from $10.49`,
+    description: locale === 'es'
+      ? 'Sube una selfie. Obtén fotos profesionales en 60 segundos.'
+      : 'Upload a selfie. Get studio-quality headshots in 60 seconds.',
+    buttonText: locale === 'es'
+      ? (brandCta.primaryTextEs || brandCta.primaryText)
+      : brandCta.primaryText,
+    href: ctaContent.href || defaultCta.href,
+  };
+
+  const afterTldrCta = content.inlineCtas?.afterTldr || defaultInlineCta;
+  const midContentCta = content.inlineCtas?.midContent || defaultInlineCta;
 
   return (
     <>
@@ -246,6 +352,9 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
         </TldrSection>
       )}
 
+      {/* Inline CTA after TL;DR */}
+      <InlineCTA {...afterTldrCta} variant="subtle" />
+
       {/* Hero Image */}
       {heroImage && (
         <BlogHeroImage
@@ -257,10 +366,35 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
         />
       )}
 
-      {/* Main Content */}
-      <div className="prose prose-lg max-w-none mb-12">
-        <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
-      </div>
+      {/* Main Content with mid-content CTA */}
+      {(() => {
+        const h2Regex = /(<h2[^>]*>)/gi;
+        const h2Matches = [...htmlContent.matchAll(h2Regex)];
+        const midIndex = Math.floor(h2Matches.length / 2);
+
+        if (h2Matches.length >= 4 && h2Matches[midIndex]?.index) {
+          const splitPoint = h2Matches[midIndex].index!;
+          const firstHalf = htmlContent.slice(0, splitPoint);
+          const secondHalf = htmlContent.slice(splitPoint);
+          return (
+            <>
+              <div className="prose prose-lg max-w-none">
+                {renderHtmlWithBeforeAfter(firstHalf)}
+              </div>
+              <InlineCTA {...midContentCta} variant="bold" />
+              <div className="prose prose-lg max-w-none mb-12">
+                {renderHtmlWithBeforeAfter(secondHalf)}
+              </div>
+            </>
+          );
+        }
+
+        return (
+          <div className="prose prose-lg max-w-none mb-12">
+            {renderHtmlWithBeforeAfter(htmlContent)}
+          </div>
+        );
+      })()}
 
       {/* FAQ Section */}
       {faqs.length > 0 && (
@@ -284,10 +418,21 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
 
       {/* CTA Section */}
       <section className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-center text-white mb-12">
+        {ctaContent.socialProof && (
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+            <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+            <span>
+              {locale === 'es' && ctaContent.socialProof.metricEs ? ctaContent.socialProof.metricEs : ctaContent.socialProof.metric}
+            </span>
+            <span className="opacity-80">
+              {locale === 'es' && ctaContent.socialProof.descriptionEs ? ctaContent.socialProof.descriptionEs : ctaContent.socialProof.description}
+            </span>
+          </div>
+        )}
         <h2 className="text-2xl font-bold mb-2">{ctaContent.title}</h2>
         <p className="mb-4 opacity-90">{ctaContent.description}</p>
         <Link
-          href={ctaContent.href || '/'}
+          href={ctaContent.href || defaultCta.href}
           className="inline-block bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
         >
           {ctaContent.button}
@@ -299,6 +444,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
         name={author.name}
         title={author.title}
         bio={author.bio}
+        initials={author.initials}
         linkedInUrl={author.linkedInUrl}
       />
     </>

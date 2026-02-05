@@ -1,12 +1,12 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 import { headers } from 'next/headers';
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
 import { SOLUTIONS } from '@/config/solutions';
 
 /**
  * Detect domain from request headers and normalize to variant name
- * Returns 'teamshotspro' | 'photoshotspro' | 'coupleshotspro' | 'familyshotspro' | 'rightclickfit' | null
+ * Returns 'teamshotspro' | 'portreya' | 'coupleshotspro' | 'familyshotspro' | 'rightclickfit' | null
  */
 async function getRequestDomain(): Promise<string | null> {
   try {
@@ -31,6 +31,7 @@ async function getRequestDomain(): Promise<string | null> {
       if (normalizedForced === TEAM_DOMAIN) return 'teamshotspro';
       if (normalizedForced === INDIVIDUAL_DOMAIN) return 'individualshots';
       if (normalizedForced === INDIVIDUAL_DOMAIN_2) return 'individualshots';
+      if (normalizedForced === PORTREYA_DOMAIN) return 'individualshots';
       if (normalizedForced === COUPLES_DOMAIN) return 'coupleshotspro';
       if (normalizedForced === FAMILY_DOMAIN) return 'familyshotspro';
       if (normalizedForced === EXTENSION_DOMAIN) return 'rightclickfit';
@@ -45,6 +46,7 @@ async function getRequestDomain(): Promise<string | null> {
     if (matches(TEAM_DOMAIN)) return 'teamshotspro';
     if (matches(INDIVIDUAL_DOMAIN)) return 'individualshots';
     if (matches(INDIVIDUAL_DOMAIN_2)) return 'individualshots';
+    if (matches(PORTREYA_DOMAIN)) return 'individualshots';
     if (matches(COUPLES_DOMAIN)) return 'coupleshotspro';
     if (matches(FAMILY_DOMAIN)) return 'familyshotspro';
     if (matches(EXTENSION_DOMAIN)) return 'rightclickfit';

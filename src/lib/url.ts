@@ -8,7 +8,7 @@ import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FA
 export const ALLOWED_DOMAINS = [
   TEAM_DOMAIN,        // teamshotspro.com
   INDIVIDUAL_DOMAIN,  // individualshots.com
-  INDIVIDUAL_DOMAIN_2, // photoshotspro.com
+  INDIVIDUAL_DOMAIN_2, // portreya.com
   COUPLES_DOMAIN,     // coupleshots.com
   FAMILY_DOMAIN,      // familyshots.com
   EXTENSION_DOMAIN,   // rightclickfit.com

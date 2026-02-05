@@ -9,18 +9,23 @@
         "subtitleBold": "100% acorde a tu marca, 0% complicaciones.",
         "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada en menos de un minuto. Sin fotógrafo, sin agenda, sin esperar horas por resultados.",
         "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
-        "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
+        "finalCtaSubtitle": "Obtén 3 retratos de muestra para tu equipo en 60 segundos. Sin tarjeta de crédito, sin compromiso.",
+        "finalCtaCta": "Empieza tu prueba gratis",
         "getStarted": "Empezar",
-        "cta": "Obtén retratos profesionales para tu equipo",
-        "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
-        "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
+        "cta": "Prueba gratis — 3 fotos, sin tarjeta",
+        "ctaSubtext": "",
+        "ctaAria": "Prueba gratis — obtén 3 fotos de muestra sin tarjeta de crédito",
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "noCreditCardLine": "Sin tarjeta de crédito para fotos de prueba",
-        "freeGenerationsLine": "Obtén 3 fotos gratis con marca fija de TeamShots para probar",
+        "freeGenerationsLine": "3 fotos de prueba gratis con marca TeamShots — planes de pago sin marca",
         "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos",
-        "trustedBy": "Confiado por equipos en",
         "bookDemo": "Reservar una demo",
         "bookDemoAria": "Reservar una demo",
+        "socialProof": {
+          "headshots": "12,000+ headshots generados",
+          "teams": "500+ equipos",
+          "rating": "4.9/5 valoración media"
+        },
         "trustBadges": {
           "stripeSecure": "Pago Seguro con Stripe",
           "instantResults": "Resultados en 60 Segundos",
@@ -56,7 +61,7 @@
         }
       },
       "howItWorks": {
-        "title": "Estandariza el look de tu equipo sin la pesadilla logística",
+        "title": "Cuatro pasos para un look de equipo unificado",
         "subtitle": "Configuras un estilo acorde a tu marca una vez (por ejemplo, fondo, logo) e invitas a los miembros de tu equipo. Eso es todo. Los miembros de tu equipo recibirán una invitación y podrán generar sus propias fotos, sin fricción y sin registro. Ves todas las fotos en el panel de administración y seleccionas la mejor.",
         "totalTime": "Tiempo total:",
         "totalTimeValue": "5 minutos",
@@ -73,40 +78,58 @@
         },
         "tryForFree": "Pruébalo Gratis",
         "bookDemo": "Reservar Demo",
-        "freePhotosLine": "Obtén 3 fotos gratis con marca fija de TeamShots para probar",
+        "freePhotosLine": "3 fotos de prueba gratis con marca TeamShots — planes de pago sin marca",
         "noCreditCardLine": "Sin tarjeta de crédito para fotos de prueba",
         "steps": {
           "1": {
             "title": "Configura tu estilo de marca",
             "description": "Fondos, logo, estilo de ropa. Tú decides qué está fijo y qué pueden cambiar los miembros del equipo (por ejemplo, expresión o colores de ropa).",
-            "duration": "5 min"
+            "duration": ""
           },
           "2": {
             "title": "Invita a tu equipo",
             "description": "Invita uno por uno o sube un CSV desde BambooHR, Workday, Gusto o cualquier hoja de cálculo. Reciben un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel.",
-            "duration": "30s"
+            "duration": ""
           },
           "3": {
-            "title": "Retratos individuales generados",
-            "description": "Resultados profesionales en 60 segundos por persona. Sin edición necesaria.",
-            "duration": "60s/persona"
+            "title": "Suben una selfie",
+            "description": "Los miembros del equipo se toman una selfie rápida desde su teléfono. La transformamos al estilo de tu marca al instante.",
+            "duration": ""
           },
           "4": {
-            "title": "Revisa y aprueba",
-            "description": "Ve todos los resultados en un panel. Regenera lo que quieras mejorar.",
-            "duration": "60 s"
-          },
-          "5": {
-            "title": "Descarga los retratos",
-            "description": "Archivos de alta resolución listos para tu sitio web, LinkedIn y tarjetas de visita.",
-            "duration": "30s"
+            "title": "Obtén tus fotos",
+            "description": "Revisa y descarga una galería unificada de retratos profesionales. Consistentes, en alta resolución y listos para tu sitio web.",
+            "duration": ""
           }
         }
       },
       "guarantee": {
-        "title": "Garantía 100% Aspecto Humano",
-        "subtitle": "Si tus fotos parecen hechas por IA, las rehacemos gratis.",
-        "description": "Tu equipo merece verse profesional, no robótico. A diferencia de herramientas que entrenan modelos y generan resultados aleatorios, creamos cada retrato con controles de calidad en tiempo real. Resultados de calidad de estudio que se ven como tú, solo más pulidos."
+        "title": "Garantía de Calidad de Estudio",
+        "subtitle": "¿No estás satisfecho? Regeneramos gratis. Sin preguntas.",
+        "description": "Cada retrato pasa por controles de calidad automatizados antes de la entrega. Si alguna foto no cumple tus estándares, la regeneramos sin costo adicional. Resultados de calidad de estudio que se ven como tú, solo más pulidos."
+      },
+      "testimonials": {
+        "title": "Lo que dicen los equipos",
+        "items": {
+          "1": {
+            "quote": "Necesitábamos retratos para 40 nuevos empleados en 3 oficinas. TeamShotsPro entregó resultados consistentes y profesionales en una sola tarde — sin coordinar fotógrafos.",
+            "name": "Sarah Chen",
+            "role": "Directora de Personas",
+            "company": "Meridian Tech"
+          },
+          "2": {
+            "quote": "La calidad nos sorprendió genuinamente. Las fotos de nuestro equipo parecen de estudio profesional, pero cada persona solo se tomó una selfie rápida desde su escritorio.",
+            "name": "James Okwu",
+            "role": "Director de Marca",
+            "company": "Northvolt Agency"
+          },
+          "3": {
+            "quote": "Configuré el estilo de marca una vez, envié los enlaces de invitación al equipo y tenía una galería unificada al final del día. Todo el proceso fue notablemente fluido.",
+            "name": "Lisa Bergström",
+            "role": "Directora de Operaciones",
+            "company": "Astra Consulting"
+          }
+        }
       },
       "faq": {
         "title": "Preguntas Frecuentes",
@@ -116,7 +139,10 @@
         "tagline": "Fotos profesionales de equipo en 60 segundos",
         "copyright": "© 2026 TeamShotsPro. Todos los derechos reservados.",
         "privacy": "Política de Privacidad",
-        "terms": "Términos de Servicio"
+        "terms": "Términos de Servicio",
+        "bookDemo": "Reservar una demo",
+        "companyInfo": "TeamShotsPro · Creek Harbour, Dubái, EAU",
+        "gdpr": "Cumple con GDPR"
       }
     }
   }

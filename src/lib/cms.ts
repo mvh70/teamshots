@@ -126,8 +126,8 @@ export function getPublishedSolutions(brandId: string): CMSBlogPost[] {
 export function variantToBrandId(variant: LandingVariant): string {
   const mapping: Record<LandingVariant, string> = {
     teamshotspro: 'teamshotspro',
-    individualshots: 'headshot-one',
-    photoshotspro: 'photoshotspro',
+    individualshots: 'portreya',
+    portreya: 'portreya',
     coupleshots: 'duo-snaps',
     familyshots: 'kin-frame',
     rightclickfit: 'rightclick-fit',
@@ -230,7 +230,7 @@ export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): Bl
     date: cmsPost.publishedAt || undefined,
     readTime: estimateReadTime(cmsPost.wordCount),
     image: heroImageToUrl(cmsPost.heroImagePath),
-    author: variant === 'teamshotspro' ? 'TeamShotsPro Team' : 'PhotoShotsPro Team',
+    author: variant === 'teamshotspro' ? 'TeamShotsPro Team' : 'Portreya Team',
     featured: false, // Could be stored in CMS
   }
 }
@@ -263,6 +263,8 @@ export type CMSBlogPostFull = {
   metaDescription: string
   content: string
   heroImagePath: string | null
+  tldrJson: string | null
+  comparisonImagePath: string | null
   publishedAt: string | null
   brandId: string
   wordCount: number
@@ -291,6 +293,8 @@ export function getBlogPostBySlug(brandId: string, slug: string, locale: string)
         cv.metaDescription,
         cv.content,
         cv.heroImagePath,
+        cv.tldrJson,
+        cv.comparisonImagePath,
         cs.publishedAt,
         cs.brandId,
         cv.wordCount,

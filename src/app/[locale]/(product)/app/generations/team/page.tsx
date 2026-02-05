@@ -42,7 +42,7 @@ export default function TeamGenerationsPage() {
   const tourTriggerAttemptedRef = useRef(false)
   const imageLoadedRef = useRef(false)
 
-  // On individual-only domains (photoshotspro.com), redirect to personal generations
+  // On individual-only domains (portreya.com), redirect to personal generations
   // Team features don't exist on individual domains
   useEffect(() => {
     if (isIndividualDomain) {

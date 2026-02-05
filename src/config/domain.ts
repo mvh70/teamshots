@@ -13,7 +13,8 @@ export const TEAM_DOMAIN = 'teamshotspro.com'
 
 // Domains that restrict signup to individual subscription
 export const INDIVIDUAL_DOMAIN = 'individualshots.com'
-export const INDIVIDUAL_DOMAIN_2 = 'photoshotspro.com'
+export const INDIVIDUAL_DOMAIN_2 = 'portreya.com'
+export const PORTREYA_DOMAIN = 'portreya.com'
 
 // New vertical domains
 export const COUPLES_DOMAIN = 'coupleshots.com'
@@ -25,6 +26,7 @@ export const RESTRICTED_DOMAINS = [
   TEAM_DOMAIN,
   INDIVIDUAL_DOMAIN,
   INDIVIDUAL_DOMAIN_2,
+  PORTREYA_DOMAIN,
   COUPLES_DOMAIN,
   FAMILY_DOMAIN,
   EXTENSION_DOMAIN,
@@ -80,7 +82,10 @@ export function getClientBrandInfo(): ClientBrandInfo {
     return { brandName: 'IndividualShots', isIndividual: true }
   }
   if (matchesDomain(INDIVIDUAL_DOMAIN_2)) {
-    return { brandName: 'PhotoShotsPro', isIndividual: true }
+    return { brandName: 'Portreya', isIndividual: true }
+  }
+  if (matchesDomain(PORTREYA_DOMAIN)) {
+    return { brandName: 'Portreya', isIndividual: true }
   }
   if (matchesDomain(COUPLES_DOMAIN)) {
     return { brandName: 'CoupleShots', isIndividual: true }

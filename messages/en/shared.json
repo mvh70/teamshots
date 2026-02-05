@@ -32,7 +32,7 @@
     "blog": "Blog",
     "signin": "Sign in",
     "dashboard": "Dashboard",
-    "getStarted": "Get Started"
+    "getStarted": "Get Started Free"
   },
   "blog": {
     "title": "Blog",
@@ -175,9 +175,9 @@
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "When you sign up, you get a free test generation so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), or VIP plan at {vipPrice} ({vipPhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
-        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our per-member pricing where you pay per team member. Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
-        "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations."
+        "answer": "When you sign up, you get a free test generation so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), or VIP plan at {vipPrice} ({vipPhotos} photos for larger teams). Photo credits never expire. Each generation can be redone up to {maxVariations} times.",
+        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our per-member pricing where you pay per team member. Photo credits never expire. Each generation can be redone up to {maxVariations} times.",
+        "answerIndividual": "When you sign up, you get a free test generation with Portreya branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire. Each generation can be redone up to {maxVariations} times."
       },
       "3": {
         "question": "What types of photos work best?",
@@ -189,7 +189,7 @@
       },
       "5": {
         "question": "How does the photo generation work?",
-        "answer": "Our system analyzes your uploaded photo and creates professional headshots by applying polished photography styles. You'll still look like you, just more professional and polished. See the gallery above for real examples."
+        "answer": "Unlike other platforms that train a model on your selfies (which is why they need 10-20 photos and still produce weird artifacts), we use a multi-step approach. Your selfie is combined with your brand settings — background, clothing style, lighting — to generate each headshot individually. No model training, no batch of random outputs. Every photo is uniquely crafted from your actual face, which is why the results look like you instead of an AI approximation."
       },
       "6": {
         "question": "How many photos do I get per generation?",
@@ -197,7 +197,7 @@
       },
       "7": {
         "question": "Do you support team photos or just individual headshots?",
-        "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results (but hey, at least they don't all need to be in the same room). We're working on team photo capabilities for future updates, because group shots are hard."
+        "answer": "We generate individual headshots for each team member — not group photos. The platform is specifically designed to make managing your team's headshots easy: invite members, set brand guidelines once, and track progress from a central dashboard. Each person uploads their own selfie and gets consistent, on-brand results. If you're looking for individual photos for your CV or personal use, check out our sister site <a href=\"https://portreya.com\" target=\"_blank\" rel=\"noopener noreferrer\">Portreya.com</a>."
       },
       "8": {
         "question": "How is this different from other AI headshot tools?",
@@ -389,6 +389,7 @@
       "photos": "photos",
       "savings": "You save",
       "saveDollar": "Save ${amount}",
+      "totalLabel": "Total: ${amount} for {count} members",
       "totalForSeats": "${amount} total for {count, plural, one {# seat} other {# seats}}",
       "total": "Total",
       "cta": "Add {seats} team members for {total}",
@@ -398,13 +399,13 @@
       "whatsIncluded": "What's Included",
       "volumeHint": "Add {seatsNeeded} more to unlock {nextPrice}/member (save {savingsPerSeat}/member)",
       "personalPlanRedirect": "Looking for a personal plan?",
-      "visitPhotoshotsPro": "Visit PhotoshotsPro.com",
+      "visitPortreya": "Visit Portreya.com",
       "features": {
         "photosPerSeat": "10 professional photos per team member",
         "professionalQuality": "AI-powered professional quality headshots",
         "teamManagement": "Central team management dashboard",
         "fullCustomization": "Full customization: background, branding, pose, clothing style",
-        "creditsNeverExpire": "Credits never expire, use anytime",
+        "creditsNeverExpire": "One-time purchase — use anytime, no expiry",
         "flexibleTeamSize": "Scale your team anytime, add seats as you grow",
         "support": "Email support and satisfaction guarantee"
       }
@@ -417,6 +418,7 @@
       "welcomeBack": "Welcome back",
       "welcomeSubtitle": "Sign in to continue generating professional team photos. We missed you!",
       "benefit1": "Fast, consistent headshots for your whole team",
+      "benefit1Individual": "Professional headshots from your selfies",
       "benefit2": "No photoshoot needed - remote-friendly",
       "benefit3": "Brand-aligned backgrounds and styles",
       "emailLabel": "Email address",
@@ -447,6 +449,7 @@
       "benefit1": "Generate professional headshots in 60 seconds",
       "benefit2": "Credits never expire. Use them whenever.",
       "benefit3": "Perfect for remote teams and new hires",
+      "benefit3Individual": "Perfect for professionals and entrepreneurs",
       "stepOf": "Step {step} of 2",
       "emailLabel": "Email address",
       "emailPlaceholder": "you@company.com",
@@ -622,7 +625,8 @@
   "app": {
     "header": {
       "title": "Dashboard",
-      "subtitle": "Welcome back! Here's what's happening with your team."
+      "subtitle": "Welcome back! Here's what's happening with your team.",
+      "subtitleIndividual": "Welcome back! Here's your studio overview."
     },
     "sidebar": {
       "brand": "TeamShotsPro",

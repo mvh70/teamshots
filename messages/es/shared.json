@@ -32,7 +32,7 @@
     "blog": "Blog",
     "signin": "Iniciar Sesión",
     "dashboard": "Panel",
-    "getStarted": "Empezar"
+    "getStarted": "Empezar Gratis"
   },
   "blog": {
     "title": "Blog",
@@ -176,9 +176,9 @@
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), o plan VIP a {vipPrice} ({vipPhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
-        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: Usa nuestro precio por miembro del equipo. Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
-        "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones."
+        "answer": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), o plan VIP a {vipPrice} ({vipPhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan. Cada generación se puede rehacer hasta {maxVariations} veces.",
+        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: Usa nuestro precio por miembro del equipo. Los créditos de foto nunca caducan. Cada generación se puede rehacer hasta {maxVariations} veces.",
+        "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos). Los créditos de foto nunca caducan. Cada generación se puede rehacer hasta {maxVariations} veces."
       },
       "3": {
         "question": "¿Qué tipos de fotos funcionan mejor?",
@@ -190,7 +190,7 @@
       },
       "5": {
         "question": "¿Cómo funciona la generación de fotos con IA?",
-        "answer": "Nuestra IA analiza tu foto con algoritmos avanzados de reconocimiento facial y transferencia de estilo (prometemos que no es magia, solo matemáticas inteligentes). Crea retratos profesionales aplicando estilos corporativos mientras mantiene tus rasgos únicos. Sí, seguirás pareciendo tú, solo más pulido."
+        "answer": "A diferencia de otras plataformas que entrenan un modelo con tus selfies (por eso necesitan 10-20 fotos y aún producen artefactos extraños), usamos un enfoque de múltiples pasos. Tu selfie se combina con la configuración de tu marca — fondo, estilo de ropa, iluminación — para generar cada headshot individualmente. Sin entrenamiento de modelos, sin lotes de resultados aleatorios. Cada foto se crea de forma única a partir de tu cara real, por eso los resultados se parecen a ti en vez de a una aproximación de IA."
       },
       "6": {
         "question": "¿Cuántas fotos obtengo por generación?",
@@ -198,7 +198,7 @@
       },
       "7": {
         "question": "¿Soportan fotos de equipo o solo retratos individuales?",
-        "answer": "Actualmente nos enfocamos en retratos individuales. Cada persona sube su propia foto para mejores resultados (al menos no necesitan estar en la misma habitación). Estamos trabajando en capacidades de fotos grupales para futuras actualizaciones, porque las fotos en grupo son difíciles."
+        "answer": "Generamos headshots individuales para cada miembro del equipo — no fotos grupales. La plataforma está diseñada específicamente para facilitar la gestión de los headshots de tu equipo: invita miembros, configura las directrices de marca una vez, y sigue el progreso desde un panel central. Cada persona sube su propio selfie y obtiene resultados consistentes y alineados con la marca. Si buscas fotos individuales para tu CV o uso personal, visita nuestro sitio hermano <a href=\"https://portreya.com\" target=\"_blank\" rel=\"noopener noreferrer\">Portreya.com</a>."
       },
       "8": {
         "question": "¿En qué se diferencia de otras herramientas de retratos con IA?",
@@ -394,6 +394,7 @@
       "photos": "fotos",
       "savings": "Ahorras",
       "saveDollar": "Ahorras ${amount}",
+      "totalLabel": "Total: ${amount} por {count} miembros",
       "totalForSeats": "${amount} total por {count, plural, one {# asiento} other {# asientos}}",
       "total": "Total",
       "cta": "Obtener {seats} miembros por {total}",
@@ -403,13 +404,13 @@
       "whatsIncluded": "Qué está incluido",
       "volumeHint": "Añade {seatsNeeded} miembros más para desbloquear {nextPrice}/miembro (ahorra {savingsPerSeat}/miembro)",
       "personalPlanRedirect": "¿Buscas un plan personal?",
-      "visitPhotoshotsPro": "Visita PhotoshotsPro.com",
+      "visitPortreya": "Visita Portreya.com",
       "features": {
         "photosPerSeat": "10 fotos profesionales por miembro del equipo",
         "professionalQuality": "Fotos de calidad profesional con IA",
         "teamManagement": "Panel de gestión centralizado del equipo",
         "fullCustomization": "Personalización completa: fondo, marca, pose, estilo de ropa",
-        "creditsNeverExpire": "Los créditos nunca caducan, úsalos cuando quieras",
+        "creditsNeverExpire": "Compra única — úsalo cuando quieras, sin caducidad",
         "flexibleTeamSize": "Escala tu equipo, añade miembros cuando lo necesites",
         "support": "Soporte por correo y garantía de satisfacción"
       }
@@ -422,6 +423,7 @@
       "welcomeBack": "Bienvenido de nuevo",
       "welcomeSubtitle": "Inicia para seguir generando fotos profesionales. ¡Te extrañamos!",
       "benefit1": "Retratos rápidos y consistentes para tu equipo",
+      "benefit1Individual": "Retratos profesionales desde tus selfies",
       "benefit2": "Sin sesión de fotos—ideal para remotos",
       "benefit3": "Fondos y estilos alineados con tu marca",
       "emailLabel": "Correo electrónico",
@@ -452,6 +454,7 @@
       "benefit1": "Genera retratos en 60 segundos",
       "benefit2": "Créditos nunca caducan. Úsalos cuando quieras.",
       "benefit3": "Perfecto para remotos y nuevas incorporaciones",
+      "benefit3Individual": "Perfecto para profesionales y emprendedores",
       "stepOf": "Paso {step} de 2",
       "emailLabel": "Correo electrónico",
       "emailPlaceholder": "tu@empresa.com",
@@ -627,7 +630,8 @@
   "app": {
     "header": {
       "title": "Panel",
-      "subtitle": "¡Bienvenido! Esto pasa con tu equipo."
+      "subtitle": "¡Bienvenido! Esto pasa con tu equipo.",
+      "subtitleIndividual": "¡Bienvenido! Aquí tienes tu resumen del estudio."
     },
     "sidebar": {
       "brand": "TeamShotsPro",

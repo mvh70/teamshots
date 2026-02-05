@@ -78,12 +78,12 @@ export default function PricingContent({ variant }: PricingContentProps) {
             <p className="text-base text-text-body">
               Looking for a personal plan?{' '}
               <a
-                href="https://photoshotspro.com"
+                href="https://portreya.com"
                 className="text-brand-primary font-semibold hover:underline transition-all"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Visit PhotoshotsPro.com
+                Visit Portreya.com
               </a>
             </p>
           </div>

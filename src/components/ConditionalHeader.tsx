@@ -26,6 +26,7 @@ export default function ConditionalHeader({ brandName, brandLogo, variant }: Con
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [solutionsOpen, setSolutionsOpen] = useState(false)
+  const [langOpen, setLangOpen] = useState(false)
   const { track } = useAnalytics()
 
   const isTeamShotsPro = variant === 'teamshotspro'
@@ -34,7 +35,10 @@ export default function ConditionalHeader({ brandName, brandLogo, variant }: Con
   const isAppRoute = pathname.includes('/app/')
   const isUploadSelfiePage = pathname.includes('/upload-selfie/')
 
-  if (isAppRoute || isUploadSelfiePage) {
+  // Don't show default header on landing pages that have their own header (e.g., Portreya V2, RightClickFit)
+  const isLandingPageWithOwnHeader = (variant === 'portreya' || variant === 'rightclickfit') && (pathname === '/' || pathname === '/en' || pathname === '/es' || pathname === '/fr' || pathname === '/de' || pathname === '/nl')
+
+  if (isAppRoute || isUploadSelfiePage || isLandingPageWithOwnHeader) {
     return null
   }
 
@@ -125,7 +129,29 @@ export default function ConditionalHeader({ brandName, brandLogo, variant }: Con
           >
             {t('blog')}
           </Link>
-          <LanguageSwitcher />
+          {/* Language Switcher - Globe Icon Dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setLangOpen(true)}
+            onMouseLeave={() => setLangOpen(false)}
+          >
+            <button
+              className="flex items-center gap-1 text-text-body hover:text-brand-primary transition-colors duration-300 p-2 rounded-lg hover:bg-gray-50"
+              aria-expanded={langOpen}
+              aria-label="Change language"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+            </button>
+            {langOpen && (
+              <div className="absolute top-full right-0 pt-2 w-32 z-50">
+                <div className="bg-bg-white rounded-xl shadow-depth-lg border border-bg-gray-100 py-2">
+                  <LanguageSwitcher />
+                </div>
+              </div>
+            )}
+          </div>
           {session ? (
             <Link
               href="/app/dashboard"
@@ -134,12 +160,20 @@ export default function ConditionalHeader({ brandName, brandLogo, variant }: Con
               {t('dashboard')}
             </Link>
           ) : (
-            <Link
-              href="/auth/signin"
-              className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
-            >
-              {t('signin')}
-            </Link>
+            <>
+              <Link
+                href="/auth/signin"
+                className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
+              >
+                {t('signin')}
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="px-5 py-2.5 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta-ring focus:ring-offset-2"
+              >
+                {t('getStarted')}
+              </Link>
+            </>
           )}
         </div>
 
@@ -221,13 +255,22 @@ export default function ConditionalHeader({ brandName, brandLogo, variant }: Con
                 {t('dashboard')}
               </Link>
             ) : (
-              <Link
-                href="/auth/signin"
-                onClick={toggleMobileMenu}
-                className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
-              >
-                {t('signin')}
-              </Link>
+              <>
+                <Link
+                  href="/auth/signin"
+                  onClick={toggleMobileMenu}
+                  className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
+                >
+                  {t('signin')}
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  onClick={toggleMobileMenu}
+                  className="block w-full text-center px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta-ring focus:ring-offset-2"
+                >
+                  {t('getStarted')}
+                </Link>
+              </>
             )}
           </div>
         </div>

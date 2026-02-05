@@ -23,7 +23,7 @@ export default function SignUpCTA({ className = '' }: SignUpCTAProps) {
         {t('signUpCta.description')}
       </p>
       <button
-        onClick={() => window.location.href = 'https://www.photoshotspro.com'}
+        onClick={() => window.location.href = 'https://www.portreya.com'}
         className="px-4 py-2 text-brand-primary border-2 border-brand-primary rounded-md text-sm font-medium transition-colors hover:bg-brand-primary hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
       >
         {t('signUpCta.button')}

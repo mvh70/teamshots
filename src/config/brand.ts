@@ -1,4 +1,4 @@
-import { INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, TEAM_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
+import { PORTREYA_DOMAIN, TEAM_DOMAIN, EXTENSION_DOMAIN } from './domain'
 
 // Type definitions for brand configuration
 export interface BrandContact {
@@ -30,26 +30,17 @@ export interface BrandLegal {
   foundedYear: number;
 }
 
-/**
- * Typography configuration for domain-specific fonts
- */
-export interface BrandTypography {
-  /** Font class for display/heading text (e.g., 'font-display', 'font-sans') */
-  displayFont: string;
-  /** Font class for body text */
-  bodyFont: string;
-}
-
-/**
- * Style tokens for domain-specific visual treatments
- */
-export interface BrandStyle {
-  /** Border radius style: affects buttons, cards, inputs */
-  borderRadius: 'sharp' | 'rounded' | 'pill';
-  /** Shadow intensity: affects depth perception */
-  shadowIntensity: 'subtle' | 'medium' | 'dramatic';
-  /** Overall visual tone */
-  tone: 'corporate' | 'friendly' | 'playful';
+export interface BrandCta {
+  primaryText: string;
+  primaryTextEs?: string;
+  primaryHref: string;
+  pricingHref: string;
+  socialProof?: {
+    metric: string;
+    metricEs?: string;
+    description: string;
+    descriptionEs?: string;
+  };
 }
 
 export interface BrandConfig {
@@ -60,8 +51,7 @@ export interface BrandConfig {
   ogImage: string;
   legal: BrandLegal;
   colors: BrandColors;
-  typography: BrandTypography;
-  style: BrandStyle;
+  cta: BrandCta;
 }
 
 // Shared configuration (same across all brands)
@@ -80,65 +70,44 @@ const SHARED_CONFIG = {
   },
 } as const satisfies { colors: BrandColors; legal: Omit<BrandLegal, 'teamName'> };
 
-// Typography per domain
-const TYPOGRAPHY_CONFIGS: Record<string, BrandTypography> = {
-  [TEAM_DOMAIN]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
-  },
-  [INDIVIDUAL_DOMAIN]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
-  },
-  [INDIVIDUAL_DOMAIN_2]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
-  },
-  [COUPLES_DOMAIN]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
-  },
-  [FAMILY_DOMAIN]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
-  },
-  [EXTENSION_DOMAIN]: {
-    displayFont: 'font-display',
-    bodyFont: 'font-sans',
+const CTA_BASE = {
+  primaryHref: '/auth/signup',
+  pricingHref: '/pricing',
+} as const satisfies Pick<BrandCta, 'primaryHref' | 'pricingHref'>;
+
+const TEAM_CTA: BrandCta = {
+  ...CTA_BASE,
+  primaryText: 'Upload a Selfie → Get Team Headshots',
+  primaryTextEs: 'Sube una selfie → obtén headshots de equipo',
+  socialProof: {
+    metric: '60 seconds',
+    metricEs: '60 segundos',
+    description: 'average first results',
+    descriptionEs: 'promedio para primeros resultados',
   },
 };
 
-// Style tokens per domain
-const STYLE_CONFIGS: Record<string, BrandStyle> = {
-  [TEAM_DOMAIN]: {
-    borderRadius: 'rounded',
-    shadowIntensity: 'medium',
-    tone: 'corporate',
+const PHOTOS_CTA: BrandCta = {
+  ...CTA_BASE,
+  primaryText: 'Upload a Selfie → Get Headshots',
+  primaryTextEs: 'Sube una selfie → obtén headshots',
+  socialProof: {
+    metric: '60 seconds',
+    metricEs: '60 segundos',
+    description: 'to first AI headshots',
+    descriptionEs: 'para los primeros headshots con IA',
   },
-  [INDIVIDUAL_DOMAIN]: {
-    borderRadius: 'pill',
-    shadowIntensity: 'dramatic',
-    tone: 'friendly',
-  },
-  [INDIVIDUAL_DOMAIN_2]: {
-    borderRadius: 'pill',
-    shadowIntensity: 'dramatic',
-    tone: 'friendly',
-  },
-  [COUPLES_DOMAIN]: {
-    borderRadius: 'rounded',
-    shadowIntensity: 'medium',
-    tone: 'friendly',
-  },
-  [FAMILY_DOMAIN]: {
-    borderRadius: 'rounded',
-    shadowIntensity: 'medium',
-    tone: 'friendly',
-  },
-  [EXTENSION_DOMAIN]: {
-    borderRadius: 'sharp',
-    shadowIntensity: 'dramatic',
-    tone: 'playful',
+};
+
+const RIGHTCLICK_CTA: BrandCta = {
+  ...CTA_BASE,
+  primaryText: 'Start Free → Try RightClickFit',
+  primaryTextEs: 'Empieza gratis → Prueba RightClickFit',
+  socialProof: {
+    metric: 'Instant fit',
+    metricEs: 'Ajuste instantáneo',
+    description: 'try-on previews',
+    descriptionEs: 'previsualizaciones de prueba',
   },
 };
 
@@ -164,83 +133,7 @@ const TEAM_BRAND: BrandConfig = {
     teamName: 'TeamShotsPro',
   },
   colors: SHARED_CONFIG.colors,
-  typography: TYPOGRAPHY_CONFIGS[TEAM_DOMAIN],
-  style: STYLE_CONFIGS[TEAM_DOMAIN],
-};
-
-const INDIVIDUAL_BRAND: BrandConfig = {
-  name: 'IndividualShots',
-  domain: INDIVIDUAL_DOMAIN,
-  contact: {
-    hello: `hello@${INDIVIDUAL_DOMAIN}`,
-    support: `support@${INDIVIDUAL_DOMAIN}`,
-    privacy: `privacy@${INDIVIDUAL_DOMAIN}`,
-    legal: `legal@${INDIVIDUAL_DOMAIN}`,
-  },
-  logo: {
-    light: '/branding/individualshots.svg',
-    dark: '/branding/individualshots.svg',
-    icon: '/branding/icon.png',
-    favicon: '/branding/favicon.ico',
-  },
-  ogImage: '/branding/og-image.jpg',
-  legal: {
-    ...SHARED_CONFIG.legal,
-    teamName: 'IndividualShots',
-  },
-  colors: SHARED_CONFIG.colors,
-  typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN],
-  style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN],
-};
-
-const COUPLES_BRAND: BrandConfig = {
-  name: 'CoupleShots',
-  domain: COUPLES_DOMAIN,
-  contact: {
-    hello: `hello@${COUPLES_DOMAIN}`,
-    support: `support@${COUPLES_DOMAIN}`,
-    privacy: `privacy@${COUPLES_DOMAIN}`,
-    legal: `legal@${COUPLES_DOMAIN}`,
-  },
-  logo: {
-    light: '/branding/coupleshots.svg',
-    dark: '/branding/coupleshots.svg',
-    icon: '/branding/icon.png',
-    favicon: '/branding/favicon.ico',
-  },
-  ogImage: '/branding/og-image.jpg',
-  legal: {
-    ...SHARED_CONFIG.legal,
-    teamName: 'CoupleShots',
-  },
-  colors: { ...SHARED_CONFIG.colors, primary: '#EC4899', primaryHover: '#DB2777' }, // Pink
-  typography: TYPOGRAPHY_CONFIGS[COUPLES_DOMAIN],
-  style: STYLE_CONFIGS[COUPLES_DOMAIN],
-};
-
-const FAMILY_BRAND: BrandConfig = {
-  name: 'FamilyShots',
-  domain: FAMILY_DOMAIN,
-  contact: {
-    hello: `hello@${FAMILY_DOMAIN}`,
-    support: `support@${FAMILY_DOMAIN}`,
-    privacy: `privacy@${FAMILY_DOMAIN}`,
-    legal: `legal@${FAMILY_DOMAIN}`,
-  },
-  logo: {
-    light: '/branding/familyshots.svg',
-    dark: '/branding/familyshots.svg',
-    icon: '/branding/icon.png',
-    favicon: '/branding/favicon.ico',
-  },
-  ogImage: '/branding/og-image.jpg',
-  legal: {
-    ...SHARED_CONFIG.legal,
-    teamName: 'FamilyShots',
-  },
-  colors: { ...SHARED_CONFIG.colors, primary: '#0EA5E9', primaryHover: '#0284C7' }, // Sky Blue
-  typography: TYPOGRAPHY_CONFIGS[FAMILY_DOMAIN],
-  style: STYLE_CONFIGS[FAMILY_DOMAIN],
+  cta: TEAM_CTA,
 };
 
 const EXTENSION_BRAND: BrandConfig = {
@@ -264,46 +157,80 @@ const EXTENSION_BRAND: BrandConfig = {
     teamName: 'RightClickFit',
   },
   colors: { ...SHARED_CONFIG.colors, primary: '#8B5CF6', primaryHover: '#7C3AED' }, // Violet
-  typography: TYPOGRAPHY_CONFIGS[EXTENSION_DOMAIN],
-  style: STYLE_CONFIGS[EXTENSION_DOMAIN],
+  cta: RIGHTCLICK_CTA,
 };
 
-const PHOTOSHOTSPRO_BRAND: BrandConfig = {
-  name: 'PhotoShotsPro',
-  domain: INDIVIDUAL_DOMAIN_2,
+const PORTREYA_BRAND: BrandConfig = {
+  name: 'Portreya',
+  domain: PORTREYA_DOMAIN,
   contact: {
-    hello: `hello@${INDIVIDUAL_DOMAIN_2}.com`,
-    support: `support@${INDIVIDUAL_DOMAIN_2}.com`,
-    privacy: `privacy@${INDIVIDUAL_DOMAIN_2}.com`,
-    legal: `legal@${INDIVIDUAL_DOMAIN_2}.com`,
+    hello: 'hello@portreya.com',
+    support: 'support@portreya.com',
+    privacy: 'privacy@portreya.com',
+    legal: 'legal@portreya.com',
   },
   logo: {
-    light: '/branding/PhotoShotsPro_trans.webp',
-    dark: '/branding/PhotoShotsPro_trans.webp',
+    light: '/branding/Portreya_trans.webp',
+    dark: '/branding/Portreya_trans.webp',
     icon: '/branding/icon.png',
     favicon: '/branding/favicon.ico',
   },
   ogImage: '/branding/og-image.jpg',
   legal: {
     ...SHARED_CONFIG.legal,
-    teamName: 'PhotoShotsPro',
+    teamName: 'Portreya',
   },
-  colors: SHARED_CONFIG.colors,
-  typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN_2],
-  style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN_2],
+  colors: {
+    primary: '#0F172A',        // Deep studio navy
+    primaryHover: '#1E293B',   // Slate-800
+    secondary: '#B45309',      // Bronze accent
+    secondaryHover: '#92400E', // Bronze dark
+    cta: '#B45309',            // Bronze for CTAs
+    ctaHover: '#92400E',       // Bronze dark
+  },
+  cta: PHOTOS_CTA,
 };
 
 export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   [TEAM_DOMAIN]: TEAM_BRAND,
-  [INDIVIDUAL_DOMAIN]: INDIVIDUAL_BRAND,
-  [INDIVIDUAL_DOMAIN_2]: PHOTOSHOTSPRO_BRAND,
-  [COUPLES_DOMAIN]: COUPLES_BRAND,
-  [FAMILY_DOMAIN]: FAMILY_BRAND,
+  [PORTREYA_DOMAIN]: PORTREYA_BRAND,
   [EXTENSION_DOMAIN]: EXTENSION_BRAND,
 };
 
 // Default brand config (TeamShotsPro) - for backwards compatibility
 export const BRAND_CONFIG = TEAM_BRAND;
+
+// Allowed domains for security validation
+const ALLOWED_DOMAINS = [
+  'teamshotspro.com',
+  'portreya.com',
+  'rightclickfit.com',
+  'localhost',
+  '127.0.0.1',
+]
+
+/**
+ * Normalize a host string to a domain.
+ * Removes port numbers and www prefix, converts to lowercase.
+ */
+export function normalizeDomain(host: string | null): string | null {
+  if (!host) return null
+  return host.split(':')[0].replace(/^www\./, '').toLowerCase()
+}
+
+/**
+ * Validate that a domain is in the allowed list.
+ * Returns the domain if valid, null otherwise.
+ */
+export function validateDomain(domain: string | null): string | null {
+  if (!domain) return null
+  if (ALLOWED_DOMAINS.includes(domain)) return domain
+  // Allow without .com suffix (local dev: portreya:3000 → portreya)
+  if (ALLOWED_DOMAINS.includes(`${domain}.com`)) return domain
+  // Also allow subdomains
+  if (ALLOWED_DOMAINS.some(allowed => domain.endsWith('.' + allowed))) return domain
+  return null
+}
 
 /**
  * Get the current domain from request headers.
@@ -319,29 +246,40 @@ export const BRAND_CONFIG = TEAM_BRAND;
 function getCurrentDomain(requestHeaders?: Headers): string | null {
   // Check for forced domain override (localhost development only)
   const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
-  
+
   // Server-side detection from provided headers (REQUIRED)
   if (requestHeaders) {
-    const host = requestHeaders.get('host') || requestHeaders.get('x-forwarded-host')
+    // Prefer 'host' header over 'x-forwarded-host' for security
+    const host = requestHeaders.get('host')
     if (host) {
-      const normalizedHost = host.split(':')[0].replace(/^www\./, '').toLowerCase()
-      
+      const normalizedHost = normalizeDomain(host)
+
       // On localhost, allow forced domain override
       if ((normalizedHost === 'localhost' || normalizedHost === '127.0.0.1') && forcedDomain) {
         // Log for debugging
         console.log(`[Brand Detection] Localhost detected. Forcing domain: ${forcedDomain}`);
-        return forcedDomain.replace(/^www\./, '').toLowerCase()
+        return normalizeDomain(forcedDomain)
       }
-      return normalizedHost
+
+      // Validate domain against whitelist
+      const validatedDomain = validateDomain(normalizedHost)
+      if (validatedDomain) {
+        return validatedDomain
+      }
+
+      // Log invalid domain attempts in production for security monitoring
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`[Brand Detection] Invalid domain attempted: ${normalizedHost}`)
+      }
     }
   }
-  
+
   return null
 }
 
 /**
  * Get the complete brand configuration based on the current domain.
- * Returns PhotoShotsPro config for photoshotspro.com, TeamShotsPro config otherwise.
+ * Returns Portreya config for portreya.com, TeamShotsPro config otherwise.
  * 
  * IMPORTANT: This function is SERVER-SIDE ONLY. Always pass headers.
  * All brand decisions must be made on the server to prevent hydration mismatches and abuse.
@@ -369,7 +307,7 @@ export function getBrand(requestHeaders?: Headers): BrandConfig {
 
 /**
  * Get the logo path based on the current domain.
- * Returns PhotoShotsPro logo for photoshotspro.com, TeamShotsPro logo otherwise.
+ * Returns Portreya logo for portreya.com, TeamShotsPro logo otherwise.
  * 
  * @param theme - 'light' or 'dark' variant
  * @param requestHeaders - Optional headers for server-side detection (useful in API routes)
@@ -381,7 +319,7 @@ export function getBrandLogo(theme: 'light' | 'dark' = 'light', requestHeaders?:
 
 /**
  * Get brand-specific contact emails based on the current domain.
- * Returns PhotoShotsPro emails for photoshotspro.com, TeamShotsPro emails otherwise.
+ * Returns Portreya emails for portreya.com, TeamShotsPro emails otherwise.
  * 
  * @param requestHeaders - Optional headers for server-side detection (useful in API routes)
  * @returns Object containing brand-specific contact email addresses
@@ -392,7 +330,7 @@ export function getBrandContact(requestHeaders?: Headers): BrandContact {
 
 /**
  * Get the brand name based on the current domain.
- * Returns "PhotoShotsPro" for photoshotspro.com, "TeamShotsPro" otherwise.
+ * Returns "Portreya" for portreya.com, "TeamShotsPro" otherwise.
  * 
  * @param requestHeaders - Optional headers for server-side detection
  * @returns The brand name string
@@ -410,18 +348,5 @@ export function getBrandColor(type: 'primary' | 'secondary' | 'cta', hover = fal
   return colors[type];
 }
 
-/**
- * Get brand typography configuration
- */
-export function getBrandTypography(requestHeaders?: Headers): BrandTypography {
-  return getBrand(requestHeaders).typography;
-}
-
-/**
- * Get brand style tokens
- */
-export function getBrandStyle(requestHeaders?: Headers): BrandStyle {
-  return getBrand(requestHeaders).style;
-}
-
+// Note: getBrandTypography and getBrandStyle removed - typography and style configs were unused
 // Note: Tagline should be retrieved using useTranslations('footer.tagline') in components

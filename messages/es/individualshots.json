@@ -1,36 +1,43 @@
 {
   "landing": {
-    "photoshotspro": {
+    "portreya": {
       "hero": {
-        "titleMain": "Retratos profesionales",
-        "titleHighlightTime": "en 60 segundos",
-        "subtitle": "Sube cualquier selfie y obtén retratos profesionales impresionantes al instante. Perfecto para LinkedIn, perfiles de citas, o cualquier lugar donde necesites lucir increíble. ",
+        "badge": "Retratos profesionales con IA",
+        "tagline": "Retratos profesionales con IA",
+        "titleMain": "Convierte cualquier selfie en un retrato que parece que costó $200",
+        "titleLine1": "Convierte cualquier selfie en un retrato",
+        "titleLine2": "que parece que costó",
+        "titleHighlight": "$200",
+        "titleLine3": "",
+        "subtitle": "Sube una foto. Obtén 4 retratos profesionales en 60 segundos. Gratis para probar — sin tarjeta de crédito.",
         "subtitleBold": "sin fotógrafo ni estudio costoso.",
-        "subtitleMain": "Convierte cualquier selfie en retratos profesionales impresionantes. Sin fotógrafo, sin esperas.",
-        "finalCtaTitle": "¿Listo para lucir increíble?",
-        "finalCtaSubtitle": "Obtén tus retratos profesionales y ve la diferencia en 60 segundos.",
-        "getStarted": "Empezar",
-        "cta": "Obtén tus retratos profesionales",
+        "subtitleMain": "Sube una foto. Obtén 4 retratos profesionales en 60 segundos. Gratis para probar — sin tarjeta de crédito.",
+        "finalCtaTitle": "Mira cómo podría quedar tu retrato",
+        "finalCtaSubtitle": "Sube un selfie. Obtén una vista previa gratis en 60 segundos. Sin tarjeta de crédito.",
+        "finalCta": "Probar Gratis",
+        "getStarted": "Probar Gratis",
+        "cta": "Sube Tu Selfie — Es Gratis",
         "ctaSubtext": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
-        "ctaAria": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso.",
+        "ctaAria": "Sube tu selfie para obtener una vista previa gratuita",
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "noCreditCardLine": "Sin tarjeta de crédito",
-        "freeGenerationsLine": "1 generación gratis con marca fija de PhotoShots",
-        "badge": "Retratos profesionales sin la molestia del estudio",
+        "freeGenerationsLine": "Vista previa gratuita",
+        "tryFree": "Probar Gratis",
         "trustBadges": {
           "stripeSecure": "Pago Seguro con Stripe",
           "instantResults": "Resultados en 60 Segundos",
           "noSubscription": "Sin Suscripción",
-          "moneyBack": "Garantía de Devolución"
+          "moneyBack": "Garantía de Devolución",
+          "photosPrivate": "Tus fotos son privadas"
         }
       },
       "gallery": {
         "title": "De selfies casuales a retratos profesionales",
-        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, apps de citas y perfiles profesionales.",
-        "cta": "Pruébalo hoy"
+        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, perfiles profesionales y uso empresarial.",
+        "cta": "Sube Tu Selfie — Es Gratis"
       },
       "trust": {
-        "title": "¿Por qué la gente elige PhotoShotsPro?",
+        "title": "¿Por qué la gente elige Portreya?",
         "subtitle": "Retratos profesionales simplificados - sin estudio, sin esperas, solo fotos increíbles",
         "badges": {
           "industryTemplates": {
@@ -39,7 +46,15 @@
           },
           "qualityControl": {
             "title": "Calidad garantizada con correcciones automáticas",
-            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
+            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados."
+          },
+          "speed": {
+            "title": "Resultados en 60 segundos",
+            "description": "Sube tu selfie y obtén 4 variaciones de retratos profesionales en menos de un minuto. Sin colas, sin esperas."
+          },
+          "privacy": {
+            "title": "Tus fotos son privadas",
+            "description": "Las fotos se procesan de forma segura y nunca se comparten. Elimina tus datos en cualquier momento desde la configuración de tu cuenta."
           }
         }
       },
@@ -62,28 +77,95 @@
         "steps": {
           "1": {
             "title": "Sube tu selfie",
-            "description": "Cualquier foto clara de tu rostro funciona. Selfies, fotos casuales - trabajamos con lo que tengas.",
+            "description": "Cualquier foto clara de tu rostro funciona. Selfies, fotos casuales — trabajamos con lo que tengas.",
             "duration": "30s"
           },
           "2": {
             "title": "Elige tu estilo",
-            "description": "Selecciona entre profesional para LinkedIn, perfil de citas, negocio casual, y más.",
+            "description": "Selecciona entre profesional para LinkedIn, negocio casual, y más.",
             "duration": "30s"
           },
           "3": {
             "title": "Obtén 4 fotos profesionales",
-            "description": "Recibe 4 variaciones impresionantes en 60 segundos. Descarga tus favoritas al instante.",
+            "description": "Recibe 4 variaciones profesionales en 60 segundos. Descarga tus favoritas al instante.",
             "duration": "60s"
+          }
+        }
+      },
+      "pricing": {
+        "label": "Precios",
+        "title": "Precios simples, pago único",
+        "subtitle": "Sin suscripciones. Paga una vez, obtén tus retratos.",
+        "tiers": {
+          "free": {
+            "name": "Prueba Gratis",
+            "description": "Ve tu retrato antes de pagar",
+            "features": {
+              "headshots": "1 retrato de prueba",
+              "style": "Estilo fijo",
+              "noCreditCard": "Sin tarjeta de crédito"
+            },
+            "cta": "Probar Gratis"
+          },
+          "individual": {
+            "name": "Profesional",
+            "description": "Ideal para quienes buscan empleo",
+            "price": "$19.99",
+            "priceLabel": "pago único",
+            "features": {
+              "headshots": "4 retratos profesionales",
+              "customization": "Personalización completa de estilo",
+              "retries": "Reintento gratuito incluido",
+              "guarantee": "Garantía de devolución"
+            },
+            "cta": "Sube Tu Selfie — Es Gratis",
+            "badge": "Más Popular"
+          },
+          "vip": {
+            "name": "VIP",
+            "description": "Ideal para equipos y usuarios avanzados",
+            "price": "$199.99",
+            "priceLabel": "pago único",
+            "features": {
+              "headshots": "25 retratos personalizables",
+              "team": "Miembros de equipo ilimitados",
+              "retries": "3 reintentos gratuitos por foto",
+              "guarantee": "Garantía de devolución"
+            },
+            "cta": "Sube Tu Selfie — Es Gratis"
           }
         }
       },
       "faq": {
         "title": "Preguntas Frecuentes",
-        "subtitle": "Todo lo que necesitas saber sobre PhotoShotsPro"
+        "subtitle": "Todo lo que necesitas saber sobre Portreya",
+        "stillHaveQuestions": "¿Aún tienes preguntas?",
+        "questions": {
+          "1": {
+            "q": "¿Se parecerá a mí o a una cara genérica de IA?",
+            "a": "Se parecerá a ti. Nuestra IA preserva tus rasgos faciales, estructura ósea y expresión. Lo que cambia es la iluminación, el fondo y la vestimenta — las cosas que un fotógrafo profesional controlaría en un estudio."
+          },
+          "2": {
+            "q": "¿Qué pasa si mi única foto es un mal selfie?",
+            "a": "No hay problema. Nuestra IA funciona con selfies casuales, fotos del teléfono, incluso capturas de webcam. Mientras tu rostro sea claramente visible y no esté oculto por gafas de sol o gorros, obtendrás buenos resultados."
+          },
+          "3": {
+            "q": "¿Cuál es su política de reembolso?",
+            "a": "Ofrecemos garantía de devolución en todos los planes de pago. Si la calidad no cumple tus expectativas, contáctanos y te reembolsaremos tu compra."
+          },
+          "4": {
+            "q": "¿Puedo usar estos retratos comercialmente?",
+            "a": "Sí. Todos los retratos generados son tuyos para usar donde quieras: LinkedIn, currículum, sitios web de empresa, redes sociales o cualquier otro uso personal o profesional."
+          },
+          "5": {
+            "q": "¿Qué resolución tienen los retratos?",
+            "a": "Los retratos generados son de alta resolución (1024x1024) y adecuados para uso digital en LinkedIn, sitios web y perfiles sociales."
+          }
+        }
       },
       "footer": {
         "tagline": "Retratos profesionales en 60 segundos",
-        "copyright": "© 2026 PhotoShotsPro. Todos los derechos reservados.",
+        "copyright": "\u00a9 2026 Portreya. Todos los derechos reservados.",
         "privacy": "Política de Privacidad",
         "terms": "Términos de Servicio"
       }

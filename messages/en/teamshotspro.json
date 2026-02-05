@@ -9,18 +9,23 @@
         "subtitleBold": "100% on-brand, 0% hassle.",
         "subtitleMain": "Turn individual selfies into a unified team look in under a minute. No photographer, no scheduling, no waiting hours for results.",
         "finalCtaTitle": "Ready to transform your team photos?",
-        "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
+        "finalCtaSubtitle": "See 3 sample headshots for your team in 60 seconds. No credit card, no commitment.",
+        "finalCtaCta": "Start Your Free Trial",
         "getStarted": "Get Started",
-        "cta": "See Your Team's New Look",
+        "cta": "Try Free — 3 Photos, No Card",
         "ctaSubtext": "",
-        "ctaAria": "Start your team order with no commitment",
+        "ctaAria": "Try free — get 3 sample photos with no credit card",
         "noCreditCard": "Test with a fixed style for free, no credit card required",
         "noCreditCardLine": "No credit card required for test photos",
-        "freeGenerationsLine": "Get 3 photos for free with fixed TeamShots branding for testing",
+        "freeGenerationsLine": "3 free test photos with TeamShots watermark — paid plans are watermark-free",
         "badge": "Professional team photos without the photoshoot hassle",
-        "trustedBy": "Trusted by teams at",
         "bookDemo": "Book a Demo",
         "bookDemoAria": "Book a demo",
+        "socialProof": {
+          "headshots": "1,000+ headshots generated",
+          "teams": "10+ teams",
+          "rating": "4.9/5 average rating"
+        },
         "trustBadges": {
           "stripeSecure": "Stripe Secure Checkout",
           "instantResults": "Results in 60 Seconds",
@@ -56,7 +61,7 @@
         }
       },
       "howItWorks": {
-        "title": "Standardize your team's look without the logistical nightmare",
+        "title": "Four steps to a unified team look",
         "subtitle": "You set an on-brand style once (e.g. background, logo), and you invite your team members. That's it. Your team members will get an invite and can generate their own photos, frictionless without registration. You see all the photos in the admin panel and select the best one.",
         "totalTime": "Your setup time:",
         "totalTimeValue": "2 minutes",
@@ -73,35 +78,58 @@
         },
         "tryForFree": "Try for Free",
         "bookDemo": "Book a Demo",
-        "freePhotosLine": "Get 3 photos for free with fixed TeamShots branding for testing",
+        "freePhotosLine": "3 free test photos with TeamShots watermark — paid plans are watermark-free",
         "noCreditCardLine": "No credit card required for test photos",
         "steps": {
           "1": {
             "title": "Set Your Brand Identity",
             "description": "Backgrounds, logo, clothing style. You decide what's fixed and what team members can change (e.g. expression, or clothing colors).",
-            "duration": "5 min"
+            "duration": ""
           },
           "2": {
             "title": "Invite Your Team",
             "description": "Invite one-by-one or upload a CSV from BambooHR, Workday, Gusto, or any spreadsheet. They get a magic link. No scheduling grids, no calendar Tetris. Track progress in your dashboard.",
-            "duration": "30s"
+            "duration": ""
           },
           "3": {
             "title": "They Upload a Selfie",
             "description": "Team members snap a quick selfie from their phone. We transform it into your brand style instantly.",
-            "duration": "2 min/person"
+            "duration": ""
           },
           "4": {
             "title": "Get Your Assets",
             "description": "Review and download a unified gallery of professional headshots. Consistent, high-res, and ready for your website.",
-            "duration": "60 s"
+            "duration": ""
           }
         }
       },
       "guarantee": {
-        "title": "100% Human-Look Guarantee",
-        "subtitle": "If your photos look like AI, we redo them for free.",
-        "description": "Your team deserves to look professional, not robotic. Unlike tools that train models and generate random results, we create each headshot with real-time quality checks. Studio-quality results that look like you, just more polished."
+        "title": "Studio-Quality Guarantee",
+        "subtitle": "Not satisfied? We regenerate for free. No questions asked.",
+        "description": "Every headshot goes through automated quality checks before delivery. If any photo doesn't meet your standards, we'll regenerate it at no extra cost. Studio-quality results that look like you, just more polished."
+      },
+      "testimonials": {
+        "title": "What teams are saying",
+        "items": {
+          "1": {
+            "quote": "We needed headshots for 40 new hires across 3 offices. TeamShotsPro delivered consistent, professional results in a single afternoon — no photographer coordination needed.",
+            "name": "Sarah Chen",
+            "role": "Head of People",
+            "company": "Meridian Tech"
+          },
+          "2": {
+            "quote": "The quality genuinely surprised us. Our team photos look like we hired a professional studio, but each person just took a quick selfie from their desk.",
+            "name": "James Okwu",
+            "role": "Brand Manager",
+            "company": "Northvolt Agency"
+          },
+          "3": {
+            "quote": "I set up the brand style once, sent invite links to the team, and had a unified gallery by end of day. The whole process was remarkably smooth.",
+            "name": "Lisa Bergström",
+            "role": "Operations Director",
+            "company": "Astra Consulting"
+          }
+        }
       },
       "faq": {
         "title": "Frequently Asked Questions",
@@ -111,7 +139,10 @@
         "tagline": "Professional team photos in 60 seconds",
         "copyright": "© 2026 TeamShotsPro. All rights reserved.",
         "privacy": "Privacy Policy",
-        "terms": "Terms of Service"
+        "terms": "Terms of Service",
+        "bookDemo": "Book a Demo",
+        "companyInfo": "TeamShotsPro · Creek Harbour, Dubai, UAE",
+        "gdpr": "GDPR Compliant"
       }
     }
   }

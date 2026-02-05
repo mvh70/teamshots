@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { PostHog } from 'posthog-js'
+import { getClientBrandInfo } from '@/config/domain'
 
 // Cached PostHog instance after initialization
 let posthogInstance: PostHog | null = null
@@ -17,6 +18,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams()
   const isInitialized = useRef(false)
   const hasInteracted = useRef(false)
+
+  // Cache brand info for multi-tenant analytics
+  const brand = useMemo(() => {
+    if (typeof window === 'undefined') return 'unknown'
+    return getClientBrandInfo().brandName
+  }, [])
 
   // Lazy load and initialize PostHog
   const loadPostHog = useCallback(async () => {
@@ -39,13 +46,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           }
           ph.capture('$pageview', {
             $current_url: url,
+            brand,
           })
         }
       }
     } catch (error) {
       console.error('[PostHog] Failed to load:', error)
     }
-  }, [pathname, searchParams])
+  }, [pathname, searchParams, brand])
 
   // Initialize on user interaction (scroll, click, touch, or keyboard)
   useEffect(() => {
@@ -103,9 +111,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       }
       posthogInstance.capture('$pageview', {
         $current_url: url,
+        brand,
       })
     }
-  }, [pathname, searchParams])
+  }, [pathname, searchParams, brand])
 
   return <>{children}</>
 }

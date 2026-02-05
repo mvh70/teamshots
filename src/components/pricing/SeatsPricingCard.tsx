@@ -257,48 +257,37 @@ export default function SeatsPricingCard({
           </div>
         )}
 
-        {/* Price per seat - prominent */}
-        <div className="flex items-start justify-center gap-2 mb-1">
+        {/* Price breakdown: $X.XX/person × N = $XXX.XX total */}
+        <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
+          {hasDiscount && (
+            <span className="text-xl text-gray-400 line-through">
+              ${fullPrice.toFixed(2)}
+            </span>
+          )}
           <div className="text-4xl font-bold text-gray-900">
             ${displayPricePerSeat.toFixed(2)}
           </div>
-          {/* Discount badge */}
           {hasDiscount && (
-            <div className="bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white whitespace-nowrap mt-1">
+            <div className="bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white whitespace-nowrap">
               {discountPercentage}% OFF
             </div>
           )}
         </div>
-        <div className="text-lg font-medium text-gray-500">{t('seats.perSeat')}</div>
+        <div className="text-lg font-medium text-gray-500 mb-2">{t('seats.perSeat')}</div>
 
-        {/* Total price - secondary */}
-        {promoDiscount ? (
-          <div className="mb-2">
-            <span className="text-lg text-gray-400 line-through mr-2">
-              ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* Total - de-emphasized */}
+        <div className="text-sm text-gray-400 mb-2">
+          {isTopUpMode ? (
+            <>{t('seats.totalForSeats', { amount: (topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: additionalSeats })}</>
+          ) : (
+            <span>
+              {t('seats.totalLabel', { amount: total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: validatedSeats })}
+              {savings > 0 && (
+                <span className="text-green-600 font-semibold block mt-1">{t('seats.saveDollar', { amount: savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}</span>
+              )}
             </span>
-            <span className="text-lg font-semibold text-green-600">
-              ${promoDiscount.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
-            </span>
-            <div className="text-sm font-semibold text-green-600">
-              You save ${promoDiscount.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {promoDiscount.type === 'percentage' && ` (${promoDiscount.value}% off)`}
-            </div>
-          </div>
-        ) : (
-          <div className="text-lg text-gray-600 mb-2">
-            {isTopUpMode ? (
-              <>{t('seats.totalForSeats', { amount: (topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: additionalSeats })}</>
-            ) : (
-              <>
-                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
-                {savings > 0 && (
-                  <span className="text-green-600 font-semibold"> · {t('seats.saveDollar', { amount: savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}</span>
-                )}
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Features */}
@@ -312,18 +301,6 @@ export default function SeatsPricingCard({
           </li>
         ))}
       </ul>
-
-      {/* Promo Code Input */}
-      <PromoCodeInput
-        purchaseType="seats"
-        originalAmount={isTopUpMode ? topUpTotal : total}
-        seats={isTopUpMode ? additionalSeats : validatedSeats}
-        onApply={handlePromoCodeApply}
-        onClear={handlePromoCodeClear}
-        isApplied={!!appliedPromoCode}
-        appliedCode={appliedPromoCode || ''}
-        className="mb-4"
-      />
 
       {/* CTA Button */}
       <CheckoutButton

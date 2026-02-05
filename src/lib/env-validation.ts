@@ -65,7 +65,7 @@ const envSchema = z.object({
 
   // Force specific domain for local testing (localhost only)
   // This controls both brand/landing AND signup type
-  // Example: 'photoshotspro.com' (individual) or 'teamshotspro.com' (team)
+  // Example: 'portreya.com' (individual) or 'teamshotspro.com' (team)
   NEXT_PUBLIC_FORCE_DOMAIN: z.string().optional(),
 }).refine(
   (data) => {

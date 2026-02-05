@@ -11,7 +11,7 @@ import { CreditService } from '@/domain/services/CreditService'
 import { getTeamOnboardingState } from '@/domain/team/onboarding'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
-import { getBrand } from '@/config/brand'
+import { getBrand, normalizeDomain } from '@/config/brand'
 import { getLandingVariant } from '@/config/landing-content'
 
 // Force dynamic rendering to ensure brand detection is fresh on each request
@@ -69,8 +69,8 @@ export default async function AppLayout({
   
   // Determine if this is an individual-only domain (no team features)
   // Only teamshotspro has team features - all other domains are individual-only
-  const host = headersList.get('host') || headersList.get('x-forwarded-host')
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
+  const host = headersList.get('host')
+  const domain = normalizeDomain(host) ?? undefined
   const variant = getLandingVariant(domain)
   const isIndividualDomain = variant !== 'teamshotspro'
 
@@ -87,7 +87,7 @@ export default async function AppLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <DomainProvider isIndividualDomain={isIndividualDomain}>
+      <DomainProvider isIndividualDomain={isIndividualDomain} brandName={brand.name}>
         <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team, person: creditBalances.person } : undefined}>
           <OnboardingProvider>
             <OnbordaProvider>
@@ -99,6 +99,7 @@ export default async function AppLayout({
                 initialBrandLogoLight={brand.logo.light}
                 initialBrandLogoIcon={brand.logo.icon}
                 isIndividualDomain={isIndividualDomain}
+                brandColors={brand.colors}
               >
                 {children}
               </AppShell>

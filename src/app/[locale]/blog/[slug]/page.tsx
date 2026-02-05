@@ -29,7 +29,7 @@ export async function generateStaticParams() {
   const params: Array<{ locale: string; slug: string }> = []
 
   // Get slugs for each brand that may have blog content
-  const brands = ['teamshotspro', 'headshot-one', 'photoshotspro', 'duo-snaps', 'kin-frame', 'rightclick-fit']
+  const brands = ['teamshotspro', 'headshot-one', 'portreya', 'duo-snaps', 'kin-frame', 'rightclick-fit']
 
   for (const brandId of brands) {
     const slugs = getAllBlogSlugs(brandId)
@@ -107,6 +107,9 @@ function markdownToHtml(markdown: string): string {
   // Normalize line endings
   let result = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 
+  // Strip leading H1 - the template already renders the title as H1
+  result = result.replace(/^# .+\n+/, '')
+
   // Remove schema markup comments and scripts (they shouldn't be rendered)
   result = result.replace(/<!--\s*COMPARISON_SCHEMA_START\s*-->[\s\S]*?<\/script>\s*/g, '')
   result = result.replace(/<!--\s*COMPARISON_SCHEMA_END\s*-->/g, '')
@@ -133,8 +136,32 @@ function markdownToHtml(markdown: string): string {
         table += '</tr>'
       })
       table += '</tbody></table>'
-      return table
+      return table + '\n'
     }
+  )
+
+  // Convert horizontal rules (--- on its own line) to <hr>
+  result = result.replace(/^---$/gm, '<hr class="my-8 border-gray-300" />')
+
+  const escapeAttribute = (value: string) => value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // Before/after image pairs (two consecutive images with before:/after: alt text)
+  result = result.replace(
+    /!\[before:\s*([^\]]+)\]\(([^)]+)\)\s*\n!\[after:\s*([^\]]+)\]\(([^)]+)\)/gi,
+    (_match, beforeAlt, beforeSrc, afterAlt, afterSrc) =>
+      `\n\n<div data-before-src=\"${escapeAttribute(beforeSrc.trim())}\" data-after-src=\"${escapeAttribute(afterSrc.trim())}\" data-before-alt=\"${escapeAttribute(beforeAlt.trim())}\" data-after-alt=\"${escapeAttribute(afterAlt.trim())}\"></div>\n\n`
+  )
+
+  // Single images
+  result = result.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_match, alt, src) =>
+      `<img src=\"${escapeAttribute(src.trim())}\" alt=\"${escapeAttribute(alt.trim())}\" class=\"w-full rounded-lg border border-gray-200 mb-6\" />`
   )
 
   const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -173,6 +200,7 @@ export default async function BlogPostPage({ params }: Props) {
   const headersList = await headers()
   const brandConfig = getBrand(headersList)
   const baseUrl = getBaseUrl(headersList)
+  const brandCta = brandConfig.cta
 
   // Get brand ID from domain
   const host = headersList.get('host') || headersList.get('x-forwarded-host')
@@ -203,6 +231,9 @@ export default async function BlogPostPage({ params }: Props) {
   const description = locale === 'es' && post.spanishDescription ? post.spanishDescription : post.metaDescription
   const rawContent = locale === 'es' && post.spanishContent ? post.spanishContent : post.content
 
+  const ctaButton = locale === 'es' ? (brandCta.primaryTextEs || brandCta.primaryText) : brandCta.primaryText
+  const ctaHref = brandCta.pricingHref || brandCta.primaryHref
+
   // Convert markdown to HTML
   const htmlContent = markdownToHtml(rawContent)
 
@@ -217,6 +248,19 @@ export default async function BlogPostPage({ params }: Props) {
     }
   }
 
+  // Parse TL;DR
+  let tldr: string[] | undefined
+  if (post.tldrJson) {
+    try {
+      const parsed = JSON.parse(post.tldrJson)
+      if (Array.isArray(parsed)) {
+        tldr = parsed.filter((item) => typeof item === 'string' && item.trim().length > 0)
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }
+
   // Build BlogPostContent
   const content: BlogPostContent = {
     slug: post.slug,
@@ -225,6 +269,7 @@ export default async function BlogPostPage({ params }: Props) {
     description,
     breadcrumb: title.length > 40 ? title.substring(0, 40) + '...' : title,
     content: htmlContent,
+    tldr,
     faqs,
     faqTitle: locale === 'es' ? 'Preguntas Frecuentes' : 'Frequently Asked Questions',
     heroImage: post.heroImagePath
@@ -237,11 +282,11 @@ export default async function BlogPostPage({ params }: Props) {
     datePublished: post.publishedAt || new Date().toISOString(),
     author: {
       name: 'Matthieu van Haperen',
-      title: locale === 'es' ? `Fundador, ${brandConfig.name}` : `Founder, ${brandConfig.name}`,
+      title: locale === 'es' ? `Fundador y CEO, ${brandConfig.name}` : `Founder & CEO, ${brandConfig.name}`,
       bio:
         locale === 'es'
-          ? `Matthieu van Haperen es el fundador de ${brandConfig.name} y un ex venture builder con más de 6 años de experiencia en startups.`
-          : `Matthieu van Haperen is the founder of ${brandConfig.name} and a former venture builder with 6+ years of startup experience.`,
+          ? `Matthieu van Haperen dirige ${brandConfig.name}, donde ha ayudado a cientos de equipos a obtener headshots profesionales con IA. Antes de fundar ${brandConfig.name}, pasó más de 6 años construyendo y escalando startups tecnológicas. Escribe sobre fotografía profesional, branding de equipos y cómo la IA está transformando la imagen corporativa.`
+          : `Matthieu van Haperen runs ${brandConfig.name}, where he has helped hundreds of teams get professional AI headshots. Before founding ${brandConfig.name}, he spent 6+ years building and scaling tech startups. He writes about professional photography, team branding, and how AI is reshaping corporate imagery.`,
       linkedInUrl: 'https://linkedin.com/in/matthieuvanhaperen',
       initials: 'MH',
     },
@@ -254,8 +299,8 @@ export default async function BlogPostPage({ params }: Props) {
         locale === 'es'
           ? 'Genera headshots profesionales con IA en 60 segundos.'
           : 'Generate professional AI headshots in 60 seconds.',
-      button: locale === 'es' ? `Prueba ${brandConfig.name} Gratis →` : `Try ${brandConfig.name} Free →`,
-      href: '/',
+      button: ctaButton,
+      href: ctaHref,
     },
     // Use pre-generated schema from CMS if available
     schemaJson: post.schemaJson || undefined,

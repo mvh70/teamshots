@@ -10,6 +10,7 @@ import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { jsonFetcher } from '@/lib/fetcher'
+import { getClientBrandInfo } from '@/config/domain'
 
 type FlowType = 'normal' | 'guest' | 'loading'
 
@@ -17,6 +18,7 @@ export default function VerifyPage() {
   const t = useTranslations('auth.signup')
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { isIndividual } = getClientBrandInfo()
 
   const [otpCode, setOtpCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -265,7 +267,7 @@ export default function VerifyPage() {
       if (normalizedSignupDomain !== 'localhost') {
         // Redirect if on different domain and signup domain is valid
         const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-          ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+          ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
           (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
         
         if (shouldRedirect) {
@@ -299,7 +301,7 @@ export default function VerifyPage() {
           } catch { /* ignore */ }
           
           // Redirect based on onboarding state
-          if (data.onboarding?.needsTeamSetup) {
+          if (data.onboarding?.needsTeamSetup && !isIndividual) {
             router.push('/app/team')
           } else {
             router.push('/app/dashboard')

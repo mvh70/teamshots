@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold font-display">1. Introduction</h2>
         <p>
-          Welcome to TeamShotsPro (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We operate teamshotspro.com and photoshotspro.com (collectively, the &ldquo;Services&rdquo;).
+          Welcome to TeamShotsPro (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We operate teamshotspro.com and portreya.com (collectively, the &ldquo;Services&rdquo;).
         </p>
         <p>
           We are committed to protecting your data. This policy outlines how we handle your personal and biometric information. We operate under strict data protection principles aligned with the Swiss Federal Act on Data Protection (FADP) and the GDPR.
@@ -169,7 +169,7 @@ export default function PrivacyPage() {
         <p>For privacy concerns, please contact us at:</p>
         <ul className="list-disc list-inside ml-4 space-y-1">
           <li><strong>Teams:</strong> <a href="mailto:support@teamshotspro.com" className="text-brand-primary hover:underline">support@teamshotspro.com</a></li>
-          <li><strong>Individuals:</strong> <a href="mailto:support@photoshotspro.com" className="text-brand-primary hover:underline">support@photoshotspro.com</a></li>
+          <li><strong>Individuals:</strong> <a href="mailto:support@portreya.com" className="text-brand-primary hover:underline">support@portreya.com</a></li>
         </ul>
       </section>
 

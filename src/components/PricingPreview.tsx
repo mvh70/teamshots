@@ -49,7 +49,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
             {/* Seats Pricing Card */}
             <SeatsPricingCard unauth={true} />
 
-            {/* Free Trial Card */}
+            {/* Free Trial Card - prominent with brand CTA colors */}
             <PricingCard
               id="free"
               price="Free"
@@ -58,23 +58,11 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
               pricePerPhoto={formatPrice(getPricePerPhoto('free'))}
               ctaMode="link"
               href="/auth/signup"
+              popular={true}
+              popularLabel="FREE TRIAL"
             />
           </div>
 
-          {/* Personal Plan Redirect */}
-          <div className="text-center mt-12 pt-8 border-t border-bg-gray-200">
-            <p className="text-base text-text-body">
-              {t('seats.personalPlanRedirect')}{' '}
-              <a
-                href="https://photoshotspro.com"
-                className="text-brand-primary font-semibold hover:underline transition-all"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t('seats.visitPhotoshotsPro')}
-              </a>
-            </p>
-          </div>
         </div>
       </section>
     )

@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 
 /**
  * All individual domains - used for signup type detection
  */
 const INDIVIDUAL_DOMAINS = [
   INDIVIDUAL_DOMAIN,      // individualshots.com
-  INDIVIDUAL_DOMAIN_2,    // photoshotspro.com
+  INDIVIDUAL_DOMAIN_2,    // portreya.com
+  PORTREYA_DOMAIN,        // portreya.com
   COUPLES_DOMAIN,         // coupleshots.com
   FAMILY_DOMAIN,          // familyshots.com
   EXTENSION_DOMAIN,       // rightclickfit.com

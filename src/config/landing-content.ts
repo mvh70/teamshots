@@ -4,17 +4,17 @@
  * Defines domain-specific landing page configuration and available
  * photo style packages for each domain.
  * 
- * Note: Each landing page component (TeamShotsLanding, PhotoShotsLanding)
+ * Note: Each landing page component (TeamShotsLanding, PortreyaLanding)
  * controls its own section visibility and layout directly.
  */
 
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 import type { PackageId } from './packages'
 
 /**
  * Landing page variant identifiers - matches domain names without .com
  */
-export type LandingVariant = 'teamshotspro' | 'individualshots' | 'photoshotspro' | 'coupleshots' | 'familyshots' | 'rightclickfit'
+export type LandingVariant = 'teamshotspro' | 'individualshots' | 'portreya' | 'coupleshots' | 'familyshots' | 'rightclickfit'
 
 /**
  * Section visibility configuration for landing pages.
@@ -75,9 +75,9 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
       default: 'headshot1',
     },
   },
-  [INDIVIDUAL_DOMAIN_2]: {
-    variant: 'photoshotspro',
-    contentNamespace: 'landing.photoshotspro',
+  [PORTREYA_DOMAIN]: {
+    variant: 'portreya',
+    contentNamespace: 'landing.portreya',
     packages: {
       available: ['headshot1', 'freepackage'],
       default: 'headshot1',

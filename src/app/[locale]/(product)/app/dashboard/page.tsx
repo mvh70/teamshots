@@ -26,7 +26,7 @@ import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
-import { INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { useDomain } from '@/contexts/DomainContext'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -107,12 +107,8 @@ export default function DashboardPage() {
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // Detect brand name based on domain
-  const brandName = useMemo(() => {
-    if (typeof window === 'undefined') return 'TeamShotsPro'
-    const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
-    return hostname === INDIVIDUAL_DOMAIN ? 'PhotoShotsPro' : 'TeamShotsPro'
-  }, [])
+  // Use server-authoritative brand name from DomainContext
+  const { brandName, isIndividualDomain } = useDomain()
 
   // Compute success message from URL params (derived during render, not in effect)
   const successMessage = useMemo(() => {
@@ -304,8 +300,8 @@ export default function DashboardPage() {
       }>('/api/dashboard')
 
       if (dashboardData.success && dashboardData.stats) {
-        // Redirect team admins who need to set up their team
-        if (dashboardData.userRole?.needsTeamSetup && dashboardData.userRole?.isTeamAdmin) {
+        // Redirect team admins who need to set up their team (not on individual domains)
+        if (!isIndividualDomain && dashboardData.userRole?.needsTeamSetup && dashboardData.userRole?.isTeamAdmin) {
           // Clear stale sessionStorage cache to ensure team page fetches fresh data
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem('teamshots.initialData')
@@ -330,7 +326,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [router, isIndividualDomain])
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -390,10 +386,18 @@ export default function DashboardPage() {
     }
   }, [router])
 
+  // On individual domains, suppress team roles for display purposes
+  // The user may actually be a team admin, but Portreya treats everyone as individual
+  const displayPermissions: UserPermissions = isIndividualDomain
+    ? { ...userPermissions, isTeamAdmin: false, isTeamMember: false, isRegularUser: true, isSeatsBasedTeam: false }
+    : userPermissions
+
+  // On individual domains, always show individual onboarding regardless of actual segment
+  const displaySegment = isIndividualDomain ? 'individual' : onboardingContext.onboardingSegment
+
   // Calculate total photos
-  // For team admins/members: only show team credits converted to photos (individual credits are unmigrated pro credits already included in team balance)
-  // For individual users: show individual credits converted to photos
-  const totalCredits = credits && (userPermissions.isTeamAdmin || userPermissions.isTeamMember)
+  // On individual domains, always use individual credits
+  const totalCredits = credits && !isIndividualDomain && (userPermissions.isTeamAdmin || userPermissions.isTeamMember)
     ? (credits.team || 0)
     : (credits?.individual || 0)
 
@@ -401,8 +405,8 @@ export default function DashboardPage() {
 
   // Stats configuration based on product type
   // TeamShots (seats-based): Team members, Photos generated, Active photo style
-  // PhotoShots (individual): Photo credits (separate), Photos generated, Active photo styles
-  const statsConfig = userPermissions.isSeatsBasedTeam
+  // Portreya (individual): Photo credits (separate), Photos generated, Active photo styles
+  const statsConfig = displayPermissions.isSeatsBasedTeam
     ? [
         // TeamShots: Team members first
         {
@@ -422,7 +426,7 @@ export default function DashboardPage() {
         },
       ]
     : [
-        // PhotoShots: Photos generated, Active templates, Team members (if admin)
+        // Portreya: Photos generated, Active templates, Team members (if admin)
         {
           name: t('stats.photosGenerated'),
           value: stats.photosGenerated.toString(),
@@ -433,7 +437,7 @@ export default function DashboardPage() {
           value: stats.activeTemplates.toString(),
           icon: DocumentTextIcon,
         },
-        ...(userPermissions.isTeamAdmin ? [{
+        ...(displayPermissions.isTeamAdmin ? [{
           name: t('stats.teamMembers'),
           value: stats.teamMembers.toString(),
           icon: UsersIcon,
@@ -441,18 +445,18 @@ export default function DashboardPage() {
       ]
 
   return (
-    <div className="space-y-8 md:space-y-10 lg:space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="space-y-8 md:space-y-10 lg:space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-[var(--text-body)]">
       {/* Onboarding Flow - Show first if applicable to prevent flickering */}
       {showOnboardingSection && (
-        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 md:p-10 lg:p-12 animate-fade-in">
+        <div className="rounded-xl shadow-depth-sm border border-[var(--brand-primary-hover)] p-8 md:p-10 lg:p-12 animate-fade-in bg-[var(--bg-white)]">
           {/* How It Works */}
           <div className="text-center space-y-6" id="how-it-works">
               <div className="max-w-3xl mx-auto">
-                <h3 className="text-xl md:text-2xl font-semibold text-gray-900 mb-6">
+                <h3 className="text-xl md:text-2xl font-semibold mb-6 text-[var(--text-dark)]">
                   {t('onboarding.howItWorks.title')}
                 </h3>
                 <div className="space-y-5 md:space-y-6 text-left">
-                  {onboardingContext.onboardingSegment === 'organizer' ? (
+                  {displaySegment === 'organizer' ? (
                     <>
                       {onboardingContext.isFreePlan ? (
                         <>
@@ -461,8 +465,8 @@ export default function DashboardPage() {
                               1
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step1.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.free.step1.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.free.step1.description', { brandName })}
                               </p>
                             </div>
@@ -472,8 +476,8 @@ export default function DashboardPage() {
                               2
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step2.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.free.step2.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.free.step2.description')}
                               </p>
                             </div>
@@ -483,8 +487,8 @@ export default function DashboardPage() {
                               3
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step3.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.free.step3.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.free.step3.description')}
                               </p>
                             </div>
@@ -497,8 +501,8 @@ export default function DashboardPage() {
                               1
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.step1.description')}
                               </p>
                             </div>
@@ -508,8 +512,8 @@ export default function DashboardPage() {
                               2
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.step2.description')}
                               </p>
                             </div>
@@ -519,8 +523,8 @@ export default function DashboardPage() {
                               3
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step3.title')}</h4>
-                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                              <h4 className="font-semibold mb-2 text-base md:text-lg text-[var(--text-dark)]">{t('onboarding.howItWorks.organizer.step3.title')}</h4>
+                              <p className="text-sm md:text-base leading-relaxed text-[var(--text-body)]">
                                 {t('onboarding.howItWorks.organizer.step3.description')}
                               </p>
                             </div>
@@ -528,7 +532,7 @@ export default function DashboardPage() {
                         </>
                       )}
                     </>
-                  ) : onboardingContext.onboardingSegment === 'invited' ? (
+                  ) : displaySegment === 'invited' ? (
                     <>
                       <div className="flex items-start gap-5 md:gap-6">
                         <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
@@ -661,7 +665,7 @@ export default function DashboardPage() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 text-white leading-tight tracking-tight">
-                {userPermissions.isFirstVisit
+                {displayPermissions.isFirstVisit
                   ? t('welcome.titleFirstTime', {name: firstName})
                   : t('welcome.title', {name: firstName})
                 }
@@ -669,7 +673,7 @@ export default function DashboardPage() {
               <p className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed font-medium">
               {loading ? (
                 <span className="animate-pulse">Loading your stats...</span>
-              ) : userPermissions.isTeamAdmin ? (
+              ) : displayPermissions.isTeamAdmin ? (
                 stats.teamMembers === 0 ? (
                   isFreePlan ? (
                     t('welcome.subtitle.teamAdminNoMembersFree')
@@ -684,7 +688,7 @@ export default function DashboardPage() {
                     teamMembers: stats.teamMembers
                   })
                 )
-              ) : userPermissions.isRegularUser || !userPermissions.isTeamAdmin ? (  // Treat regular and default as individual
+              ) : displayPermissions.isRegularUser || !displayPermissions.isTeamAdmin ? (  // Treat regular and default as individual
                 stats.photosGenerated === 0 ? (
                   isFreePlan ? (
                     t('welcome.subtitle.individualNoPhotosFree')
@@ -696,7 +700,7 @@ export default function DashboardPage() {
                     count: stats.photosGenerated
                   })
                 )
-              ) : userPermissions.isTeamMember ? (
+              ) : displayPermissions.isTeamMember ? (
                 stats.photosGenerated === 0 ? (
                   t('welcome.subtitle.teamNoPhotos')
                 ) : (
@@ -713,11 +717,11 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stats Grid - Credit Status Card First (PhotoShots only), Then Other Stats */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isSeatsBasedTeam ? 'lg:grid-cols-3' : (userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3')} gap-6 md:gap-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
-            {/* Credit Status Card - Only show for PhotoShots (non-seats-based) */}
-            {!userPermissions.isSeatsBasedTeam && (loading || creditsLoading ? (
-              <div className="bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 animate-pulse">
+          {/* Stats Grid - Credit Status Card First (Portreya only), Then Other Stats */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${displayPermissions.isSeatsBasedTeam ? 'lg:grid-cols-3' : (displayPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3')} gap-6 md:gap-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
+            {/* Credit Status Card - Only show for Portreya (non-seats-based) */}
+            {!displayPermissions.isSeatsBasedTeam && (loading || creditsLoading ? (
+              <div className="rounded-xl p-6 shadow-depth-sm border border-[var(--brand-primary-hover)] animate-pulse bg-[var(--bg-white)]">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
                   <div className="ml-4 flex-1">
@@ -728,8 +732,8 @@ export default function DashboardPage() {
                 <div className="h-4 bg-gray-200 rounded w-32"></div>
               </div>
             ) : (
-              <div 
-                className={`bg-gradient-to-br from-white to-gray-50/50 rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
+              <div
+                className={`rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-[var(--brand-primary-hover)] hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] transition-all duration-200 bg-[var(--bg-white)] ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
                 style={{ animationDelay: '100ms' }}
               >
                 <div className="flex items-start mb-5">
@@ -737,9 +741,9 @@ export default function DashboardPage() {
                     <SparklesIcon className="h-7 w-7 text-brand-primary" />
                   </div>
                   <div className="ml-4 flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-text-muted mb-3">{t('stats.photos')}</p>
-                    <p className="text-4xl md:text-5xl font-extrabold text-text-dark mb-2 leading-none tracking-tight">{totalPhotos}</p>
-                    <p className="text-sm font-medium text-text-muted mb-5">{t('stats.photosUnit')}</p>
+                    <p className="text-sm font-semibold mb-3 text-[var(--text-muted)]">{t('stats.photos')}</p>
+                    <p className="text-4xl md:text-5xl font-extrabold mb-2 leading-none tracking-tight text-[var(--text-dark)]">{totalPhotos}</p>
+                    <p className="text-sm font-medium mb-5 text-[var(--text-muted)]">{t('stats.photosUnit')}</p>
                   </div>
                 </div>
                 <button
@@ -776,7 +780,7 @@ export default function DashboardPage() {
                   return (
                     <div 
                       key={stat.name} 
-                      className={`bg-gradient-to-br from-white to-gray-50/50 rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
+                      className={`bg-gradient-to-br from-white to-gray-50/50 rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
                       style={{ animationDelay: `${(index + 2) * 100}ms` }}
                     >
                       <div className="flex items-start">
@@ -786,7 +790,7 @@ export default function DashboardPage() {
                         <div className="ml-4 flex-1 min-w-0">
                           <p className="text-sm font-semibold text-text-muted mb-3">{stat.name}</p>
                           <div className="flex items-baseline gap-2 mb-2">
-                            <p className="text-3xl md:text-4xl font-extrabold text-text-dark leading-none tracking-tight">Free Package</p>
+                            <p className="text-xl md:text-2xl font-bold text-text-dark leading-none tracking-tight">Free Package</p>
                           </div>
                           <button
                             onClick={() => router.push('/app/upgrade')}
@@ -834,7 +838,7 @@ export default function DashboardPage() {
           {/* Main Content Area - Activity & Invites */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Recent Activity - Only for Team Admins */}
-            {userPermissions.isTeamAdmin && (
+            {displayPermissions.isTeamAdmin && (
               <div className={`bg-white rounded-xl shadow-[0_1px_3px_0_rgb(0_0_0_/0.1),0_1px_2px_-1px_rgb(0_0_0_/0.1)] border border-gray-200/80 hover:shadow-[0_4px_6px_-1px_rgb(0_0_0_/0.1),0_2px_4px_-2px_rgb(0_0_0_/0.1)] transition-shadow duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '400ms' }}>
                 <div className="p-6 md:p-7 border-b border-gray-200">
                   <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('recentActivity.title')}</h3>
@@ -903,7 +907,7 @@ export default function DashboardPage() {
             )}
 
             {/* Pending Invites - Only for Team Admins */}
-            {userPermissions.isTeamAdmin && (
+            {displayPermissions.isTeamAdmin && (
               <div className={`bg-white rounded-xl shadow-[0_1px_3px_0_rgb(0_0_0_/0.1),0_1px_2px_-1px_rgb(0_0_0_/0.1)] border border-gray-200/80 hover:shadow-[0_4px_6px_-1px_rgb(0_0_0_/0.1),0_2px_4px_-2px_rgb(0_0_0_/0.1)] transition-shadow duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '400ms', animation: 'fadeInUp 0.6s ease-out' }}>
                 <div className="p-6 md:p-7 border-b border-gray-200">
                   <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('pendingInvites.title')}</h3>
@@ -987,7 +991,7 @@ export default function DashboardPage() {
               <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('quickActions.title')}</h3>
             </div>
             <div className="p-6 md:p-7">
-              <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-5 md:gap-6`}>
+              <div className={`grid grid-cols-1 ${displayPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-5 md:gap-6`}>
                 {/* Primary Action - Generate Photos */}
                 <button 
                   onClick={() => {
@@ -995,7 +999,7 @@ export default function DashboardPage() {
                     resetFlow()
                     router.push('/app/generate/start')
                   }}
-                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-cta/30 rounded-xl hover:border-brand-cta hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-cta/5 to-transparent group min-h-[160px]"
+                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-cta/30 rounded-xl hover:border-brand-cta hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] transition-all duration-200 bg-gradient-to-br from-brand-cta/5 to-transparent group min-h-[160px]"
                 >
                   <div className="w-14 h-14 bg-brand-cta rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
                     <PhotoIcon className="h-7 w-7 text-white" />
@@ -1006,7 +1010,7 @@ export default function DashboardPage() {
                 {/* Secondary Actions */}
                 <button 
                   onClick={() => router.push('/app/styles')}
-                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
+                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] transition-all duration-200 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
                 >
                   <div className="w-14 h-14 bg-brand-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
                     <DocumentTextIcon className="h-7 w-7 text-white" />
@@ -1014,10 +1018,10 @@ export default function DashboardPage() {
                   <span className="text-lg md:text-xl font-extrabold text-text-dark group-hover:text-brand-primary transition-colors">{t('quickActions.createTemplate')}</span>
                 </button>
                 
-                {userPermissions.isTeamAdmin && (
+                {displayPermissions.isTeamAdmin && (
                   <button 
                     onClick={() => router.push('/app/team')}
-                    className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
+                    className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] transition-all duration-200 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
                   >
                     <div className="w-14 h-14 bg-brand-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
                       <UsersIcon className="h-7 w-7 text-white" />

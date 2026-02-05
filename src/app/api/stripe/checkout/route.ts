@@ -348,13 +348,13 @@ export async function POST(request: NextRequest) {
       if (priceId === PRICING_CONFIG.individual.stripePriceId) {
         planTier = 'individual'
         planPeriod = 'small'
-        planName = 'PhotoShots - Individual Plan'
+        planName = 'Portreya - Individual Plan'
         planDescription = 'Professional AI headshots'
         originalPrice = PRICING_CONFIG.individual.price
       } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
         planTier = 'individual'
         planPeriod = 'large'
-        planName = 'PhotoShots - VIP Plan'
+        planName = 'Portreya - VIP Plan'
         planDescription = 'Premium professional AI headshots'
         originalPrice = PRICING_CONFIG.vip.price
       }

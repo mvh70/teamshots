@@ -11,7 +11,7 @@ export default function GuaranteeSection({ variant }: GuaranteeSectionProps) {
   const t = useTranslations(`landing.${variant}.guarantee`);
 
   return (
-    <section className="py-16 sm:py-20 bg-gradient-to-br from-brand-primary-light via-bg-white to-brand-secondary-light">
+    <section className="py-16 sm:py-20 bg-bg-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="bg-white rounded-3xl shadow-depth-2xl p-8 sm:p-12 border-4 border-brand-primary">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-brand-primary to-brand-primary-hover rounded-full mb-6 shadow-depth-xl">

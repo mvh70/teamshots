@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { getClientBrandInfo } from '@/config/domain'
 
 type AuthCardProps = {
   title?: string
@@ -9,6 +10,28 @@ type AuthCardProps = {
 }
 
 export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
+  const { isIndividual } = getClientBrandInfo()
+
+  if (isIndividual) {
+    // Portreya: restrained, angular, warm — matches Precision Studio design
+    return (
+      <div className="w-full max-w-md bg-white border border-[#0F172A]/10 shadow-xl p-10 lg:p-12 relative">
+        {(title || subtitle) && (
+          <div className="mb-10 text-center">
+            {title && (
+              <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight mb-2 leading-tight" style={{ fontFamily: 'var(--font-playfair), serif' }}>{title}</h2>
+            )}
+            {subtitle && (
+              <div className="mt-4 text-base text-[#0F172A]/60 leading-relaxed">{subtitle}</div>
+            )}
+          </div>
+        )}
+        <div>{children}</div>
+      </div>
+    )
+  }
+
+  // TeamShotsPro: original rounded design
   return (
     <div className="w-full max-w-md bg-white/98 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200/60 p-10 lg:p-12 transform transition-all duration-300 hover:shadow-3xl relative">
       {/* Subtle glow effect */}
@@ -31,5 +54,3 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
     </div>
   )
 }
-
-

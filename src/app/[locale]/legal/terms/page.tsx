@@ -20,7 +20,7 @@ export default function TermsPage() {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold font-display">1. Acceptance of Terms</h2>
         <p>
-          By accessing teamshotspro.com or photoshotspro.com, you agree to these Terms. If you represent a company (using teamshotspro.com), you certify that you have the authority to bind that entity to these terms.
+          By accessing teamshotspro.com or portreya.com, you agree to these Terms. If you represent a company (using teamshotspro.com), you certify that you have the authority to bind that entity to these terms.
         </p>
         <p>
           <strong>Age Requirement:</strong> You must be at least 18 years old to create an account and use the Services. By creating an account, you represent and warrant that you are at least 18 years of age.
@@ -35,13 +35,13 @@ export default function TermsPage() {
           The Service utilizes Generative AI to create synthetic professional photography. All generated images are AI-created and are not real photographs.
         </p>
         <p>
-          <strong>Domain Separation:</strong> teamshotspro.com is for teams and businesses. photoshotspro.com is for individual users.
+          <strong>Domain Separation:</strong> teamshotspro.com is for teams and businesses. portreya.com is for individual users.
         </p>
         <p>
           <strong>Pricing:</strong> All pricing is displayed on our pricing pages at{' '}
           <a href="https://teamshotspro.com/pricing" className="text-brand-primary hover:underline" target="_blank" rel="noopener noreferrer">teamshotspro.com/pricing</a>{' '}
           and{' '}
-          <a href="https://photoshotspro.com/pricing" className="text-brand-primary hover:underline" target="_blank" rel="noopener noreferrer">photoshotspro.com/pricing</a>.
+          <a href="https://portreya.com/pricing" className="text-brand-primary hover:underline" target="_blank" rel="noopener noreferrer">portreya.com/pricing</a>.
           Prices are subject to change. All purchases are one-time payments, not subscriptions. Top-ups are available for additional photos.
         </p>
       </section>
@@ -91,7 +91,7 @@ export default function TermsPage() {
           </ul>
         </div>
         
-        <p className="mt-4">To claim replacement credits, email <a href="mailto:support@teamshotspro.com" className="text-brand-primary hover:underline">support@teamshotspro.com</a> (for teams) or <a href="mailto:support@photoshotspro.com" className="text-brand-primary hover:underline">support@photoshotspro.com</a> (for individuals) with your transaction details.</p>
+        <p className="mt-4">To claim replacement credits, email <a href="mailto:support@teamshotspro.com" className="text-brand-primary hover:underline">support@teamshotspro.com</a> (for teams) or <a href="mailto:support@portreya.com" className="text-brand-primary hover:underline">support@portreya.com</a> (for individuals) with your transaction details.</p>
       </section>
 
       <hr className="border-gray-200" />
@@ -114,7 +114,7 @@ export default function TermsPage() {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold font-display">7. Governing Law & Dispute Resolution</h2>
         <p>These Terms are governed by the laws of Switzerland.</p>
-        <p><strong>Amicable Resolution:</strong> You agree to attempt to resolve any dispute informally by contacting <a href="mailto:support@teamshotspro.com" className="text-brand-primary hover:underline">support@teamshotspro.com</a> (for teams) or <a href="mailto:support@photoshotspro.com" className="text-brand-primary hover:underline">support@photoshotspro.com</a> (for individuals). We will work in good faith to resolve any issues within 30 days.</p>
+        <p><strong>Amicable Resolution:</strong> You agree to attempt to resolve any dispute informally by contacting <a href="mailto:support@teamshotspro.com" className="text-brand-primary hover:underline">support@teamshotspro.com</a> (for teams) or <a href="mailto:support@portreya.com" className="text-brand-primary hover:underline">support@portreya.com</a> (for individuals). We will work in good faith to resolve any issues within 30 days.</p>
         <p><strong>Arbitration:</strong> If informal resolution fails, either party may elect to resolve the dispute through binding arbitration administered under the Swiss Rules of International Arbitration. The arbitration shall be conducted in English, with the seat of arbitration in Zurich, Switzerland. The arbitrator&apos;s decision shall be final and binding.</p>
         <p><strong>Jurisdiction:</strong> If arbitration is not elected, any legal disputes shall be subject to the exclusive jurisdiction of the courts of Zurich, Switzerland.</p>
       </section>

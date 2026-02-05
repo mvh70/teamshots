@@ -15,7 +15,7 @@ interface Messages {
  * Target structure:
  * - messages/en/shared.json - All shared namespaces
  * - messages/en/teamshotspro.json - TeamShots landing content
- * - messages/en/photoshotspro.json - PhotoShots landing content
+ * - messages/en/portreya.json - Portreya landing content
  */
 async function splitTranslations(locale: 'en' | 'es') {
   console.log(`\n📦 Processing ${locale} translations...`);
@@ -29,9 +29,9 @@ async function splitTranslations(locale: 'en' | 'es') {
 
   // Extract domain-specific landing content
   const teamshotsLanding = source.landing?.teamshotspro;
-  const photoshotsLanding = source.landing?.photoshotspro;
+  const portreyaLanding = source.landing?.portreya;
 
-  if (!teamshotsLanding || !photoshotsLanding) {
+  if (!teamshotsLanding || !portreyaLanding) {
     throw new Error(`Missing landing content in ${locale}.json`);
   }
 
@@ -42,9 +42,9 @@ async function splitTranslations(locale: 'en' | 'es') {
     }
   };
 
-  const photoshotsMessages = {
+  const portreyaMessages = {
     landing: {
-      photoshotspro: photoshotsLanding
+      portreya: portreyaLanding
     }
   };
 
@@ -56,7 +56,7 @@ async function splitTranslations(locale: 'en' | 'es') {
       // For landing, exclude domain-specific content but keep any other landing keys
       const landingCopy: Messages = {};
       for (const [landingKey, landingValue] of Object.entries(source.landing)) {
-        if (landingKey !== 'teamshotspro' && landingKey !== 'photoshotspro') {
+        if (landingKey !== 'teamshotspro' && landingKey !== 'portreya') {
           landingCopy[landingKey] = landingValue;
         }
       }
@@ -83,20 +83,20 @@ async function splitTranslations(locale: 'en' | 'es') {
   console.log(`  ✓ Created ${locale}/teamshotspro.json`);
 
   await fs.writeFile(
-    path.join(baseDir, 'photoshotspro.json'),
-    JSON.stringify(photoshotsMessages, null, 2) + '\n'
+    path.join(baseDir, 'portreya.json'),
+    JSON.stringify(portreyaMessages, null, 2) + '\n'
   );
-  console.log(`  ✓ Created ${locale}/photoshotspro.json`);
+  console.log(`  ✓ Created ${locale}/portreya.json`);
 
   // Report sizes
   const sharedSize = (JSON.stringify(sharedMessages).length / 1024).toFixed(1);
   const teamshotsSize = (JSON.stringify(teamshotsMessages).length / 1024).toFixed(1);
-  const photoshotsSize = (JSON.stringify(photoshotsMessages).length / 1024).toFixed(1);
+  const portreyaSize = (JSON.stringify(portreyaMessages).length / 1024).toFixed(1);
 
   console.log(`\n  📊 File sizes:`);
   console.log(`     shared.json: ${sharedSize} KB`);
   console.log(`     teamshotspro.json: ${teamshotsSize} KB`);
-  console.log(`     photoshotspro.json: ${photoshotsSize} KB`);
+  console.log(`     portreya.json: ${portreyaSize} KB`);
 }
 
 async function main() {

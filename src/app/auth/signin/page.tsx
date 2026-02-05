@@ -5,11 +5,13 @@ import {useTranslations} from 'next-intl'
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { CameraIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
+import { getClientBrandInfo } from '@/config/domain'
 import { trackLoginCompleted, track } from '@/lib/track'
 
 export default function SignInPage() {
@@ -41,7 +43,7 @@ export default function SignInPage() {
         if (normalizedSignupDomain !== 'localhost') {
           // Redirect if on different domain and signup domain is valid
           const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-            ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+            ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
             (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
           
           if (shouldRedirect) {
@@ -176,7 +178,7 @@ export default function SignInPage() {
                 // Redirect if on different domain and signup domain is valid
                 // Only redirect in production or if explicitly enabled for testing
                 const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-                  ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+                  ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
                   (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
                 
                 if (shouldRedirect) {
@@ -202,7 +204,7 @@ export default function SignInPage() {
                 
                 // Check for callbackUrl from middleware redirect (e.g., after Stripe checkout)
                 // If callbackUrl exists, redirect there; otherwise use default based on onboarding
-                const defaultPath = data.onboarding?.needsTeamSetup ? '/app/team' : '/app/dashboard'
+                const defaultPath = data.onboarding?.needsTeamSetup && !isIndividual ? '/app/team' : '/app/dashboard'
                 if (redirectToCallbackOrDefault(defaultPath, session.user.id)) {
                   return
                 }
@@ -236,31 +238,90 @@ export default function SignInPage() {
     }
   }
 
-  return (
-    <AuthSplitLayout
-      left={
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-pink-500/10 rounded-3xl shadow-xl border border-white/20 backdrop-blur-sm transition-all duration-500 group-hover:shadow-2xl group-hover:from-blue-500/15 group-hover:via-purple-500/8 group-hover:to-pink-500/15" />
-          <div className="relative p-12 lg:p-14">
-            <h1 className="text-5xl lg:text-6xl font-display font-bold text-slate-900 mb-6 tracking-tight leading-tight bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">{t('welcomeBack')}</h1>
-            <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed font-medium">{t('welcomeSubtitle')}</p>
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none">
-                <span className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s' }} aria-hidden="true" />
-                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit1')}</span>
-              </div>
-              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" style={{ transitionDelay: '50ms' }}>
-                <span className="w-3 h-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s', animationDelay: '0.5s' }} aria-hidden="true" />
-                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit2')}</span>
-              </div>
-              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" style={{ transitionDelay: '100ms' }}>
-                <span className="w-3 h-3 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s', animationDelay: '1s' }} aria-hidden="true" />
-                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit3')}</span>
-              </div>
+  const { isIndividual } = getClientBrandInfo()
+
+  // Portreya left panel - Precision Studio design
+  const photoShotsProLeft = (
+    <div className="relative">
+      {/* Viewfinder frame decoration */}
+      <div className="absolute -top-4 -left-4 w-8 h-8 border-l-2 border-t-2 border-[#B45309]/40" />
+      <div className="absolute -top-4 -right-4 w-8 h-8 border-r-2 border-t-2 border-[#B45309]/40" />
+      <div className="absolute -bottom-4 -left-4 w-8 h-8 border-l-2 border-b-2 border-[#B45309]/40" />
+      <div className="absolute -bottom-4 -right-4 w-8 h-8 border-r-2 border-b-2 border-[#B45309]/40" />
+
+      <div className="relative p-8 lg:p-12 border border-[#0F172A]/10 bg-[#F5F0E8]/50">
+        {/* Camera info bar */}
+        <div className="flex items-center justify-between mb-8 text-[#0F172A]/40 text-xs tracking-widest uppercase">
+          <span>ISO 400</span>
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] animate-pulse" />
+            REC
+          </span>
+          <span>f/2.8</span>
+        </div>
+
+        <h1 className="font-serif text-4xl lg:text-5xl text-[#0F172A] mb-6 leading-tight">
+          Welcome
+          <span className="block text-[#B45309]">Back</span>
+        </h1>
+
+        <p className="text-lg text-[#0F172A]/70 mb-10 leading-relaxed">
+          Sign in to access your professional headshots and continue creating your perfect image.
+        </p>
+
+        {/* Benefits */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 group">
+            <div className="w-10 h-10 flex items-center justify-center border border-[#B45309]/20 text-[#B45309]">
+              <CameraIcon className="w-5 h-5" />
             </div>
+            <span className="text-[#0F172A]/80 font-medium">{t('benefit1Individual')}</span>
+          </div>
+          <div className="flex items-center gap-4 group">
+            <div className="w-10 h-10 flex items-center justify-center border border-[#B45309]/20 text-[#B45309]">
+              <ClockIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[#0F172A]/80 font-medium">{t('benefit2')}</span>
+          </div>
+          <div className="flex items-center gap-4 group">
+            <div className="w-10 h-10 flex items-center justify-center border border-[#B45309]/20 text-[#B45309]">
+              <SparklesIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[#0F172A]/80 font-medium">{t('benefit3')}</span>
           </div>
         </div>
-      }
+      </div>
+    </div>
+  )
+
+  // TeamShotsPro left panel - Original design
+  const teamShotsProLeft = (
+    <div className="relative group">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-pink-500/10 rounded-3xl shadow-xl border border-white/20 backdrop-blur-sm transition-all duration-500 group-hover:shadow-2xl group-hover:from-blue-500/15 group-hover:via-purple-500/8 group-hover:to-pink-500/15" />
+      <div className="relative p-12 lg:p-14">
+        <h1 className="text-5xl lg:text-6xl font-display font-bold text-slate-900 mb-6 tracking-tight leading-tight bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">{t('welcomeBack')}</h1>
+        <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed font-medium">{t('welcomeSubtitle')}</p>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none">
+            <span className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s' }} aria-hidden="true" />
+            <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit1')}</span>
+          </div>
+          <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" style={{ transitionDelay: '50ms' }}>
+            <span className="w-3 h-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s', animationDelay: '0.5s' }} aria-hidden="true" />
+            <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit2')}</span>
+          </div>
+          <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" style={{ transitionDelay: '100ms' }}>
+            <span className="w-3 h-3 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full shadow-sm animate-pulse motion-reduce:animate-none" style={{ animationDuration: '2s', animationDelay: '1s' }} aria-hidden="true" />
+            <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit3')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <AuthSplitLayout
+      left={isIndividual ? photoShotsProLeft : teamShotsProLeft}
     >
       <AuthCard title={t('title')}>
         <FocusTrap>
@@ -269,7 +330,11 @@ export default function SignInPage() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl: searchParams.get('callbackUrl') || '/app/dashboard' })}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+            className={`w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 font-semibold transition-all duration-200 shadow-sm hover:shadow-md ${
+              isIndividual
+                ? 'border-[#0F172A]/10 text-[#0F172A] hover:border-[#0F172A]/20 hover:bg-[#FAFAF9]'
+                : 'border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+            }`}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -353,7 +418,9 @@ export default function SignInPage() {
               />
               <span className="font-medium">{t('useMagicLink')}</span>
             </label>
-            <Link href="/auth/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-2 decoration-2">{t('forgotPassword')}</Link>
+            <Link href="/auth/forgot-password" className={`text-sm font-semibold transition-all duration-200 hover:underline underline-offset-2 decoration-2 ${
+              isIndividual ? 'text-[#B45309] hover:text-[#92400E]' : 'text-blue-600 hover:text-blue-700'
+            }`}>{t('forgotPassword')}</Link>
           </div>
           {error && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-200">
@@ -364,7 +431,9 @@ export default function SignInPage() {
             {isLoading ? t('signingIn') : t('submit')}
           </AuthButton>
           <div className="text-center pt-3">
-            <Link href="/auth/signup" className="text-sm lg:text-base font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-4 decoration-2">
+            <Link href="/auth/signup" className={`text-sm lg:text-base font-semibold transition-all duration-200 hover:underline underline-offset-4 decoration-2 ${
+              isIndividual ? 'text-[#B45309] hover:text-[#92400E]' : 'text-blue-600 hover:text-blue-700'
+            }`}>
               {t('noAccount')}
             </Link>
           </div>

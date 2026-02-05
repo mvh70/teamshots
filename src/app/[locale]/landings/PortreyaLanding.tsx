@@ -16,7 +16,7 @@ import type { LandingVariant, LandingSections } from '@/config/landing-content';
 import type { LandingProps } from '../page';
 
 /**
- * PhotoShotsPro Landing Page
+ * Portreya Landing Page
  * 
  * Individual-focused landing page for personal headshots.
  * Features:
@@ -25,7 +25,7 @@ import type { LandingProps } from '../page';
  * - 3-step simple workflow
  * - Focus on LinkedIn, dating profiles, personal branding
  */
-export default function PhotoShotsLanding({ supportEmail, variant }: LandingProps) {
+export default function PortreyaLanding({ supportEmail, variant }: LandingProps) {
   
   // Use domain-specific translations
   const t = useTranslations(`landing.${variant}.hero`);
@@ -39,7 +39,7 @@ export default function PhotoShotsLanding({ supportEmail, variant }: LandingProp
     return () => cancelAnimationFrame(timer);
   }, []);
 
-  // Section visibility for PhotoShots - hide team features, show individual features
+  // Section visibility for Portreya - hide team features, show individual features
   const showSection = (section: keyof LandingSections): boolean => {
     const visibility: LandingSections = {
       showTeamCommandCenter: false,  // Hide team management

@@ -9,7 +9,8 @@ import { getBrand } from '@/config/brand';
 
 // Dynamic imports for landing pages
 const TeamShotsLanding = dynamic(() => import('./landings/TeamShotsLanding'), { ssr: true });
-const PhotoShotsLanding = dynamic(() => import('./landings/PhotoShotsLanding'), { ssr: true });
+const PortreyaLanding = dynamic(() => import('./landings/PortreyaLanding'), { ssr: true });
+const PortreyaLandingV2 = dynamic(() => import('./landings/PortreyaLandingV2'), { ssr: true });
 const RightClickFitLanding = dynamic(() => import('./landings/RightClickFitLanding'), { ssr: true });
 
 type Props = {
@@ -44,10 +45,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const LANDING_COMPONENTS: Record<LandingVariant, React.ComponentType<LandingProps>> = {
   teamshotspro: TeamShotsLanding,
-  individualshots: PhotoShotsLanding,
-  photoshotspro: PhotoShotsLanding,
-  coupleshots: PhotoShotsLanding,
-  familyshots: PhotoShotsLanding,
+  individualshots: PortreyaLanding,
+  portreya: PortreyaLandingV2,
+  coupleshots: PortreyaLanding,
+  familyshots: PortreyaLanding,
   rightclickfit: RightClickFitLanding,
 };
 

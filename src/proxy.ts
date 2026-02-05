@@ -228,7 +228,7 @@ export default async function proxy(request: NextRequest) {
       }
       
       // Cross-domain redirect: Ensure users stay on their signup domain
-      // This maintains brand consistency - users who signed up on photoshotspro.com
+      // This maintains brand consistency - users who signed up on portreya.com
       // should be redirected there if they try to access via teamshotspro.com
       const signupDomain = session.user.signupDomain
       if (signupDomain) {

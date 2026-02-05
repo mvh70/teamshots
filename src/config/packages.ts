@@ -48,7 +48,7 @@ export const PACKAGES_CONFIG = {
       price: 0, // Free
     } as PackageMetadata,
 
-    // Individual-focused packages (photoshotspro.com)
+    // Individual-focused packages (portreya.com)
     linkedin: {
       id: 'linkedin',
       name: 'LinkedIn Professional',

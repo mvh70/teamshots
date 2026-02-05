@@ -5,41 +5,49 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  
+
   /* Brand Colors - Simplified 3-color system for clarity */
   --brand-primary: #6366F1;        /* Indigo - Brand identity */
   --brand-primary-hover: #4F46E5;
   --brand-primary-light: #EEF2FF;  /* Indigo-50 */
   --brand-primary-lighter: #E0E7FF; /* Indigo-100 */
-  
+
   --brand-secondary: #10B981;      /* Green - Success states */
   --brand-secondary-hover: #059669;
-  
+
   --brand-cta: #EA580C;            /* Orange - Call-to-action */
   --brand-cta-hover: #C2410C;
   --brand-cta-light: #FFF7ED;      /* Orange-50 */
   --brand-cta-ring: #FB923C;       /* Orange-500 for rings */
   --brand-cta-shadow: #FED7AA;     /* Orange-200 for shadows */
-  
+
   --brand-premium: #8B5CF6;        /* Violet - Premium tier */
   --brand-premium-ring: #8B5CF6;   /* Violet-500 for rings */
-  
+
   /* Text Colors - WCAG AA+ Compliant */
   --text-dark: #111827;      /* Gray-900 for headings */
   --text-body: #374151;      /* Gray-700 for body (7.25:1 contrast) */
   --text-muted: #6B7280;     /* Gray-500 for secondary info */
-  
+
   /* Background Colors */
   --bg-white: #FFFFFF;
   --bg-gray-50: #F9FAFB;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Brand-specific styles are now set dynamically via inline styles in AppShell
+ * based on the brand config. This allows any number of brands to have custom
+ * colors without hardcoding them in CSS.
+ *
+ * CSS variables used:
+ * --brand-primary, --brand-primary-hover
+ * --brand-cta, --brand-cta-hover
+ * --brand-secondary, --brand-secondary-hover
+ * --text-dark, --text-body, --text-muted
+ * --bg-white, --bg-gray-50
+ */
+
+/* Dark mode disabled — app is light-only. Remove stub to prevent
+   accidental dark backgrounds on devices with dark system preference. */
 
 /* General responsive styles for all onborda tours */
 @media (max-width: 640px) {

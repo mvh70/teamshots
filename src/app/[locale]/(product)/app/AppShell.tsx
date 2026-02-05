@@ -3,13 +3,14 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from '@/i18n/routing'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
 
 import { AccountMode } from '@/domain/account/accountMode'
 import { SubscriptionInfo } from '@/domain/subscription/subscription'
+import type { BrandColors } from '@/config/brand'
 
 // Serialized subscription type for client-side (Date objects are ISO strings)
 type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange'> & {
@@ -31,16 +32,17 @@ type InitialRole = {
   nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null
 }
 
-export default function AppShell({ 
-  children, 
-  initialRole, 
+export default function AppShell({
+  children,
+  initialRole,
   initialAccountMode,
   initialSubscription,
   initialBrandName,
   initialBrandLogoLight,
   initialBrandLogoIcon,
-  isIndividualDomain = false
-}: { 
+  isIndividualDomain = false,
+  brandColors
+}: {
   children: React.ReactNode
   initialRole?: InitialRole
   initialAccountMode?: AccountMode
@@ -49,6 +51,7 @@ export default function AppShell({
   initialBrandLogoLight?: string
   initialBrandLogoIcon?: string
   isIndividualDomain?: boolean
+  brandColors?: BrandColors
 }) {
   const { status } = useSession()
   const router = useRouter()
@@ -167,22 +170,55 @@ export default function AppShell({
 
     // Redirect team admins who need to set up their team to the team page
     // Skip redirect if already on team page to avoid infinite loop
-    if (initialRole?.needsTeamSetup && initialRole?.isTeamAdmin && !pathname?.includes('/app/team')) {
+    if (!isIndividualDomain && initialRole?.needsTeamSetup && initialRole?.isTeamAdmin && !pathname?.includes('/app/team')) {
       router.push('/app/team')
       return
     }
   }, [status, router, initialRole?.needsTeamSetup, initialRole?.isTeamAdmin, pathname])
 
+  // Build CSS variables from brand colors - memoized to prevent unnecessary re-renders
+  const brandStyle = useMemo(() =>
+    brandColors ? {
+      '--brand-primary': brandColors.primary,
+      '--brand-primary-hover': brandColors.primaryHover,
+      '--brand-cta': brandColors.cta,
+      '--brand-cta-hover': brandColors.ctaHover,
+      '--brand-secondary': brandColors.secondary,
+      '--brand-secondary-hover': brandColors.secondaryHover,
+      // Light canvas for all brands — Portreya uses warm ivory tones
+      '--bg-white': isIndividualDomain ? '#FAFAF9' : '#FFFFFF',
+      '--bg-gray-50': isIndividualDomain ? '#F5F0E8' : '#F9FAFB',
+      // Text colors — dark text on light backgrounds for all brands
+      '--text-dark': isIndividualDomain ? '#0F172A' : '#111827',
+      '--text-body': isIndividualDomain ? '#334155' : '#374151',
+      '--text-muted': isIndividualDomain ? '#64748B' : '#6B7280',
+    } as React.CSSProperties : undefined,
+    [brandColors, isIndividualDomain]
+  )
+
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-cta"></div>
+      <div
+        data-brand={isIndividualDomain ? 'portreya' : 'teamshotspro'}
+        className="min-h-screen flex items-center justify-center"
+        style={{ ...brandStyle, backgroundColor: 'var(--bg-gray-50)' }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-transparent" style={{ borderTopColor: brandColors?.cta || '#EA580C', borderRightColor: brandColors?.cta || '#EA580C' }} />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`min-h-screen ${isGenerationFlow ? 'bg-white' : 'bg-gray-50'} ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}>
+    <div
+      data-brand={isIndividualDomain ? 'portreya' : 'teamshotspro'}
+      className={`min-h-screen ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}
+      style={{
+        ...brandStyle,
+        backgroundColor: isGenerationFlow ? (isIndividualDomain ? '#FAFAF9' : (brandColors?.primary || '#FFFFFF')) : undefined,
+      }}
+    >
       <div className="flex relative">
         {showSidebar && (
           <>
@@ -245,7 +281,7 @@ export default function AppShell({
           </>
         )}
         <div
-          className={`flex-1 flex flex-col transition-all duration-300 relative z-0 ${
+          className={`flex-1 flex flex-col transition-all duration-300 relative z-0 bg-[var(--bg-gray-50)] ${
             showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-20' : 'ml-0 lg:ml-64') : 'ml-0'
           }`}
         >

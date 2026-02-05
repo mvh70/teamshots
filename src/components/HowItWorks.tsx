@@ -69,7 +69,7 @@ const VARIANT_TAB_ICONS: Partial<Record<LandingVariant, Record<number, React.Rea
     2: TAB_ICONS.customize,
     3: TAB_ICONS.sparkle,
   },
-  photoshotspro: {
+  portreya: {
     1: TAB_ICONS.upload,
     2: TAB_ICONS.customize,
     3: TAB_ICONS.sparkle,
@@ -94,7 +94,7 @@ const VARIANT_TAB_LABEL_KEYS: Partial<Record<LandingVariant, Record<number, stri
     2: 'tabs.customize',
     3: 'tabs.generate',
   },
-  photoshotspro: {
+  portreya: {
     1: 'tabs.upload',
     2: 'tabs.customize',
     3: 'tabs.generate',
@@ -114,11 +114,11 @@ const VARIANT_IMAGES: Partial<Record<LandingVariant, Record<number, string>>> = 
     3: '/images/how-it-works/step-3-v2.png',
     4: '/images/how-it-works/step-4-v2.png',
   },
-  // PhotoShotsPro uses same images as teamshotspro, minus team management
+  // Portreya uses same images as teamshotspro, minus team management
   // Step 1 (Upload) → teamshotspro step 3 (selfie upload)
   // Step 2 (Customize) → teamshotspro step 1 (branding/style)
   // Step 3 (Generate) → teamshotspro step 4 (results)
-  photoshotspro: {
+  portreya: {
     1: '/images/how-it-works/step-3-v2.png',
     2: '/images/how-it-works/step-1-v2.png',
     3: '/images/how-it-works/step-4-v2.png',
@@ -259,13 +259,15 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
 
           {/* Right: Description */}
           <div className="flex flex-col justify-center py-4 lg:py-8">
-            {/* Duration Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-full text-sm font-bold text-text-body w-fit mb-6">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {activeStepData.duration}
-            </div>
+            {/* Duration Badge - only show when duration is provided */}
+            {activeStepData.duration && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-full text-sm font-bold text-text-body w-fit mb-6">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {activeStepData.duration}
+              </div>
+            )}
 
             {/* Title */}
             <h3 className="text-3xl sm:text-4xl font-display font-bold text-text-dark mb-4 leading-tight">

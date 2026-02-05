@@ -76,31 +76,31 @@ export default defineConfig({
     },
 
     // ============================================
-    // PhotoShots Domain (photoshotspro.com)
+    // Portreya Domain (portreya.com)
     // Tests: individual user flows
     // ============================================
     {
-      name: 'photoshots-chromium',
+      name: 'portreya-chromium',
       use: {
         ...devices['Desktop Chrome'],
         extraHTTPHeaders: {
-          'x-forwarded-host': 'photoshotspro.com',
+          'x-forwarded-host': 'portreya.com',
         },
       },
-      testDir: './tests/e2e/photoshots',
+      testDir: './tests/e2e/portreya',
       testMatch: '**/*.spec.ts',
     },
     {
-      name: 'photoshots-mobile',
+      name: 'portreya-mobile',
       use: {
         ...devices['Pixel 5'],
         extraHTTPHeaders: {
-          'x-forwarded-host': 'photoshotspro.com',
+          'x-forwarded-host': 'portreya.com',
         },
         actionTimeout: 15000,
         navigationTimeout: 30000,
       },
-      testDir: './tests/e2e/photoshots',
+      testDir: './tests/e2e/portreya',
       testMatch: '**/*.spec.ts',
     },
 

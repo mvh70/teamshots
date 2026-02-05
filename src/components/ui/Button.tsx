@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { BRAND_CONFIG } from '@/config/brand'
+import { getClientBrandInfo } from '@/config/domain'
 
 interface ButtonProps {
   children: React.ReactNode
@@ -50,6 +51,8 @@ export function Button({
     lg: 'px-8 py-4 text-lg'
   }
 
+  const { isIndividual } = getClientBrandInfo()
+
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
@@ -59,7 +62,9 @@ export function Button({
       case 'danger':
         return 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed'
       case 'auth':
-        return 'w-full py-4 px-6 text-white bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:via-blue-700 hover:to-blue-800 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.99] font-bold rounded-xl transition-all duration-200 relative overflow-hidden group'
+        return isIndividual
+          ? 'w-full py-4 px-6 text-white bg-[#B45309] hover:bg-[#92400e] focus:ring-[#B45309] focus:ring-offset-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:shadow-[#B45309]/25 transform hover:-translate-y-0.5 active:scale-[0.99] font-bold transition-all duration-200 tracking-wider uppercase text-sm'
+          : 'w-full py-4 px-6 text-white bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:via-blue-700 hover:to-blue-800 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.99] font-bold rounded-xl transition-all duration-200 relative overflow-hidden group'
       case 'checkout':
         if (useBrandCtaColors) {
           return 'text-white disabled:opacity-60 disabled:cursor-not-allowed'
@@ -74,7 +79,9 @@ export function Button({
 
   // Auth-style button has fixed layout
   const finalSizeClasses = variant === 'auth' ? 'py-4 px-6' : sizeClasses[size]
-  const classes = `${baseClasses} ${finalSizeClasses} ${variantClasses} ${loading || disabled ? 'opacity-60 cursor-not-allowed' : ''} ${authStyle ? 'flex gap-2' : ''} ${className}`
+  // Portreya auth buttons: no border-radius (angular Precision Studio style)
+  const authRadiusOverride = variant === 'auth' && isIndividual ? 'rounded-none' : ''
+  const classes = `${baseClasses} ${finalSizeClasses} ${variantClasses} ${authRadiusOverride} ${loading || disabled ? 'opacity-60 cursor-not-allowed' : ''} ${authStyle ? 'flex gap-2' : ''} ${className}`
 
   const brandStyle: React.CSSProperties | undefined = (variant === 'checkout' && useBrandCtaColors)
     ? { backgroundColor: isHovered ? BRAND_CONFIG.colors.ctaHover : BRAND_CONFIG.colors.cta }
@@ -119,7 +126,7 @@ export function Button({
     return children
   }
 
-  const shimmerEffect = variant === 'auth' ? (
+  const shimmerEffect = variant === 'auth' && !isIndividual ? (
     <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
   ) : null
 

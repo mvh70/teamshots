@@ -9,11 +9,13 @@ import { useSearchParams } from 'next/navigation'
 import TopUpCard from '@/components/pricing/TopUpCard'
 import { normalizePlanTierForUI, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
+import { useDomain } from '@/contexts/DomainContext'
 
 export default function TopUpPage() {
   const t = useTranslations()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { isIndividualDomain } = useDomain()
   const [planTier, setPlanTier] = useState<UIPlanTier | null>(null)
   // Local loading/error states are not used in UI here; omit to avoid lint warnings
 
@@ -66,7 +68,7 @@ export default function TopUpPage() {
   useEffect(() => {
     if (planTier === 'free') {
       router.push('/app/upgrade')
-    } else if (planTier === 'team') {
+    } else if (planTier === 'team' && !isIndividualDomain) {
       // Team users should manage seats on the team page
       router.push('/app/team')
     }

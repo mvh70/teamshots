@@ -103,11 +103,13 @@ interface SidebarProps {
   initialBrandName?: string
   initialBrandLogoLight?: string
   initialBrandLogoIcon?: string
-  /** If true, hide team-related menu items (for individual-only domains like photoshotspro.com) */
+  /** If true, hide team-related menu items (for individual-only domains like portreya.com) */
   isIndividualDomain?: boolean
 }
 
 export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseEnter, onMouseLeave, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, isIndividualDomain = false }: SidebarProps) {
+  // Brand-aware border color
+  const sidebarBorderClass = isIndividualDomain ? 'border-[#0F172A]/8' : 'border-gray-200/60'
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
@@ -167,21 +169,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
       setPlanTier(mapUITierToStateTier(normalized))
 
       // Compute human-readable label based on tier+period (transactional pricing)
+      // On individual domains, always show individual-style labels (never "Team")
       let label = 'Free package'
       if (isFreePlan(period)) {
         label = t('plan.free')
       } else if (tierRaw === 'individual' && period === 'small') {
         label = 'Individual'
       } else if (tierRaw === 'pro' && period === 'seats') {
-        label = 'Team' // Seats-based pricing shows as "Team"
+        label = isIndividualDomain ? 'Individual' : 'Team'
       } else {
         // Backward compatibility: handle legacy values
         if (tierRaw === 'individual') label = 'Individual'
-        else if (tierRaw === 'pro') label = 'Pro'
+        else if (tierRaw === 'pro') label = isIndividualDomain ? 'Individual' : 'Pro'
       }
       setPlanLabel(label)
     }
-  }, [initialSubscription])
+  }, [initialSubscription, isIndividualDomain, t])
 
   // OPTIMIZATION: Only fetch account mode and team data if not provided as props
   // This eliminates redundant queries when data is already available from server
@@ -338,7 +341,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
             } else if (tierRaw === 'pro' && period === 'large') {
               label = 'Pro Large'
             } else if (tierRaw === 'pro' && period === 'seats') {
-              label = 'Team' // Seats-based pricing shows as "Team"
+              label = isIndividualDomain ? 'Individual' : 'Team'
       } else {
         // Backward compatibility: handle legacy values
         if (tierRaw === 'individual') label = 'Individual'
@@ -508,7 +511,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
   // Pro mode: show pro/team features (unless on individual-only domain)
   // Individual mode: show personal features
   // Team members (invited) don't have sidebar (handled separately)
-  // On individual-only domains (photoshotspro.com), always show personal navigation, never team
+  // On individual-only domains (portreya.com), always show personal navigation, never team
   let navigation: NavigationItem[]
   if (isIndividualDomain) {
     // Individual domain: always show personal navigation, regardless of account mode
@@ -544,7 +547,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/60 transition-all duration-300 transform shadow-sm ${
+      className={`fixed inset-y-0 left-0 z-[120] text-[var(--text-dark)] bg-[var(--bg-white)] border-r ${sidebarBorderClass} transition-all duration-300 transform shadow-sm ${
         // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
         (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
         // Visibility: use collapsed prop (when false, sidebar is visible)
@@ -589,7 +592,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   <XMarkIcon className="h-5 w-5 text-gray-500" />
                 )}
                 {/* Desktop chevrons - hidden but kept for potential future use */}
-                {/* 
+                {/*
                 {effectiveCollapsed ? (
                   <ChevronRightIcon className="h-5 w-5 text-gray-500" />
                 ) : (
@@ -611,7 +614,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
               id="primary-generate-btn"
               href="/app/generate/start"
               onClick={onMenuItemClick}
-              className="flex items-center bg-brand-primary text-white rounded-xl px-3 py-3 font-medium hover:bg-brand-primary-hover transition-all duration-300 min-h-[44px]"
+              className="flex items-center bg-brand-cta text-white rounded-xl px-3 py-3 font-medium hover:bg-brand-cta-hover transition-all duration-300 min-h-[44px]"
             >
               <span className="flex-shrink-0 w-5 flex items-center justify-center">
                 <PlusIcon className="h-5 w-5" />
@@ -639,7 +642,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-3 py-4 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+        <nav className={`flex-1 px-3 py-4 min-h-0 bg-[var(--bg-white)] ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
           <div className={`h-full space-y-2 ${effectiveCollapsed ? '' : 'overflow-x-visible'}`}>
             {!navReady ? null : navigation.map((item) => {
               const Icon = item.current ? item.iconSolid : item.icon
@@ -710,7 +713,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                         planTier === 'pro'
                           ? 'bg-brand-premium/10 text-brand-premium'
                           : planTier === 'individual'
-                          ? 'bg-brand-primary/10 text-brand-primary'
+                          ? (isIndividualDomain ? 'bg-[#B45309]/10 text-[#B45309]' : 'bg-brand-primary/10 text-brand-primary')
                           : 'bg-gray-200/80 text-gray-600'
                       }`}
                     >
@@ -720,7 +723,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 )}
 
                 <div className="space-y-2">
-                {accountMode === 'individual' && (
+                {/* On individual domains, always show individual credits regardless of account mode */}
+                {(accountMode === 'individual' || isIndividualDomain) && (
                   <div className="relative group">
                     {/* Unified structure with crossfade between layouts */}
                     <div className="relative min-h-[44px]">
@@ -754,8 +758,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   </div>
                 )}
 
-                {/* Free-plan team admin: Show personal credits (no seats purchased yet) */}
-                {accountMode === 'pro' && (!seatInfo || seatInfo.totalSeats === 0) && (
+                {/* Free-plan team admin: Show personal credits (no seats purchased yet) — hidden on individual domains */}
+                {!isIndividualDomain && accountMode === 'pro' && (!seatInfo || seatInfo.totalSeats === 0) && (
                   <div className="relative group">
                     <div className="relative min-h-[44px]">
                       {/* Collapsed view */}
@@ -788,8 +792,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   </div>
                 )}
 
-                {/* Paid team admin: Show seats + person balance */}
-                {accountMode === 'pro' && seatInfo && seatInfo.totalSeats > 0 && (
+                {/* Paid team admin: Show seats + person balance — hidden on individual domains */}
+                {!isIndividualDomain && accountMode === 'pro' && seatInfo && seatInfo.totalSeats > 0 && (
                   <div className="relative group space-y-1">
                     {/* Seats row */}
                     <div className="relative min-h-[44px]">
@@ -848,8 +852,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   </div>
                 )}
 
-                {/* Legacy credit-based Pro teams: Show team credits (excludes free-plan team admins who have totalSeats=0) */}
-                {seatInfo && !seatInfo.isSeatsModel && seatInfo.totalSeats > 0 && (
+                {/* Legacy credit-based Pro teams: Show team credits — hidden on individual domains */}
+                {!isIndividualDomain && seatInfo && !seatInfo.isSeatsModel && seatInfo.totalSeats > 0 && (
                   <>
                     <div className="relative group">
                       <div className="relative min-h-[44px]">
@@ -932,14 +936,14 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                     className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 bg-brand-cta hover:bg-brand-cta-hover min-h-[40px]"
                   >
                     <PlusIcon className="h-4 w-4 flex-shrink-0" />
-                    <span 
+                    <span
                       className={`whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden ${
-                        effectiveCollapsed 
-                          ? 'w-0 opacity-0 ml-0' 
+                        effectiveCollapsed
+                          ? 'w-0 opacity-0 ml-0'
                           : 'w-auto opacity-100 ml-1.5'
                       }`}
                     >
-                      {seatInfo?.isSeatsModel
+                      {!isIndividualDomain && seatInfo?.isSeatsModel
                         ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
                         : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
                     </span>
@@ -948,7 +952,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
                     effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'
                   }`}>
-                    {seatInfo?.isSeatsModel
+                    {!isIndividualDomain && seatInfo?.isSeatsModel
                       ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
                       : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
                   </span>
@@ -959,7 +963,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
           {/* User Profile w/ expandable menu (expands upwards) */}
           {session?.user && (
-            <div className="px-3 py-3 border-t border-gray-200/60 relative">
+            <div className={`px-3 py-3 border-t ${sidebarBorderClass} relative`}>
             <div
               className="relative group flex items-center cursor-pointer hover:bg-gray-100/80 rounded-xl p-2 -mx-1 transition-all duration-300"
               onClick={() => setMenuOpen(!menuOpen)}

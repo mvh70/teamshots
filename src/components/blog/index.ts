@@ -4,6 +4,7 @@ export { TldrSection } from './TldrSection';
 export { Breadcrumb } from './Breadcrumb';
 export { BlogHeroImage } from './BlogHeroImage';
 export { BlogPostTemplate, type BlogPostContent } from './BlogPostTemplate';
+export { InlineCTA } from './InlineCTA';
 export { default as BlogCard } from './BlogCard';
 export { default as FeaturedPost } from './FeaturedPost';
 export { default as CategoryTabs } from './CategoryTabs';
