@@ -141,5 +141,9 @@
   "overrides": {
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3"
+  },
+  "optionalDependencies": {
+    "@parcel/watcher": "^2.5.6",
+    "@parcel/watcher-linux-x64-glibc": "^2.5.6"
   }
 }
