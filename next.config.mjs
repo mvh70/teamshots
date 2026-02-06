@@ -53,6 +53,23 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // 301 redirect /en/* to /* — English is the default locale and should not have a prefix.
+      // Google Search Console was crawling old /en/ URLs (e.g. /en/blog/best-ai-headshot-generators)
+      // that need permanent redirects to their canonical versions without the prefix.
+      {
+        source: '/en',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/en/:path*',
+        destination: '/:path*',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

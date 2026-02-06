@@ -262,14 +262,6 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Try manual rewrite instead of intlMiddleware to debug
-    if (request.nextUrl.pathname === '/') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/en'
-      console.log('[PROXY] Manual rewrite to:', url.toString())
-      return addSecurityHeaders(NextResponse.rewrite(url))
-    }
-
     const response = intlMiddleware(request)
 
     return addSecurityHeaders(response)
