@@ -126,7 +126,7 @@ const customAdapter = (() => {
     createUser: async (data: any) => {
       try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { name, image, ...userData } = data
+      const { name, image, emailVerified, ...userData } = data
 
       // Extract first/last name from OAuth profile name
       const nameParts = (name || '').split(' ')

@@ -2530,6 +2530,9 @@
       },
       "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}"
     },
+    "photos": {
+      "buyMoreSeats": "Añadir miembros al equipo"
+    },
     "buttons": {
       "inviteTeamMember": "Invitar Miembro del Equipo",
       "bulkInvite": "Invitación Masiva",

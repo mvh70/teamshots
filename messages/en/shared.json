@@ -2518,6 +2518,9 @@
         "noAvailableSeats": "No available seats. Please purchase more seats."
       }
     },
+    "photos": {
+      "buyMoreSeats": "Add team members"
+    },
     "buttons": {
       "inviteTeamMember": "Invite team member",
       "bulkInvite": "Bulk Invite",
