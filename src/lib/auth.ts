@@ -17,6 +17,24 @@ import MagicLinkEmail from '@/emails/MagicLink'
 import { render } from '@react-email/render'
 import { getEmailTranslation } from '@/lib/translations'
 
+// Ensure Auth.js uses a single canonical URL source in production.
+// Some platforms inject AUTH_URL automatically; if it differs from NEXTAUTH_URL,
+// callback error redirects can unexpectedly point to localhost.
+const canonicalNextAuthUrl = process.env.NEXTAUTH_URL?.trim()
+if (canonicalNextAuthUrl) {
+  if (process.env.AUTH_URL && process.env.AUTH_URL !== canonicalNextAuthUrl) {
+    console.warn(
+      `AUTH_URL (${process.env.AUTH_URL}) differs from NEXTAUTH_URL (${canonicalNextAuthUrl}); overriding AUTH_URL to match NEXTAUTH_URL`
+    )
+  }
+  process.env.AUTH_URL = canonicalNextAuthUrl
+}
+
+// Keep Auth.js v5 secret naming aligned with existing NEXTAUTH_SECRET configuration.
+if (process.env.NEXTAUTH_SECRET && !process.env.AUTH_SECRET) {
+  process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET
+}
+
 // SECURITY: Tightened session configuration for better security
 // Exported so other modules can use consistent session timing
 export const SESSION_MAX_AGE_SECONDS = 15 * 60 // 15 minutes (reduced from 30)
@@ -699,6 +717,15 @@ export const authOptions = {
       // Import allowed domains for cross-domain redirect validation
       const { ALLOWED_DOMAINS } = await import('@/lib/url')
 
+      const isLocalHost = (u: string): boolean => {
+        try {
+          const hostname = new URL(u).hostname.toLowerCase()
+          return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+        } catch {
+          return false
+        }
+      }
+
       const stripDefaultPort = (u: string): string => {
         try {
           const parsed = new URL(u)
@@ -716,18 +743,30 @@ export const authOptions = {
         }
       }
 
+      const isProduction = Env.string('NODE_ENV', 'development') === 'production'
       const cleanedBaseUrl = stripDefaultPort(baseUrl)
+
+      // Safety net: never allow localhost as redirect base in production.
+      // Some proxy setups can leak localhost host headers during OAuth callback.
+      const envBaseUrl = stripDefaultPort(Env.string('NEXTAUTH_URL', cleanedBaseUrl))
+      const safeBaseUrl = isProduction && isLocalHost(cleanedBaseUrl)
+        ? envBaseUrl
+        : cleanedBaseUrl
 
       // Handle relative URLs
       if (url.startsWith('/')) {
-        return `${cleanedBaseUrl}${url}`
+        return `${safeBaseUrl}${url}`
       }
 
       // Handle absolute URLs
       const cleanedUrl = stripDefaultPort(url)
       try {
+        if (isProduction && isLocalHost(cleanedUrl)) {
+          return safeBaseUrl
+        }
+
         const urlOrigin = new URL(cleanedUrl).origin
-        const baseOrigin = new URL(cleanedBaseUrl).origin
+        const baseOrigin = new URL(safeBaseUrl).origin
 
         // Allow same-origin redirects
         if (urlOrigin === baseOrigin) {
@@ -746,7 +785,7 @@ export const authOptions = {
       }
 
       // Default: redirect to cleaned base URL
-      return cleanedBaseUrl
+      return safeBaseUrl
     },
   },
 

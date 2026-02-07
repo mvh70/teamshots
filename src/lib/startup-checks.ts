@@ -10,6 +10,8 @@ import { Logger } from './logger'
 export function validateEnvironment() {
   const nodeEnv = process.env.NODE_ENV
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+  const nextAuthUrl = process.env.NEXTAUTH_URL
+  const authUrl = process.env.AUTH_URL
 
   // Production environment checks
   if (nodeEnv === 'production') {
@@ -76,8 +78,15 @@ export function validateEnvironment() {
     throw new Error('DATABASE_URL must be set')
   }
 
-  if (!process.env.NEXTAUTH_URL) {
+  if (!nextAuthUrl) {
     throw new Error('NEXTAUTH_URL must be set')
+  }
+
+  if (nodeEnv === 'production' && authUrl && authUrl !== nextAuthUrl) {
+    Logger.warn('AUTH_URL differs from NEXTAUTH_URL in production', {
+      AUTH_URL: authUrl,
+      NEXTAUTH_URL: nextAuthUrl,
+    })
   }
 
   Logger.info('✓ Startup validation complete')

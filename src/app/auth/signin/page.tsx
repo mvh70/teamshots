@@ -30,6 +30,15 @@ export default function SignInPage() {
 
   const router = useRouter()
 
+  const getSafeCallbackPath = () => {
+    const callbackUrl = searchParams.get('callbackUrl')
+    // Only allow app-internal relative paths. Ignore absolute URLs.
+    if (callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')) {
+      return callbackUrl
+    }
+    return '/app/dashboard'
+  }
+
   // Check if user is already authenticated and should be redirected to their signup domain
   useEffect(() => {
     const checkAndRedirect = async () => {
@@ -108,8 +117,8 @@ export default function SignInPage() {
     try {
       if (useMagicLink) {
         // Send magic link
-        // Get the callbackUrl from search params or default to dashboard
-        const callbackUrl = searchParams.get('callbackUrl') || '/app/dashboard'
+        // Only pass safe internal callback paths
+        const callbackUrl = getSafeCallbackPath()
         const result = await signIn('email', {
           email: trimmedEmail,
           redirect: false,
@@ -329,7 +338,7 @@ export default function SignInPage() {
         <div className="mb-6">
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: searchParams.get('callbackUrl') || '/app/dashboard' })}
+            onClick={() => signIn('google', { callbackUrl: getSafeCallbackPath() })}
             className={`w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 font-semibold transition-all duration-200 shadow-sm hover:shadow-md ${
               isIndividual
                 ? 'border-[#0F172A]/10 text-[#0F172A] hover:border-[#0F172A]/20 hover:bg-[#FAFAF9]'
