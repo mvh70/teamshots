@@ -124,6 +124,7 @@ const customAdapter = (() => {
     // Also creates Person and Team (if team domain) in the same transaction
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createUser: async (data: any) => {
+      try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { name, image, ...userData } = data
 
@@ -230,41 +231,79 @@ const customAdapter = (() => {
           teamId = team.id
         }
 
-        // 4. Grant free trial credits
-        await tx.creditTransaction.create({
-          data: {
+        // 4. Grant free trial credits (non-blocking for auth)
+        try {
+          await tx.creditTransaction.create({
+            data: {
+              personId: person.id,
+              credits: freeCredits,
+              type: 'free_grant',
+              description: 'Free trial credits',
+              planTier,
+              planPeriod: 'free',
+            }
+          })
+        } catch (error) {
+          console.error('OAuth signup: failed to create free trial credit transaction', {
+            userId: user.id,
             personId: person.id,
-            credits: freeCredits,
-            type: 'free_grant',
-            description: 'Free trial credits',
             planTier,
-            planPeriod: 'free',
-          }
-        })
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
 
-        // 5. Create subscription change record
-        await tx.subscriptionChange.create({
-          data: {
+        // 5. Create subscription change record (non-blocking for auth)
+        try {
+          await tx.subscriptionChange.create({
+            data: {
+              userId: user.id,
+              planTier,
+              planPeriod: 'free',
+              action: 'start',
+            }
+          })
+        } catch (error) {
+          console.error('OAuth signup: failed to create subscription change record', {
             userId: user.id,
             planTier,
-            planPeriod: 'free',
-            action: 'start',
-          }
-        })
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
 
-        // 6. Grant default package
-        await tx.userPackage.create({
-          data: {
+        // 6. Grant default package (non-blocking for auth)
+        try {
+          await tx.userPackage.create({
+            data: {
+              userId: user.id,
+              packageId,
+              purchasedAt: new Date()
+            }
+          })
+        } catch (error) {
+          console.error('OAuth signup: failed to assign default package', {
             userId: user.id,
             packageId,
-            purchasedAt: new Date()
-          }
-        })
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
 
         return { user, person, teamId }
       })
 
       return result.user
+      } catch (error) {
+        // Bubble up with enough context to diagnose production failures.
+        // Auth.js will return `error=Configuration` to clients for safety.
+        const maybeEmail = typeof data?.email === 'string' ? data.email : undefined
+        console.error('OAuth signup createUser failed', {
+          email: maybeEmail,
+          hasName: !!data?.name,
+          hasImage: !!data?.image,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+        throw error
+      }
     },
   }
 })()
@@ -794,6 +833,27 @@ export const authOptions = {
     signUp: "/auth/signup",
     verifyRequest: "/auth/verify-request",
     error: "/auth/error",
+  },
+
+  debug: Env.boolean('AUTH_DEBUG', false),
+  logger: {
+    error(error: Error) {
+      const cause = (error as Error & { cause?: unknown }).cause
+      console.error('[Auth.js][error]', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause,
+      })
+    },
+    warn(code: string) {
+      console.warn('[Auth.js][warn]', code)
+    },
+    debug(message: string, metadata?: unknown) {
+      if (Env.boolean('AUTH_DEBUG', false)) {
+        console.debug('[Auth.js][debug]', message, metadata)
+      }
+    },
   },
   
   // Trust the Host header to support multiple domains from the same deployment
