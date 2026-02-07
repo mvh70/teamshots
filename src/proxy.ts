@@ -176,14 +176,24 @@ const intlMiddleware = createMiddleware({
 export async function proxy(request: NextRequest) {
   console.log('[PROXY] Request received:', request.nextUrl.pathname)
   try {
-    // Redirect www to non-www for SEO canonicalization
-    // This prevents duplicate content issues in Google Search Console
-    const host = request.headers.get('host') || request.headers.get('x-forwarded-host') || ''
-    if (host.startsWith('www.')) {
-      const newUrl = new URL(request.url)
-      newUrl.host = host.replace(/^www\./, '')
-      stripDefaultPort(newUrl)
-      return NextResponse.redirect(newUrl, 301)
+    // Canonical host redirect (SEO + auth cookie consistency).
+    // Keep host aligned with configured base URL to avoid OAuth PKCE cookie loss
+    // when signin starts on one host and callback lands on another.
+    const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
+    const host = rawHost.split(',')[0].trim().toLowerCase()
+    const canonicalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL
+    if (canonicalBaseUrl) {
+      try {
+        const canonicalHost = new URL(canonicalBaseUrl).host.toLowerCase()
+        if (host && host !== canonicalHost) {
+          const newUrl = new URL(request.url)
+          newUrl.host = canonicalHost
+          stripDefaultPort(newUrl)
+          return NextResponse.redirect(newUrl, 301)
+        }
+      } catch {
+        // Ignore invalid canonical URL config
+      }
     }
 
     // Allow E2E tests to bypass locale detection/redirects
