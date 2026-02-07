@@ -30,6 +30,21 @@ export default function SignInPage() {
 
   const router = useRouter()
 
+  // Keep OAuth start and callback on the same host to preserve PKCE cookies.
+  useEffect(() => {
+    const canonicalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    if (!canonicalBaseUrl) return
+    try {
+      const canonical = new URL(canonicalBaseUrl)
+      if (window.location.hostname !== canonical.hostname) {
+        const target = `${canonical.protocol}//${canonical.host}${window.location.pathname}${window.location.search}${window.location.hash}`
+        window.location.replace(target)
+      }
+    } catch {
+      // Ignore invalid canonical URL config
+    }
+  }, [])
+
   const getSafeCallbackPath = () => {
     const callbackUrl = searchParams.get('callbackUrl')
     // Only allow app-internal relative paths. Ignore absolute URLs.
