@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import ResendProvider from "next-auth/providers/resend"
 import Google from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
+import { readFileSync } from "node:fs"
 import { prisma } from "@/lib/prisma"
 
 import type { Session, User } from "next-auth"
@@ -250,6 +251,55 @@ const customAdapter = (() => {
   }
 })()
 
+type GoogleCredentials = {
+  clientId: string
+  clientSecret: string
+  source: string
+}
+
+function getGoogleCredentials(): GoogleCredentials | null {
+  // Preferred for production: direct env vars
+  const envClientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID
+  const envClientSecret = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET
+
+  if (envClientId && envClientSecret) {
+    return {
+      clientId: envClientId,
+      clientSecret: envClientSecret,
+      source: 'environment variables',
+    }
+  }
+
+  if (envClientId || envClientSecret) {
+    console.warn('Google OAuth is partially configured: both client ID and client secret must be set')
+  }
+
+  // Local/dev fallback: OAuth client JSON file path
+  const credentialsPath = Env.string('GOOGLE_OAUTH_CREDENTIALS', '').trim()
+  if (!credentialsPath) {
+    return null
+  }
+
+  try {
+    const raw = readFileSync(credentialsPath, 'utf-8')
+    const credentials = JSON.parse(raw)
+    const { client_id, client_secret } = credentials.installed || credentials.web || credentials
+    if (!client_id || !client_secret) {
+      console.warn(`Google OAuth credentials file is missing client_id/client_secret: ${credentialsPath}`)
+      return null
+    }
+    return {
+      clientId: client_id,
+      clientSecret: client_secret,
+      source: `credentials file (${credentialsPath})`,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`Failed to load Google OAuth credentials from ${credentialsPath}: ${message}`)
+    return null
+  }
+}
+
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: customAdapter as any,
@@ -405,24 +455,22 @@ export const authOptions = {
 
     // Google OAuth authentication
     // allowDangerousEmailAccountLinking is safe for Google because they always verify emails
-    // Credentials loaded from JSON file specified by GOOGLE_OAUTH_CREDENTIALS env var
+    // Loads from AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET (preferred), GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET,
+    // or JSON path via GOOGLE_OAUTH_CREDENTIALS (local/dev fallback).
     ...(() => {
-      const credentialsPath = Env.string('GOOGLE_OAUTH_CREDENTIALS', '')
-      if (!credentialsPath) return []
-      try {
-        const fs = require('fs')
-        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'))
-        const { client_id, client_secret } = credentials.installed || credentials.web || credentials
-        if (!client_id || !client_secret) return []
-        return [Google({
-          clientId: client_id,
-          clientSecret: client_secret,
-          allowDangerousEmailAccountLinking: true,
-        })]
-      } catch {
-        console.warn('Failed to load Google OAuth credentials from', credentialsPath)
+      const credentials = getGoogleCredentials()
+      if (!credentials) {
+        if (Env.string('NODE_ENV', 'development') === 'production') {
+          console.warn('Google OAuth provider disabled in production: no valid credentials found')
+        }
         return []
       }
+      console.info(`Google OAuth provider enabled via ${credentials.source}`)
+      return [Google({
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        allowDangerousEmailAccountLinking: true,
+      })]
     })(),
   ],
   

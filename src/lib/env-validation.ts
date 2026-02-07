@@ -8,6 +8,10 @@ const envSchema = z.object({
   // NextAuth
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string().min(32),
+  AUTH_GOOGLE_ID: z.string().optional(),
+  AUTH_GOOGLE_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
   
   // Email
   RESEND_API_KEY: z.string().startsWith('re_'),
@@ -77,6 +81,16 @@ const envSchema = z.object({
   {
     message: 'NEXTAUTH_URL must start with https:// in production.',
     path: ['NEXTAUTH_URL'],
+  }
+).refine(
+  (data) => {
+    const authPairIsValid = (!!data.AUTH_GOOGLE_ID && !!data.AUTH_GOOGLE_SECRET) || (!data.AUTH_GOOGLE_ID && !data.AUTH_GOOGLE_SECRET);
+    const googlePairIsValid = (!!data.GOOGLE_CLIENT_ID && !!data.GOOGLE_CLIENT_SECRET) || (!data.GOOGLE_CLIENT_ID && !data.GOOGLE_CLIENT_SECRET);
+    return authPairIsValid && googlePairIsValid;
+  },
+  {
+    message: 'If set, Google OAuth credentials must be provided as complete pairs: AUTH_GOOGLE_ID+AUTH_GOOGLE_SECRET or GOOGLE_CLIENT_ID+GOOGLE_CLIENT_SECRET.',
+    path: ['AUTH_GOOGLE_ID'],
   }
 ).refine(
   (data) => {
