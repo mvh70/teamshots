@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn, signOut, getSession } from 'next-auth/react'
 import {useTranslations, useLocale} from 'next-intl'
 import { ShieldCheckIcon, ClockIcon, BanknotesIcon, SparklesIcon, CameraIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
@@ -59,6 +59,24 @@ export default function SignUpPage() {
   const planParam = searchParams.get('plan')
   const periodParam = searchParams.get('period')
   const autoCheckout = searchParams.get('autoCheckout') === 'true'
+
+  const getGoogleCallbackPath = () => (
+    autoCheckout && planParam && periodParam
+      ? `/${locale}/app/upgrade?autoCheckout=true&plan=${planParam}&period=${periodParam}`
+      : '/app/dashboard'
+  )
+
+  const handleGoogleSignUp = async () => {
+    const callbackUrl = getGoogleCallbackPath()
+    try {
+      // Important: Auth.js links OAuth accounts to the currently signed-in user.
+      // Sign out first so Google sign-up uses the selected account, not the existing session.
+      await signOut({ redirect: false })
+    } catch {
+      // Continue to Google sign-up even if local sign-out fails.
+    }
+    await signIn('google', { callbackUrl }, { prompt: 'select_account' })
+  }
 
   // Form state - userType is determined server-side based on domain
   const [formData, setFormData] = useState(() => ({
@@ -359,10 +377,7 @@ export default function SignUpPage() {
               <div className="mb-2">
                 <button
                   type="button"
-                  onClick={() => signIn('google', { callbackUrl: autoCheckout && planParam && periodParam
-                    ? `/${locale}/app/upgrade?autoCheckout=true&plan=${planParam}&period=${periodParam}`
-                    : '/app/dashboard'
-                  })}
+                  onClick={handleGoogleSignUp}
                   className={`w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 font-semibold transition-all duration-200 shadow-sm hover:shadow-md ${
                     isIndividual
                       ? 'border-[#0F172A]/10 text-[#0F172A] hover:border-[#0F172A]/20 hover:bg-[#FAFAF9]'

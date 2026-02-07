@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {useTranslations} from 'next-intl'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn, signOut, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CameraIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline'
@@ -52,6 +52,18 @@ export default function SignInPage() {
       return callbackUrl
     }
     return '/app/dashboard'
+  }
+
+  const handleGoogleSignIn = async () => {
+    const callbackUrl = getSafeCallbackPath()
+    try {
+      // Important: Auth.js links OAuth accounts to the currently signed-in user.
+      // Sign out first so "Continue with Google" always authenticates as the selected Google account.
+      await signOut({ redirect: false })
+    } catch {
+      // Continue to Google sign-in even if local sign-out fails.
+    }
+    await signIn('google', { callbackUrl }, { prompt: 'select_account' })
   }
 
   // Check if user is already authenticated and should be redirected to their signup domain
@@ -353,7 +365,7 @@ export default function SignInPage() {
         <div className="mb-6">
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: getSafeCallbackPath() })}
+            onClick={handleGoogleSignIn}
             className={`w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 font-semibold transition-all duration-200 shadow-sm hover:shadow-md ${
               isIndividual
                 ? 'border-[#0F172A]/10 text-[#0F172A] hover:border-[#0F172A]/20 hover:bg-[#FAFAF9]'
