@@ -14,13 +14,21 @@ export const ALLOWED_DOMAINS = [
   EXTENSION_DOMAIN,   // rightclickfit.com
 ] as const
 
+function toCanonicalHost(normalizedHost: string): string {
+  // TeamShotsPro uses www as canonical host in production (robots/sitemap and edge redirects).
+  if (normalizedHost === TEAM_DOMAIN) {
+    return `www.${TEAM_DOMAIN}`
+  }
+  return normalizedHost
+}
+
 /**
  * Get the base URL dynamically from the request.
  * In production, this detects which domain the request came from.
  * In development, falls back to NEXT_PUBLIC_BASE_URL.
  *
  * @param requestHeaders - Optional headers object (for server components)
- * @returns The base URL (e.g., "https://teamshotspro.com")
+ * @returns The base URL (e.g., "https://www.teamshotspro.com")
  */
 export function getBaseUrl(requestHeaders?: Headers): string {
   // In development, always use the env var
@@ -33,12 +41,12 @@ export function getBaseUrl(requestHeaders?: Headers): string {
 
   if (host) {
     // Normalize: remove port and www prefix
-    const normalizedHost = host.split(':')[0].replace(/^www\./, '')
+    const normalizedHost = host.split(':')[0].toLowerCase().replace(/^www\./, '')
 
     // Check if it's one of our allowed domains
     if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedHost)) {
       const protocol = requestHeaders?.get('x-forwarded-proto') || 'https'
-      return `${protocol}://${normalizedHost}`
+      return `${protocol}://${toCanonicalHost(normalizedHost)}`
     }
   }
 
@@ -99,13 +107,12 @@ export function getBaseUrlForUser(signupDomain: string | null | undefined): stri
 
   // If user has a stored signup domain, use it
   if (signupDomain) {
-    const normalizedDomain = signupDomain.replace(/^www\./, '')
+    const normalizedDomain = signupDomain.toLowerCase().replace(/^www\./, '')
     if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedDomain)) {
-      return `https://${normalizedDomain}`
+      return `https://${toCanonicalHost(normalizedDomain)}`
     }
   }
 
   // Fallback to default domain
   return Env.string('NEXT_PUBLIC_BASE_URL', 'https://teamshotspro.com')
 }
-

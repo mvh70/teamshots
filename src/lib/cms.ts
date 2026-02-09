@@ -338,19 +338,30 @@ export function getRedirectForSlug(brandId: string, slug: string): string | null
       SELECT redirectTo
       FROM ContentMigration
       WHERE brandId = ?
-        AND redirectFrom = ?
+        AND redirectFrom IN (?, ?)
         AND redirectTo IS NOT NULL
+        AND redirectTo LIKE '/blog/%'
         AND status = 'complete'
+      ORDER BY
+        completedAt DESC,
+        updatedAt DESC,
+        createdAt DESC
       LIMIT 1
     `
 
-    const row = db.prepare(query).get(brandId, `/blog/${slug}`) as { redirectTo: string } | undefined
+    const row = db.prepare(query).get(
+      brandId,
+      `/blog/${slug}`,
+      `/${slug}`
+    ) as { redirectTo: string } | undefined
     db.close()
 
     if (!row) return null
 
-    // redirectTo is stored as "/blog/target-slug" — extract just the slug
-    return row.redirectTo.replace(/^\/blog\//, '')
+    // redirectTo is typically stored as "/blog/target-slug"; support plain slugs too.
+    return row.redirectTo
+      .replace(/^\/blog\//, '')
+      .replace(/^\//, '')
   } catch (error) {
     console.error('Failed to check redirect for slug:', error)
     return null

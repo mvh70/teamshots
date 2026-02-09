@@ -19,6 +19,26 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>
 }
 
+function normalizeIsoDate(dateValue: string | null | undefined): string | undefined {
+  if (!dateValue) return undefined
+
+  const value = dateValue.trim()
+  if (!value) return undefined
+
+  if (/^\d{13}$/.test(value)) {
+    const parsed = new Date(Number(value))
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  if (/^\d{10}$/.test(value)) {
+    const parsed = new Date(Number(value) * 1000)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+}
+
 /**
  * Generate static params for all blog posts from CMS
  * Note: With dynamic = 'force-dynamic', this serves as a hint for which paths exist
@@ -56,6 +76,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const variant = getLandingVariant(domain)
   const brandId = variantToBrandId(variant)
 
+  const redirectSlug = getRedirectForSlug(brandId, slug)
+  if (redirectSlug && redirectSlug !== slug) {
+    permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+  }
+
   const post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
@@ -86,7 +111,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       ...baseMetadata.openGraph,
       type: 'article',
-      publishedTime: post.publishedAt || undefined,
+      publishedTime: normalizeIsoDate(post.publishedAt),
       authors: ['Matthieu van Haperen'],
     },
     alternates: {
@@ -209,13 +234,18 @@ export default async function BlogPostPage({ params }: Props) {
   const brandId = variantToBrandId(variant)
 
   // Get blog post from CMS
+  const redirectSlug = getRedirectForSlug(brandId, slug)
+  if (redirectSlug && redirectSlug !== slug) {
+    permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+  }
+
   const post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
     // Check if this slug has been consolidated/redirected
-    const redirectSlug = getRedirectForSlug(brandId, slug)
-    if (redirectSlug) {
-      permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+    const fallbackRedirectSlug = getRedirectForSlug(brandId, slug)
+    if (fallbackRedirectSlug) {
+      permanentRedirect(`/${locale}/blog/${fallbackRedirectSlug}`)
     }
     notFound()
   }
@@ -279,7 +309,7 @@ export default async function BlogPostPage({ params }: Props) {
         src: `/api/cms/images${post.heroImagePath}`,
       }
       : undefined,
-    datePublished: post.publishedAt || new Date().toISOString(),
+    datePublished: normalizeIsoDate(post.publishedAt) || new Date().toISOString(),
     author: {
       name: 'Matthieu van Haperen',
       title: locale === 'es' ? `Fundador y CEO, ${brandConfig.name}` : `Founder & CEO, ${brandConfig.name}`,

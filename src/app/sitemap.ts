@@ -117,14 +117,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       })
 
-      // Spanish version (use localized slug if available)
-      const spanishSlug = es || en
-      entries.push({
-        url: `${baseUrl}/es/blog/${spanishSlug}`,
-        lastModified: new Date(),
-        changeFrequency: 'weekly',
-        priority: 0.8,
-      })
+      // Spanish version (only include when a published/approved translation exists)
+      if (es) {
+        entries.push({
+          url: `${baseUrl}/es/blog/${es}`,
+          lastModified: new Date(),
+          changeFrequency: 'weekly',
+          priority: 0.8,
+        })
+      }
     }
   }
 

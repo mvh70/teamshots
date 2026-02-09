@@ -357,6 +357,34 @@ function getGoogleCredentials(): GoogleCredentials | null {
   }
 }
 
+/**
+ * Look up users by email in a case-insensitive way.
+ * Prefer exact lowercase lookup first to keep indexed queries fast.
+ */
+async function findUserByEmailCaseInsensitive(email: string) {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!normalizedEmail) {
+    return null
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail }
+  })
+
+  if (user) {
+    return user
+  }
+
+  return prisma.user.findFirst({
+    where: {
+      email: {
+        equals: normalizedEmail,
+        mode: 'insensitive',
+      }
+    }
+  })
+}
+
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: customAdapter as any,
@@ -376,7 +404,12 @@ export const authOptions = {
           return null
         }
 
-        const email = credentials.email as string
+        const email = (credentials.email as string).trim()
+        const normalizedEmail = email.toLowerCase()
+
+        if (!normalizedEmail) {
+          return null
+        }
 
         // Check for sign-in token (guest checkout flow)
         if (credentials.signInToken) {
@@ -389,15 +422,13 @@ export const authOptions = {
           }
 
           // Verify the token email matches the provided email
-          if (tokenResult.email.toLowerCase() !== email.toLowerCase()) {
+          if (tokenResult.email.toLowerCase() !== normalizedEmail) {
             console.error('Sign-in token email mismatch')
             return null
           }
 
           // Find the user
-          const user = await prisma.user.findUnique({
-            where: { email: tokenResult.email }
-          })
+          const user = await findUserByEmailCaseInsensitive(tokenResult.email)
 
           if (!user) {
             return null
@@ -422,9 +453,7 @@ export const authOptions = {
         // Rate limiting for sign-in is enforced at the API route level via middleware or route handler
         // This ensures security while maintaining compatibility with Edge Runtime
 
-        const user = await prisma.user.findUnique({
-          where: { email }
-        })
+        const user = await findUserByEmailCaseInsensitive(normalizedEmail)
 
         if (!user || !user.password) {
           return null
