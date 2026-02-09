@@ -19,8 +19,21 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>
 }
 
-function normalizeIsoDate(dateValue: string | null | undefined): string | undefined {
+function normalizeIsoDate(
+  dateValue: string | number | Date | null | undefined
+): string | undefined {
   if (!dateValue) return undefined
+
+  if (dateValue instanceof Date) {
+    return Number.isNaN(dateValue.getTime()) ? undefined : dateValue.toISOString()
+  }
+
+  if (typeof dateValue === 'number') {
+    const parsed = new Date(dateValue > 1_000_000_000_000 ? dateValue : dateValue * 1000)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  if (typeof dateValue !== 'string') return undefined
 
   const value = dateValue.trim()
   if (!value) return undefined

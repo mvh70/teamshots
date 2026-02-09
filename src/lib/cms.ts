@@ -26,7 +26,7 @@ export type CMSBlogPost = {
   title: string
   metaDescription: string
   heroImagePath: string | null
-  publishedAt: string | null
+  publishedAt: string | number | Date | null
   brandId: string
   contentType: string
   category: string | null
@@ -201,6 +201,39 @@ function estimateReadTime(wordCount: number): string {
   return `${minutes} min read`
 }
 
+function normalizeIsoDate(
+  dateValue: string | number | Date | null | undefined
+): string | undefined {
+  if (!dateValue) return undefined
+
+  if (dateValue instanceof Date) {
+    return Number.isNaN(dateValue.getTime()) ? undefined : dateValue.toISOString()
+  }
+
+  if (typeof dateValue === 'number') {
+    const parsed = new Date(dateValue > 1_000_000_000_000 ? dateValue : dateValue * 1000)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  if (typeof dateValue !== 'string') return undefined
+
+  const value = dateValue.trim()
+  if (!value) return undefined
+
+  if (/^\d{13}$/.test(value)) {
+    const parsed = new Date(Number(value))
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  if (/^\d{10}$/.test(value)) {
+    const parsed = new Date(Number(value) * 1000)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+}
+
 /**
  * Transform CMS heroImagePath to API URL
  * Converts /blog/slug.png → /api/cms/images/blog/slug.png
@@ -227,7 +260,7 @@ export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): Bl
           es: { title: cmsPost.spanishTitle, description: cmsPost.spanishDescription || cmsPost.metaDescription },
         }
       : undefined,
-    date: cmsPost.publishedAt || undefined,
+    date: normalizeIsoDate(cmsPost.publishedAt),
     readTime: estimateReadTime(cmsPost.wordCount),
     image: heroImageToUrl(cmsPost.heroImagePath),
     author: variant === 'teamshotspro' ? 'TeamShotsPro Team' : 'Portreya Team',
@@ -265,7 +298,7 @@ export type CMSBlogPostFull = {
   heroImagePath: string | null
   tldrJson: string | null
   comparisonImagePath: string | null
-  publishedAt: string | null
+  publishedAt: string | number | Date | null
   brandId: string
   wordCount: number
   faqsJson: string | null
