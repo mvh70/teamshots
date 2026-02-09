@@ -6,6 +6,25 @@ import { SOLUTIONS } from '@/config/solutions'
 import { routing } from '@/i18n/routing'
 import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
 
+const TEAMSHOTS_HOST = 'teamshotspro.com'
+const TEAMSHOTS_CANONICAL_HOST = 'www.teamshotspro.com'
+
+function normalizeSitemapBaseUrl(url: string): string {
+  const cleanUrl = url.replace(/\/$/, '')
+
+  try {
+    const parsed = new URL(cleanUrl)
+    if (parsed.hostname === TEAMSHOTS_HOST || parsed.hostname === TEAMSHOTS_CANONICAL_HOST) {
+      parsed.protocol = 'https:'
+      parsed.hostname = TEAMSHOTS_CANONICAL_HOST
+    }
+    return parsed.toString().replace(/\/$/, '')
+  } catch {
+    // Keep a safe string fallback if URL parsing fails for any reason.
+    return cleanUrl.replace(/^https?:\/\/teamshotspro\.com$/i, `https://${TEAMSHOTS_CANONICAL_HOST}`)
+  }
+}
+
 /**
  * Domain-aware sitemap
  * Dynamically reads published content from CMS database.
@@ -19,12 +38,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const headersList = await headers()
-    baseUrl = getBaseUrl(headersList)
+    baseUrl = normalizeSitemapBaseUrl(getBaseUrl(headersList))
     const host = headersList.get('x-forwarded-host') || headersList.get('host')
     const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
     variant = getLandingVariant(domain)
   } catch {
-    baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com'
+    baseUrl = normalizeSitemapBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || `https://${TEAMSHOTS_CANONICAL_HOST}`)
     variant = 'teamshotspro'
   }
 
