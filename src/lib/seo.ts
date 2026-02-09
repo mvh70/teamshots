@@ -11,6 +11,32 @@ type ConstructMetadataParams = {
     siteName?: string  // Override for og:site_name
 }
 
+const SITE_NAME_BY_DOMAIN: Record<string, string> = {
+    'teamshotspro.com': 'TeamShotsPro',
+    'portreya.com': 'Portreya',
+    'rightclickfit.com': 'RightClickFit',
+}
+
+function deriveSiteName(baseUrl: string, explicitSiteName?: string): string {
+    if (explicitSiteName) return explicitSiteName
+
+    try {
+        const hostname = new URL(baseUrl).hostname.replace(/^www\./, '').toLowerCase()
+        if (SITE_NAME_BY_DOMAIN[hostname]) {
+            return SITE_NAME_BY_DOMAIN[hostname]
+        }
+        const firstLabel = hostname.split('.')[0]
+        return firstLabel.charAt(0).toUpperCase() + firstLabel.slice(1)
+    } catch {
+        const fallback = baseUrl
+            .replace(/^https?:\/\//, '')
+            .replace(/:\d+$/, '')
+            .replace(/^www\./, '')
+            .split('.')[0]
+        return fallback.charAt(0).toUpperCase() + fallback.slice(1)
+    }
+}
+
 /**
  * Helper to construct consistent SEO metadata with proper canonicals and hreflangs.
  * Enforces HTTPS and non-www domain (teamshotspro.com).
@@ -35,9 +61,7 @@ export function constructMetadata({
     // Default og:image to the brand image if not provided
     const ogImage = image || `${baseUrl}/branding/og-image.jpg`
 
-    // Derive site name from baseUrl if not provided
-    const derivedSiteName = siteName || baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, '').split('.')[0]
-    const displaySiteName = derivedSiteName.charAt(0).toUpperCase() + derivedSiteName.slice(1)
+    const displaySiteName = deriveSiteName(baseUrl, siteName)
 
     return {
         title,
