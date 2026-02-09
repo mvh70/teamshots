@@ -813,6 +813,7 @@ export const authOptions = {
 
       const isProduction = Env.string('NODE_ENV', 'development') === 'production'
       const cleanedBaseUrl = stripDefaultPort(baseUrl)
+      const stripTrailingSlashes = (u: string): string => u.replace(/\/+$/, '')
 
       // Safety net: never allow localhost as redirect base in production.
       // Some proxy setups can leak localhost host headers during OAuth callback.
@@ -820,21 +821,24 @@ export const authOptions = {
       const safeBaseUrl = isProduction && isLocalHost(cleanedBaseUrl)
         ? envBaseUrl
         : cleanedBaseUrl
+      const safeBaseUrlNoTrailingSlash = stripTrailingSlashes(safeBaseUrl)
 
       // Handle relative URLs
       if (url.startsWith('/')) {
-        return `${safeBaseUrl}${url}`
+        // Prevent protocol-relative redirects (e.g. //app/dashboard -> https://app/dashboard)
+        const normalizedPath = `/${url.replace(/^\/+/, '')}`
+        return `${safeBaseUrlNoTrailingSlash}${normalizedPath}`
       }
 
       // Handle absolute URLs
       const cleanedUrl = stripDefaultPort(url)
       try {
         if (isProduction && isLocalHost(cleanedUrl)) {
-          return safeBaseUrl
+          return safeBaseUrlNoTrailingSlash
         }
 
         const urlOrigin = new URL(cleanedUrl).origin
-        const baseOrigin = new URL(safeBaseUrl).origin
+        const baseOrigin = new URL(safeBaseUrlNoTrailingSlash).origin
 
         // Allow same-origin redirects
         if (urlOrigin === baseOrigin) {
@@ -853,7 +857,7 @@ export const authOptions = {
       }
 
       // Default: redirect to cleaned base URL
-      return safeBaseUrl
+      return safeBaseUrlNoTrailingSlash
     },
   },
 
