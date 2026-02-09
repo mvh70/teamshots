@@ -128,7 +128,7 @@ export default async function SolucionesPage({ params }: Props) {
   if (!englishSlug) notFound()
 
   // TeamShotsPro-only pages (B2B verticals)
-  const host = headersList.get('host') || headersList.get('x-forwarded-host')
+  const host = headersList.get('x-forwarded-host') || headersList.get('host')
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
   const variant = getLandingVariant(domain)
   if (variant !== 'teamshotspro') {

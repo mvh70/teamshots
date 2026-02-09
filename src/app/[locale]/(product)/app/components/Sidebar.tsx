@@ -614,7 +614,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
               id="primary-generate-btn"
               href="/app/generate/start"
               onClick={onMenuItemClick}
-              className="flex items-center bg-brand-cta text-white rounded-xl px-3 py-3 font-medium hover:bg-brand-cta-hover transition-all duration-300 min-h-[44px]"
+              className="flex items-center bg-brand-primary text-white rounded-xl px-3 py-3 font-medium hover:bg-brand-primary-hover transition-all duration-300 min-h-[44px]"
             >
               <span className="flex-shrink-0 w-5 flex items-center justify-center">
                 <PlusIcon className="h-5 w-5" />

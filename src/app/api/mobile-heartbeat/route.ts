@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
 
     const now = new Date()
 
-    // Try MobileHandoffToken first
-    const handoffToken = await prisma.mobileHandoffToken.findUnique({
-      where: { token },
+    // Try MobileHandoffToken first (must not be expired)
+    const handoffToken = await prisma.mobileHandoffToken.findFirst({
+      where: { token, expiresAt: { gt: now } },
       select: { id: true }
     })
 
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Try TeamInvite
+    // Try TeamInvite (must not be expired)
     const invite = await prisma.teamInvite.findFirst({
-      where: { token },
+      where: { token, expiresAt: { gt: now } },
       select: { id: true }
     })
 

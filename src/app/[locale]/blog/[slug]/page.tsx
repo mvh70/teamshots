@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const brandConfig = getBrand(headersList)
 
   // Get brand ID from domain
-  const host = headersList.get('host') || headersList.get('x-forwarded-host')
+  const host = headersList.get('x-forwarded-host') || headersList.get('host')
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
   const variant = getLandingVariant(domain)
   const brandId = variantToBrandId(variant)
@@ -203,7 +203,7 @@ export default async function BlogPostPage({ params }: Props) {
   const brandCta = brandConfig.cta
 
   // Get brand ID from domain
-  const host = headersList.get('host') || headersList.get('x-forwarded-host')
+  const host = headersList.get('x-forwarded-host') || headersList.get('host')
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
   const variant = getLandingVariant(domain)
   const brandId = variantToBrandId(variant)

@@ -212,14 +212,17 @@ export async function transferCreditsFromTeamToPerson(
   teamInviteId?: string,
   description?: string
 ) {
-  // Check team has enough credits
-  const teamBalance = await getTeamCreditBalance(teamId)
-  if (teamBalance < amount) {
-    throw new Error(`Insufficient team credits. Team has ${teamBalance}, trying to transfer ${amount}`)
-  }
-
-  // Create both transactions atomically
+  // Balance check + transfer in a single Serializable transaction to prevent race conditions
   return await prisma.$transaction(async (tx) => {
+    // Check team balance inside transaction for atomic read
+    const teamBalanceResult = await tx.creditTransaction.aggregate({
+      where: { teamId },
+      _sum: { credits: true }
+    })
+    const teamBalance = teamBalanceResult._sum.credits || 0
+    if (teamBalance < amount) {
+      throw new Error(`Insufficient team credits. Team has ${teamBalance}, trying to transfer ${amount}`)
+    }
     // Debit from team pool
     const debitTransaction = await tx.creditTransaction.create({
       data: {
@@ -257,6 +260,9 @@ export async function transferCreditsFromTeamToPerson(
       debitTransaction,
       creditTransaction
     }
+  }, {
+    isolationLevel: 'Serializable',
+    timeout: 10000
   })
 }
 
@@ -318,28 +324,6 @@ export async function transferCreditsFromPersonToTeam(
       debitTransaction,
       creditTransaction
     }
-  })
-}
-
-/**
- * Allocate credits to a person from an invite
- * @deprecated Use transferCreditsFromTeamToPerson instead
- *
- * This legacy function only creates an allocation marker without transferring credits.
- * The new model requires actual transfer from team to person.
- */
-export async function allocateCreditsFromInvite(
-  personId: string,
-  teamInviteId: string,
-  amount: number,
-  description?: string
-) {
-  return await createCreditTransaction({
-    credits: amount,
-    type: 'invite_allocated',
-    description: description || `Credits allocated from team invite`,
-    personId,
-    teamInviteId
   })
 }
 
@@ -469,11 +453,11 @@ export async function reserveCreditsForGeneration(
     })
 
     if (invite) {
-      // Calculate allocated credits from team invite
+      // Calculate allocated credits from team invite (both legacy and new types)
       const allocatedResult = await tx.creditTransaction.aggregate({
         where: {
           teamInviteId: invite.id,
-          type: 'invite_allocated'
+          type: { in: ['invite_allocated', 'seat_received'] }
         },
         _sum: { credits: true }
       })
@@ -565,7 +549,7 @@ export async function getTeamInviteTotalAllocated(teamInviteId: string): Promise
   const result = await prisma.creditTransaction.aggregate({
     where: {
       teamInviteId,
-      type: 'invite_allocated'
+      type: { in: ['invite_allocated', 'seat_received'] }
     },
     _sum: {
       credits: true

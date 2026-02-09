@@ -96,7 +96,11 @@ chrome-extension/**
 /*.md
 /*.jpeg
 
+# scripts (dev-only tooling, not used in production)
+scripts/
+
 # generated content
 generated-images/
 # next-agents-md
 .next-docs/
+.next-e2e/

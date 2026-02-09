@@ -8,7 +8,7 @@ function isCategoryUserChoice(categoryKey: string, settings: Record<string, unkn
   if (!settings) return false
 
   if (categoryKey === 'clothing') {
-    return settings.style === 'user-choice'
+    return settings.style === 'user-choice' || settings.mode === 'user-choice'
   }
 
   // Check new format (mode) first, then legacy format (type)
@@ -106,7 +106,8 @@ export function hasUserDefinedFields(obj: unknown): boolean {
 export function hasUneditedEditableFields(
   current: Record<string, unknown>,
   original: Record<string, unknown> | undefined,
-  packageId?: string
+  packageId?: string,
+  options?: { includeDefaultValues?: boolean }
 ): boolean {
   // If no packageId, use legacy behavior with hasUserDefinedFields
   if (!packageId) {
@@ -114,7 +115,7 @@ export function hasUneditedEditableFields(
   }
 
   // Use getUneditedEditableFieldNames for consistent logic
-  const uneditedFields = getUneditedEditableFieldNames(current, original, packageId)
+  const uneditedFields = getUneditedEditableFieldNames(current, original, packageId, options)
   return uneditedFields.length > 0
 }
 
@@ -235,12 +236,17 @@ export function areAllCustomizableSectionsCustomized(
  * @param current - Current photo style settings
  * @param original - Original context settings to compare against (can be undefined)
  * @param packageId - Package ID to determine visible categories
+ * @param options.includeDefaultValues - When true, fields whose current value matches the
+ *   package default are also considered "unedited". Use this for progressive activation
+ *   (visual guidance) where you want to highlight ALL fields the user hasn't touched,
+ *   even those with pre-populated defaults. Default false (original behavior).
  * @returns Array of category keys that need to be edited (in visibleCategories order)
  */
 export function getUneditedEditableFieldNames(
   current: Record<string, unknown>,
   original: Record<string, unknown> | undefined,
-  packageId: string
+  packageId: string,
+  options?: { includeDefaultValues?: boolean }
 ): string[] {
   const pkg = getPackageConfig(packageId)
   const visibleCategories = pkg.visibleCategories || []
@@ -277,35 +283,41 @@ export function getUneditedEditableFieldNames(
       // Support both old format (colors) and new format (value)
       const currentColors = (currentSettings.colors as Record<string, unknown>) ||
                            (currentSettings.value as Record<string, unknown>) || {}
+      const originalColors = (originalSettings?.colors as Record<string, unknown>) ||
+                           (originalSettings?.value as Record<string, unknown>) || {}
 
       const resolvedColors = {
         ...defaultColors,
         ...currentColors
       }
+      const resolvedOriginalColors = {
+        ...defaultColors,
+        ...originalColors
+      }
 
       const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
       if (!hasColors) {
         unedited.push(categoryKey)
+      } else if (options?.includeDefaultValues && originalSettings) {
+        // Treat untouched default/preset colors as unedited until explicitly accepted/changed.
+        if (JSON.stringify(resolvedColors) === JSON.stringify(resolvedOriginalColors)) {
+          unedited.push(categoryKey)
+        }
       }
     } else if (categoryKey === 'branding') {
-      // Special handling for branding: the UI shows "No Logo" as a valid default
-      // selection when value is undefined. Unlike other categories, undefined here
-      // represents a meaningful choice (exclude logo), not an unset field.
-      // Only consider branding unedited if explicitly marked as user-choice AND
-      // the user hasn't seen/acknowledged the default (handled by visited steps logic)
-      // Since the UI shows a valid default, we don't require explicit interaction.
-      continue
+      // Branding defaults to "No Logo" which is a valid choice.
+      // For progressive activation (includeDefaultValues), include it as a stop
+      // so users acknowledge it. Value is set to null once acknowledged (Tab/click).
+      // Without includeDefaultValues, skip it — no explicit interaction required.
+      if (options?.includeDefaultValues && currentSettings.value === undefined) {
+        unedited.push(categoryKey)
+      }
     } else {
       // For other categories, check if a value has been set
-      // A field is "edited" (done) if it has any value, regardless of whether
-      // it matches the original - we don't require users to change from defaults
-
-      // Check if user has a selection (value exists in new format)
       const hasValue = currentSettings.value !== undefined
 
-      // If no value yet, it's unedited
       if (!hasValue) {
-        // Also check legacy format - if mode is user-choice with no value, it's unedited
+        // No value at all - check if it's a user-choice field
         const isUserChoiceWithNoValue =
           (currentSettings.mode === 'user-choice' && currentSettings.value === undefined) ||
           (currentSettings.type === 'user-choice')
@@ -313,8 +325,14 @@ export function getUneditedEditableFieldNames(
         if (isUserChoiceWithNoValue) {
           unedited.push(categoryKey)
         }
+      } else if (options?.includeDefaultValues && originalSettings) {
+        // Has a value but matches the original/default exactly.
+        // The user hasn't actively changed it - treat as "unedited" for visual guidance.
+        // Only applies when includeDefaultValues is true (progressive activation).
+        if (JSON.stringify(currentSettings) === JSON.stringify(originalSettings)) {
+          unedited.push(categoryKey)
+        }
       }
-      // If hasValue is true, the field is considered "set" - don't add to unedited
     }
   }
 

@@ -61,6 +61,7 @@ const PresetSelector = dynamic(() => import('@/domain/style/elements/preset/Pres
   loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
 })
 import { getPackageConfig } from '@/domain/style/packages'
+import { getUneditedEditableFieldNames } from '@/domain/style/userChoice'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 
 // Extracted memoized component to prevent recreation on every render
@@ -139,6 +140,14 @@ interface PhotoStyleSettingsProps {
   hideInlineNavigation?: boolean
   /** Called when step indicator props change (for external navigation UI) */
   onStepIndicatorChange?: (props: { current: number; total: number; lockedSteps?: number[]; totalWithLocked?: number; currentAllStepsIndex?: number; visitedEditableSteps?: number[] } | undefined) => void
+  /** Opt-in desktop progressive activation for incomplete editable cards */
+  enableDesktopProgressiveActivation?: boolean
+  /** Called when a customization card is visited/activated */
+  onCategoryVisit?: (categoryKey: string) => void
+  /** Categories that can be accepted without value changes once visited */
+  acceptedOnVisitKeys?: string[]
+  /** Visited category keys from parent flow state */
+  visitedStepKeys?: Set<string>
 }
 
 export type MobileStep = {
@@ -181,7 +190,11 @@ export default function PhotoStyleSettings({
   topHeader,
   onNavigationReady,
   hideInlineNavigation = false,
-  onStepIndicatorChange
+  onStepIndicatorChange,
+  enableDesktopProgressiveActivation = false,
+  onCategoryVisit,
+  acceptedOnVisitKeys = [],
+  visitedStepKeys
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -217,9 +230,213 @@ export default function PhotoStyleSettings({
     }
   }, [pkg])
 
+  const effectivePackageId = packageId || 'headshot1'
+  const uneditedFieldKeys = React.useMemo(() => {
+    if (showToggles) return []
+    return getUneditedEditableFieldNames(
+      value as Record<string, unknown>,
+      originalContextSettings as Record<string, unknown> | undefined,
+      effectivePackageId,
+      { includeDefaultValues: true }
+    )
+  }, [showToggles, value, originalContextSettings, effectivePackageId])
+  const uneditedFieldSet = React.useMemo(() => new Set(uneditedFieldKeys), [uneditedFieldKeys])
+  const acceptedOnVisitSet = React.useMemo(() => new Set(acceptedOnVisitKeys), [acceptedOnVisitKeys])
+
+  const desktopProgressiveActivationEnabled = enableDesktopProgressiveActivation && !showToggles && !isMobileViewport
+  const [manualActiveFieldKey, setManualActiveFieldKey] = React.useState<string | null>(null)
+  const [clickedFieldKey, setClickedFieldKey] = React.useState<string | null>(null)
+
+  // Reset manual active state when context/package changes.
+  React.useEffect(() => {
+    setManualActiveFieldKey(null)
+    setClickedFieldKey(null)
+  }, [effectivePackageId, originalContextSettings])
+
+  // If manually active field becomes complete, clear manual state.
+  React.useEffect(() => {
+    if (manualActiveFieldKey && !uneditedFieldSet.has(manualActiveFieldKey)) {
+      setManualActiveFieldKey(null)
+    }
+  }, [manualActiveFieldKey, uneditedFieldSet])
+
+  const activeFieldKey = React.useMemo(() => {
+    if (!desktopProgressiveActivationEnabled) return null
+    if (manualActiveFieldKey && uneditedFieldSet.has(manualActiveFieldKey)) {
+      return manualActiveFieldKey
+    }
+    return uneditedFieldKeys[0] ?? null
+  }, [desktopProgressiveActivationEnabled, manualActiveFieldKey, uneditedFieldSet, uneditedFieldKeys])
+  const tabNavigationKeys = React.useMemo(() => {
+    if (!desktopProgressiveActivationEnabled) return []
+    return allCategories.map(category => category.key)
+  }, [desktopProgressiveActivationEnabled, allCategories])
+  const getVisibleCardElement = React.useCallback((fieldKey: string) => {
+    if (typeof document === 'undefined') return null
+    const candidates = document.querySelectorAll<HTMLElement>(`[id="${fieldKey}-settings"]`)
+    if (candidates.length === 0) return null
+
+    for (const candidate of Array.from(candidates)) {
+      // Hidden mobile/desktop variants have no layout box.
+      if (candidate.offsetParent !== null) {
+        return candidate
+      }
+    }
+
+    return candidates[0] ?? null
+  }, [])
+
+  const hasMountedRef = React.useRef(false)
+  React.useEffect(() => {
+    // Skip initial mount auto-scroll.
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+
+    if (!desktopProgressiveActivationEnabled || !activeFieldKey) return
+
+    const target = getVisibleCardElement(activeFieldKey)
+    if (!target) return
+
+    const rect = target.getBoundingClientRect()
+    const viewportPadding = 80
+    const isVisible =
+      rect.top >= viewportPadding && rect.bottom <= window.innerHeight - viewportPadding
+
+    if (isVisible) return
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const timeout = window.setTimeout(() => {
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'center'
+      })
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [activeFieldKey, desktopProgressiveActivationEnabled, getVisibleCardElement])
+
+  // Tab key navigation: advance to the next incomplete card
+  React.useEffect(() => {
+    if (!desktopProgressiveActivationEnabled) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      if (tabNavigationKeys.length === 0) return
+
+      e.preventDefault()
+
+      const markVisited = (fieldKey: string | null) => {
+        if (!fieldKey) return
+        onCategoryVisit?.(fieldKey)
+      }
+      const scrollFieldIntoView = (fieldKey: string | null) => {
+        if (!fieldKey) return
+        const target = getVisibleCardElement(fieldKey)
+        if (!target) return
+
+        const rect = target.getBoundingClientRect()
+        const viewportPadding = 80
+        const isVisible =
+          rect.top >= viewportPadding && rect.bottom <= window.innerHeight - viewportPadding
+
+        if (isVisible) return
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        target.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'center'
+        })
+      }
+
+      const isTabNavigationKey = (fieldKey: string | null): fieldKey is CategoryType =>
+        fieldKey !== null && tabNavigationKeys.some(key => key === fieldKey)
+
+      const getCurrentFieldKey = (): CategoryType | null => {
+        if (isTabNavigationKey(clickedFieldKey)) {
+          return clickedFieldKey
+        }
+        if (isTabNavigationKey(activeFieldKey)) {
+          return activeFieldKey
+        }
+        const target = e.target as HTMLElement | null
+        const card = target?.closest?.('[id$="-settings"]') as HTMLElement | null
+        if (!card?.id) return null
+        const fieldKey = card.id.replace(/-settings$/, '')
+        return tabNavigationKeys.find(key => key === fieldKey) ?? null
+      }
+
+      const currentFieldKey = getCurrentFieldKey()
+
+      // When leaving branding, mark it as acknowledged
+      if (currentFieldKey === 'branding' && value.branding?.value === undefined) {
+        const newSettings = { ...value }
+        newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+        onChange(newSettings)
+      }
+
+      const currentIdx = currentFieldKey ? tabNavigationKeys.indexOf(currentFieldKey) : -1
+
+      if (e.shiftKey) {
+        // Shift+Tab: go backward
+        const prevIdx = currentIdx <= 0 ? tabNavigationKeys.length - 1 : currentIdx - 1
+        const nextFieldKey = tabNavigationKeys[prevIdx]
+        markVisited(currentFieldKey)
+        markVisited(nextFieldKey)
+        setClickedFieldKey(nextFieldKey)
+        setManualActiveFieldKey(nextFieldKey)
+        scrollFieldIntoView(nextFieldKey)
+      } else {
+        // Tab: go forward
+        const nextIdx = (currentIdx + 1) % tabNavigationKeys.length
+        const nextFieldKey = tabNavigationKeys[nextIdx]
+        markVisited(currentFieldKey)
+        markVisited(nextFieldKey)
+        setClickedFieldKey(nextFieldKey)
+        setManualActiveFieldKey(nextFieldKey)
+        scrollFieldIntoView(nextFieldKey)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    desktopProgressiveActivationEnabled,
+    tabNavigationKeys,
+    clickedFieldKey,
+    activeFieldKey,
+    value,
+    onChange,
+    onCategoryVisit,
+    getVisibleCardElement
+  ])
+
   // State for tracking customization progress (for locked sections reveal)
   const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
   const [activeMobileStep, setActiveMobileStep] = React.useState(0)
+
+  function isUserChoiceSetting(category: CategoryType, settings: unknown) {
+    if (!settings) return false
+
+    // CustomClothing uses a different pattern (type field directly, not wrapped)
+    if (category === 'customClothing') {
+      return (settings as { type?: string }).type === 'user-choice'
+    }
+
+    // All other categories use the ElementSetting wrapper pattern
+    // Check for new format first (mode property)
+    const wrapped = settings as { mode?: string; type?: string; style?: string }
+    if ('mode' in wrapped && wrapped.mode !== undefined) {
+      return wrapped.mode === 'user-choice'
+    }
+
+    // Legacy format fallback
+    if (category === 'clothing') {
+      return wrapped.style === 'user-choice'
+    }
+    return wrapped.type === 'user-choice'
+  }
 
   // Get persisted visited steps from flow state
   const { visitedSteps: persistedVisitedSteps, setVisitedSteps: setPersistentVisitedSteps } = useGenerationFlowState()
@@ -535,28 +752,6 @@ export default function PhotoStyleSettings({
     onChange(newSettings)
   }
 
-  const isUserChoiceSetting = (category: CategoryType, settings: unknown) => {
-    if (!settings) return false
-
-    // CustomClothing uses a different pattern (type field directly, not wrapped)
-    if (category === 'customClothing') {
-      return (settings as { type?: string }).type === 'user-choice'
-    }
-
-    // All other categories use the ElementSetting wrapper pattern
-    // Check for new format first (mode property)
-    const wrapped = settings as { mode?: string; type?: string; style?: string }
-    if ('mode' in wrapped && wrapped.mode !== undefined) {
-      return wrapped.mode === 'user-choice'
-    }
-
-    // Legacy format fallback
-    if (category === 'clothing') {
-      return wrapped.style === 'user-choice'
-    }
-    return wrapped.type === 'user-choice'
-  }
-
   const isPredefinedSetting = (category: CategoryType, settings: unknown) => {
     if (!settings) return false
 
@@ -612,29 +807,6 @@ export default function PhotoStyleSettings({
     return isUserChoiceSetting(category, categorySettings) ? 'user-choice' : 'predefined'
   }
 
-  // Check if a category has a value set (for completion indicator)
-  const categoryHasValue = (category: CategoryType): boolean => {
-    const settings = (value as Record<string, unknown>)[category]
-    if (!settings) return false
-
-    // Special case: branding - "No Logo" is a valid default selection
-    if (category === 'branding') {
-      return true
-    }
-
-    // Special case: clothingColors - check if any colors are set
-    if (category === 'clothingColors') {
-      const colorSettings = settings as { value?: Record<string, unknown>; colors?: Record<string, unknown> }
-      const colors = colorSettings?.value || colorSettings?.colors
-      return !!(colors?.topLayer || colors?.baseLayer || colors?.bottom || colors?.shoes)
-    }
-
-    // Standard check: has a value property that is not undefined
-    const settingsWithValue = settings as { value?: unknown }
-    return settingsWithValue?.value !== undefined
-  }
-
-
   const renderCategoryCard = (category: CategoryConfig) => {
     const Icon = category.icon
     const status = getCategoryStatus(category.key)
@@ -642,24 +814,82 @@ export default function PhotoStyleSettings({
     const isUserChoice = status === 'user-choice'
     // When showToggles is true (admin setting style), nothing is locked
     const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined
-    const isLocked = isLockedByPreset
-    const hasValueSet = categoryHasValue(category.key)
-    const chipLabel = isUserChoice
-      ? t('legend.editableChip', { default: 'Editable' })
-      : isLockedByPreset
-        ? t('legend.lockedChip', { default: 'Locked' })
-        : t('legend.presetChip', { default: 'Preset active' })
+    const hasValueSet = !uneditedFieldSet.has(category.key) ||
+      (acceptedOnVisitSet.has(category.key) && Boolean(visitedStepKeys?.has(category.key)))
+    const isIncomplete = !hasValueSet
+    const highlightedFieldKey = desktopProgressiveActivationEnabled ? (clickedFieldKey ?? activeFieldKey) : null
+    const isHighlightedField = desktopProgressiveActivationEnabled && highlightedFieldKey === category.key
+    const isHighlightedIncomplete = isHighlightedField && isIncomplete
+    const isInactiveIncomplete = desktopProgressiveActivationEnabled &&
+      highlightedFieldKey !== null &&
+      isIncomplete &&
+      highlightedFieldKey !== category.key
+    const canActivateCard = desktopProgressiveActivationEnabled
+    const isLastCard = allCategories[allCategories.length - 1]?.key === category.key
+    const showContinueHint = desktopProgressiveActivationEnabled && isHighlightedField && hasValueSet && !isLastCard && uneditedFieldKeys.length > 0
+    const userChoiceCardClass = 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
 
     return (
+      <div key={category.key} className="relative">
+      {/* "TAB or click next customization" hint — right edge, vertically centered */}
+      {showContinueHint && (
+        <button
+          type="button"
+          data-testid={`continue-hint-${category.key}`}
+          className="hidden md:flex absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 z-10 items-center cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation()
+            // Navigate to the next card in visual order (not next unedited)
+            const keys = allCategories.map(c => c.key)
+            const currentIdx = keys.indexOf(category.key)
+            if (currentIdx < 0 || currentIdx >= keys.length - 1) return
+            const nextKey = keys[currentIdx + 1]
+            // Auto-acknowledge branding if we're leaving it
+            if (category.key === 'branding' && value.branding?.value === undefined) {
+              const newSettings = { ...value }
+              newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+              onChange(newSettings)
+            }
+            onCategoryVisit?.(nextKey)
+            setClickedFieldKey(nextKey)
+            setManualActiveFieldKey(nextKey)
+            const target = getVisibleCardElement(nextKey)
+            if (target) {
+              const rect = target.getBoundingClientRect()
+              const isVisible = rect.top >= 80 && rect.bottom <= window.innerHeight - 80
+              if (!isVisible) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            }
+          }}
+        >
+          <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur border border-gray-200 shadow-md rounded-2xl px-3 py-1.5 text-xs text-gray-500 font-medium hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 transition-colors">
+            <span className="animate-slide-right">→</span>
+            <span className="text-center leading-tight">TAB or click<br/>next customization</span>
+          </div>
+        </button>
+      )}
       <div
-        key={category.key}
         id={`${category.key}-settings`}
-        className={`w-full max-w-full overflow-hidden transition-all duration-300 ease-out ${isPredefined
+        aria-current={isHighlightedIncomplete ? 'step' : undefined}
+        onClick={canActivateCard ? () => {
+          onCategoryVisit?.(category.key)
+          setClickedFieldKey(category.key)
+          // When leaving branding by clicking an incomplete card ahead, acknowledge it.
+          // Don't auto-acknowledge when clicking back to a completed card (user is revisiting, not skipping).
+          if (activeFieldKey === 'branding' && category.key !== 'branding' && value.branding?.value === undefined && uneditedFieldSet.has(category.key)) {
+            const newSettings = { ...value }
+            newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+            onChange(newSettings)
+          }
+          setManualActiveFieldKey(category.key)
+        } : undefined}
+        className={`w-full h-full max-w-full overflow-hidden transition-all duration-300 ease-out ${isPredefined
           ? 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
           : isUserChoice
-            ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
+            ? userChoiceCardClass
             : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-          } ${isLockedByPreset ? 'opacity-75' : ''}`}
+          } ${isLockedByPreset ? 'opacity-75' : ''} ${isHighlightedField ? 'ring-2 ring-brand-primary shadow-lg' : ''} ${isInactiveIncomplete ? 'opacity-35 shadow-none border-gray-200/60 hover:opacity-60' : ''} ${canActivateCard ? 'cursor-pointer' : ''}`}
       >
         {/* Category Header */}
         <div
@@ -792,6 +1022,8 @@ export default function PhotoStyleSettings({
                 availableStyles={pkg.availableClothingStyles}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
                 isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                // In user customization flow, a clothing choice must be explicit (no implicit auto-accept).
+                suppressAutoSelect={!showToggles || desktopProgressiveActivationEnabled}
               />
             )}
 
@@ -829,13 +1061,15 @@ export default function PhotoStyleSettings({
             )}
 
             {category.key === 'branding' && (
-              <BrandingSelector
-                value={value.branding || userChoice()}
-                onChange={(settings) => handleCategorySettingsChange('branding', settings)}
-                isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
-                token={token}
-              />
+              <>
+                <BrandingSelector
+                  value={value.branding || userChoice()}
+                  onChange={(settings) => handleCategorySettingsChange('branding', settings)}
+                  isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                  isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                  token={token}
+                />
+              </>
             )}
 
             {category.key === 'expression' && (
@@ -888,16 +1122,14 @@ export default function PhotoStyleSettings({
           </div>
         </ErrorBoundary>
       </div>
+      </div>
     )
   }
 
   // Use shared components for intro steps (mobile swipe variant)
 
-  // Capture initial value on mount to preserve ordering
-  const initialValueRef = React.useRef<PhotoStyleSettingsType | undefined>(undefined)
-  if (initialValueRef.current === undefined) {
-    initialValueRef.current = value
-  }
+  // Capture initial value once to preserve ordering
+  const [initialValue] = React.useState<PhotoStyleSettingsType>(value)
 
   // Determine initial editable state based on originalContextSettings or initial value
   // This preserves the ordering even when users make changes
@@ -909,7 +1141,7 @@ export default function PhotoStyleSettings({
     customizationStepMeta
   } = useCustomizationWizard({
     value,
-    originalContextSettings: originalContextSettings || initialValueRef.current, // Fallback to initial value if no context
+    originalContextSettings: originalContextSettings || initialValue, // Fallback to initial value if no context
     packageId: packageId || 'headshot1', // Ensure string
     showToggles,
     readonlyPredefined,
@@ -1164,9 +1396,8 @@ export default function PhotoStyleSettings({
     <div className={`space-y-8 ${className}`}>
       {/* Context B: Show editable sections, then teaser or revealed locked sections */}
       {!showToggles && (
-        <>
-          {/* Mobile swipe experience */}
-          <div className="md:hidden pb-32 w-full max-w-full">
+        isMobileViewport ? (
+          <div className="pb-32 w-full max-w-full">
             {mobileSteps.length > 0 ? (
               <div className="w-full max-w-full">
                 {/* Scroll-aware header: when topHeader is provided, shows dual headers (app + flow) */}
@@ -1192,7 +1423,7 @@ export default function PhotoStyleSettings({
                   fixedOnMobile={Boolean(topHeader)}
                 />
                 {/* Spacer for fixed header - only needed when topHeader is provided */}
-                {isMobileViewport && topHeader && <div style={{ height: '120px' }} />}
+                {topHeader && <div style={{ height: '120px' }} />}
 
                 {/* Swipeable carousel */}
                 <SwipeableContainer
@@ -1293,14 +1524,13 @@ export default function PhotoStyleSettings({
               />
             )}
           </div>
-
-          {/* Desktop experience */}
-          <div className="hidden md:block space-y-8">
+        ) : (
+          <div className="space-y-8">
             {currentEditableCategories.length > 0 && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-l-4 border-purple-500 rounded-xl p-5 shadow-md">
+                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
                       <SparklesIcon className="h-7 w-7 text-white" />
                     </div>
                     <div className="flex-1">
@@ -1364,63 +1594,64 @@ export default function PhotoStyleSettings({
               </>
             )}
           </div>
-        </>
+        )
       )}
 
       {/* Context A: Admin setting style - show all categories with sections */}
       {showToggles && (
-        <>
-          {/* Mobile: All categories in single grid */}
-          <div className="md:hidden space-y-6">
+        isMobileViewport ? (
+          <div className="space-y-6">
             <CardGrid gap="lg">
               {allCategories.map(renderCategoryCard)}
             </CardGrid>
           </div>
-
-          {/* Desktop: Original order - Photo Style Section */}
-          <div className="hidden md:block space-y-6">
-            <div id="composition-settings-section" className="bg-gradient-to-r from-brand-primary/10 via-brand-secondary/5 to-brand-primary/10 border-l-4 border-brand-primary rounded-xl p-6 shadow-md">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <CameraIcon className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                    {t('sections.composition', { default: 'Composition Settings' })}
-                  </h2>
-                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                    {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <CardGrid gap="lg">
-              {visiblePhotoCategories.map(renderCategoryCard)}
-            </CardGrid>
-          </div>
-
-          {/* Desktop: User Style Section */}
-          <div className="hidden md:block space-y-6 mt-8">
-            <div id="user-style-settings-section" className="bg-gradient-to-r from-brand-secondary/10 via-brand-primary/5 to-brand-secondary/10 border-l-4 border-brand-secondary rounded-xl p-6 shadow-md">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-brand-secondary to-brand-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <UserIcon className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                    {t('sections.userStyle', { default: 'User Style Settings' })}
-                  </h2>
-                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                    {t('sections.userStyleDesc', { default: 'Clothing, expression, and lighting preferences' })}
-                  </p>
+        ) : (
+          <>
+            {/* Desktop: Original order - Photo Style Section */}
+            <div className="space-y-6">
+              <div id="composition-settings-section" className="bg-gradient-to-r from-brand-primary/10 via-brand-secondary/5 to-brand-primary/10 border-l-4 border-brand-primary rounded-xl p-6 shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <CameraIcon className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                      {t('sections.composition', { default: 'Composition Settings' })}
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                      {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
+                    </p>
+                  </div>
                 </div>
               </div>
+              <CardGrid gap="lg">
+                {visiblePhotoCategories.map(renderCategoryCard)}
+              </CardGrid>
             </div>
-            <CardGrid gap="lg">
-              {visibleUserCategories.map(renderCategoryCard)}
-            </CardGrid>
-          </div>
-        </>
+
+            {/* Desktop: User Style Section */}
+            <div className="space-y-6 mt-8">
+              <div id="user-style-settings-section" className="bg-gradient-to-r from-brand-secondary/10 via-brand-primary/5 to-brand-secondary/10 border-l-4 border-brand-secondary rounded-xl p-6 shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-brand-secondary to-brand-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <UserIcon className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                      {t('sections.userStyle', { default: 'User Style Settings' })}
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                      {t('sections.userStyleDesc', { default: 'Clothing, expression, and lighting preferences' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <CardGrid gap="lg">
+                {visibleUserCategories.map(renderCategoryCard)}
+              </CardGrid>
+            </div>
+          </>
+        )
       )}
     </div>
   )

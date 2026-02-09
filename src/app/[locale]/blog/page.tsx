@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blog' });
   const headersList = await headers();
-  const host = headersList.get('host') || headersList.get('x-forwarded-host');
+  const host = headersList.get('x-forwarded-host') || headersList.get('host');
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   // Fallback to teamshotspro if host missing (unlikely in prod) but good for safety
   const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com';
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
  */
 export default async function BlogPage() {
   const headersList = await headers();
-  const host = headersList.get('host') || headersList.get('x-forwarded-host');
+  const host = headersList.get('x-forwarded-host') || headersList.get('host');
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
   const variant = getLandingVariant(domain);

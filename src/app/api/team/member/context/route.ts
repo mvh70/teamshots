@@ -13,11 +13,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing token' }, { status: 400 })
     }
 
-    // Validate the token and get invite data
+    // Validate the token, check expiry, and get invite data
     const invite = await prisma.teamInvite.findFirst({
       where: {
         token,
-        usedAt: { not: null }
+        usedAt: { not: null },
+        expiresAt: { gt: new Date() }
       },
       include: {
         team: {

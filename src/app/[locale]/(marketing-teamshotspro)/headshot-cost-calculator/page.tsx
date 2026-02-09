@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const headersList = await headers();
   const brand = getBrand(headersList);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
 
   const t = await getTranslations({ locale, namespace: 'costCalculator' });
@@ -90,7 +90,7 @@ export default async function HeadshotCostCalculatorPage({ params }: Props) {
   const headersList = await headers();
   const brand = getBrand(headersList);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
 
   const t = await getTranslations({ locale, namespace: 'costCalculator' });

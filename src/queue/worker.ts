@@ -19,16 +19,22 @@ async function startWorkers() {
     console.log('✅ All workers started successfully')
     console.log('📊 Workers are now processing jobs...')
     
-    // Keep the process alive
-    process.on('SIGINT', async () => {
-      console.log('\n🛑 Shutting down workers...')
+    // Graceful shutdown: let in-flight jobs finish before exiting
+    const shutdown = async (signal: string) => {
+      console.log(`\n🛑 Received ${signal}, draining workers...`)
+      try {
+        // Import the worker instance to close it gracefully
+        const { default: worker } = await import('./workers/generateImage')
+        await worker.close()
+        console.log('✅ Workers drained, exiting.')
+      } catch (err) {
+        console.error('Error during graceful shutdown:', err)
+      }
       process.exit(0)
-    })
-    
-    process.on('SIGTERM', async () => {
-      console.log('\n🛑 Shutting down workers...')
-      process.exit(0)
-    })
+    }
+
+    process.on('SIGINT', () => shutdown('SIGINT'))
+    process.on('SIGTERM', () => shutdown('SIGTERM'))
     
   } catch (error) {
     console.error('❌ Failed to start workers:', error)

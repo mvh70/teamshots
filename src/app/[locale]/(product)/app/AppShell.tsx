@@ -216,7 +216,7 @@ export default function AppShell({
       className={`min-h-screen ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}
       style={{
         ...brandStyle,
-        backgroundColor: isGenerationFlow ? (isIndividualDomain ? '#FAFAF9' : (brandColors?.primary || '#FFFFFF')) : undefined,
+        backgroundColor: isGenerationFlow ? 'var(--bg-gray-50)' : undefined,
       }}
     >
       <div className="flex relative">
@@ -305,5 +305,4 @@ export default function AppShell({
     </div>
   )
 }
-
 

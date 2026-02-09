@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, ReactNode, useCallback } from 'react'
+import React, { createContext, useContext, ReactNode, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
@@ -61,8 +61,13 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
 
   const credits = data || defaultCredits
 
+  const contextValue = useMemo(
+    () => ({ credits, loading: isLoading, refetch }),
+    [credits, isLoading, refetch]
+  )
+
   return (
-    <CreditsContext.Provider value={{ credits, loading: isLoading, refetch }}>
+    <CreditsContext.Provider value={contextValue}>
       {children}
     </CreditsContext.Provider>
   )

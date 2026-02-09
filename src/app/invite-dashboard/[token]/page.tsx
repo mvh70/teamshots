@@ -295,7 +295,7 @@ export default function InviteDashboardPage() {
         <div className="space-y-6">
           {/* Insufficient credits warning */}
           {stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
+            <div data-testid="insufficient-credits-banner" className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
               <div className="flex items-start gap-3">
                 <svg className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -328,6 +328,7 @@ export default function InviteDashboardPage() {
                 {/* Sticky wrapper for mobile */}
                 <div className="md:static sticky bottom-0 md:bottom-auto z-10 bg-white md:bg-transparent pt-4 md:pt-0 pb-4 md:pb-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none -mx-6 md:mx-0 px-6 md:px-0">
                   <button
+                    data-testid="get-started-btn"
                     onClick={handleStartFlow}
                     disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
                     className="w-full flex items-center justify-center px-6 py-5 bg-brand-primary text-white rounded-2xl hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary shadow-md hover:shadow-lg font-semibold text-base md:text-lg"

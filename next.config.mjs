@@ -4,6 +4,8 @@ const requestConfigPath = './src/i18n/request.ts';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow E2E tests to run a separate dev server without conflicting with the main one
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   turbopack: {

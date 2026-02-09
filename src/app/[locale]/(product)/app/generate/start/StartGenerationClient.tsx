@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
@@ -20,14 +20,13 @@ import { loadStyleByContextId, setActiveStyle, clearActiveStyle } from '@/domain
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import GenerateButton from '@/components/generation/GenerateButton'
-import { hasUneditedEditableFields, getUneditedEditableFieldNames } from '@/domain/style/userChoice'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
-import { FlowProgressDock } from '@/components/generation/navigation'
+import { FlowProgressDock, CustomizationMobileFooter } from '@/components/generation/navigation'
 import type { CustomizationStepsMeta } from '@/lib/customizationSteps'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
@@ -35,6 +34,7 @@ import Header from '@/app/[locale]/(product)/app/components/Header'
 import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
 import { isUserChoice, hasValue, userChoice } from '@/domain/style/elements/base/element-types'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
+import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -51,6 +51,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const t = useTranslations('app.sidebar.generate')
   const tCustomize = useTranslations('generate.customize')
   const tNav = useTranslations('inviteDashboard.selfieSelection.mobile.navigation')
+  const tProgressDock = useTranslations('generation.progressDock')
+  const tStyleCategories = useTranslations('customization.photoStyle.categories')
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
   const searchParamsString = useMemo(() => searchParams.toString(), [searchParams])
 
@@ -82,6 +84,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     customizationStepsMeta,
     visitedSteps,
     setVisitedSteps,
+    completedSteps,
     setCompletedSteps
   } = useGenerationFlowState()
   const isMobile = useMobileViewport()
@@ -109,6 +112,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
   const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
+  const [acceptedVisitedStepKeys, setAcceptedVisitedStepKeys] = useState<Set<string>>(() => new Set())
   // Navigation methods exposed by PhotoStyleSettings for mobile sticky footer (use ref to avoid re-render loops)
   const navMethodsRef = React.useRef<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -286,7 +290,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       const currentIsUserChoice = currentValue?.mode === 'user-choice'
 
       if (savedHasValue && currentValue && currentIsUserChoice) {
-        // Current is user-choice with saved value: restore user's selection
+        // Restore user's saved selection for user-choice settings.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ; (merged as any)[key] = {
           ...currentValue,
@@ -433,7 +437,28 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       next.add(stepId)
       return next
     })
+    setAcceptedVisitedStepKeys(prev => {
+      if (prev.has(stepId)) return prev
+      const next = new Set(prev)
+      next.add(stepId)
+      return next
+    })
   }, [])
+
+  const handleCategoryVisit = useCallback((categoryKey: string) => {
+    setAcceptedVisitedStepKeys(prev => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
+    if (!customizationStepsMeta?.stepKeys) return
+    const index = customizationStepsMeta.stepKeys.indexOf(categoryKey)
+    if (index < 0) return
+    if (visitedSteps.includes(index)) return
+    setVisitedSteps(Array.from(new Set([...visitedSteps, index])))
+  }, [customizationStepsMeta?.stepKeys, visitedSteps, setVisitedSteps])
+  const acceptedOnVisitKeys = React.useMemo(() => ['clothing', 'clothingColors', 'pose', 'expression', 'branding'], [])
 
   // Track whether we've received fresh step meta from PhotoStyleSettings this session
   // This prevents auto-proceed from using stale cached sessionStorage values
@@ -560,6 +585,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   useEffect(() => {
     setVisitedMobileSteps(new Set())
+    if (!skipUpload) {
+      setAcceptedVisitedStepKeys(new Set())
+    }
   }, [skipUpload])
 
   // NEW CREDIT MODEL: Credits always belong to a person, not team pool
@@ -568,76 +596,148 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const hasRequiredSelfies = hasEnoughSelfies(selectedSelfies.length)
 
   const effectivePackageId = isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
+  const acceptedVisitStorageKey = React.useMemo(() => {
+    const scope = activeContext?.id ? `context_${activeContext.id}` : `package_${effectivePackageId}`
+    return `teamshots_accepted_visited_steps_${scope}`
+  }, [activeContext?.id, effectivePackageId])
 
-  const hasUneditedFields = originalContextSettings
-    ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
-    : true // Default to true when no context settings - requires user to customize
-
-  // Get list of unedited fields for progress dock display
-  const uneditedFields = React.useMemo(() => {
-    if (!originalContextSettings) return []
-    return getUneditedEditableFieldNames(
-      photoStyleSettings as Record<string, unknown>,
-      originalContextSettings as Record<string, unknown>,
-      effectivePackageId
-    )
-  }, [photoStyleSettings, originalContextSettings, effectivePackageId])
-
-  // Compute value-based visited steps (a step is "done" if it has a value, not just visited)
-  // This aligns the dock progress dots with the card badges
-  const valueBasedVisitedSteps = React.useMemo(() => {
-    if (!customizationStepsMeta?.stepKeys) return []
-    const uneditedSet = new Set(uneditedFields)
-    const visited: number[] = []
-    customizationStepsMeta.stepKeys.forEach((key, index) => {
-      // Step is "done" if it's NOT in the unedited list
-      if (!uneditedSet.has(key)) {
-        visited.push(index)
-      }
-    })
-    return visited
-  }, [customizationStepsMeta?.stepKeys, uneditedFields])
-
-  // Persist completed steps to flow state so other pages can show progress
   React.useEffect(() => {
-    setCompletedSteps(valueBasedVisitedSteps)
-  }, [valueBasedVisitedSteps, setCompletedSteps])
+    if (typeof window === 'undefined') return
 
-  const hasVisitedClothingColorsIfEditable = React.useMemo(() => {
-    if (!isMobile) return true
+    try {
+      const raw = sessionStorage.getItem(acceptedVisitStorageKey)
+      if (!raw) {
+        setAcceptedVisitedStepKeys(new Set())
+        return
+      }
 
-    const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
-    const clothingColorsSettings = categorySettings['clothingColors'] as { type?: string; mode?: string } | undefined
-    // Support both new format (mode) and legacy format (type)
-    const isClothingColorsEditable = !clothingColorsSettings ||
-      clothingColorsSettings.mode === 'user-choice' ||
-      clothingColorsSettings.type === 'user-choice'
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        setAcceptedVisitedStepKeys(new Set())
+        return
+      }
 
-    return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
-  }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
+      const keys = parsed.filter((key): key is string => typeof key === 'string')
+      setAcceptedVisitedStepKeys(new Set(keys))
+    } catch {
+      setAcceptedVisitedStepKeys(new Set())
+    }
+  }, [acceptedVisitStorageKey])
 
-  // Customization is complete only when all fields have values set
-  // (not just visited - user must actually make selections)
-  const isCustomizationComplete = !hasUneditedFields
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
 
-  // Compute visited step indices for mobile progress dots based on VALUE (not just visited)
-  // This ensures mobile dots match the card badges - a step is "done" if it has a value
-  const valueBasedVisitedIndicesMobile = React.useMemo(() => {
-    const indices: number[] = [0] // Index 0 is selfie (always visited when on customization page)
+    const keys = Array.from(acceptedVisitedStepKeys)
+    if (keys.length > 0) {
+      sessionStorage.setItem(acceptedVisitStorageKey, JSON.stringify(keys))
+    } else {
+      sessionStorage.removeItem(acceptedVisitStorageKey)
+    }
+  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey])
 
-    if (customizationStepsMeta?.stepKeys) {
-      const uneditedSet = new Set(uneditedFields)
-      // Convert value-based steps to indices (shifted by 1 for selfie at index 0)
-      customizationStepsMeta.stepKeys.forEach((key, idx) => {
-        // Step is "done" if it's NOT in the unedited list (has a value)
-        if (!uneditedSet.has(key)) {
-          indices.push(idx + 1) // +1 because selfie is at index 0
+  const completionState = useCustomizationCompletion({
+    photoStyleSettings,
+    originalContextSettings,
+    packageId: effectivePackageId,
+    stepKeys: customizationStepsMeta?.stepKeys,
+    visitedStepKeys: acceptedVisitedStepKeys,
+    isMobileViewport: isMobile,
+    visitedMobileStepKeys: visitedMobileSteps,
+    completionMode: 'values-only',
+    includeDefaultValues: true,
+    clothingColorsEditableWhenMissing: true,
+    acceptedOnVisitKeys,
+    acceptedOnVisitVisitedKeys: acceptedVisitedStepKeys
+  })
+  const uneditedFields = completionState.uneditedFields
+  const hasUneditedFields = originalContextSettings ? completionState.hasUneditedFields : true
+  const isCustomizationComplete = originalContextSettings ? completionState.isCustomizationComplete : false
+  const valueBasedVisitedSteps = completionState.valueBasedVisitedStepIndices
+  const hasVisitedClothingColorsIfEditable = completionState.hasVisitedClothingColorsIfEditable
+
+  const uneditedFieldLabels = React.useMemo(() => {
+    return uneditedFields
+      .map((fieldKey) => {
+        try {
+          return tStyleCategories(`${fieldKey}.title`, { default: fieldKey })
+        } catch {
+          return ''
         }
+      })
+      .filter((label): label is string => Boolean(label && label.trim()))
+  }, [uneditedFields, tStyleCategories])
+
+  const fieldSpecificDisabledGenerateReason = React.useMemo(() => {
+    if (!hasUneditedFields || uneditedFieldLabels.length === 0) return undefined
+
+    if (uneditedFieldLabels.length === 1) {
+      return tProgressDock('tooltips.setField', {
+        field: uneditedFieldLabels[0],
+        default: `Set your ${uneditedFieldLabels[0]} to generate`
       })
     }
 
-    return indices
-  }, [customizationStepsMeta?.stepKeys, uneditedFields])
+    if (uneditedFieldLabels.length === 2) {
+      const fields = `${uneditedFieldLabels[0]} and ${uneditedFieldLabels[1]}`
+      return tProgressDock('tooltips.setFields', {
+        fields,
+        default: `Set ${fields} to generate`
+      })
+    }
+
+    const fields = `${uneditedFieldLabels[0]}, ${uneditedFieldLabels[1]}`
+    const count = uneditedFieldLabels.length - 2
+    return tProgressDock('tooltips.setFieldsMore', {
+      fields,
+      count,
+      default: `Set ${fields}, and ${count} more to generate`
+    })
+  }, [hasUneditedFields, tProgressDock, uneditedFieldLabels])
+
+  const disabledGenerateReasonDesktop = React.useMemo(() => {
+    if (!hasUneditedFields) return undefined
+    return fieldSpecificDisabledGenerateReason ?? t('customizeFirstTooltip')
+  }, [fieldSpecificDisabledGenerateReason, hasUneditedFields, t])
+
+  const disabledGenerateReasonMobile = React.useMemo(() => {
+    if (!hasUneditedFields) return undefined
+    return fieldSpecificDisabledGenerateReason ?? t('customizeFirstTooltipMobile')
+  }, [fieldSpecificDisabledGenerateReason, hasUneditedFields, t])
+
+  const scrollToFirstIncompleteCard = React.useCallback(() => {
+    const firstIncompleteField = uneditedFields[0]
+    if (!firstIncompleteField) return
+
+    const candidates = document.querySelectorAll<HTMLElement>(`[id="${firstIncompleteField}-settings"]`)
+    const cardElement = Array.from(candidates).find(candidate => candidate.offsetParent !== null) ?? candidates[0]
+    if (!cardElement) return
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    cardElement.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: 'center'
+    })
+
+    if (prefersReducedMotion) return
+
+    cardElement.classList.remove('attention-pulse')
+    void cardElement.getBoundingClientRect()
+    cardElement.classList.add('attention-pulse')
+    window.setTimeout(() => {
+      cardElement.classList.remove('attention-pulse')
+    }, 2000)
+  }, [uneditedFields])
+
+  // Persist completed steps to flow state so other pages can show progress
+  React.useEffect(() => {
+    if (
+      completedSteps.length === valueBasedVisitedSteps.length &&
+      completedSteps.every((step, idx) => step === valueBasedVisitedSteps[idx])
+    ) {
+      return
+    }
+    setCompletedSteps(valueBasedVisitedSteps)
+  }, [completedSteps, valueBasedVisitedSteps, setCompletedSteps])
 
   const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && isCustomizationComplete && hasVisitedClothingColorsIfEditable
 
@@ -746,6 +846,22 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     )
   }
 
+  const sharedStyleSettingsSectionProps = {
+    value: photoStyleSettings,
+    onChange: handleSettingsChange,
+    readonlyPredefined: !!activeContext,
+    originalContextSettings,
+    showToggles: false as const,
+    packageId: effectivePackageId,
+    isFreePlan,
+    teamContext: effectiveGenerationType === 'team',
+    noContainer: true,
+    onStepMetaChange: handleStepMetaChange,
+    onCategoryVisit: handleCategoryVisit,
+    acceptedOnVisitKeys,
+    visitedStepKeys: acceptedVisitedStepKeys
+  }
+
   return (
     <>
       {/* Progress Dock - Bottom Center (Desktop Only) */}
@@ -768,6 +884,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           // This aligns the dock progress dots with the card badges
           valueBasedVisitedSteps
         }
+        onAttemptDisabledGenerate={scrollToFirstIncompleteCard}
+        disabledGenerateReason={disabledGenerateReasonDesktop}
       />
 
       <div className={`${pagePaddingClasses} space-y-8 pb-44 md:pb-52 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
@@ -1045,46 +1163,28 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             {/* Package Selector - Hide for free package contexts or predefined styles */}
             {/* Removed as integrated into main dropdown */}
 
-            {/* Photo Style Settings - Mobile */}
-            <div className="md:hidden pb-24 w-full max-w-full overflow-x-hidden">
-              <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+            {isMobile ? (
+              <div className="pb-24 w-full max-w-full overflow-x-hidden">
+                <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+                  <StyleSettingsSection
+                    {...sharedStyleSettingsSectionProps}
+                    onMobileStepChange={handleMobileStepChange}
+                    onSwipeBack={() => router.push('/app/generate/customization-intro')}
+                    topHeader={<Header standalone showBackToDashboard />}
+                    onNavigationReady={handleNavigationReady}
+                    hideInlineNavigation={true}
+                    onStepIndicatorChange={handleStepIndicatorChange}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
                 <StyleSettingsSection
-                  value={photoStyleSettings}
-                  onChange={handleSettingsChange}
-                  readonlyPredefined={!!activeContext}
-                  originalContextSettings={originalContextSettings}
-                  showToggles={false}
-                  packageId={effectivePackageId}
-                  isFreePlan={isFreePlan}
-                  teamContext={effectiveGenerationType === 'team'}
-                  noContainer
-                  onMobileStepChange={handleMobileStepChange}
-                  onSwipeBack={() => router.push('/app/generate/customization-intro')}
-                  onStepMetaChange={handleStepMetaChange}
-                  topHeader={<Header standalone showBackToDashboard />}
-                  onNavigationReady={handleNavigationReady}
-                  hideInlineNavigation={true}
-                  onStepIndicatorChange={handleStepIndicatorChange}
+                  {...sharedStyleSettingsSectionProps}
+                  enableDesktopProgressiveActivation={true}
                 />
               </div>
-            </div>
-
-            {/* Photo Style Settings - Desktop */}
-            <div className="space-y-6">
-              <StyleSettingsSection
-                value={photoStyleSettings}
-                onChange={handleSettingsChange}
-                readonlyPredefined={!!activeContext}
-                originalContextSettings={originalContextSettings}
-                showToggles={false}
-                packageId={effectivePackageId}
-                isFreePlan={isFreePlan}
-                teamContext={effectiveGenerationType === 'team'}
-                className="hidden md:block"
-                noContainer
-                onStepMetaChange={handleStepMetaChange}
-              />
-            </div>
+            )}
 
             {/* Custom Prompt */}
             {activeContext?.customPrompt && (
@@ -1098,98 +1198,69 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </div>
             )}
 
-            {/* Fixed sticky controls at bottom - Mobile */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-3 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-              {/* Labeled navigation buttons row */}
-              <div className="flex items-center justify-between pb-3">
-                {/* Back button - Selfies on first step, Previous on other steps */}
-                {(stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => router.push('/app/generate/selfie')}
-                    className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="text-sm font-medium">
-                      {tNav('selfies', { default: 'Selfies' })}
-                    </span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => navMethodsRef.current?.goPrev()}
-                    className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span className="text-sm font-medium">
-                      {tNav('previous', { default: 'Previous' })}
-                    </span>
-                  </button>
-                )}
+            <CustomizationMobileFooter
+              leftAction={{
+                label: (stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1
+                  ? tNav('selfies', { default: 'Selfies' })
+                  : tNav('previous', { default: 'Previous' }),
+                onClick: () => {
+                  if ((stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1) {
+                    router.push('/app/generate/selfie')
+                    return
+                  }
+                  navMethodsRef.current?.goPrev()
+                }
+              }}
+              rightAction={(stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)
+                ? {
+                    label: tNav('next', { default: 'Next' }),
+                    onClick: () => navMethodsRef.current?.goNext(),
+                    tone: 'primary',
+                    icon: 'chevron-right'
+                  }
+                : undefined}
+              progressContent={
+                <div className="pb-3 flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500 font-medium">{t('selfies', { default: 'Selfies' })}</span>
+                    <span className="h-2.5 w-2.5 rounded-full bg-brand-secondary" />
+                  </div>
 
-                {/* Forward - Next (when not on last step), nothing on last step (use big Generate button) */}
-                {(stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1) ? (
-                  <button
-                    type="button"
-                    onClick={() => navMethodsRef.current?.goNext()}
-                    className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition bg-brand-primary text-white hover:brightness-110"
-                  >
-                    <span className="text-sm font-medium">{tNav('next', { default: 'Next' })}</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                ) : null}
-              </div>
+                  <div className="h-4 w-px bg-gray-200" />
 
-              {/* Progress indicators - Selfies and Customization separated */}
-              <div className="pb-3 flex items-center justify-center gap-4">
-                {/* Selfies indicator */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-500 font-medium">{t('selfies', { default: 'Selfies' })}</span>
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-secondary" />
-                </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500 font-medium">{t('customize', { default: 'Customize' })}</span>
+                    <div className="flex items-center gap-1">
+                      {customizationStepsMeta?.stepKeys?.map((key, idx) => {
+                        const hasValue = !uneditedFields.includes(key)
+                        const isLocked = customizationStepsMeta.lockedSteps?.includes(idx + 1)
+                        const isCurrent = stepIndicatorProps?.currentAllStepsIndex === idx + 1
 
-                <div className="h-4 w-px bg-gray-200" />
+                        if (isLocked) {
+                          return (
+                            <LockClosedIcon
+                              key={`progress-lock-${key}`}
+                              className={`h-3 w-3 ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}
+                            />
+                          )
+                        }
 
-                {/* Customization dots */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-500 font-medium">{t('customize', { default: 'Customize' })}</span>
-                  <div className="flex items-center gap-1">
-                    {customizationStepsMeta?.stepKeys?.map((key, idx) => {
-                      const hasValue = !uneditedFields.includes(key)
-                      const isLocked = customizationStepsMeta.lockedSteps?.includes(idx + 1) // +1 for selfie offset
-                      const isCurrent = stepIndicatorProps?.currentAllStepsIndex === idx + 1
-
-                      if (isLocked) {
                         return (
-                          <LockClosedIcon
-                            key={`progress-lock-${key}`}
-                            className={`h-3 w-3 ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}
+                          <span
+                            key={`progress-dot-${key}`}
+                            className={`
+                              rounded-full transition-all duration-300
+                              ${isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'}
+                              ${hasValue ? 'bg-brand-secondary' : 'bg-brand-primary'}
+                            `}
                           />
                         )
-                      }
-
-                      return (
-                        <span
-                          key={`progress-dot-${key}`}
-                          className={`
-                          rounded-full transition-all duration-300
-                          ${isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'}
-                          ${hasValue ? 'bg-brand-secondary' : 'bg-brand-primary'}
-                        `}
-                        />
-                      )
-                    })}
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Generate button or credits hint */}
+              }
+            >
               {!hasEnoughCredits ? (
                 <Link
                   href={buyCreditsHrefWithReturn}
@@ -1215,9 +1286,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                   size="md"
                   disabledReason={
                     !hasVisitedClothingColorsIfEditable
-                      ? t('customizeFirstTooltipMobile')
+                      ? (disabledGenerateReasonMobile || t('customizeFirstTooltipMobile'))
                       : !isCustomizationComplete
-                        ? t('customizeFirstTooltipMobile')
+                        ? (disabledGenerateReasonMobile || t('customizeFirstTooltipMobile'))
                         : undefined
                   }
                   integrateInPopover={!isCustomizationComplete && hasVisitedClothingColorsIfEditable}
@@ -1225,11 +1296,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                   {t('generatePhoto')}
                 </GenerateButton>
               )}
-            </div>
+            </CustomizationMobileFooter>
           </>
         ) : null}
       </div>
     </>
   )
 }
-

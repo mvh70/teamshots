@@ -140,7 +140,7 @@ export default function ContextsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900" data-testid="styles-page-title">
               {t('title')}
             </h1>
             {contextsData?.contextType && (
@@ -161,6 +161,7 @@ export default function ContextsPage() {
           <button
             onClick={() => { if (!isFreePlan) setShowCreateForm(true) }}
             disabled={isFreePlan}
+            data-testid="create-context-btn"
             className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isFreePlan ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-primary text-white hover:bg-brand-primary-hover'}`}
           >
             <PlusIcon className="h-5 w-5" />
@@ -256,6 +257,7 @@ export default function ContextsPage() {
                 <button
                   onClick={() => handleDeleteContext(context.id)}
                   className="p-1 text-gray-400 hover:text-red-600"
+                  data-testid="delete-style-btn"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>

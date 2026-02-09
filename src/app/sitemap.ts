@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const headersList = await headers()
     baseUrl = getBaseUrl(headersList)
-    const host = headersList.get('host') || headersList.get('x-forwarded-host')
+    const host = headersList.get('x-forwarded-host') || headersList.get('host')
     const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
     variant = getLandingVariant(domain)
   } catch {

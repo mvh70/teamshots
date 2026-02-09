@@ -12,7 +12,6 @@ import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import GenerateButton from '@/components/generation/GenerateButton'
 import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
-import { hasUneditedEditableFields } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
@@ -20,10 +19,11 @@ import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
-import { SwipeableContainer, FlowProgressDock, FlowNavigation } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowProgressDock, FlowNavigation, CustomizationMobileFooter } from '@/components/generation/navigation'
 import { trackInvitedMemberGenerationStarted } from '@/lib/track'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import { DEFAULT_CUSTOMIZATION_STEPS_META, buildSelfieStepIndicator } from '@/lib/customizationSteps'
+import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -92,6 +92,7 @@ export default function InviteCustomizationPage() {
     index: 0
   })
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
+  const [acceptedVisitedStepKeys, setAcceptedVisitedStepKeys] = useState<Set<string>>(new Set())
   // Navigation methods exposed by PhotoStyleSettings
   const [navMethods, setNavMethods] = useState<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -115,6 +116,10 @@ export default function InviteCustomizationPage() {
   const [photoStyleSettings, setPhotoStyleSettingsRaw] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [packageId, setPackageId] = useState<string>('headshot1')
+  const acceptedVisitStorageKey = useMemo(
+    () => `teamshots_invite_accepted_visited_steps_${token}`,
+    [token]
+  )
 
   // Wrapper for setPhotoStyleSettings that also marks steps as visited on desktop
   const setPhotoStyleSettings = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
@@ -336,41 +341,61 @@ export default function InviteCustomizationPage() {
     selectedIds.filter(id => availableSelfies.some(s => s.id === id)),
     [selectedIds, availableSelfies]
   )
+  const acceptedOnVisitKeys = useMemo(() => ['clothing', 'clothingColors', 'pose', 'expression', 'branding'], [])
 
-  // Check if all customizable sections are customized
-  // IMPORTANT: Only determine this after originalContextSettings is loaded
-  // Otherwise we might incorrectly show customization as complete before data loads
-  const customizationStillRequired = originalContextSettings
-    ? hasUneditedEditableFields(
-        photoStyleSettings as Record<string, unknown>,
-        originalContextSettings as Record<string, unknown>,
-        packageId || 'headshot1'
-      )
-    : true // Assume required until data loads
+  const {
+    isCustomizationComplete,
+    isClothingColorsEditable,
+    hasVisitedClothingColorsIfEditable: hasVisitedClothingColors
+  } = useCustomizationCompletion({
+    photoStyleSettings,
+    originalContextSettings,
+    packageId: packageId || 'headshot1',
+    stepKeys: customizationStepsMeta.stepKeys,
+    editableSteps: customizationStepsMeta.editableSteps,
+    visitedStepKeys: visitedSteps,
+    visitedMobileStepKeys: visitedSteps,
+    isMobileViewport,
+    completionMode: 'values-or-visited',
+    includeDefaultValues: false,
+    clothingColorsEditableWhenMissing: false,
+    acceptedOnVisitKeys: acceptedOnVisitKeys,
+    acceptedOnVisitVisitedKeys: acceptedVisitedStepKeys
+  })
 
-  // Check if clothing colors is editable (not admin preset)
-  const isClothingColorsEditable = useMemo(() => {
-    const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
-    const clothingColorsSettings = categorySettings['clothingColors'] as { type?: string; mode?: string } | undefined
-    // Only editable if settings exist AND mode is 'user-choice'
-    // If no settings, admin didn't include it, so it's NOT editable
-    if (!clothingColorsSettings) return false
-    return clothingColorsSettings.mode === 'user-choice' ||
-      clothingColorsSettings.type === 'user-choice'
-  }, [originalContextSettings, photoStyleSettings])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
 
-  // Check if clothing colors step has been visited (for mobile flow only, and only if editable)
-  const hasVisitedClothingColors = !isMobileViewport || !isClothingColorsEditable || visitedSteps.has('clothingColors')
+    try {
+      const raw = sessionStorage.getItem(acceptedVisitStorageKey)
+      if (!raw) {
+        setAcceptedVisitedStepKeys(new Set())
+        return
+      }
 
-  // Check if all editable steps have been visited (user has reviewed all options)
-  // If editableSteps is 0 (admin preset everything), consider all steps visited
-  const allEditableStepsVisited = customizationStepsMeta.editableSteps === 0 ||
-    visitedSteps.size >= customizationStepsMeta.editableSteps
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        setAcceptedVisitedStepKeys(new Set())
+        return
+      }
 
-  // Customization is complete if either:
-  // 1. All editable steps have been visited (user reviewed everything), OR
-  // 2. All values have been explicitly changed from original
-  const isCustomizationComplete = allEditableStepsVisited || !customizationStillRequired
+      const keys = parsed.filter((key): key is string => typeof key === 'string')
+      setAcceptedVisitedStepKeys(new Set(keys))
+    } catch {
+      setAcceptedVisitedStepKeys(new Set())
+    }
+  }, [acceptedVisitStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const keys = Array.from(acceptedVisitedStepKeys)
+    if (keys.length > 0) {
+      sessionStorage.setItem(acceptedVisitStorageKey, JSON.stringify(keys))
+    } else {
+      sessionStorage.removeItem(acceptedVisitStorageKey)
+    }
+  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey])
 
   const canGenerate = validSelectedIds.length >= 2 &&
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
@@ -426,7 +451,28 @@ export default function InviteCustomizationPage() {
         newSet.add(stepId)
         return newSet
       })
+      setAcceptedVisitedStepKeys(prev => {
+        if (prev.has(stepId)) return prev
+        const next = new Set(prev)
+        next.add(stepId)
+        return next
+      })
     }
+  }, [])
+
+  const handleCategoryVisit = useCallback((categoryKey: string) => {
+    setAcceptedVisitedStepKeys(prev => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
+    setVisitedSteps(prev => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
   }, [])
 
   // Navigation helper: go back to customization intro
@@ -651,6 +697,23 @@ export default function InviteCustomizationPage() {
     />
   )
 
+  const sharedStyleSettingsSectionProps = {
+    value: photoStyleSettings,
+    onChange: setPhotoStyleSettings,
+    readonlyPredefined: true,
+    originalContextSettings,
+    showToggles: false as const,
+    packageId: packageId || 'headshot1',
+    noContainer: true,
+    teamContext: true,
+    token,
+    onStepMetaChange: setCustomizationStepsMeta,
+    enableDesktopProgressiveActivation: true,
+    onCategoryVisit: handleCategoryVisit,
+    acceptedOnVisitKeys: acceptedOnVisitKeys,
+    visitedStepKeys: acceptedVisitedStepKeys
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - hidden on mobile (handled by StyleSettingsSection) */}
@@ -665,107 +728,75 @@ export default function InviteCustomizationPage() {
           enabled={isSwipeEnabled && activeMobileStepInfo.index === 0}
         >
           <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 pb-44 md:pb-52">
-            {/* Mobile: Style settings, cost, and sticky controls */}
-            <div className="md:hidden space-y-6">
-              <StyleSettingsSection
-                value={photoStyleSettings}
-                onChange={setPhotoStyleSettings}
-                readonlyPredefined={true}
-                originalContextSettings={originalContextSettings}
-                showToggles={false}
-                packageId={packageId || 'headshot1'}
-                noContainer
-                teamContext
-                token={token}
-                onMobileStepChange={handleMobileStepChange}
-                onSwipeBack={handleBack}
-                onStepMetaChange={setCustomizationStepsMeta}
-                topHeader={inviteHeader}
-                onNavigationReady={setNavMethods}
-                hideInlineNavigation={true}
-                onStepIndicatorChange={setStepIndicatorProps}
-              />
-            </div>
-
-            {/* Fixed sticky controls at bottom - Mobile */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-3 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-              {/* Labeled navigation buttons row */}
-              <div className="flex items-center justify-between pb-3">
-                {/* Back to Selfies */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (stepIndicatorProps?.currentAllStepsIndex === 0) {
-                      router.push(`/invite-dashboard/${token}/selfies`)
-                    } else {
-                      navMethods?.goPrev()
-                    }
-                  }}
-                  className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span className="text-sm font-medium">
-                    {stepIndicatorProps?.currentAllStepsIndex === 0
-                      ? t('selfieSelection.mobile.navigation.selfies', { default: 'Selfies' })
-                      : t('selfieSelection.mobile.navigation.back', { default: 'Back' })}
-                  </span>
-                </button>
-
-                {/* Forward - Generate or Next */}
-                {canGenerate ? (
-                  <button
-                    type="button"
-                    onClick={onProceed}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition"
-                  >
-                    <span className="text-sm font-semibold">{t('selfieSelection.mobile.navigation.generate', { default: 'Generate' })}</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
-                    </svg>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => navMethods?.goNext()}
-                    disabled={(stepIndicatorProps?.currentAllStepsIndex ?? 0) >= ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)}
-                    className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition ${
-                      (stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)
-                        ? 'bg-brand-primary text-white hover:brightness-110'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{t('selfieSelection.mobile.navigation.next', { default: 'Next' })}</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {/* Progress dots */}
-              <div className="pb-3">
-                <FlowNavigation
-                  variant="dots-only"
-                  size="md"
-                  current={stepIndicatorProps?.currentAllStepsIndex ?? 0}
-                  total={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
-                  onPrev={() => {
-                    if (stepIndicatorProps?.currentAllStepsIndex === 0) {
-                      handleBack()
-                    } else {
-                      navMethods?.goPrev()
-                    }
-                  }}
-                  onNext={() => navMethods?.goNext()}
-                  stepColors={stepIndicatorProps ? {
-                    lockedSteps: stepIndicatorProps.lockedSteps,
-                    visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
-                  } : undefined}
+            {isMobileViewport ? (
+              <div className="space-y-6">
+                <StyleSettingsSection
+                  {...sharedStyleSettingsSectionProps}
+                  onMobileStepChange={handleMobileStepChange}
+                  onSwipeBack={handleBack}
+                  topHeader={inviteHeader}
+                  onNavigationReady={setNavMethods}
+                  hideInlineNavigation={true}
+                  onStepIndicatorChange={setStepIndicatorProps}
                 />
               </div>
+            ) : (
+              <StyleSettingsSection
+                {...sharedStyleSettingsSectionProps}
+              />
+            )}
+
+            <CustomizationMobileFooter
+              leftAction={{
+                label: stepIndicatorProps?.currentAllStepsIndex === 0
+                  ? t('selfieSelection.mobile.navigation.selfies', { default: 'Selfies' })
+                  : t('selfieSelection.mobile.navigation.back', { default: 'Back' }),
+                onClick: () => {
+                  if (stepIndicatorProps?.currentAllStepsIndex === 0) {
+                    router.push(`/invite-dashboard/${token}/selfies`)
+                    return
+                  }
+                  navMethods?.goPrev()
+                }
+              }}
+              rightAction={canGenerate
+                ? {
+                    label: t('selfieSelection.mobile.navigation.generate', { default: 'Generate' }),
+                    onClick: onProceed,
+                    disabled: isGenerating,
+                    tone: 'gradient',
+                    icon: 'play'
+                  }
+                : {
+                    label: t('selfieSelection.mobile.navigation.next', { default: 'Next' }),
+                    onClick: () => navMethods?.goNext(),
+                    disabled: (stepIndicatorProps?.currentAllStepsIndex ?? 0) >= ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1),
+                    tone: 'primary',
+                    icon: 'chevron-right'
+                  }}
+              progressContent={
+                <div className="pb-3">
+                  <FlowNavigation
+                    variant="dots-only"
+                    size="md"
+                    current={stepIndicatorProps?.currentAllStepsIndex ?? 0}
+                    total={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
+                    onPrev={() => {
+                      if (stepIndicatorProps?.currentAllStepsIndex === 0) {
+                        handleBack()
+                      } else {
+                        navMethods?.goPrev()
+                      }
+                    }}
+                    onNext={() => navMethods?.goNext()}
+                    stepColors={stepIndicatorProps ? {
+                      lockedSteps: stepIndicatorProps.lockedSteps,
+                      visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
+                    } : undefined}
+                  />
+                </div>
+              }
+            >
               {activeMobileStepInfo.type === 'selfie-tips' ? (
                 /* Selfie tips step: Show swipe hint to continue */
                 <div className="flex items-center justify-center gap-3 py-3 px-4 bg-brand-primary/10 rounded-xl overflow-hidden">
@@ -828,21 +859,8 @@ export default function InviteCustomizationPage() {
                   {t('styleSelection.generateButton')}
                 </GenerateButton>
               )}
-            </div>
+            </CustomizationMobileFooter>
 
-            <StyleSettingsSection
-              value={photoStyleSettings}
-              onChange={setPhotoStyleSettings}
-              readonlyPredefined={true}
-              originalContextSettings={originalContextSettings}
-              showToggles={false}
-              packageId={packageId || 'headshot1'}
-              noContainer
-              teamContext
-              className="hidden md:block"
-              token={token}
-              onStepMetaChange={setCustomizationStepsMeta}
-            />
           </div>
         </SwipeableContainer>
       </div>

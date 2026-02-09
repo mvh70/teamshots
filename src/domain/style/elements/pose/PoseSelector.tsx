@@ -99,11 +99,11 @@ export default function PoseSelector({
   // Get current pose type, handling both formats
   const currentPoseType = getPoseTypeFromSettings(value)
 
-  // Find the currently selected pose to show its description
-  const selectedPose = currentPoseType ? visiblePoses.find(p => p.value === currentPoseType) : undefined
-
   // For the select value, use first available pose if none selected
   const selectValue = currentPoseType || (visiblePoses[0]?.value ?? 'classic_corporate')
+
+  // Find the pose matching the displayed select value (for description and icon)
+  const selectedPose = visiblePoses.find(p => p.value === selectValue)
 
   return (
     <div className={`${className}`}>
@@ -150,20 +150,31 @@ export default function PoseSelector({
           </p>
         )}
 
-        {/* Conditional Image Preview - use selectValue to show preview for default/fallback pose too */}
-        {selectValue && hasPoseImage(selectValue) && (
-          <div className="mt-4">
-            <ImagePreview
-              src={`/images/poses/${selectValue}.png`}
-              alt={t(`poses.${selectValue}.label`)}
-              width={400}
-              height={300}
-              variant="preview"
-              className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
-              priority={true}
-              unoptimized={true}
-              showLoadingSpinner={false}
-            />
+        {/* Pose Preview - always shows for the selected pose */}
+        {selectValue && (
+          <div className="mt-4" key={selectValue}>
+            {hasPoseImage(selectValue) ? (
+              <ImagePreview
+                src={`/images/poses/${selectValue}.png`}
+                alt={t(`poses.${selectValue}.label`)}
+                width={400}
+                height={300}
+                variant="preview"
+                className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
+                priority={true}
+                unoptimized={true}
+                showLoadingSpinner={false}
+              />
+            ) : (
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                <span className="text-3xl" role="img" aria-label={t(`poses.${selectValue}.label`)}>
+                  {selectedPose?.icon || '📸'}
+                </span>
+                <div className="text-sm text-gray-500">
+                  {t('noPreview', { default: 'No preview image available for this pose' })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

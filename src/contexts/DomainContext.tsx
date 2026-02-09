@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 
 interface DomainContextValue {
   /** If true, this is an individual-only domain (portreya.com) - no team features */
@@ -21,8 +21,9 @@ interface DomainProviderProps {
 }
 
 export function DomainProvider({ children, isIndividualDomain, brandName }: DomainProviderProps) {
+  const value = useMemo(() => ({ isIndividualDomain, brandName }), [isIndividualDomain, brandName])
   return (
-    <DomainContext.Provider value={{ isIndividualDomain, brandName }}>
+    <DomainContext.Provider value={value}>
       {children}
     </DomainContext.Provider>
   )

@@ -79,25 +79,41 @@ export async function POST(request: NextRequest) {
     
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        try {
+          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        } catch (handlerError) {
+          Logger.error('Error handling checkout.session.completed', { error: handlerError instanceof Error ? handlerError.message : String(handlerError) });
+        }
         break;
-        
+
       case 'payment_intent.succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
+        try {
+          await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
+        } catch (handlerError) {
+          Logger.error('Error handling payment_intent.succeeded', { error: handlerError instanceof Error ? handlerError.message : String(handlerError) });
+        }
         break;
-        
+
       case 'payment_intent.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+        try {
+          await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+        } catch (handlerError) {
+          Logger.error('Error handling payment_intent.payment_failed', { error: handlerError instanceof Error ? handlerError.message : String(handlerError) });
+        }
         break;
-        
+
       case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        try {
+          await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        } catch (handlerError) {
+          Logger.error('Error handling invoice.payment_succeeded', { error: handlerError instanceof Error ? handlerError.message : String(handlerError) });
+        }
         break;
       default:
         Logger.warn(`Unhandled event type: ${event.type}`);
     }
-    
-    Logger.info(`Successfully processed webhook event: ${event.type}`);
+
+    Logger.info(`Processed webhook event: ${event.type}`);
 
     return NextResponse.json({ received: true });
   } catch (error) {
@@ -117,6 +133,18 @@ function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Idempotency: skip if we already processed this checkout session
+  const existingTransaction = await prisma.creditTransaction.findFirst({
+    where: {
+      stripePaymentId: session.payment_intent as string,
+      type: 'purchase'
+    }
+  })
+  if (existingTransaction) {
+    Logger.info('Checkout session already processed, skipping', { sessionId: session.id, transactionId: existingTransaction.id })
+    return
+  }
+
   let userId = session.metadata?.userId as string | undefined;
   const purchaseType = session.metadata?.type;
   let isNewGuestUser = false;

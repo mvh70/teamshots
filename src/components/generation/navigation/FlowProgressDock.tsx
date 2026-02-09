@@ -55,6 +55,10 @@ interface FlowProgressDockProps {
   onDontShowAgain?: () => void
   /** Text for the "Don't show again" button */
   dontShowAgainText?: string
+  /** Called when user clicks disabled generate due to missing customization */
+  onAttemptDisabledGenerate?: () => void
+  /** Specific reason text for disabled generate */
+  disabledGenerateReason?: string
 }
 
 /**
@@ -88,7 +92,9 @@ export default function FlowProgressDock({
   customizationStepsMeta,
   visitedEditableSteps = [],
   onDontShowAgain,
-  dontShowAgainText
+  dontShowAgainText,
+  onAttemptDisabledGenerate,
+  disabledGenerateReason
 }: FlowProgressDockProps) {
   const t = useTranslations('generation.progressDock')
 
@@ -250,7 +256,7 @@ export default function FlowProgressDock({
         disabled: !canContinue,
         tooltip: !canContinue
           ? (!isCustomizationComplete
-              ? t('tooltips.needCustomization')
+              ? (disabledGenerateReason || t('tooltips.needCustomization'))
               : t('tooltips.needCredits'))
           : undefined,
         isGenerate: isGenerate && canContinue
@@ -265,6 +271,21 @@ export default function FlowProgressDock({
 
   const backConfig = getBackConfig()
   const continueConfig = getContinueConfig()
+  const continueIsDisabled = continueConfig.disabled || isGenerating
+  const canGuideDisabledClick = isOnCustomize && !isCustomizationComplete && !!onAttemptDisabledGenerate && continueConfig.disabled && !isGenerating
+  const continueIsHardDisabled = isGenerating || (continueConfig.disabled && !canGuideDisabledClick)
+  const handleContinueClick = () => {
+    if (continueIsHardDisabled) {
+      return
+    }
+    if (canGuideDisabledClick) {
+      if (onAttemptDisabledGenerate) {
+        onAttemptDisabledGenerate()
+      }
+      return
+    }
+    continueConfig.onClick()
+  }
 
   // Pre-compute sets for efficient lookup
   const lockedSet = new Set(customizationStepsMeta?.lockedSteps ?? [])
@@ -479,12 +500,13 @@ export default function FlowProgressDock({
             <Tooltip content={continueConfig.tooltip} position="top">
               <button
                 type="button"
-                onClick={continueConfig.onClick}
-                disabled={continueConfig.disabled}
+                onClick={handleContinueClick}
+                disabled={continueIsHardDisabled}
+                aria-disabled={continueIsHardDisabled || undefined}
                 className={`
                   flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
                   transition-all duration-200
-                  ${continueConfig.disabled
+                  ${continueIsDisabled
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : continueConfig.isGenerate
                       ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
@@ -508,12 +530,13 @@ export default function FlowProgressDock({
           ) : (
             <button
               type="button"
-              onClick={continueConfig.onClick}
-              disabled={continueConfig.disabled || isGenerating}
+              onClick={handleContinueClick}
+              disabled={continueIsHardDisabled}
+              aria-disabled={continueIsHardDisabled || undefined}
               className={`
                 flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
                 transition-all duration-200
-                ${continueConfig.disabled
+                ${continueIsDisabled
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : continueConfig.isGenerate
                     ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
@@ -538,6 +561,13 @@ export default function FlowProgressDock({
 
         {/* Divider */}
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-3" />
+
+        {/* Status message when customization is incomplete */}
+        {isOnCustomize && effectiveHasUneditedFields && disabledGenerateReason && (
+          <div data-testid="customization-status-banner" className="text-center text-xs font-medium text-amber-700 bg-amber-50/80 border border-amber-200/50 rounded-lg px-3 py-1.5 mb-3">
+            {disabledGenerateReason}
+          </div>
+        )}
 
         {/* ROW 2: Progress indicators */}
         <div className="flex items-start justify-center gap-2">

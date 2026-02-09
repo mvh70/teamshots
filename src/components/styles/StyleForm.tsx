@@ -328,6 +328,7 @@ export default function StyleForm({
           </label>
           <input
             id="style-name-input"
+            data-testid="style-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}

@@ -3229,7 +3229,7 @@ export default function TeamPage() {
                 disabled
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
               >
-                <PlusIcon className="h-4.5 w-4.5" />
+                <PlusIcon className="h-[18px] w-[18px]" />
                 {t('buttons.upgradeToInvite')}
               </button>
             ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
@@ -3238,7 +3238,7 @@ export default function TeamPage() {
                 href="/app/styles/team/create"
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg bg-gradient-to-r from-brand-primary to-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
               >
-                <PlusIcon className="h-4.5 w-4.5" />
+                <PlusIcon className="h-[18px] w-[18px]" />
                 {t('setupRequired.createButton')}
               </Link>
             ) : credits.team === 0 ? (
@@ -3255,7 +3255,7 @@ export default function TeamPage() {
                   e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
               >
-                <PlusIcon className="h-4.5 w-4.5" />
+                <PlusIcon className="h-[18px] w-[18px]" />
                 {t('photos.buyMoreSeats')}
               </Link>
             ) : (
@@ -3270,7 +3270,7 @@ export default function TeamPage() {
                 }}
                 className="group w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg bg-gradient-to-r from-brand-secondary to-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
               >
-                <PlusIcon className="h-4.5 w-4.5 transition-transform group-hover:rotate-90 duration-200" />
+                <PlusIcon className="h-[18px] w-[18px] transition-transform group-hover:rotate-90 duration-200" />
                 {t('buttons.inviteTeamMember')}
               </button>
             )}

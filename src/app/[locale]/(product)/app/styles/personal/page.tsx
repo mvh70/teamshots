@@ -111,7 +111,7 @@ export default function PersonalPhotoStylesPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 id="personal-photo-styles-heading" className="text-2xl font-bold text-gray-900">
+            <h1 id="personal-photo-styles-heading" data-testid="styles-page-title" className="text-2xl font-bold text-gray-900">
               {t('labels.personalPhotoStyles')}
             </h1>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-premium/10 text-brand-premium">
@@ -124,6 +124,7 @@ export default function PersonalPhotoStylesPage() {
         </div>
         <button
           id="create-personal-style-btn"
+          data-testid="create-context-btn"
           onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/personal/create' }}
           disabled={isFreePlan}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isFreePlan ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-primary text-white hover:bg-brand-primary-hover'}`}
@@ -170,6 +171,7 @@ export default function PersonalPhotoStylesPage() {
         {contextsData?.contexts.map((context) => (
           <div
             key={context.id}
+            data-testid="style-card"
             className={`rounded-lg border-2 p-6 ${
               contextsData.activeContext?.id === context.id
                 ? 'border-brand-secondary bg-white'
@@ -200,6 +202,7 @@ export default function PersonalPhotoStylesPage() {
                 <button
                   onClick={() => handleDeleteContext(context.id)}
                   className="p-1 text-gray-400 hover:text-red-600"
+                  data-testid="delete-style-btn"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>

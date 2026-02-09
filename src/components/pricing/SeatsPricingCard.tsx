@@ -377,6 +377,19 @@ export default function SeatsPricingCard({
         </span>
       </div>
 
+      {/* Promo Code Input */}
+      <div className="mb-6">
+        <PromoCodeInput
+          purchaseType="seats"
+          originalAmount={isTopUpMode ? topUpTotal : total}
+          seats={isTopUpMode ? additionalSeats : validatedSeats}
+          onApply={handlePromoCodeApply}
+          onClear={handlePromoCodeClear}
+          isApplied={!!appliedPromoCode}
+          appliedCode={appliedPromoCode || ''}
+        />
+      </div>
+
       {/* CTA Button - Switch to "Book a Demo" for enterprise (100+ seats) */}
       {validatedSeats >= 100 ? (
         <a

@@ -1,8 +1,10 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { headers } from 'next/headers'
 import { Work_Sans, Inter } from 'next/font/google'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
+import { routing } from '@/i18n/routing'
 import '../globals.css'
 
 const displayFont = Work_Sans({
@@ -24,8 +26,10 @@ export default async function InviteDashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Default to English for invite dashboard
-  const locale = 'en'
+  // Detect locale from Accept-Language header, falling back to default
+  const headersList = await headers()
+  const acceptLang = headersList.get('accept-language') || ''
+  const locale = routing.locales.find(l => acceptLang.toLowerCase().includes(l)) || routing.defaultLocale
   const messages = await getMessages({ locale })
   
   return (

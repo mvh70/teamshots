@@ -6,111 +6,9 @@ const { handlers, auth: originalAuth } = NextAuth(authOptions)
 // Export handlers for use in route
 export { handlers }
 
-// Custom auth function that checks for E2E headers and handles impersonation
+// Custom auth function that handles impersonation
 export async function auth() {
   try {
-    // In build contexts, using async functions that depend on request context
-    // can fail. We wrap everything in a try-catch to handle this gracefully.
-    const headersList = await (async () => {
-      try {
-        const { headers } = await import("next/headers")
-        return await headers()
-      } catch {
-        // headers() is not available in build/static contexts
-        return null
-      }
-    })()
-    
-    if (headersList) {
-      try {
-        const e2eUserId = headersList.get('x-e2e-user-id')
-        const nodeEnv = process.env.NODE_ENV
-
-        // SECURITY: Only allow E2E bypass in test environment with explicit flag
-        // Must have BOTH: NODE_ENV=test AND E2E_TESTING=true
-        // This prevents accidental bypass in development or production
-        const isTestEnvironment = nodeEnv === 'test'
-        const e2eTestingEnabled = process.env.E2E_TESTING === 'true'
-
-        // SECURITY: Explicitly reject E2E headers in production
-        if (e2eUserId && nodeEnv === 'production') {
-          const { SecurityLogger } = await import('@/lib/security-logger')
-          await SecurityLogger.logSuspiciousActivity(
-            'anonymous',
-            'e2e_bypass_attempt_in_production',
-            {
-              attemptedUserId: e2eUserId,
-              ip: headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
-            }
-          )
-          // Reject completely - don't even proceed to regular auth
-          throw new Error('E2E authentication bypass is not allowed in production')
-        }
-
-        // Only allow E2E bypass if BOTH conditions are met
-        if (e2eUserId && isTestEnvironment && e2eTestingEnabled) {
-          // Validate E2E user ID format (UUIDs only)
-          if (!/^[a-z0-9]{25}$/.test(e2eUserId) && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e2eUserId)) {
-            const { SecurityLogger } = await import('@/lib/security-logger')
-            await SecurityLogger.logSuspiciousActivity(
-              'anonymous',
-              'e2e_invalid_user_id_format',
-              {
-                attemptedUserId: e2eUserId,
-                environment: nodeEnv
-              }
-            )
-            throw new Error('Invalid E2E user ID format')
-          }
-
-          // Log E2E authentication bypass for audit purposes
-          try {
-            const { SecurityLogger } = await import('@/lib/security-logger')
-            await SecurityLogger.logSuspiciousActivity(
-              e2eUserId,
-              'e2e_auth_bypass',
-              {
-                environment: nodeEnv,
-                email: headersList.get('x-e2e-user-email') || 'test@example.com',
-                e2eTestingEnabled
-              }
-            )
-          } catch {
-            // Ignore logging errors in E2E context
-          }
-
-          // Return mock session for E2E tests
-          return {
-            user: {
-              id: e2eUserId,
-              email: headersList.get('x-e2e-user-email') || 'test@example.com',
-              name: 'Test User',
-              role: headersList.get('x-e2e-user-role') || 'user',
-              isAdmin: headersList.get('x-e2e-user-is-admin') === 'true',
-              locale: headersList.get('x-e2e-user-locale') || 'en',
-              signupDomain: headersList.get('x-e2e-user-signup-domain') || null
-            },
-            expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-          }
-        }
-        // If E2E headers present but conditions not met, log and fall through
-        if (e2eUserId && (!isTestEnvironment || !e2eTestingEnabled)) {
-          const { SecurityLogger } = await import('@/lib/security-logger')
-          await SecurityLogger.logSuspiciousActivity(
-            'anonymous',
-            'e2e_bypass_rejected',
-            {
-              reason: !isTestEnvironment ? 'not_test_env' : 'e2e_testing_disabled',
-              environment: nodeEnv,
-              e2eTestingEnabled
-            }
-          )
-        }
-      } catch {
-        // If anything fails while reading headers, fall through to standard auth
-      }
-    }
-
     // Check for impersonation cookie
     const cookieStore = await (async () => {
       try {
@@ -199,9 +97,8 @@ export async function auth() {
       }
     }
   } catch {
-    // Catch any unexpected errors during header handling
+    // If anything fails, fall through to standard auth
   }
-  
+
   return originalAuth()
 }
-

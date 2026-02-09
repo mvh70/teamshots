@@ -15,7 +15,7 @@ export default function StyleCard({
   className
 }: StyleCardProps) {
   return (
-    <div className={className}>
+    <div className={className} data-testid="style-card">
       <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
         <StyleSummaryCard
           settings={(settings as SummarySettings) || undefined}

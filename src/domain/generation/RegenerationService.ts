@@ -120,30 +120,30 @@ export class RegenerationService {
       }
     }
     
-    // Create new generation record
-    const generation = await prisma.generation.create({
-      data: {
-        personId: personId,
-        contextId: sourceGeneration.contextId,
-        status: 'pending',
-        maxRegenerations: 0, // Regenerations cannot be regenerated
-        remainingRegenerations: 0,
-        generationGroupId: sourceGeneration.generationGroupId,
-        isOriginal: false,
-        groupIndex: nextGroupIndex,
-        creditsUsed: 0, // Regenerations don't cost credits
-        creditSource: creditSource,
-        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
-      },
-    })
-
-    // Update the original generation's remaining regenerations
-    await prisma.generation.update({
-      where: { id: originalGeneration.id },
-      data: {
-        remainingRegenerations: originalGeneration.remainingRegenerations - 1
-      }
-    })
+    // Create new generation + decrement regeneration count atomically
+    const [generation] = await prisma.$transaction([
+      prisma.generation.create({
+        data: {
+          personId: personId,
+          contextId: sourceGeneration.contextId,
+          status: 'pending',
+          maxRegenerations: 0, // Regenerations cannot be regenerated
+          remainingRegenerations: 0,
+          generationGroupId: sourceGeneration.generationGroupId,
+          isOriginal: false,
+          groupIndex: nextGroupIndex,
+          creditsUsed: 0, // Regenerations don't cost credits
+          creditSource: creditSource,
+          styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
+        },
+      }),
+      prisma.generation.update({
+        where: { id: originalGeneration.id },
+        data: {
+          remainingRegenerations: { decrement: 1 }
+        }
+      })
+    ])
     
     // Queue the generation job
     if (!Array.isArray(storedSelfieKeys) || storedSelfieKeys.length === 0) {

@@ -1,7 +1,6 @@
 import createMiddleware from 'next-intl/middleware';
 import { routing } from '@/i18n/routing';
 import { NextResponse, NextRequest } from 'next/server'
-import { getRequestHeader } from '@/lib/server-headers'
 import { auth } from '@/auth'
 import { ALLOWED_DOMAINS } from '@/lib/url'
 import { getRequestDomain } from '@/lib/domain'
@@ -36,7 +35,7 @@ function createCleanRedirectUrl(path: string, baseUrl: string | URL): URL {
 
 function removeLocalePrefix(pathname: string) {
   const segments = pathname.split('/')
-  if (segments.length > 1 && ['en', 'es'].includes(segments[1])) {
+  if (segments.length > 1 && (routing.locales as readonly string[]).includes(segments[1])) {
     return '/' + segments.slice(2).join('/')
   }
   return pathname
@@ -176,14 +175,17 @@ const intlMiddleware = createMiddleware({
 export async function proxy(request: NextRequest) {
   console.log('[PROXY] Request received:', request.nextUrl.pathname)
   try {
+    const shouldEnforceCanonicalHost =
+      process.env.NODE_ENV === 'production' || process.env.ENFORCE_CANONICAL_HOST === 'true'
+
     // Canonical host redirect (SEO + auth cookie consistency).
     // Keep host aligned with configured base URL to avoid OAuth PKCE cookie loss
     // when signin starts on one host and callback lands on another.
-    const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
-    const host = rawHost.split(',')[0].trim().toLowerCase()
     const canonicalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL
-    if (canonicalBaseUrl) {
+    if (shouldEnforceCanonicalHost && canonicalBaseUrl) {
       try {
+        const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
+        const host = rawHost.split(',')[0].trim().toLowerCase()
         const canonicalHost = new URL(canonicalBaseUrl).host.toLowerCase()
         if (host && host !== canonicalHost) {
           const newUrl = new URL(request.url)
@@ -196,31 +198,12 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Allow E2E tests to bypass locale detection/redirects
-    if ((await getRequestHeader('x-playwright-e2e')) === '1') {
-      const res = NextResponse.next()
-      // Preserve existing E2E headers if they exist, otherwise add defaults
-      if (!res.headers.get('x-e2e-user-id')) {
-        res.headers.set('x-e2e-user-id', 'test-user-id')
-      }
-      if (!res.headers.get('x-e2e-user-email')) {
-        res.headers.set('x-e2e-user-email', 'test@example.com')
-      }
-      if (!res.headers.get('x-e2e-user-role')) {
-        res.headers.set('x-e2e-user-role', 'user')
-      }
-      if (!res.headers.get('x-e2e-user-locale')) {
-        res.headers.set('x-e2e-user-locale', 'en')
-      }
-      return addSecurityHeaders(res)
-    }
-    
     // Safari-specific fix: Handle protocol-less URLs
     const url = request.nextUrl
     if (url.protocol === 'about:' || !url.protocol) {
       // Redirect to proper protocol
       const newUrl = new URL(request.url)
-      newUrl.protocol = (await getRequestHeader('x-forwarded-proto')) || 'http'
+      newUrl.protocol = request.headers.get('x-forwarded-proto') || 'http'
       stripDefaultPort(newUrl)
       return addSecurityHeaders(NextResponse.redirect(newUrl, 301))
     }

@@ -16,6 +16,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint, uploadEndpoi
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [tempKey, setTempKey] = useState<string | null>(null)
   const [isDirectUpload, setIsDirectUpload] = useState(false) // Track if using direct upload (no temp storage)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null) // Track objectURL for cleanup
   const { track } = useAnalytics()
 
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
@@ -57,8 +58,13 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint, uploadEndpoi
       setPendingFile(file)
       setIsDirectUpload(false) // Mark as temp storage flow
       
+      // Revoke previous preview URL to prevent memory leak
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
       // Create preview URL for local display
       const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
       
       // Return temp key as the current uploadedKey surrogate
       return { key: data.tempKey, url }
@@ -254,6 +260,10 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint, uploadEndpoi
   }
 
   const reset = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
     setUploadedKey(null)
     setIsApproved(false)
     setIsLoading(false)

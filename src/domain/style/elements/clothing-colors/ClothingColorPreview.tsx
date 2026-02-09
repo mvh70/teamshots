@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { getColorHex, type ColorValue, type ClothingColorKey } from './types'
+import { normalizeColorToHex } from '@/lib/color-utils'
 
 interface ClothingColorPreviewProps {
   colors: {
@@ -17,6 +18,18 @@ interface ClothingColorPreviewProps {
   className?: string
 }
 
+/**
+ * Resolve a color to a valid CSS hex value.
+ * getColorHex may return raw color names like 'Dark blue' which aren't valid CSS.
+ * This ensures we always get a usable hex string.
+ */
+function resolveColorToHex(color: string | ColorValue | undefined): string | undefined {
+  const raw = getColorHex(color)
+  if (!raw) return undefined
+  if (raw.startsWith('#')) return raw
+  return normalizeColorToHex(raw)
+}
+
 // Individual clothing layer component with color overlay
 function ClothingLayer({
   imagePath,
@@ -29,7 +42,7 @@ function ClothingLayer({
 }) {
   const [imageExists, setImageExists] = useState(true)
   const [imageError, setImageError] = useState(false)
-  const colorHex = getColorHex(color)
+  const colorHex = resolveColorToHex(color)
 
   if (!imageExists || imageError) {
     return null

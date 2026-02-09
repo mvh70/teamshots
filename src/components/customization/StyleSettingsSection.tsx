@@ -28,6 +28,10 @@ interface StyleSettingsSectionProps {
   hideInlineNavigation?: boolean
   /** Called when step indicator props change (for external navigation UI) */
   onStepIndicatorChange?: Parameters<typeof PhotoStyleSettings>[0]['onStepIndicatorChange']
+  enableDesktopProgressiveActivation?: Parameters<typeof PhotoStyleSettings>[0]['enableDesktopProgressiveActivation']
+  onCategoryVisit?: Parameters<typeof PhotoStyleSettings>[0]['onCategoryVisit']
+  acceptedOnVisitKeys?: Parameters<typeof PhotoStyleSettings>[0]['acceptedOnVisitKeys']
+  visitedStepKeys?: Parameters<typeof PhotoStyleSettings>[0]['visitedStepKeys']
 }
 
 export default function StyleSettingsSection({
@@ -51,7 +55,11 @@ export default function StyleSettingsSection({
   topHeader,
   onNavigationReady,
   hideInlineNavigation = false,
-  onStepIndicatorChange
+  onStepIndicatorChange,
+  enableDesktopProgressiveActivation = false,
+  onCategoryVisit,
+  acceptedOnVisitKeys,
+  visitedStepKeys
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -77,6 +85,10 @@ export default function StyleSettingsSection({
         onNavigationReady={onNavigationReady}
         hideInlineNavigation={hideInlineNavigation}
         onStepIndicatorChange={onStepIndicatorChange}
+        enableDesktopProgressiveActivation={enableDesktopProgressiveActivation}
+        onCategoryVisit={onCategoryVisit}
+        acceptedOnVisitKeys={acceptedOnVisitKeys}
+        visitedStepKeys={visitedStepKeys}
       />
     </>
   )
@@ -91,5 +103,3 @@ export default function StyleSettingsSection({
     </div>
   )
 }
-
-

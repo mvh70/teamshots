@@ -31,15 +31,6 @@ export function validateEnvironment() {
       )
     }
 
-    // 3. Ensure E2E_TESTING is not enabled in production
-    if (process.env.E2E_TESTING === 'true') {
-      throw new Error(
-        'SECURITY: E2E_TESTING must not be enabled in production! ' +
-        'This allows authentication bypass via E2E headers. ' +
-        'Remove E2E_TESTING=true from production environment.'
-      )
-    }
-
     // 3. Validate required production secrets
     const requiredSecrets = [
       'NEXTAUTH_SECRET',

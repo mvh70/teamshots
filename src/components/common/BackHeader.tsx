@@ -22,7 +22,7 @@ export default function BackHeader({ backUrl, title, subtitle }: BackHeaderProps
         <ArrowLeftIcon className="h-5 w-5" />
       </button>
       <div className="flex-1 min-w-0">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-2">{title}</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-2" data-testid="page-title">{title}</h1>
         {subtitle ? (
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">{subtitle}</p>
         ) : null}

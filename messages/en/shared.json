@@ -1660,7 +1660,10 @@
       "tooltips": {
         "needSelfies": "Add {count} photos first",
         "needCustomization": "Complete all customization options first",
-        "needCredits": "You need more credits to generate"
+        "needCredits": "You need more credits to generate",
+        "setField": "Set your {field} to generate",
+        "setFields": "Set {fields} to generate",
+        "setFieldsMore": "Set {fields} and {count} more to generate"
       },
       "infoIcons": {
         "selfieTips": "Selfie tips",

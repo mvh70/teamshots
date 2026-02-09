@@ -6,7 +6,7 @@ import { predefined, hasValue, userChoice } from '../base/element-types'
 import { Grid } from '@/components/ui'
 import { CLOTHING_STYLES, CLOTHING_DETAILS, getAccessoriesForClothing } from './config'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ClothingColorPreview from '../clothing-colors/ClothingColorPreview'
 import type { ClothingColorKey } from '../clothing-colors/types'
 
@@ -18,6 +18,7 @@ interface ClothingSelectorProps {
   availableStyles?: string[] // Optional list of available clothing styles (filters CLOTHING_STYLES)
   isPredefined?: boolean // If true, user can't change the settings
   isDisabled?: boolean // If true, controls are visually greyed and inactive
+  suppressAutoSelect?: boolean // If true, don't auto-select first style on mount (for progressive activation)
   className?: string
   showHeader?: boolean
 }
@@ -30,30 +31,46 @@ export default function ClothingSelector({
   availableStyles,
   isPredefined = false,
   isDisabled = false,
+  suppressAutoSelect = false,
   className = '',
   showHeader = false
 }: ClothingSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothing')
-  const [imageExists, setImageExists] = useState(true)
-
-  // Extract the clothing value from the wrapper
-  const clothingValue = hasValue(value) ? value.value : undefined
-
-  // Helper to preserve mode when updating value
-  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
-  const wrapWithCurrentMode = (newValue: ClothingValue): ClothingSettings => {
-    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
-  }
+  const [failedPreviewKey, setFailedPreviewKey] = useState<string | null>(null)
 
   // Filter clothing styles based on availableStyles prop
   const filteredClothingStyles = availableStyles
     ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
     : CLOTHING_STYLES
 
+  // Extract the clothing value from the wrapper
+  const clothingValue = hasValue(value) ? value.value : undefined
+  const fallbackStyle = filteredClothingStyles[0]?.value as ClothingType | undefined
+  const displayStyle = clothingValue?.style || fallbackStyle
+  const fallbackDetails = displayStyle ? CLOTHING_DETAILS[displayStyle]?.[0] : undefined
+  const displayDetails = clothingValue?.details || fallbackDetails
+  const displayClothingValue = displayStyle
+    ? {
+        style: displayStyle,
+        details: displayDetails,
+        accessories: clothingValue?.accessories || []
+      }
+    : undefined
+  const previewKey = displayClothingValue?.style && displayClothingValue?.details
+    ? `${displayClothingValue.style}-${displayClothingValue.details}`
+    : null
+  const imageExists = previewKey ? failedPreviewKey !== previewKey : false
+
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = useCallback((newValue: ClothingValue): ClothingSettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }, [value?.mode])
+
   // Initialize with first available style and detail if not set
   // This ensures the dropdown value matches what's visually displayed and shows the preview
   useEffect(() => {
-    if (!clothingValue?.style && filteredClothingStyles.length > 0 && !isPredefined && !isDisabled) {
+    if (!clothingValue?.style && filteredClothingStyles.length > 0 && !isPredefined && !isDisabled && !suppressAutoSelect) {
       const defaultStyle = filteredClothingStyles[0].value as ClothingType
       const defaultDetails = CLOTHING_DETAILS[defaultStyle]?.[0]
       const newValue: ClothingValue = {
@@ -63,7 +80,7 @@ export default function ClothingSelector({
       }
       onChange(wrapWithCurrentMode(newValue))
     }
-  }, [clothingValue?.style, filteredClothingStyles, isPredefined, isDisabled, onChange])
+  }, [clothingValue?.style, filteredClothingStyles, isPredefined, isDisabled, suppressAutoSelect, onChange, wrapWithCurrentMode])
 
   const handleStyleChange = (style: ClothingType, event?: React.MouseEvent) => {
     if (event) {
@@ -88,8 +105,12 @@ export default function ClothingSelector({
       event.stopPropagation()
     }
 
-    if (!clothingValue) return
-    onChange(wrapWithCurrentMode({ ...clothingValue, details: detail }))
+    if (!displayClothingValue?.style) return
+    onChange(wrapWithCurrentMode({
+      ...displayClothingValue,
+      details: detail,
+      accessories: displayClothingValue.accessories || []
+    }))
   }
 
   const handleAccessoryToggle = (accessory: string, event?: React.MouseEvent) => {
@@ -97,21 +118,15 @@ export default function ClothingSelector({
       event.preventDefault()
       event.stopPropagation()
     }
-    if (isPredefined || !clothingValue) return
+    if (isPredefined || !displayClothingValue?.style) return
 
-    const currentAccessories = clothingValue.accessories || []
+    const currentAccessories = displayClothingValue.accessories || []
     const newAccessories = currentAccessories.includes(accessory)
       ? currentAccessories.filter((a: string) => a !== accessory)
       : [...currentAccessories, accessory]
 
-    onChange(wrapWithCurrentMode({ ...clothingValue, accessories: newAccessories }))
+    onChange(wrapWithCurrentMode({ ...displayClothingValue, accessories: newAccessories }))
   }
-
-  // Reset image exists state when style or details change
-  useEffect(() => {
-    setImageExists(true)
-  }, [clothingValue?.style, clothingValue?.details])
-
 
   return (
     <div className={`${className}`}>
@@ -136,7 +151,7 @@ export default function ClothingSelector({
       {/* Clothing Style Selection - Dropdown */}
       <div className="mb-6">
         <select
-          value={clothingValue?.style || ''}
+          value={displayStyle || ''}
           onChange={(e) => !(isPredefined || isDisabled) && handleStyleChange(e.target.value as ClothingType)}
           disabled={isPredefined || isDisabled}
           className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
@@ -152,7 +167,7 @@ export default function ClothingSelector({
       </div>
 
       {/* Style-specific controls */}
-      {clothingValue?.style && (
+      {displayClothingValue?.style && (
         <div className={`space-y-6 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
           {/* Details Section */}
           <div>
@@ -160,8 +175,8 @@ export default function ClothingSelector({
               {t('details.label', { default: 'Details' })}
             </label>
             <Grid cols={{ mobile: 2 }} gap="sm">
-              {CLOTHING_DETAILS[clothingValue.style]?.map((detail) => {
-                const isSelected = clothingValue.details === detail
+              {CLOTHING_DETAILS[displayClothingValue.style]?.map((detail) => {
+                const isSelected = displayClothingValue.details === detail
                 return (
                   <button
                     type="button"
@@ -189,11 +204,11 @@ export default function ClothingSelector({
             </div>
 
             {/* Accessory Selector */}
-            {!(isPredefined || isDisabled) && (
-              <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                {getAccessoriesForClothing(clothingValue.style, clothingValue.details).map((accessory) => {
-                  const isSelected = clothingValue.accessories?.includes(accessory) || false
-                  return (
+              {!(isPredefined || isDisabled) && (
+                <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  {getAccessoriesForClothing(displayClothingValue.style, displayClothingValue.details).map((accessory) => {
+                    const isSelected = displayClothingValue.accessories?.includes(accessory) || false
+                    return (
                     <button
                       type="button"
                       key={accessory}
@@ -216,23 +231,25 @@ export default function ClothingSelector({
           </div>
 
           {/* Preview Image with Colors */}
-          {clothingValue.details && imageExists && clothingValue.style && (
-            <div className="mt-6 rounded-md overflow-hidden border border-gray-200 bg-white p-4">
+          {displayClothingValue.details && imageExists && displayClothingValue.style && (
+            <div className="mt-6">
               {clothingColors && hasValue(clothingColors) ? (
                 <ClothingColorPreview
                   colors={clothingColors.value}
-                  clothingStyle={clothingValue.style}
-                  clothingDetail={clothingValue.details}
+                  clothingStyle={displayClothingValue.style}
+                  clothingDetail={displayClothingValue.details}
                   excludeColors={excludeColors}
                 />
               ) : (
                 <Image
-                  src={`/images/clothing/${clothingValue.style}-${clothingValue.details}.png`}
-                  alt={`${t(`styles.${clothingValue.style}.label`)} - ${t(`details_options.${clothingValue.details}`)}`}
+                  src={`/images/clothing/${displayClothingValue.style}-${displayClothingValue.details}.png`}
+                  alt={`${t(`styles.${displayClothingValue.style}.label`)} - ${t(`details_options.${displayClothingValue.details}`)}`}
                   width={600}
                   height={400}
                   className="w-full h-auto object-cover"
-                  onError={() => setImageExists(false)}
+                  onError={() => {
+                    if (previewKey) setFailedPreviewKey(previewKey)
+                  }}
                 />
               )}
             </div>
@@ -243,4 +260,3 @@ export default function ClothingSelector({
     </div>
   )
 }
-

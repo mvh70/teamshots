@@ -14,11 +14,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing token' }, { status: 400 })
     }
 
-    // Validate the token and get person data
+    // Validate the token, check expiry, and get person data
     const invite = await prisma.teamInvite.findFirst({
       where: {
         token,
-        usedAt: { not: null }
+        usedAt: { not: null },
+        expiresAt: { gt: new Date() }
       },
       include: {
         person: true
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
 
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
+    }
+
+    // Verify person is still a member of the team
+    if (invite.person && invite.person.teamId !== invite.teamId) {
+      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
     }
 
     // Extend invite expiry (sliding expiration) - don't await to avoid blocking
@@ -101,11 +107,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing token or selfieKey' }, { status: 400 })
     }
 
-    // Validate the token and get person data
+    // Validate the token, check expiry, and get person data
     const invite = await prisma.teamInvite.findFirst({
       where: {
         token,
-        usedAt: { not: null }
+        usedAt: { not: null },
+        expiresAt: { gt: new Date() }
       },
       include: {
         person: true
@@ -114,6 +121,11 @@ export async function POST(request: NextRequest) {
 
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
+    }
+
+    // Verify person is still a member of the team
+    if (invite.person && invite.person.teamId !== invite.teamId) {
+      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
     }
 
     // Extend invite expiry (sliding expiration) - don't await to avoid blocking

@@ -2,15 +2,21 @@ import { NextResponse } from 'next/server'
 import { cleanupExpiredHandoffTokens } from '@/lib/mobile-handoff'
 import { Logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 
 export const runtime = 'nodejs'
 
 /**
  * POST /api/mobile-handoff/cleanup
  * Manually trigger cleanup of expired mobile handoff tokens
- * Useful for testing and manual cleanup
+ * Requires admin authentication
  */
 export async function POST() {
+  const session = await auth()
+  if (!session?.user?.isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const now = new Date()
     
@@ -63,8 +69,14 @@ export async function POST() {
 /**
  * GET /api/mobile-handoff/cleanup
  * Check status of expired tokens without cleaning them
+ * Requires admin authentication
  */
 export async function GET() {
+  const session = await auth()
+  if (!session?.user?.isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const now = new Date()
     

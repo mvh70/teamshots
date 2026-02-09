@@ -249,10 +249,12 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
 
   // Server-side detection from provided headers (REQUIRED)
   if (requestHeaders) {
-    // Prefer 'host' header over 'x-forwarded-host' for security
-    const host = requestHeaders.get('host')
+    // Prefer x-forwarded-host to preserve original domain behind proxies.
+    // Fall back to host for local/dev environments that don't set forwarding headers.
+    const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host')
     if (host) {
-      const normalizedHost = normalizeDomain(host)
+      // Handle comma-separated values from multi-proxy chains.
+      const normalizedHost = normalizeDomain(host.split(',')[0].trim())
 
       // On localhost, allow forced domain override
       if ((normalizedHost === 'localhost' || normalizedHost === '127.0.0.1') && forcedDomain) {

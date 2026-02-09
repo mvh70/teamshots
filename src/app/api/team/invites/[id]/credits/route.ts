@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withTeamPermission } from '@/domain/access/permissions'
-import { getEffectiveTeamCreditBalance, createCreditTransaction } from '@/domain/credits/credits'
+import { getEffectiveTeamCreditBalance, transferCreditsFromTeamToPerson } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
@@ -97,18 +97,16 @@ export async function POST(
 
     // Different handling based on whether invite has been accepted
     if (invite.personId) {
-      // Accepted invite: Create credit transaction only (single source of truth)
-      // The person's credit balance is tracked via CreditTransaction, not creditsAllocated
-      await createCreditTransaction({
-        credits: creditsToAdd,
-        type: 'invite_allocated',
-        description: `Additional ${photosToAdd} photos added by team admin`,
-        personId: invite.personId,
-        teamInviteId: inviteId,
-        userId: session.user.id  // Track who added the credits
-      })
-      
-      Logger.info('Added credits to accepted invite via transaction', {
+      // Accepted invite: Transfer credits from team pool to person (atomic)
+      await transferCreditsFromTeamToPerson(
+        team.id,
+        invite.personId,
+        creditsToAdd,
+        inviteId,
+        `Additional ${photosToAdd} photos added by team admin`
+      )
+
+      Logger.info('Transferred credits to accepted invite member', {
         inviteId,
         personId: invite.personId,
         photosAdded: photosToAdd,
@@ -165,8 +163,7 @@ export async function POST(
       stack: error instanceof Error ? error.stack : undefined
     })
     return NextResponse.json({ 
-      error: getTranslation('api.errors.internalServerError', 'en'),
-      details: error instanceof Error ? error.message : String(error)
+      error: getTranslation('api.errors.internalServerError', 'en')
     }, { status: 500 })
   }
 }

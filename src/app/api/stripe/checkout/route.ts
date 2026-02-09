@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
     // customer_email when customer is provided. The webhook will create/link the Stripe
     // customer after successful payment using the userId from metadata.
 
+    // Validate required fields
+    if (type === 'plan' && !priceId) {
+      return NextResponse.json({ error: 'Missing required field: priceId' }, { status: 400 })
+    }
+
     // Enforce business rules before creating session
     if (!unauth && user) {
       if (type === 'top_up') {
@@ -439,11 +444,14 @@ export async function POST(request: NextRequest) {
       // Validate minimum seats based on purchase type
       // First purchase: minimum 2 seats required
       // Additional seats: minimum 1 seat (no restriction)
-      if (!seatsIsTopUp && quantity < PRICING_CONFIG.seats.minSeats) {
-        throw new Error(`Minimum ${PRICING_CONFIG.seats.minSeats} seats required for first purchase`);
-      }
       if (quantity < 1) {
-        throw new Error('At least 1 seat required');
+        return NextResponse.json({ error: 'At least 1 seat required' }, { status: 400 });
+      }
+      if (!seatsIsTopUp && quantity < PRICING_CONFIG.seats.minSeats) {
+        return NextResponse.json(
+          { error: `Minimum ${PRICING_CONFIG.seats.minSeats} seats required for first purchase` },
+          { status: 402 }
+        );
       }
 
       // Calculate graduated price using config

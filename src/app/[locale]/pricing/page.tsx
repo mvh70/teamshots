@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const headersList = await headers();
   const brand = getBrand(headersList);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
 
   // Determine variant for SEO-optimized metadata
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 async function getDomainFromHeaders(): Promise<string | undefined> {
   const headersList = await headers();
-  const host = headersList.get('host') || headersList.get('x-forwarded-host');
+  const host = headersList.get('x-forwarded-host') || headersList.get('host');
   if (host) {
     return host.split(':')[0].replace(/^www\./, '').toLowerCase();
   }
@@ -78,7 +78,7 @@ export default async function PricingPage({ params }: Props) {
   const headersList = await headers();
   const brand = getBrand(headersList);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
 
   // Get translations for FAQ schema

@@ -15,7 +15,7 @@ export default function SignUpCTA({ className = '' }: SignUpCTAProps) {
   const t = useTranslations('inviteDashboard')
 
   return (
-    <div className={`hidden md:block bg-white rounded-lg shadow-md border border-gray-100 p-6 ${className}`}>
+    <div data-testid="signup-cta" className={`hidden md:block bg-white rounded-lg shadow-md border border-gray-100 p-6 ${className}`}>
       <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
         {t('signUpCta.title')}
       </h3>
