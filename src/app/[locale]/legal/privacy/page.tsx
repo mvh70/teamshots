@@ -1,11 +1,30 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { Link } from '@/i18n/routing';
+import { constructMetadata } from '@/lib/seo';
+import { headers } from 'next/headers';
+import { getBrand } from '@/config/brand';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy | TeamShotsPro',
-  description: 'Privacy Policy for TeamShotsPro - Learn how we protect your data under GDPR and Swiss FADP.',
+type Props = {
+  params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
+
+  return constructMetadata({
+    baseUrl,
+    path: '/legal/privacy',
+    locale,
+    title: 'Privacy Policy',
+    description: 'Privacy Policy for TeamShotsPro - Learn how we protect your data under GDPR and Swiss FADP.',
+  });
+}
 
 export default function PrivacyPage() {
   return (

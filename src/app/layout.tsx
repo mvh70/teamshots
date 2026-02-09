@@ -3,10 +3,10 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 import { GoogleTagManager } from '@next/third-parties/google'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
-import Script from 'next/script'
 import { getBrand } from '@/config/brand'
 import { getBaseUrl } from '@/lib/url'
 import { headers } from 'next/headers'
+import { getLocale } from 'next-intl/server'
 import './globals.css'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -54,17 +54,24 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Note: Next.js App Router allows async RootLayout
-  // but TypeScript may not infer it automatically; keep function sync and
-  // use a top-level async IIFE to fetch the session.
-  // We'll render a wrapper that awaits the session server-side.
+  let htmlLang: 'en' | 'es' = 'en'
+
+  try {
+    const headersList = await headers()
+    const localeFromHeader = headersList.get('x-next-intl-locale')
+    const locale = localeFromHeader || await getLocale()
+    htmlLang = locale === 'es' ? 'es' : 'en'
+  } catch {
+    htmlLang = 'en'
+  }
+
   return (
-    <html lang="en">
+    <html lang={htmlLang}>
       {process.env.NEXT_PUBLIC_GTM_ID && (
         <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       )}

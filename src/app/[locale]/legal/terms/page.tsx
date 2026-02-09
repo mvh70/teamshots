@@ -1,11 +1,30 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { Link } from '@/i18n/routing';
+import { constructMetadata } from '@/lib/seo';
+import { headers } from 'next/headers';
+import { getBrand } from '@/config/brand';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service | TeamShotsPro',
-  description: 'Terms of Service for TeamShotsPro - AI-powered professional headshot generation.',
+type Props = {
+  params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
+
+  return constructMetadata({
+    baseUrl,
+    path: '/legal/terms',
+    locale,
+    title: 'Terms of Service',
+    description: 'Terms of Service for TeamShotsPro - AI-powered professional headshot generation.',
+  });
+}
 
 export default function TermsPage() {
   return (

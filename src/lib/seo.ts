@@ -1,5 +1,4 @@
 import { Metadata } from 'next'
-import { routing } from '@/i18n/routing'
 
 type ConstructMetadataParams = {
     baseUrl: string    // The base URL of the current domain (e.g. "https://teamshotspro.com")
@@ -29,13 +28,9 @@ export function constructMetadata({
     // Ensure path starts with slash if not empty
     const cleanPath = path.startsWith('/') ? path : `/${path}`
 
-    // Construct canonical URL (always HTTPS, uses passed baseUrl, always English path structure for default)
-    // detailed logic:
-    // - en: https://domain.com/path
-    // - es: https://domain.com/es/path
-    const canonicalUrl = locale === 'en'
-        ? `${baseUrl}${cleanPath}`
-        : `${baseUrl}/${locale}${cleanPath}`
+    const englishUrl = `${baseUrl}${cleanPath}`
+    const spanishUrl = `${baseUrl}/es${cleanPath}`
+    const canonicalUrl = locale === 'en' ? englishUrl : spanishUrl
 
     // Default og:image to the brand image if not provided
     const ogImage = image || `${baseUrl}/branding/og-image.jpg`
@@ -72,8 +67,9 @@ export function constructMetadata({
         alternates: {
             canonical: canonicalUrl,
             languages: {
-                'en': `${baseUrl}${cleanPath}`,
-                'es': `${baseUrl}/es${cleanPath}`,
+                'en': englishUrl,
+                'es': spanishUrl,
+                'x-default': englishUrl,
             },
         },
         robots: {
@@ -104,11 +100,9 @@ export function constructBlogMetadata({
     image?: string
 }): Metadata {
     const currentSlug = locale === 'en' ? enSlug : (esSlug || enSlug)
-    const path = `/blog/${currentSlug}`
-
-    const currentUrl = locale === 'en'
-        ? `${baseUrl}/blog/${enSlug}`
-        : `${baseUrl}/${locale}/blog/${currentSlug}`
+    const englishUrl = `${baseUrl}/blog/${enSlug}`
+    const spanishUrl = `${baseUrl}/es/blog/${esSlug || enSlug}`
+    const currentUrl = locale === 'en' ? englishUrl : `${baseUrl}/${locale}/blog/${currentSlug}`
 
     return {
         title,
@@ -122,8 +116,9 @@ export function constructBlogMetadata({
         alternates: {
             canonical: currentUrl,
             languages: {
-                'en': `${baseUrl}/blog/${enSlug}`,
-                'es': `${baseUrl}/es/blog/${esSlug || enSlug}`,
+                'en': englishUrl,
+                'es': spanishUrl,
+                'x-default': englishUrl,
             },
         },
     }

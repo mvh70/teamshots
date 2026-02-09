@@ -58,6 +58,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/cdn-cgi/',              // Cloudflare email protection
         '/upload/',               // Upload pages (private)
         '/upload-selfie/',        // Mobile upload pages (private)
+        '/_next/static/media/',   // Static font/media assets (not indexable pages)
       ],
     },
     sitemap: `${cleanBaseUrl}/sitemap.xml`,

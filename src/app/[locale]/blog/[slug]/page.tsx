@@ -3,7 +3,6 @@ import { constructMetadata } from '@/lib/seo'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getBrand } from '@/config/brand'
-import { getBaseUrl } from '@/lib/url'
 import { getLandingVariant } from '@/config/landing-content'
 import { BlogPostTemplate, type BlogPostContent } from '@/components/blog'
 import {
@@ -50,7 +49,6 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params
   const headersList = await headers()
-  const brandConfig = getBrand(headersList)
 
   // Get brand ID from domain
   const host = headersList.get('x-forwarded-host') || headersList.get('host')
@@ -95,7 +93,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ...baseMetadata.alternates,
       languages: spanishAvailable
         ? baseMetadata.alternates!.languages
-        : { 'en': baseMetadata.alternates!.languages!['en'] },
+        : {
+          en: baseMetadata.alternates!.languages!['en'],
+          'x-default': baseMetadata.alternates!.languages!['en'],
+        },
     },
   }
 }
@@ -199,7 +200,6 @@ export default async function BlogPostPage({ params }: Props) {
   const { locale, slug } = await params
   const headersList = await headers()
   const brandConfig = getBrand(headersList)
-  const baseUrl = getBaseUrl(headersList)
   const brandCta = brandConfig.cta
 
   // Get brand ID from domain
