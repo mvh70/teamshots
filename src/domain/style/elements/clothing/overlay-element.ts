@@ -325,8 +325,9 @@ export class ClothingOverlayElement extends StyleElement {
     // Always provide instructions/mustFollow (like CustomClothingElement does)
     // Reference image is only added if overlay was successfully prepared
     const mustFollow = [
-      'Use the clothing overlay as the PRIMARY reference for all garment styling and details.',
-      'Replicate the EXACT appearance of the clothing shown in the overlay - colors, patterns, logos, and all visible details are already correctly applied.',
+      'Use the clothing overlay as the PRIMARY reference for garment composition, colors, logo placement, and overall styling.',
+      'FABRIC QUALITY: The overlay is a low-resolution compositional guide. Do NOT replicate the fabric texture from the overlay pixel-for-pixel. Instead, generate photorealistic, high-quality fabric textures (cotton weave, wool texture, silk sheen, etc.) appropriate to each garment type. The fabric should look continuous, natural, and physically plausible with proper folds, draping, and light interaction.',
+      'Replicate the EXACT garment types, colors, patterns, logos, and layering shown in the overlay - but render all fabrics at full quality with continuous, seamless textures.',
       'Logo handling: The logo in the overlay may have a bright GREEN (chroma key) background for visibility. Do NOT include the green background - only reproduce the logo elements themselves on the fabric.',
       'Logo handling: Preserve the base-layer logo exactly as shown. If an outer layer naturally covers part of it, that is expected. Do NOT relocate or "save" the logo.',
       'Do NOT modify, reinterpret, or add clothing elements. For clothing/branding/logo info, ignore all other references and use the overlay only.',
@@ -349,7 +350,7 @@ export class ClothingOverlayElement extends StyleElement {
     if (overlay?.data.base64) {
       referenceImages.push({
         url: `data:${overlay.data.mimeType};base64,${overlay.data.base64}`,
-        description: 'CLOTHING TEMPLATE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements on the fabric.',
+        description: 'CLOTHING TEMPLATE - Compositional guide showing garment types, colors, layering, and logo placement. Use this for WHAT to dress the person in and WHERE the logo goes, but generate your own high-quality photorealistic fabric textures - do NOT copy the low-resolution fabric from this reference. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements on the fabric.',
         type: 'clothing' as const,
       })
 

@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from '@/i18n/routing';
 import { InlineCTA } from '@/components/blog/InlineCTA';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
-import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getBrand } from '@/config/brand';
 import { getBaseUrl } from '@/lib/url';
@@ -26,8 +25,7 @@ function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
     // Support array or @graph formats by emitting a single JSON-LD block
     if (Array.isArray(schema) || schema['@graph']) {
       return (
-        <Script
-          id="schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(schema),
@@ -37,14 +35,10 @@ function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
     }
 
     // Handle both wrapped format { article: {...}, faq: {...} } and direct format
-    const hasArticle = schema.article || schema['@type'] === 'Article';
-    const hasFaq = schema.faq || schema['@type'] === 'FAQPage';
-
     return (
       <>
         {schema.article && (
-          <Script
-            id="article-schema"
+          <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.article }),
@@ -52,8 +46,7 @@ function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
           />
         )}
         {schema.faq && (
-          <Script
-            id="faq-schema"
+          <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.faq }),
@@ -62,8 +55,7 @@ function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
         )}
         {/* Handle direct schema format (single type) */}
         {!schema.article && !schema.faq && schema['@type'] && (
-          <Script
-            id="schema"
+          <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({ '@context': 'https://schema.org', ...schema }),

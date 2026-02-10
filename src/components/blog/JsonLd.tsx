@@ -1,5 +1,3 @@
-import Script from 'next/script';
-
 interface ArticleJsonLdProps {
   headline: string;
   description: string;
@@ -59,8 +57,7 @@ export function ArticleJsonLd({
   };
 
   return (
-    <Script
-      id="article-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
     />
@@ -85,8 +82,7 @@ export function BreadcrumbJsonLd({ items, baseUrl }: BreadcrumbJsonLdProps) {
   };
 
   return (
-    <Script
-      id="breadcrumb-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
     />
@@ -108,8 +104,7 @@ export function FaqJsonLd({ items }: FaqJsonLdProps) {
   };
 
   return (
-    <Script
-      id="faq-schema"
+    <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
     />

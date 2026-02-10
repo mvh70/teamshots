@@ -4,6 +4,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/auth'
 import { ALLOWED_DOMAINS } from '@/lib/url'
 import { getRequestDomain } from '@/lib/domain'
+import { TEAM_DOMAIN } from '@/config/domain'
 
 const PROTECTED_PATH_PREFIXES = ['/app']
 const ADMIN_PATH_PREFIXES = ['/app/admin']
@@ -31,6 +32,44 @@ function stripDefaultPort(url: URL): URL {
 function createCleanRedirectUrl(path: string, baseUrl: string | URL): URL {
   const url = new URL(path, baseUrl)
   return stripDefaultPort(url)
+}
+
+function normalizeHost(rawHost: string): string {
+  const firstHost = rawHost.split(',')[0]?.trim().toLowerCase() || ''
+
+  // IPv6 values can be represented as [::1]:3000.
+  if (firstHost.startsWith('[')) {
+    const ipv6End = firstHost.indexOf(']')
+    return ipv6End >= 0 ? firstHost.slice(0, ipv6End + 1) : firstHost
+  }
+
+  return firstHost.split(':')[0]
+}
+
+function getCanonicalHostForDomain(domain: string): string {
+  // TeamShotsPro keeps www as canonical; other brands use bare domain.
+  if (domain === TEAM_DOMAIN) {
+    return `www.${TEAM_DOMAIN}`
+  }
+  return domain
+}
+
+function resolveCanonicalHost(rawHost: string, canonicalBaseUrl: string | undefined): string | null {
+  const host = normalizeHost(rawHost)
+  if (!host) return null
+
+  const normalizedDomain = host.replace(/^www\./, '')
+  if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedDomain)) {
+    return getCanonicalHostForDomain(normalizedDomain)
+  }
+
+  // Fallback for unknown hosts: use configured canonical host if present.
+  if (!canonicalBaseUrl) return null
+  try {
+    return new URL(canonicalBaseUrl).host.toLowerCase()
+  } catch {
+    return null
+  }
 }
 
 function removeLocalePrefix(pathname: string) {
@@ -179,15 +218,16 @@ export async function proxy(request: NextRequest) {
       process.env.NODE_ENV === 'production' || process.env.ENFORCE_CANONICAL_HOST === 'true'
 
     // Canonical host redirect (SEO + auth cookie consistency).
-    // Keep host aligned with configured base URL to avoid OAuth PKCE cookie loss
-    // when signin starts on one host and callback lands on another.
+    // Domain-aware behavior for multi-brand setup:
+    // - Keep each allowed brand domain on its own canonical host.
+    // - Fall back to env canonical host for unknown/untrusted hosts.
     const canonicalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL
-    if (shouldEnforceCanonicalHost && canonicalBaseUrl) {
+    if (shouldEnforceCanonicalHost) {
       try {
         const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
-        const host = rawHost.split(',')[0].trim().toLowerCase()
-        const canonicalHost = new URL(canonicalBaseUrl).host.toLowerCase()
-        if (host && host !== canonicalHost) {
+        const host = normalizeHost(rawHost)
+        const canonicalHost = resolveCanonicalHost(rawHost, canonicalBaseUrl)
+        if (host && canonicalHost && host !== canonicalHost) {
           const newUrl = new URL(request.url)
           newUrl.host = canonicalHost
           stripDefaultPort(newUrl)

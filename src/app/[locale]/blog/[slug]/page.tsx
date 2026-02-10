@@ -121,6 +121,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     ...baseMetadata,
+    // Override the layout template — blog titles are self-contained and
+    // appending "| BrandName" pushes them past Google's ~60-char SERP limit.
+    title: { absolute: title },
     openGraph: {
       ...baseMetadata.openGraph,
       type: 'article',

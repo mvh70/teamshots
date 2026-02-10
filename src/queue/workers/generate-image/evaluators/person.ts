@@ -83,11 +83,16 @@ export async function evaluatePersonGeneration(
     instructions.push(
       '',
       '5. branding_logo_matches',
-      '   - Logo can be covered by parts of the wardrobe or the arms. The visible parts of the logo should have all the images and letters of the logo, each in the same size, position, and color of the original logo.',
+      '   - CHROMA KEY: The logo reference image may have a bright GREEN background. This green is a CHROMA KEY added for visibility only - it is NOT part of the logo. IGNORE the green background entirely when comparing. Only compare the actual logo elements (text, icons, shapes, colors) against what appears in the generated image.',
+      '   - The logo may be PARTIALLY COVERED by outer layers (jacket, blazer, cardigan) or arms - this is EXPECTED and REALISTIC. Do NOT reject an image because the logo is partially hidden behind clothing layers.',
+      '   - Only evaluate the VISIBLE portions of the logo. The visible parts should faithfully reproduce the actual logo elements (text, icons, shapes) with correct colors and proportions.',
+      '   - Answer YES if the visible portion of the logo is recognizable, correctly colored, and properly rendered on the fabric - even if 30-50% is hidden behind an outer garment.',
+      '   - Answer NO only if the visible portion has wrong text, distorted shapes, wrong colors (ignoring the green chroma background), or the logo is completely invisible.',
       '',
       '6. branding_positioned_correctly',
-      '   - Is the logo placed on the CHEST AREA of the shirt/t-shirt/polo (NOT on jacket, background, or accessories)?',
-      '   - Very important: Is the logo positioned naturally on the base garment surface, and does it not overflow on eg the outer layer (jacket, blazer, cardigan)?',
+      '   - Is the logo placed on the CHEST AREA of the base layer garment (shirt/t-shirt/polo), NOT on the jacket, background, or accessories?',
+      '   - The logo should be rendered on the base garment surface. It is ACCEPTABLE and EXPECTED for outer layers (jacket, blazer, cardigan) to cover parts of the logo - this adds realism.',
+      '   - Answer NO only if the logo is placed on the WRONG garment (e.g., on the jacket instead of the shirt) or on non-clothing surfaces.',
       '',
       '7. branding_scene_aligned',
       '   - Does the logo look like it\'s physically printed on the fabric with proper lighting and shadows, followingthe natural contours and perspective of the clothing?',
@@ -156,7 +161,7 @@ export async function evaluatePersonGeneration(
     images.push({
       base64: logoReference.base64,
       mimeType: logoReference.mimeType,
-      description: logoReference.description ?? 'Official branding/logo asset for clothing'
+      description: logoReference.description ?? 'Official branding/logo reference. NOTE: If this logo has a bright GREEN background, that is a CHROMA KEY for visibility only - it is NOT part of the actual logo. Ignore the green background when comparing against the generated image.'
     })
   }
 
