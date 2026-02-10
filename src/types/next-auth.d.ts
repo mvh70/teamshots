@@ -11,6 +11,8 @@ declare module "next-auth" {
       isAdmin: boolean
       locale: string
       signupDomain: string | null
+      isNewGoogleSignup?: boolean
+      oauthSignupAt?: number
       impersonating?: boolean
       originalUserId?: string
       person?: {
@@ -54,6 +56,8 @@ declare module "next-auth/jwt" {
     isAdmin: boolean
     locale: string
     signupDomain?: string | null
+    isNewGoogleSignup?: boolean
+    oauthSignupAt?: number
     givenName?: string
     impersonating?: boolean
     originalUserId?: string

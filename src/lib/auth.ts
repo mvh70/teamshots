@@ -628,7 +628,19 @@ export const authOptions = {
     },
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async jwt({ token, user, trigger: _trigger }: { token: JWT; user?: User | AdapterUser | null; trigger?: string }) {
+    async jwt({
+      token,
+      user,
+      account,
+      trigger: _trigger,
+      isNewUser,
+    }: {
+      token: JWT
+      user?: User | AdapterUser | null
+      account?: { provider?: string } | null
+      trigger?: string
+      isNewUser?: boolean
+    }) {
       // SECURITY: Check if token has been revoked (only on subsequent requests, not initial auth)
       if (!user && token.jti) {
         const isRevoked = await isTokenRevoked(token.jti as string)
@@ -651,15 +663,29 @@ export const authOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { tokenVersion: true, signupDomain: true }
+            select: { tokenVersion: true, signupDomain: true, createdAt: true, password: true }
           })
           token.tokenVersion = dbUser?.tokenVersion ?? 0
           token.signupDomain = dbUser?.signupDomain ?? null
+          if (account?.provider === 'google') {
+            // Prefer Auth.js isNewUser when available; fallback to a DB-based check for compatibility.
+            const fallbackGoogleSignup = Boolean(
+              dbUser &&
+              !dbUser.password &&
+              Date.now() - dbUser.createdAt.getTime() < 10 * 60 * 1000
+            )
+            token.isNewGoogleSignup = typeof isNewUser === 'boolean' ? isNewUser : fallbackGoogleSignup
+          } else {
+            token.isNewGoogleSignup = false
+          }
+          token.oauthSignupAt = token.isNewGoogleSignup ? Date.now() : undefined
         } catch (error) {
           // If database query fails, default to 0 and log the error
           console.error('Error fetching token version during initial auth:', error)
           token.tokenVersion = 0
           token.signupDomain = null
+          token.isNewGoogleSignup = false
+          token.oauthSignupAt = undefined
         }
 
         // SECURITY: Track session creation time for absolute maximum enforcement
@@ -747,6 +773,8 @@ export const authOptions = {
         session.user.isAdmin = token.isAdmin as boolean
         session.user.locale = token.locale as string
         session.user.signupDomain = (token.signupDomain as string | null) ?? null
+        session.user.isNewGoogleSignup = token.isNewGoogleSignup as boolean | undefined
+        session.user.oauthSignupAt = token.oauthSignupAt as number | undefined
         session.user.person = token.person as {
           id: string
           firstName: string

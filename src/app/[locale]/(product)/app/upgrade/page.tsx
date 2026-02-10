@@ -45,14 +45,14 @@ export default function UpgradePage() {
   // When a user signs up via Google and is redirected here (with autoCheckout), fire the event
   useEffect(() => {
     const newSignup = searchParams.get('newSignup')
-    if (newSignup === 'google' && session?.user?.id) {
+    if (newSignup === 'google' && session?.user?.id && session.user.isNewGoogleSignup) {
       trackSignupCompleted(session.user.id, 'google')
       // Clean up the URL param to prevent duplicate tracking on refresh
       const url = new URL(window.location.href)
       url.searchParams.delete('newSignup')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [searchParams, session?.user?.id])
+  }, [searchParams, session?.user?.id, session?.user?.isNewGoogleSignup])
 
   // Auto-checkout effect
   useEffect(() => {
@@ -291,5 +291,4 @@ export default function UpgradePage() {
     </div>
   )
 }
-
 

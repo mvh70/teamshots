@@ -168,14 +168,14 @@ export default function DashboardPage() {
   // We fire the PostHog event here since the OAuth redirect bypasses the signup page's tracking
   useEffect(() => {
     const newSignup = searchParams.get('newSignup')
-    if (newSignup === 'google' && session?.user?.id) {
+    if (newSignup === 'google' && session?.user?.id && session.user.isNewGoogleSignup) {
       trackSignupCompleted(session.user.id, 'google')
       // Clean up the URL param to prevent duplicate tracking on refresh
       const url = new URL(window.location.href)
       url.searchParams.delete('newSignup')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [searchParams, session?.user?.id])
+  }, [searchParams, session?.user?.id, session?.user?.isNewGoogleSignup])
 
   const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
 
