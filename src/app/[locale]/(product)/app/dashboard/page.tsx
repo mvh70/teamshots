@@ -25,6 +25,7 @@ import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
+import { trackSignupCompleted } from '@/lib/track'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { useDomain } from '@/contexts/DomainContext'
 
@@ -162,6 +163,20 @@ export default function DashboardPage() {
   }, [])
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
   
+  // Track Google OAuth signup completion
+  // When a user signs up via Google on the signup page, the callback URL includes ?newSignup=google
+  // We fire the PostHog event here since the OAuth redirect bypasses the signup page's tracking
+  useEffect(() => {
+    const newSignup = searchParams.get('newSignup')
+    if (newSignup === 'google' && session?.user?.id) {
+      trackSignupCompleted(session.user.id, 'google')
+      // Clean up the URL param to prevent duplicate tracking on refresh
+      const url = new URL(window.location.href)
+      url.searchParams.delete('newSignup')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams, session?.user?.id])
+
   const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
 
   // Don't show onboarding during initial server render to prevent hydration mismatch

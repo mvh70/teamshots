@@ -62,11 +62,12 @@ export default function SignUpPage() {
 
   const getGoogleCallbackPath = () => (
     autoCheckout && planParam && periodParam
-      ? `/${locale}/app/upgrade?autoCheckout=true&plan=${planParam}&period=${periodParam}`
-      : '/app/dashboard'
+      ? `/${locale}/app/upgrade?autoCheckout=true&plan=${planParam}&period=${periodParam}&newSignup=google`
+      : '/app/dashboard?newSignup=google'
   )
 
   const handleGoogleSignUp = async () => {
+    trackSignupStarted('google')
     const callbackUrl = getGoogleCallbackPath()
     try {
       // Important: Auth.js links OAuth accounts to the currently signed-in user.
@@ -98,11 +99,6 @@ export default function SignUpPage() {
     formData.confirmPassword
   )
   const confirmPasswordTouched = formData.confirmPassword.length > 0
-
-  // Track signup page view
-  useEffect(() => {
-    trackSignupStarted('email')
-  }, [])
 
   const handleSendOTP = async () => {
     setIsLoading(true)
@@ -139,6 +135,7 @@ export default function SignUpPage() {
   }
 
   const handleSubscribe = async () => {
+    trackSignupStarted('email')
     // New flow: send OTP and proceed to verification step; no checkout here
     await handleSendOTP()
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -13,6 +14,7 @@ import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
 import { normalizePlanTierForUI } from '@/domain/subscription/utils'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 import { fetchAccountMode, type AccountMode } from '@/domain/account/accountMode'
+import { trackSignupCompleted } from '@/lib/track'
 
 type Tier = 'individual' | 'pro'
 
@@ -37,6 +39,20 @@ export default function UpgradePage() {
   const planParam = searchParams.get('plan')
   const periodParam = searchParams.get('period')
   const [isAutoCheckingOut, setIsAutoCheckingOut] = useState(false)
+  const { data: session } = useSession()
+
+  // Track Google OAuth signup completion
+  // When a user signs up via Google and is redirected here (with autoCheckout), fire the event
+  useEffect(() => {
+    const newSignup = searchParams.get('newSignup')
+    if (newSignup === 'google' && session?.user?.id) {
+      trackSignupCompleted(session.user.id, 'google')
+      // Clean up the URL param to prevent duplicate tracking on refresh
+      const url = new URL(window.location.href)
+      url.searchParams.delete('newSignup')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams, session?.user?.id])
 
   // Auto-checkout effect
   useEffect(() => {

@@ -52,11 +52,11 @@ export const track = (event: string, properties?: Record<string, unknown>) => {
 // ============================================
 
 // Signup funnel
-export const trackSignupStarted = (method: 'email' | 'magic_link' = 'email') => {
+export const trackSignupStarted = (method: 'email' | 'magic_link' | 'google' = 'email') => {
   track('signup_started', { method })
 }
 
-export const trackSignupCompleted = (userId: string, method: 'email' | 'magic_link' = 'email') => {
+export const trackSignupCompleted = (userId: string, method: 'email' | 'magic_link' | 'google' = 'email') => {
   track('signup_completed', { user_id: userId, method })
 }
 
