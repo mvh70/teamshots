@@ -54,13 +54,36 @@ function getCanonicalHostForDomain(domain: string): string {
   return domain
 }
 
+function resolveAllowedDomain(host: string): string | null {
+  const normalized = host.replace(/^www\./, '')
+  if ((ALLOWED_DOMAINS as readonly string[]).includes(normalized)) {
+    return normalized
+  }
+
+  const withCom = `${normalized}.com`
+  if ((ALLOWED_DOMAINS as readonly string[]).includes(withCom)) {
+    return withCom
+  }
+
+  return null
+}
+
 function resolveCanonicalHost(rawHost: string, canonicalBaseUrl: string | undefined): string | null {
   const host = normalizeHost(rawHost)
   if (!host) return null
 
-  const normalizedDomain = host.replace(/^www\./, '')
-  if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedDomain)) {
-    return getCanonicalHostForDomain(normalizedDomain)
+  const normalizedRawHost = rawHost.split(',')[0]?.trim().toLowerCase() || ''
+  const hasExplicitPort = normalizedRawHost.includes(':')
+
+  const allowedDomain = resolveAllowedDomain(host)
+  if (allowedDomain) {
+    // Keep short aliases with explicit local ports stable
+    // (e.g. teamshotspro:3000, portreya:3000), even if NODE_ENV=production locally.
+    const isShortAlias = !host.includes('.')
+    if (isShortAlias && hasExplicitPort) {
+      return host
+    }
+    return getCanonicalHostForDomain(allowedDomain)
   }
 
   // Fallback for unknown hosts: use configured canonical host if present.
@@ -308,5 +331,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(es|en)/:path*', '/((?!api|auth|invite|_next|_vercel|.*\\..*).*)']
+  // Keep matcher simple and static so Next can always register proxy in dev/prod.
+  // This covers root and locale-prefixed pages while excluding API/internal assets.
+  matcher: ['/((?!api|auth|invite|_next|_vercel|.*\\..*).*)']
 };

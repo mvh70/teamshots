@@ -1683,7 +1683,9 @@
         "selfies": "Selfies",
         "customize": "Personalizar",
         "generate": "Generar",
-        "dontShowAgain": "No mostrar de nuevo"
+        "dontShowAgain": "No mostrar de nuevo",
+        "expand": "Expandir detalles",
+        "collapse": "Ocultar detalles"
       }
     },
     "typeSelection": {

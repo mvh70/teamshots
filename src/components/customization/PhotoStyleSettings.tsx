@@ -253,20 +253,17 @@ export default function PhotoStyleSettings({
     setClickedFieldKey(null)
   }, [effectivePackageId, originalContextSettings])
 
-  // If manually active field becomes complete, clear manual state.
-  React.useEffect(() => {
-    if (manualActiveFieldKey && !uneditedFieldSet.has(manualActiveFieldKey)) {
-      setManualActiveFieldKey(null)
-    }
-  }, [manualActiveFieldKey, uneditedFieldSet])
-
   const activeFieldKey = React.useMemo(() => {
     if (!desktopProgressiveActivationEnabled) return null
-    if (manualActiveFieldKey && uneditedFieldSet.has(manualActiveFieldKey)) {
+    if (manualActiveFieldKey) {
       return manualActiveFieldKey
     }
     return uneditedFieldKeys[0] ?? null
-  }, [desktopProgressiveActivationEnabled, manualActiveFieldKey, uneditedFieldSet, uneditedFieldKeys])
+  }, [desktopProgressiveActivationEnabled, manualActiveFieldKey, uneditedFieldKeys])
+  const scrollTargetFieldKey = React.useMemo(() => {
+    if (!desktopProgressiveActivationEnabled) return null
+    return clickedFieldKey ?? activeFieldKey
+  }, [desktopProgressiveActivationEnabled, clickedFieldKey, activeFieldKey])
   const tabNavigationKeys = React.useMemo(() => {
     if (!desktopProgressiveActivationEnabled) return []
     return allCategories.map(category => category.key)
@@ -294,9 +291,9 @@ export default function PhotoStyleSettings({
       return
     }
 
-    if (!desktopProgressiveActivationEnabled || !activeFieldKey) return
+    if (!desktopProgressiveActivationEnabled || !scrollTargetFieldKey) return
 
-    const target = getVisibleCardElement(activeFieldKey)
+    const target = getVisibleCardElement(scrollTargetFieldKey)
     if (!target) return
 
     const rect = target.getBoundingClientRect()
@@ -315,7 +312,7 @@ export default function PhotoStyleSettings({
     }, 300)
 
     return () => window.clearTimeout(timeout)
-  }, [activeFieldKey, desktopProgressiveActivationEnabled, getVisibleCardElement])
+  }, [scrollTargetFieldKey, desktopProgressiveActivationEnabled, getVisibleCardElement])
 
   // Tab key navigation: advance to the next incomplete card
   React.useEffect(() => {
@@ -872,6 +869,11 @@ export default function PhotoStyleSettings({
       <div
         id={`${category.key}-settings`}
         aria-current={isHighlightedIncomplete ? 'step' : undefined}
+        onPointerDownCapture={canActivateCard ? () => {
+          onCategoryVisit?.(category.key)
+          setClickedFieldKey(category.key)
+          setManualActiveFieldKey(category.key)
+        } : undefined}
         onClick={canActivateCard ? () => {
           onCategoryVisit?.(category.key)
           setClickedFieldKey(category.key)

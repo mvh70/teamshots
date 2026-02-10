@@ -6,6 +6,36 @@ const requestConfigPath = './src/i18n/request.ts';
 const nextConfig = {
   // Allow E2E tests to run a separate dev server without conflicting with the main one
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // Dev-only host allowlist for local brand aliases (e.g. https://teamshotspro:3000).
+  // This does not affect production.
+  allowedDevOrigins: [
+    'localhost',
+    '127.0.0.1',
+    'teamshotspro',
+    '*.teamshotspro',
+    'teamshotspro.com',
+    '*.teamshotspro.com',
+    'portreya',
+    '*.portreya',
+    'portreya.com',
+    '*.portreya.com',
+    'individualshots',
+    '*.individualshots',
+    'individualshots.com',
+    '*.individualshots.com',
+    'coupleshots',
+    '*.coupleshots',
+    'coupleshots.com',
+    '*.coupleshots.com',
+    'familyshots',
+    '*.familyshots',
+    'familyshots.com',
+    '*.familyshots.com',
+    'rightclickfit',
+    '*.rightclickfit',
+    'rightclickfit.com',
+    '*.rightclickfit.com',
+  ],
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   turbopack: {

@@ -1676,7 +1676,9 @@
         "selfies": "Selfies",
         "customize": "Customize",
         "generate": "Generate",
-        "dontShowAgain": "Don't show again"
+        "dontShowAgain": "Don't show again",
+        "expand": "Expand details",
+        "collapse": "Collapse details"
       }
     },
     "typeSelection": {

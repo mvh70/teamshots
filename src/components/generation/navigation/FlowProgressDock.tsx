@@ -2,15 +2,12 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { CheckIcon, LockClosedIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
+import { SparklesIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import Tooltip from '@/components/ui/Tooltip'
 import { SmallLoadingSpinner } from '@/components/ui/LoadingSpinner'
 import type { CustomizationStepsMeta } from '@/lib/customizationSteps'
-
-type StepState = 'locked' | 'incomplete' | 'active' | 'complete' | 'ready'
 
 interface FlowProgressDockProps {
   /** Number of selfies currently selected */
@@ -77,9 +74,7 @@ interface FlowProgressDockProps {
 export default function FlowProgressDock({
   selfieCount,
   requiredSelfies = MIN_SELFIES_REQUIRED,
-  uneditedFields,
   hasUneditedFields,
-  canGenerate,
   hasEnoughCredits,
   currentStep,
   onNavigateToSelfies,
@@ -111,43 +106,6 @@ export default function FlowProgressDock({
     ? hasUneditedFields
     : !isCustomizationComplete
 
-  // Determine state for each step
-  const getSelfieState = (): StepState => {
-    if (hasEnoughSelfies) return 'complete'
-    return 'incomplete'
-  }
-
-  const getCustomizeState = (): StepState => {
-    if (!hasEnoughSelfies) return 'locked'
-    if (isCustomizationComplete) return 'complete'
-    return 'active'
-  }
-
-  const getGenerateState = (): StepState => {
-    if (!hasEnoughSelfies) return 'locked'
-    if (effectiveHasUneditedFields) return 'locked'
-    if (!hasEnoughCredits) return 'locked'
-    return 'ready'
-  }
-
-  const selfieState = getSelfieState()
-  const customizeState = getCustomizeState()
-  const generateState = getGenerateState()
-
-  // Get status text for each step
-  const getSelfieStatusText = (): string => {
-    if (selfieCount === 0) {
-      return t('selfies.addPhotos', { count: requiredSelfies })
-    }
-    if (selfieCount < requiredSelfies) {
-      const remaining = requiredSelfies - selfieCount
-      return remaining === 1
-        ? t('selfies.addOneMore')
-        : t('selfies.addPhotos', { count: remaining })
-    }
-    return t('selfies.complete', { count: selfieCount })
-  }
-
   const getCustomizeStatusText = (): string => {
     if (!hasEnoughSelfies) {
       return t('customize.locked')
@@ -166,19 +124,6 @@ export default function FlowProgressDock({
       })
     }
     return t('customize.notStarted', { default: 'Customize your photos' })
-  }
-
-  const getGenerateStatusText = (): string => {
-    if (!hasEnoughSelfies) {
-      return t('generate.needPhotos')
-    }
-    if (effectiveHasUneditedFields) {
-      return t('generate.needCustomization')
-    }
-    if (!hasEnoughCredits) {
-      return t('generate.needCredits')
-    }
-    return t('generate.ready')
   }
 
   // Navigation logic
@@ -288,146 +233,63 @@ export default function FlowProgressDock({
   }
 
   // Pre-compute sets for efficient lookup
-  const lockedSet = new Set(customizationStepsMeta?.lockedSteps ?? [])
   const visitedSet = new Set(visitedEditableSteps)
+  const editableStepsCount = customizationStepsMeta?.editableSteps ?? 0
+  const visitedEditableCount = visitedEditableSteps.length
+  const warningText = isOnCustomize && effectiveHasUneditedFields ? disabledGenerateReason : undefined
+  const [isExpanded, setIsExpanded] = React.useState(false)
 
-  // Render customization progress dots
-  const renderCustomizationDots = () => {
-    if (!customizationStepsMeta || customizationStepsMeta.editableSteps === 0) return null
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    const saved = window.localStorage.getItem('flow_progress_dock_expanded')
+    setIsExpanded(saved === '1')
+  }, [])
 
-    const { editableSteps, stepNames } = customizationStepsMeta
+  const toggleExpanded = React.useCallback(() => {
+    setIsExpanded(prev => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('flow_progress_dock_expanded', next ? '1' : '0')
+      }
+      return next
+    })
+  }, [])
 
-    // Check if we have valid stepNames (must be array with matching length)
-    const hasValidStepNames = Array.isArray(stepNames) && stepNames.length === editableSteps
+  const renderCompactDots = () => {
+    if (!customizationStepsMeta || editableStepsCount === 0) return null
 
     return (
-      <div className="flex items-center justify-center gap-2 mt-1">
-        {Array.from({ length: editableSteps }).map((_, idx) => {
+      <div className="flex items-center gap-1">
+        {Array.from({ length: editableStepsCount }).map((_, idx) => {
           const isVisited = visitedSet.has(idx)
-          // Only show tooltip if we have valid step name
-          const stepName = hasValidStepNames && stepNames[idx] ? stepNames[idx] : null
-
-          // Wrap dot in a slightly larger hit area for better hover detection
-          const dotWithHitArea = (
+          return (
             <span
-              className="inline-flex items-center justify-center p-1 -m-1 cursor-help"
-              title={stepName || undefined}
-            >
-              <span
-                className={`
-                  block h-2 w-2 rounded-full transition-all duration-300
-                  ${isVisited
-                    ? 'bg-brand-secondary'
-                    : 'bg-gray-300'
-                  }
-                `}
-              />
-            </span>
+              key={`compact-dot-${idx}`}
+              className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
+                isVisited ? 'bg-brand-secondary' : 'bg-gray-300'
+              }`}
+            />
           )
-
-          // Only wrap in Tooltip if we have a valid step name
-          if (stepName) {
-            return (
-              <Tooltip key={`dot-${idx}`} content={stepName} position="top">
-                {dotWithHitArea}
-              </Tooltip>
-            )
-          }
-
-          return <span key={`dot-${idx}`}>{dotWithHitArea}</span>
         })}
       </div>
     )
   }
 
-  // Render a progress section (bottom row)
-  const renderProgressSection = (
-    label: string,
-    statusText: string,
-    state: StepState,
-    onClick: () => void,
-    isCurrent: boolean,
-    showDots: boolean = false
-  ) => {
-    const isComplete = state === 'complete'
-    const isLocked = state === 'locked'
-    const isReady = state === 'ready'
-
-    const getIconContent = () => {
-      if (isLocked) {
-        return <LockClosedIcon className="w-4 h-4 text-gray-300" />
-      }
-      if (isComplete) {
-        return <CheckIconSolid className="w-4 h-4 text-white" />
-      }
-      if (isReady) {
-        return <SparklesIcon className="w-4 h-4 text-white" />
-      }
-      // Active/incomplete - show empty circle handled by background
-      return null
+  const getSelfiesSummary = (): string => {
+    if (selfieCount >= requiredSelfies) {
+      return t('selfies.complete', { count: selfieCount })
     }
+    const remaining = requiredSelfies - selfieCount
+    return remaining === 1
+      ? t('selfies.addOneMore')
+      : t('selfies.addPhotos', { count: remaining })
+  }
 
-    const getIconStyles = () => {
-      const base = 'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200'
-      if (isLocked) {
-        return `${base} bg-gray-100 border border-gray-200`
-      }
-      if (isComplete) {
-        return `${base} bg-brand-secondary`
-      }
-      if (isReady) {
-        return `${base} bg-gradient-to-r from-brand-primary to-brand-secondary`
-      }
-      if (isCurrent) {
-        return `${base} bg-brand-primary/20 border-2 border-brand-primary`
-      }
-      return `${base} bg-gray-100 border border-gray-200`
-    }
-
-    const getLabelStyles = () => {
-      if (isCurrent) return 'text-gray-900 font-semibold'
-      if (isComplete || isReady) return 'text-gray-600'
-      if (isLocked) return 'text-gray-300'
-      return 'text-gray-400'
-    }
-
-    const getStatusStyles = () => {
-      if (isCurrent && isComplete) return 'text-brand-secondary'
-      if (isCurrent) return 'text-brand-primary'
-      if (isComplete) return 'text-gray-400'
-      if (isLocked) return 'text-gray-300'
-      return 'text-gray-400'
-    }
-
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={isLocked}
-        className={`
-          flex flex-col items-center gap-1.5 px-6 py-2 rounded-xl transition-all duration-200
-          ${!isLocked ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-not-allowed'}
-        `}
-      >
-        {/* Section label */}
-        <span className={`text-xs tracking-wide uppercase ${getLabelStyles()}`}>
-          {label}
-        </span>
-
-        {/* Icon */}
-        <div className={getIconStyles()}>
-          {getIconContent()}
-        </div>
-
-        {/* Status text */}
-        <span className={`text-[10px] font-medium ${getStatusStyles()}`}>
-          {statusText}
-        </span>
-
-        {/* Progress dots for customize step */}
-        {showDots && renderCustomizationDots()}
-      </button>
-    )
+  const getGenerateSummary = (): string => {
+    if (!hasEnoughSelfies) return t('generate.needPhotos')
+    if (effectiveHasUneditedFields) return t('generate.needCustomization')
+    if (!hasEnoughCredits) return t('generate.needCredits')
+    return t('generate.ready')
   }
 
   // Use state to track if we're mounted (for portal)
@@ -440,62 +302,65 @@ export default function FlowProgressDock({
     <div
       className={`
         hidden md:block
-        fixed bottom-8 left-1/2 -translate-x-1/2 z-[10000]
-        w-auto min-w-[520px] max-w-2xl
+        fixed bottom-5 left-1/2 -translate-x-1/2 z-[10000]
+        w-[min(92vw,760px)]
         ${className}
       `}
     >
-      {/* Soft ambient shadow for floating effect */}
-      <div className="absolute -inset-3 bg-gradient-to-b from-gray-900/[0.08] to-gray-900/[0.03] rounded-[2rem] blur-2xl" />
+      <div className="absolute -inset-2 rounded-3xl bg-gradient-to-b from-gray-900/[0.08] to-gray-900/[0.03] blur-2xl" />
 
-      {/* Secondary glow layer for depth */}
-      <div className="absolute -inset-1 bg-gradient-to-b from-gray-100 to-gray-200/80 rounded-3xl blur-sm opacity-60" />
-
-      {/* Main dock container */}
-      <div
-        className="
-          relative
-          bg-gradient-to-b from-white via-white to-gray-50/90
-          backdrop-blur-2xl
-          rounded-2xl
-          border border-gray-200/80
-          shadow-[0_8px_32px_-8px_rgba(0,0,0,0.15),0_4px_12px_-4px_rgba(0,0,0,0.1)]
-          px-6 py-4
-          transition-all duration-300
-        "
-      >
-        {/* ROW 1: Navigation buttons */}
-        <div className="flex items-center justify-between mb-3">
-          {/* Back button */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-[#6F4CFF]/55 bg-white/95 backdrop-blur-xl px-3 py-2 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.22)]">
+        <div className="flex h-10 items-center gap-2">
           <button
             type="button"
             onClick={backConfig.onClick}
             disabled={backConfig.disabled}
             className={`
-              flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
-              transition-all duration-200
+              inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-all duration-200
               ${backConfig.disabled
-                ? 'text-gray-300 cursor-not-allowed border border-gray-200 bg-gray-50'
-                : 'text-gray-700 border border-gray-300 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100'
+                ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'
+                : 'border-gray-300 bg-white text-gray-700 shadow-sm hover:border-gray-400 hover:bg-gray-50 active:bg-gray-100'
               }
             `}
           >
-            <ChevronLeftIcon className="w-4 h-4" strokeWidth={2.5} />
+            <ChevronLeftIcon className="h-4 w-4" strokeWidth={2.5} />
             <span>{backConfig.label}</span>
           </button>
 
-          {/* Center: Don't show again (only on tips/intro pages) */}
-          {onDontShowAgain && (
-            <button
-              type="button"
-              onClick={onDontShowAgain}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
-            </button>
-          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex h-9 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3">
+              {renderCompactDots()}
+              <span className="truncate text-xs font-semibold text-gray-700">
+                {editableStepsCount > 0
+                  ? t('customize.stepProgress', {
+                    current: visitedEditableCount,
+                    total: editableStepsCount,
+                    default: `Step ${visitedEditableCount} of ${editableStepsCount}`
+                  })
+                  : getCustomizeStatusText()}
+              </span>
+              {warningText && (
+                <Tooltip content={warningText} position="top">
+                  <span
+                    data-testid="customization-status-banner"
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 cursor-help"
+                  >
+                    <ExclamationTriangleIcon className="h-3 w-3" />
+                  </span>
+                </Tooltip>
+              )}
+              {onDontShowAgain && (
+                <button
+                  type="button"
+                  onClick={onDontShowAgain}
+                  className="ml-1 shrink-0 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600"
+                >
+                  {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
+                </button>
+              )}
+            </div>
+          </div>
 
-          {/* Continue/Generate button */}
           {continueConfig.tooltip ? (
             <Tooltip content={continueConfig.tooltip} position="top">
               <button
@@ -504,10 +369,9 @@ export default function FlowProgressDock({
                 disabled={continueIsHardDisabled}
                 aria-disabled={continueIsHardDisabled || undefined}
                 className={`
-                  flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
-                  transition-all duration-200
+                  inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-all duration-200
                   ${continueIsDisabled
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                     : continueConfig.isGenerate
                       ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
                       : continueConfig.isCredits
@@ -517,13 +381,13 @@ export default function FlowProgressDock({
                 `}
               >
                 {isGenerating ? (
-                  <SmallLoadingSpinner className="text-white border-white/30 border-t-white" />
+                  <SmallLoadingSpinner className="border-white/30 border-t-white text-white" />
                 ) : continueConfig.isGenerate ? (
-                  <SparklesIcon className="w-4 h-4" strokeWidth={2} />
+                  <SparklesIcon className="h-4 w-4" strokeWidth={2} />
                 ) : null}
-                <span>{continueConfig.label}</span>
+                <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
                 {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
-                  <ChevronRightIcon className="w-4 h-4" strokeWidth={2.5} />
+                  <ChevronRightIcon className="h-4 w-4" strokeWidth={2.5} />
                 )}
               </button>
             </Tooltip>
@@ -534,10 +398,9 @@ export default function FlowProgressDock({
               disabled={continueIsHardDisabled}
               aria-disabled={continueIsHardDisabled || undefined}
               className={`
-                flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
-                transition-all duration-200
+                inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-all duration-200
                 ${continueIsDisabled
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                   : continueConfig.isGenerate
                     ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
                     : continueConfig.isCredits
@@ -547,74 +410,69 @@ export default function FlowProgressDock({
               `}
             >
               {isGenerating ? (
-                <SmallLoadingSpinner className="text-white border-white/30 border-t-white" />
+                <SmallLoadingSpinner className="border-white/30 border-t-white text-white" />
               ) : continueConfig.isGenerate ? (
-                <SparklesIcon className="w-4 h-4" strokeWidth={2} />
+                <SparklesIcon className="h-4 w-4" strokeWidth={2} />
               ) : null}
               <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
               {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
-                <ChevronRightIcon className="w-4 h-4" strokeWidth={2.5} />
+                <ChevronRightIcon className="h-4 w-4" strokeWidth={2.5} />
               )}
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={toggleExpanded}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition-all duration-200 hover:border-gray-400 hover:bg-gray-50"
+            aria-label={isExpanded ? t('navigation.collapse', { default: 'Collapse details' }) : t('navigation.expand', { default: 'Expand details' })}
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? (
+              <ChevronDownIcon className="h-4 w-4" strokeWidth={2.5} />
+            ) : (
+              <ChevronUpIcon className="h-4 w-4" strokeWidth={2.5} />
+            )}
+          </button>
         </div>
 
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-3" />
+        {isExpanded && (
+          <div className="mt-2 border-t border-gray-200/80 pt-2">
+            {warningText && (
+              <div
+                data-testid="customization-status-banner-expanded"
+                className="mb-2 rounded-lg border border-amber-200/50 bg-amber-50/80 px-2.5 py-1.5 text-center text-[11px] font-medium text-amber-700"
+              >
+                {warningText}
+              </div>
+            )}
 
-        {/* Status message when customization is incomplete */}
-        {isOnCustomize && effectiveHasUneditedFields && disabledGenerateReason && (
-          <div data-testid="customization-status-banner" className="text-center text-xs font-medium text-amber-700 bg-amber-50/80 border border-amber-200/50 rounded-lg px-3 py-1.5 mb-3">
-            {disabledGenerateReason}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={onNavigateToSelfies}
+                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('selfies.label')}</p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getSelfiesSummary()}</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={onNavigateToCustomize}
+                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('customize.label')}</p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getCustomizeStatusText()}</p>
+              </button>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('generate.label')}</p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getGenerateSummary()}</p>
+              </div>
+            </div>
           </div>
         )}
-
-        {/* ROW 2: Progress indicators */}
-        <div className="flex items-start justify-center gap-2">
-          {/* SELFIES */}
-          {renderProgressSection(
-            t('selfies.label'),
-            getSelfieStatusText(),
-            selfieState,
-            onNavigateToSelfies,
-            isOnSelfies
-          )}
-
-          {/* Connector */}
-          <div className="flex items-center self-center pt-4">
-            <div className="w-8 h-[2px] bg-gray-200 rounded-full" />
-          </div>
-
-          {/* CUSTOMIZE */}
-          {renderProgressSection(
-            t('customize.label'),
-            getCustomizeStatusText(),
-            customizeState,
-            onNavigateToCustomize,
-            isOnCustomize,
-            true // show dots
-          )}
-
-          {/* Connector */}
-          <div className="flex items-center self-center pt-4">
-            <div className="w-8 h-[2px] bg-gray-200 rounded-full" />
-          </div>
-
-          {/* GENERATE */}
-          {renderProgressSection(
-            t('generate.label'),
-            getGenerateStatusText(),
-            generateState,
-            () => {
-              if (!hasEnoughCredits && onBuyCredits) {
-                onBuyCredits()
-              } else if (generateState === 'ready') {
-                onGenerate()
-              }
-            },
-            false
-          )}
-        </div>
       </div>
     </div>
   )

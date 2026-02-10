@@ -92,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Get published content from CMS database
   const brandId = variantToBrandId(variant)
-  const { blogSlugs, solutionSlugs } = getAllPublishedSlugs(brandId)
+  const { blogSlugs, solutionSlugs, redirectedBlogSlugs } = getAllPublishedSlugs(brandId)
 
   // Add blog routes
   if (blogSlugs.length > 0 || variant === 'teamshotspro' || variant === 'individualshots') {
@@ -108,6 +108,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     // Individual blog posts
+    const publishedBlogSlugSet = new Set(blogSlugs.map(({ en }) => en))
     for (const { en, es } of blogSlugs) {
       // English version
       entries.push({
@@ -126,6 +127,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           priority: 0.8,
         })
       }
+    }
+
+    // Legacy blog URLs that now permanently redirect to canonical posts.
+    // Including them helps search engines re-crawl high-impression legacy paths.
+    for (const slug of redirectedBlogSlugs) {
+      if (publishedBlogSlugSet.has(slug)) continue
+      entries.push({
+        url: `${baseUrl}/blog/${slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.3,
+      })
     }
   }
 

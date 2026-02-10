@@ -141,6 +141,7 @@ export function variantToBrandId(variant: LandingVariant): string {
 export function getAllPublishedSlugs(brandId: string): {
   blogSlugs: Array<{ en: string; es: string | null }>
   solutionSlugs: Array<{ en: string; es: string | null }>
+  redirectedBlogSlugs: string[]
 } {
   try {
     const db = new Database(DB_PATH, { readonly: true })
@@ -171,6 +172,16 @@ export function getAllPublishedSlugs(brandId: string): {
         AND cs.status != 'archived'
     `
 
+    const blogRedirectQuery = `
+      SELECT redirectFrom
+      FROM ContentMigration
+      WHERE brandId = ?
+        AND status = 'complete'
+        AND redirectFrom LIKE '/blog/%'
+        AND redirectTo LIKE '/blog/%'
+      ORDER BY completedAt DESC, updatedAt DESC, createdAt DESC
+    `
+
     const blogRows = db.prepare(blogQuery).all(brandId) as Array<{
       slug: string
       spanishSlug: string | null
@@ -179,16 +190,26 @@ export function getAllPublishedSlugs(brandId: string): {
       slug: string
       spanishSlug: string | null
     }>
+    const blogRedirectRows = db.prepare(blogRedirectQuery).all(brandId) as Array<{
+      redirectFrom: string
+    }>
 
     db.close()
+
+    const redirectedBlogSlugs = [...new Set(
+      blogRedirectRows
+        .map((r) => r.redirectFrom.replace(/^\/blog\//, '').replace(/^\//, '').trim())
+        .filter((slug) => slug.length > 0)
+    )]
 
     return {
       blogSlugs: blogRows.map((r) => ({ en: r.slug, es: r.spanishSlug })),
       solutionSlugs: solutionRows.map((r) => ({ en: r.slug, es: r.spanishSlug })),
+      redirectedBlogSlugs,
     }
   } catch (error) {
     console.error('Failed to read CMS database for sitemap:', error)
-    return { blogSlugs: [], solutionSlugs: [] }
+    return { blogSlugs: [], solutionSlugs: [], redirectedBlogSlugs: [] }
   }
 }
 
