@@ -48,6 +48,10 @@ const PROFESSIONAL_SUGGESTIONS = [
   { name: 'Cream', hex: '#fef3c7' },
 ]
 
+const PROFESSIONAL_SUGGESTION_MAP = new Map(
+  PROFESSIONAL_SUGGESTIONS.map((color) => [color.name.toLowerCase(), color])
+)
+
 export default function ColorWheelPicker({
   value,
   onChange,
@@ -104,23 +108,30 @@ export default function ColorWheelPicker({
     // Load color names on mount using dynamic import
     if (colorNameListRef.current.length === 0) {
       import('color-name-list')
-        .then((module: any) => {
+        .then((module: unknown) => {
+          const colorModule = module as { colornames?: ColorName[]; default?: ColorName[] }
           // The module exports data under the 'colornames' property
           let colorArray: ColorName[] = []
 
-          if (module.colornames && Array.isArray(module.colornames)) {
-            colorArray = module.colornames
-          } else if (Array.isArray(module.default)) {
-            colorArray = module.default
+          if (Array.isArray(colorModule.colornames)) {
+            colorArray = colorModule.colornames
+          } else if (Array.isArray(colorModule.default)) {
+            colorArray = colorModule.default
           } else if (Array.isArray(module)) {
-            colorArray = module
+            colorArray = module as ColorName[]
           }
 
           if (colorArray.length > 0) {
             colorNameListRef.current = colorArray
-            colorMapRef.current = new Map(
+            const map = new Map(
               colorArray.map((color: ColorName) => [color.name.toLowerCase(), color.hex])
             )
+            // Keep app-curated colors canonical (e.g., Cream) even when the
+            // external color list has a different hex for the same name.
+            PROFESSIONAL_SUGGESTIONS.forEach((color) => {
+              map.set(color.name.toLowerCase(), color.hex)
+            })
+            colorMapRef.current = map
           }
         })
         .catch(() => {
@@ -169,11 +180,21 @@ export default function ColorWheelPicker({
 
     // Search color names
     const matches: ColorName[] = []
+    const seenHex = new Set<string>()
+    const seenNames = new Set<string>()
+    const addMatch = (color: ColorName) => {
+      const normalizedHex = color.hex.toLowerCase()
+      const normalizedName = color.name.toLowerCase()
+      if (seenHex.has(normalizedHex) || seenNames.has(normalizedName)) return
+      matches.push(color)
+      seenHex.add(normalizedHex)
+      seenNames.add(normalizedName)
+    }
 
     // First, add professional colors that match
     PROFESSIONAL_SUGGESTIONS.forEach((color: ColorName) => {
       if (color.name.toLowerCase().includes(searchTerm)) {
-        matches.push(color)
+        addMatch(color)
       }
     })
 
@@ -182,10 +203,9 @@ export default function ColorWheelPicker({
     colorNameList.forEach((color: ColorName) => {
       if (
         matches.length < 10 &&
-        !matches.find((m: ColorName) => m.hex === color.hex) &&
         color.name.toLowerCase().includes(searchTerm)
       ) {
-        matches.push({ name: color.name, hex: color.hex })
+        addMatch({ name: color.name, hex: color.hex })
       }
     })
 
@@ -209,9 +229,16 @@ export default function ColorWheelPicker({
     } else if (newValue.trim()) {
       // Color name lookup - strip hex code if present (e.g., "Navy Blue #003366" -> "Navy Blue")
       const cleanedValue = stripHexCode(newValue)
-      const colorHex = colorMapRef.current.get(cleanedValue.toLowerCase())
+      const normalizedName = cleanedValue.toLowerCase().trim()
+      const professionalMatch = PROFESSIONAL_SUGGESTION_MAP.get(normalizedName)
+      if (professionalMatch) {
+        onChange({ hex: professionalMatch.hex, name: professionalMatch.name })
+        return
+      }
+
+      const colorHex = colorMapRef.current.get(normalizedName)
       if (colorHex) {
-        const colorName = colorNameListRef.current.find(c => c.hex === colorHex)?.name || cleanedValue
+        const colorName = colorNameListRef.current.find(c => c.name.toLowerCase() === normalizedName)?.name || cleanedValue
         onChange({ hex: colorHex, name: colorName })
       }
     }
@@ -255,6 +282,14 @@ export default function ColorWheelPicker({
       // Strip hex code if present (e.g., "Navy Blue #003366" -> "Navy Blue")
       const cleanedInput = stripHexCode(inputValue)
       const searchTerm = cleanedInput.toLowerCase().trim()
+      const professionalMatch = PROFESSIONAL_SUGGESTION_MAP.get(searchTerm)
+      if (professionalMatch) {
+        onChange({ hex: professionalMatch.hex, name: professionalMatch.name })
+        setInputValue(`${professionalMatch.name} ${professionalMatch.hex}`)
+        setShowSuggestions(false)
+        setShowColorWheel(true)
+        return
+      }
       const colorHex = colorMapRef.current.get(searchTerm)
       if (colorHex) {
         // Find the original color name (with proper capitalization)

@@ -1,28 +1,17 @@
 import { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
-import { getBaseUrl } from '@/lib/url'
+import { getBaseUrl, normalizeBaseUrlForSeo } from '@/lib/url'
 import { getLandingVariant } from '@/config/landing-content'
 import { SOLUTIONS } from '@/config/solutions'
 import { routing } from '@/i18n/routing'
 import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
 
-const TEAMSHOTS_HOST = 'teamshotspro.com'
-const TEAMSHOTS_CANONICAL_HOST = 'www.teamshotspro.com'
+const STATIC_LAST_MODIFIED = new Date('2025-06-01')
 
-function normalizeSitemapBaseUrl(url: string): string {
-  const cleanUrl = url.replace(/\/$/, '')
-
-  try {
-    const parsed = new URL(cleanUrl)
-    if (parsed.hostname === TEAMSHOTS_HOST || parsed.hostname === TEAMSHOTS_CANONICAL_HOST) {
-      parsed.protocol = 'https:'
-      parsed.hostname = TEAMSHOTS_CANONICAL_HOST
-    }
-    return parsed.toString().replace(/\/$/, '')
-  } catch {
-    // Keep a safe string fallback if URL parsing fails for any reason.
-    return cleanUrl.replace(/^https?:\/\/teamshotspro\.com$/i, `https://${TEAMSHOTS_CANONICAL_HOST}`)
-  }
+function getPublishedLastModified(publishedAt: string | number | null | undefined): Date {
+  if (!publishedAt) return STATIC_LAST_MODIFIED
+  const parsed = new Date(String(publishedAt))
+  return Number.isNaN(parsed.getTime()) ? STATIC_LAST_MODIFIED : parsed
 }
 
 /**
@@ -38,12 +27,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const headersList = await headers()
-    baseUrl = normalizeSitemapBaseUrl(getBaseUrl(headersList))
+    baseUrl = normalizeBaseUrlForSeo(getBaseUrl(headersList))
     const host = headersList.get('x-forwarded-host') || headersList.get('host')
     const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
     variant = getLandingVariant(domain)
   } catch {
-    baseUrl = normalizeSitemapBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || `https://${TEAMSHOTS_CANONICAL_HOST}`)
+    baseUrl = normalizeBaseUrlForSeo(process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com')
     variant = 'teamshotspro'
   }
 
@@ -69,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const path = locale === 'en' ? route : `/${locale}${route}`
         entries.push({
           url: `${baseUrl}${path}`,
-          lastModified: new Date(),
+          lastModified: STATIC_LAST_MODIFIED,
           changeFrequency: 'weekly',
           priority: 0.9,
         })
@@ -83,7 +72,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const path = locale === 'en' ? route : `/${locale}${route}`
       entries.push({
         url: `${baseUrl}${path}`,
-        lastModified: new Date(),
+        lastModified: STATIC_LAST_MODIFIED,
         changeFrequency: route === '' ? 'daily' : 'weekly',
         priority: route === '' ? 1.0 : 0.8,
       })
@@ -92,7 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Get published content from CMS database
   const brandId = variantToBrandId(variant)
-  const { blogSlugs, solutionSlugs, redirectedBlogSlugs } = getAllPublishedSlugs(brandId)
+  const { blogSlugs, solutionSlugs } = getAllPublishedSlugs(brandId)
 
   // Add blog routes
   if (blogSlugs.length > 0 || variant === 'teamshotspro' || variant === 'individualshots') {
@@ -108,12 +97,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     // Individual blog posts
-    const publishedBlogSlugSet = new Set(blogSlugs.map(({ en }) => en))
-    for (const { en, es } of blogSlugs) {
+    for (const { en, es, publishedAt } of blogSlugs) {
       // English version
       entries.push({
         url: `${baseUrl}/blog/${en}`,
-        lastModified: new Date(),
+        lastModified: getPublishedLastModified(publishedAt),
         changeFrequency: 'weekly',
         priority: 0.8,
       })
@@ -122,33 +110,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (es) {
         entries.push({
           url: `${baseUrl}/es/blog/${es}`,
-          lastModified: new Date(),
+          lastModified: getPublishedLastModified(publishedAt),
           changeFrequency: 'weekly',
           priority: 0.8,
         })
       }
-    }
-
-    // Legacy blog URLs that now permanently redirect to canonical posts.
-    // Including them helps search engines re-crawl high-impression legacy paths.
-    for (const slug of redirectedBlogSlugs) {
-      if (publishedBlogSlugSet.has(slug)) continue
-      entries.push({
-        url: `${baseUrl}/blog/${slug}`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.3,
-      })
     }
   }
 
   // Add solution routes (TeamShotsPro only)
   if (variant === 'teamshotspro') {
     // From CMS database
-    for (const { en, es } of solutionSlugs) {
+    for (const { en, es, publishedAt } of solutionSlugs) {
       entries.push({
         url: `${baseUrl}/solutions/${en}`,
-        lastModified: new Date(),
+        lastModified: getPublishedLastModified(publishedAt),
         changeFrequency: 'weekly',
         priority: 0.8,
       })
@@ -157,7 +133,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const spanishSlug = es || en
       entries.push({
         url: `${baseUrl}/es/soluciones/${spanishSlug}`,
-        lastModified: new Date(),
+        lastModified: getPublishedLastModified(publishedAt),
         changeFrequency: 'weekly',
         priority: 0.8,
       })
@@ -172,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           const path = locale === 'en' ? `/solutions/${solution.slug}` : `/${locale}/solutions/${solution.slug}`
           entries.push({
             url: `${baseUrl}${path}`,
-            lastModified: new Date(),
+            lastModified: STATIC_LAST_MODIFIED,
             changeFrequency: 'weekly',
             priority: 0.8,
           })

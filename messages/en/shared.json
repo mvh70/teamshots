@@ -41,6 +41,11 @@
       "heading": "Ready to get your professional headshots?",
       "subheading": "Join thousands of professionals who have transformed their online presence with AI-powered headshots.",
       "buttonText": "Get Started Free"
+    },
+    "search": {
+      "placeholder": "Search blog posts...",
+      "noResults": "No posts found matching \"{query}\"",
+      "clear": "Clear search"
     }
   },
   "faq": {
@@ -2236,10 +2241,6 @@
             "label": "Power Pose",
             "description": "Executive, founder, leadership"
           },
-          "power_crossed": {
-            "label": "Power Pose (Arms Crossed)",
-            "description": "Professional, expert, corporate"
-          },
           "casual_confident": {
             "label": "Casual Confident",
             "description": "Modern professional, tech, creative"
@@ -2251,10 +2252,6 @@
           "walking_confident": {
             "label": "Walking - Purposeful",
             "description": "Dynamic, modern, leadership"
-          },
-          "sitting_engaged": {
-            "label": "Sitting Forward - Engaged",
-            "description": "Coach, consultant, empathetic"
           },
           "seated_engagement": {
             "label": "The Seated Engagement",

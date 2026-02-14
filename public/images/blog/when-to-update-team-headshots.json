@@ -1,0 +1,32 @@
+{
+  "prompt": "Inside a sun-drenched, glass-walled botanical conservatory filled with towering tropical plants. A Middle Eastern female professional in her late 20s, wearing a sharp royal blue blazer (primary brand color), stands at a high rustic potting bench. Instead of plants, the table is covered in a strategic layout of printed team photos and a large yearly planning calendar. She is holding a marker, thoughtfully circling a date for the next refresh. The scene juxtaposes the organic, growing environment with structured corporate strategy. Deep green foliage surrounds her (secondary color), and a bright azure notebook (accent color) rests nearby. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+  "analysis": {
+    "prompt": "Inside a sun-drenched, glass-walled botanical conservatory filled with towering tropical plants. A Middle Eastern female professional in her late 20s, wearing a sharp royal blue blazer (primary brand color), stands at a high rustic potting bench. Instead of plants, the table is covered in a strategic layout of printed team photos and a large yearly planning calendar. She is holding a marker, thoughtfully circling a date for the next refresh. The scene juxtaposes the organic, growing environment with structured corporate strategy. Deep green foliage surrounds her (secondary color), and a bright azure notebook (accent color) rests nearby. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+    "altText": "Middle Eastern woman planning corporate headshot schedule inside a lush botanical garden conservatory.",
+    "creativeDirectionName": "unexpected-location",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "late-20s",
+        "descriptor": "in their late 20s"
+      },
+      "ethnicity": {
+        "label": "middle-eastern",
+        "descriptor": "Middle Eastern"
+      }
+    }
+  },
+  "altText": "Middle Eastern woman planning corporate headshot schedule inside a lush botanical garden conservatory.",
+  "generatedAt": "2026-02-13T12:46:48.939Z",
+  "model": "gemini-3-pro-image-preview",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "professional",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

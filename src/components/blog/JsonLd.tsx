@@ -4,8 +4,8 @@ interface ArticleJsonLdProps {
   authorName: string;
   authorUrl?: string;
   authorJobTitle?: string;
-  publisherName?: string;
-  publisherUrl?: string;
+  publisherName: string;
+  publisherUrl: string;
   datePublished: string;
   dateModified?: string;
   url: string;
@@ -27,8 +27,8 @@ export function ArticleJsonLd({
   authorName,
   authorUrl,
   authorJobTitle,
-  publisherName = 'TeamShotsPro',
-  publisherUrl = 'https://teamshotspro.com',
+  publisherName,
+  publisherUrl,
   datePublished,
   dateModified,
   url,
@@ -110,4 +110,3 @@ export function FaqJsonLd({ items }: FaqJsonLdProps) {
     />
   );
 }
-

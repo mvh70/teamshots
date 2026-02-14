@@ -27,12 +27,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   });
 }
 
+type BlogPageProps = {
+  searchParams: Promise<{ q?: string | string[] }>
+}
+
 /**
  * Domain-aware blog index page
  * Dynamically reads published posts from CMS database.
  * Falls back to static config for posts not yet in CMS.
  */
-export default async function BlogPage() {
+export default async function BlogPage({ searchParams }: BlogPageProps) {
   const headersList = await headers();
   const host = headersList.get('x-forwarded-host') || headersList.get('host');
   const protocol = headersList.get('x-forwarded-proto') || 'https';
@@ -67,6 +71,8 @@ export default async function BlogPage() {
 
   const title = t('title');
   const description = t('description');
+  const { q } = await searchParams;
+  const initialSearchQuery = Array.isArray(q) ? (q[0] ?? '') : (q ?? '');
 
   return (
     <>
@@ -84,6 +90,7 @@ export default async function BlogPage() {
         title={title}
         description={description}
         locale={locale}
+        initialSearchQuery={initialSearchQuery}
         cta={{
           heading: t('cta.heading'),
           subheading: t('cta.subheading'),

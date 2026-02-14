@@ -33,32 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: t('meta.description'),
   });
 
-  // Locale-specific keywords
-  const keywords = locale === 'es'
-    ? [
-        'calculadora de costos de headshots',
-        'precios de retratos corporativos',
-        'costo de headshots con IA',
-        'costo de headshots de equipo',
-        'precio de retrato profesional',
-        'comparación de costos de fotografía',
-        'IA vs fotografía tradicional',
-        'ROI de headshots empresariales',
-      ]
-    : [
-        'headshot cost calculator',
-        'corporate headshot pricing',
-        'AI headshots cost',
-        'team headshot cost',
-        'professional headshot price',
-        'photography cost comparison',
-        'AI vs traditional photography',
-        'business headshot ROI',
-      ];
-
   return {
     ...baseMetadata,
-    keywords,
     openGraph: {
       ...baseMetadata.openGraph,
       type: 'website',
@@ -77,10 +53,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: t('meta.title'),
       description: t('meta.description'),
       images: [`${baseUrl}/branding/og-image.jpg`],
-    },
-    other: {
-      'og:price:amount': '29',
-      'og:price:currency': 'USD',
     },
   };
 }

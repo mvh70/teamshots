@@ -175,6 +175,42 @@ const nextConfig = {
         ]
       },
       {
+        source: '/blog/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
+      },
+      {
+        source: '/es/blog/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
+      },
+      {
+        source: '/solutions/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
+      },
+      {
+        source: '/es/soluciones/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
+      },
+      {
         source: '/public/:path*',
         headers: [
           {

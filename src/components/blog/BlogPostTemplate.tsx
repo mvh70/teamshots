@@ -5,6 +5,7 @@ import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import { headers } from 'next/headers';
 import { getBrand } from '@/config/brand';
 import { getBaseUrl } from '@/lib/url';
+import { markdownToInlineHtml } from '@/lib/markdown';
 import {
   ArticleJsonLd,
   FaqJsonLd,
@@ -344,7 +345,7 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
       {tldr && tldr.length > 0 && (
         <TldrSection>
           {tldr.map((item, index) => (
-            <p key={index} dangerouslySetInnerHTML={{ __html: item }} />
+            <div key={index} dangerouslySetInnerHTML={{ __html: markdownToInlineHtml(item) }} />
           ))}
         </TldrSection>
       )}

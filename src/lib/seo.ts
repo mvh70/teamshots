@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { normalizeBaseUrlForSeo } from '@/lib/url'
 
 type ConstructMetadataParams = {
     baseUrl: string    // The base URL of the current domain (e.g. "https://teamshotspro.com")
@@ -42,7 +43,7 @@ function deriveSiteName(baseUrl: string, explicitSiteName?: string): string {
  * Enforces HTTPS and non-www domain (teamshotspro.com).
  */
 export function constructMetadata({
-    baseUrl,
+    baseUrl: rawBaseUrl,
     path = '',
     title,
     description,
@@ -51,6 +52,8 @@ export function constructMetadata({
     noIndex = false,
     siteName,
 }: ConstructMetadataParams): Metadata {
+    const baseUrl = normalizeBaseUrlForSeo(rawBaseUrl)
+
     // Ensure path starts with slash if not empty
     const cleanPath = path.startsWith('/') ? path : `/${path}`
 
@@ -107,7 +110,7 @@ export function constructMetadata({
  * Helper for dynamic blog posts where slugs might differ by language
  */
 export function constructBlogMetadata({
-    baseUrl,
+    baseUrl: rawBaseUrl,
     enSlug,
     esSlug,
     locale,
@@ -123,6 +126,7 @@ export function constructBlogMetadata({
     description?: string
     image?: string
 }): Metadata {
+    const baseUrl = normalizeBaseUrlForSeo(rawBaseUrl)
     const currentSlug = locale === 'en' ? enSlug : (esSlug || enSlug)
     const englishUrl = `${baseUrl}/blog/${enSlug}`
     const spanishUrl = `${baseUrl}/es/blog/${esSlug || enSlug}`

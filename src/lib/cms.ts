@@ -139,8 +139,8 @@ export function variantToBrandId(variant: LandingVariant): string {
  * Get all published content slugs for sitemap generation
  */
 export function getAllPublishedSlugs(brandId: string): {
-  blogSlugs: Array<{ en: string; es: string | null }>
-  solutionSlugs: Array<{ en: string; es: string | null }>
+  blogSlugs: Array<{ en: string; es: string | null; publishedAt: string | number | null }>
+  solutionSlugs: Array<{ en: string; es: string | null; publishedAt: string | number | null }>
   redirectedBlogSlugs: string[]
 } {
   try {
@@ -149,6 +149,7 @@ export function getAllPublishedSlugs(brandId: string): {
     const blogQuery = `
       SELECT
         cs.canonicalSlug as slug,
+        cs.publishedAt,
         t.localizedSlug as spanishSlug
       FROM ContentSeries cs
       INNER JOIN ContentVersion cv ON cv.seriesId = cs.id
@@ -162,6 +163,7 @@ export function getAllPublishedSlugs(brandId: string): {
     const solutionQuery = `
       SELECT
         cs.canonicalSlug as slug,
+        cs.publishedAt,
         t.localizedSlug as spanishSlug
       FROM ContentSeries cs
       INNER JOIN ContentVersion cv ON cv.seriesId = cs.id
@@ -185,10 +187,12 @@ export function getAllPublishedSlugs(brandId: string): {
     const blogRows = db.prepare(blogQuery).all(brandId) as Array<{
       slug: string
       spanishSlug: string | null
+      publishedAt: string | number | null
     }>
     const solutionRows = db.prepare(solutionQuery).all(brandId) as Array<{
       slug: string
       spanishSlug: string | null
+      publishedAt: string | number | null
     }>
     const blogRedirectRows = db.prepare(blogRedirectQuery).all(brandId) as Array<{
       redirectFrom: string
@@ -203,8 +207,8 @@ export function getAllPublishedSlugs(brandId: string): {
     )]
 
     return {
-      blogSlugs: blogRows.map((r) => ({ en: r.slug, es: r.spanishSlug })),
-      solutionSlugs: solutionRows.map((r) => ({ en: r.slug, es: r.spanishSlug })),
+      blogSlugs: blogRows.map((r) => ({ en: r.slug, es: r.spanishSlug, publishedAt: r.publishedAt })),
+      solutionSlugs: solutionRows.map((r) => ({ en: r.slug, es: r.spanishSlug, publishedAt: r.publishedAt })),
       redirectedBlogSlugs,
     }
   } catch (error) {
@@ -257,12 +261,12 @@ function normalizeIsoDate(
 
 /**
  * Transform CMS heroImagePath to API URL
- * Converts /blog/slug.png → /api/cms/images/blog/slug.png
+ * Converts /blog/slug.png → /images/blog/slug.png
  */
 function heroImageToUrl(heroImagePath: string | null): string | undefined {
   if (!heroImagePath) return undefined
   // heroImagePath is stored as /blog/slug.png or similar
-  return `/api/cms/images${heroImagePath}`
+  return `/images${heroImagePath}`
 }
 
 /**

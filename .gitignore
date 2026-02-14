@@ -82,6 +82,10 @@ docs/**
 storage/**
 backup_images/
 
+.agent
+.agents
+.roo
+.windsurf
 .claude
 .cursor
 CLAUDE.md
@@ -95,6 +99,9 @@ chrome-extension/**
 
 /*.md
 /*.jpeg
+
+# plans (internal planning docs)
+plans/
 
 # scripts (dev-only tooling, not used in production)
 scripts/

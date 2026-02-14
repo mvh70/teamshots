@@ -1,5 +1,3 @@
-import Script from 'next/script';
-
 import type { LandingVariant } from '@/config/landing-content';
 
 interface LandingSchemaProps {
@@ -33,14 +31,6 @@ export function LandingSchema({
       '@type': 'Organization',
       '@id': `${baseUrl}#organization`,
       name: brandName,
-    },
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${baseUrl}/blog?q={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
     },
     inLanguage: ['en-US', 'es-ES'],
   };
@@ -125,7 +115,6 @@ export function LandingSchema({
       description: 'Free trial with 3 sample photos',
       availability: 'https://schema.org/InStock',
     },
-    aggregateRating: undefined, // Only add when we have real reviews
     featureList: variant === 'teamshotspro'
       ? [
           'AI-powered professional headshots',
@@ -304,44 +293,36 @@ export function LandingSchema({
 
   return (
     <>
-      <Script
-        id="landing-website-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
       />
-      <Script
-        id="landing-webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Script
-        id="landing-organization-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
-      <Script
-        id="landing-software-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
       />
-      <Script
-        id="landing-service-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
-      <Script
-        id="landing-breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <Script
-        id="landing-howto-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
       {faqSchema && (
-        <Script
-          id="landing-faq-schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />

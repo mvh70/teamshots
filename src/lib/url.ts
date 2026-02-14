@@ -92,6 +92,22 @@ export function getCleanClientBaseUrl(): string {
   return Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
 }
 
+export function normalizeBaseUrlForSeo(url: string): string {
+  const cleanUrl = url.replace(/\/$/, '')
+
+  try {
+    const parsed = new URL(cleanUrl)
+    const normalizedHost = parsed.hostname.replace(/^www\./, '').toLowerCase()
+    if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedHost)) {
+      parsed.protocol = 'https:'
+      parsed.hostname = toCanonicalHost(normalizedHost)
+    }
+    return parsed.toString().replace(/\/$/, '')
+  } catch {
+    return cleanUrl
+  }
+}
+
 /**
  * Get the base URL for a specific user based on their signup domain.
  * Used for emails and notifications to ensure links point to the domain they signed up on.

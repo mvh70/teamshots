@@ -41,6 +41,11 @@
       "heading": "¿Listo para obtener tus headshots profesionales?",
       "subheading": "Únete a miles de profesionales que han transformado su presencia online con headshots generados por IA.",
       "buttonText": "Comenzar Gratis"
+    },
+    "search": {
+      "placeholder": "Buscar artículos...",
+      "noResults": "No se encontraron artículos para \"{query}\"",
+      "clear": "Borrar búsqueda"
     }
   },
   "faq": {
@@ -2245,10 +2250,6 @@
             "label": "Pose de Poder",
             "description": "Ejecutivo, fundador, liderazgo"
           },
-          "power_crossed": {
-            "label": "Pose de Poder (Brazos Cruzados)",
-            "description": "Profesional, experto, corporativo"
-          },
           "casual_confident": {
             "label": "Confianza Casual",
             "description": "Profesional moderno, tecnología, creativo"
@@ -2260,10 +2261,6 @@
           "walking_confident": {
             "label": "Caminando - Con Propósito",
             "description": "Dinámico, moderno, liderazgo"
-          },
-          "sitting_engaged": {
-            "label": "Sentado Hacia Adelante - Comprometido",
-            "description": "Coach, consultor, empático"
           },
           "seated_engagement": {
             "label": "El Compromiso Sentado",

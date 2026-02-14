@@ -1,0 +1,17 @@
+{
+  "prompt": "Split diptych composition illustrating 'The Coordination Nightmare' vs 'The Automated Solution.' LEFT FRAME: A South Asian male professional in his late 50s with brown skin and salt-and-pepper hair, looking overwhelmed in a dimly lit, cluttered space. He holds a chaotic fan of mismatched printed photos—some blurry, some dark, differing sizes. Behind him, a corkboard is messy with timezone maps and red string. RIGHT FRAME: The same man, now radiating calm authority in a crisp primary blue (#2563eb) blazer. He stands in a minimalist, sun-drenched space with a secondary blue (#1e40af) accent wall, holding a single translucent acrylic pane displaying a perfect, symmetrical grid of digital team faces. The lighting shifts from warm, stressful tungsten on the left to clean, cool daylight on the right. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+  "analysis": {
+    "prompt": "Split diptych composition illustrating 'The Coordination Nightmare' vs 'The Automated Solution.' LEFT FRAME: A South Asian male professional in his late 50s with brown skin and salt-and-pepper hair, looking overwhelmed in a dimly lit, cluttered space. He holds a chaotic fan of mismatched printed photos—some blurry, some dark, differing sizes. Behind him, a corkboard is messy with timezone maps and red string. RIGHT FRAME: The same man, now radiating calm authority in a crisp primary blue (#2563eb) blazer. He stands in a minimalist, sun-drenched space with a secondary blue (#1e40af) accent wall, holding a single translucent acrylic pane displaying a perfect, symmetrical grid of digital team faces. The lighting shifts from warm, stressful tungsten on the left to clean, cool daylight on the right. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+    "altText": "Split screen comparison showing a South Asian male executive overwhelmed by messy physical photos versus holding a perfect digital headshot grid."
+  },
+  "altText": "Split screen comparison showing a South Asian male executive overwhelmed by messy physical photos versus holding a perfect digital headshot grid.",
+  "generatedAt": "2026-02-13T12:00:02.502Z",
+  "model": "gemini-3-pro-image-preview",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "professional",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

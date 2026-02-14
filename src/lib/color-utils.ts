@@ -21,7 +21,7 @@ export const COMMON_COLOR_MAPPINGS: Record<string, string> = {
   'purple': '#800080',
   'pink': '#FFC0CB',
   'tan': '#D2B48C',
-  'cream': '#FFFDD0',
+  'cream': '#FEF3C7',
   'khaki': '#F0E68C',
   'olive': '#808000',
   'maroon': '#800000',
@@ -30,6 +30,32 @@ export const COMMON_COLOR_MAPPINGS: Record<string, string> = {
   'gold': '#FFD700',
   'off white': '#F8F8FF',
   'off-white': '#F8F8FF'
+}
+
+// UI naming overrides for colors where the external color database uses
+// uncommon labels (e.g., "Silent Ivory") but product language expects common names.
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  '#000000': 'Black',
+  '#1f2937': 'Charcoal',
+  '#374151': 'Dark Gray',
+  '#6b7280': 'Gray',
+  '#9ca3af': 'Light Gray',
+  '#ffffff': 'White',
+  '#f5f5dc': 'Beige',
+  '#d2b48c': 'Tan',
+  '#8b4513': 'Brown',
+  '#4a3728': 'Dark Brown',
+  '#000080': 'Navy',
+  '#1e3a5f': 'Dark Blue',
+  '#3b82f6': 'Blue',
+  '#60a5fa': 'Light Blue',
+  '#14532d': 'Dark Green',
+  '#166534': 'Forest Green',
+  '#800020': 'Burgundy',
+  '#7f1d1d': 'Dark Red',
+  '#78350f': 'Olive',
+  '#fef3c7': 'Cream',
+  '#ffffc2': 'Cream',
 }
 
 // Create a lookup map for fast color name to hex conversion from the full database
@@ -169,6 +195,9 @@ export function hexToColorName(hex: string): string {
   
   // Normalize hex format
   const normalizedHex = hex.startsWith('#') ? hex.toLowerCase() : `#${hex.toLowerCase()}`
+
+  const displayNameOverride = DISPLAY_NAME_OVERRIDES[normalizedHex]
+  if (displayNameOverride) return displayNameOverride
   
   // 1. Try exact match in the color database
   const exactMatch = hexToNameMap.get(normalizedHex)
@@ -198,6 +227,11 @@ export function hexToColorNameWithInfo(hex: string): { name: string; matchedHex:
   if (!hex) return { name: 'Unknown', matchedHex: '', isExact: false }
   
   const normalizedHex = hex.startsWith('#') ? hex.toLowerCase() : `#${hex.toLowerCase()}`
+
+  const displayNameOverride = DISPLAY_NAME_OVERRIDES[normalizedHex]
+  if (displayNameOverride) {
+    return { name: displayNameOverride, matchedHex: normalizedHex, isExact: true }
+  }
   
   // 1. Try exact match in the color database
   const exactMatch = hexToNameMap.get(normalizedHex)
@@ -249,4 +283,3 @@ export function hexToColorNameWithInfo(hex: string): { name: string; matchedHex:
   
   return { ...result, isExact: false }
 }
-

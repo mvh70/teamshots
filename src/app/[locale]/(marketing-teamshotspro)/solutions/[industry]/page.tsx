@@ -41,6 +41,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, industry } = await params
   const headersList = await headers()
+  const brand = getBrand(headersList)
 
   const solution = getSolutionBySlug(industry)
   if (!solution) notFound()
@@ -75,13 +76,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: seoTitle,
       description: seoDescription,
       url: canonical,
-      siteName: 'TeamShotsPro',
+      siteName: brand.name,
       images: [
         {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${solution.label} AI Headshots - TeamShotsPro`,
+          alt: `${solution.label} AI Headshots - ${brand.name}`,
         },
       ],
     },
@@ -92,15 +93,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [ogImage],
       creator: '@teamshotspro',
     },
-    keywords: [
-      `${solution.label.toLowerCase()} headshots`,
-      `AI headshots for ${solution.label.toLowerCase()}`,
-      'professional team photos',
-      'corporate headshots',
-      'AI photography',
-      'team photos',
-      ...solution.platforms.map(p => `headshots for ${p.toLowerCase()}`),
-    ],
   }
 }
 

@@ -1,0 +1,32 @@
+{
+  "prompt": "Wide cinematic shot: A chaotic, high-ceilinged converted warehouse studio at twilight. The vast space is filled with the cluttered reality of a growing small business—stacks of cardboard inventory boxes, architectural blueprints unrolled on tables, and shelving units. In the center of this industrial expanse, a small figure stands out: a South Asian male professional in his late 50s with distinguished graying hair. He wears a deep royal blue blazer. He is standing back to admire a small, makeshift photography corner he has created against a brick wall—a smooth azure backdrop taped up with bright blue painter's tape, illuminated by a single clamp light. The scene contrasts the messy 'behind the scenes' reality with the polished image he is trying to create. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+  "analysis": {
+    "prompt": "Wide cinematic shot: A chaotic, high-ceilinged converted warehouse studio at twilight. The vast space is filled with the cluttered reality of a growing small business—stacks of cardboard inventory boxes, architectural blueprints unrolled on tables, and shelving units. In the center of this industrial expanse, a small figure stands out: a South Asian male professional in his late 50s with distinguished graying hair. He wears a deep royal blue blazer. He is standing back to admire a small, makeshift photography corner he has created against a brick wall—a smooth azure backdrop taped up with bright blue painter's tape, illuminated by a single clamp light. The scene contrasts the messy 'behind the scenes' reality with the polished image he is trying to create. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+    "altText": "Wide environmental shot of South Asian male business owner setting up DIY headshot backdrop in messy warehouse.",
+    "creativeDirectionName": "environmental-story",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "late-50s",
+        "descriptor": "in their late 50s"
+      },
+      "ethnicity": {
+        "label": "south-asian",
+        "descriptor": "South Asian with brown skin"
+      }
+    }
+  },
+  "altText": "Wide environmental shot of South Asian male business owner setting up DIY headshot backdrop in messy warehouse.",
+  "generatedAt": "2026-02-13T12:44:35.508Z",
+  "model": "gemini-3-pro-image-preview",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "professional",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}
