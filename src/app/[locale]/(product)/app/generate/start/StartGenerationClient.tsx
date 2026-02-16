@@ -113,6 +113,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [isGenerating, setIsGenerating] = useState(false)
   const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
   const [acceptedVisitedStepKeys, setAcceptedVisitedStepKeys] = useState<Set<string>>(() => new Set())
+  const [acceptedVisitedLoaded, setAcceptedVisitedLoaded] = useState(false)
   // Navigation methods exposed by PhotoStyleSettings for mobile sticky footer (use ref to avoid re-render loops)
   const navMethodsRef = React.useRef<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -282,19 +283,45 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       const currentValue = settings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
       const savedValue = savedSettings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
 
-      // Check if saved value has actual content (value property with data)
-      const savedHasValue = savedValue?.value !== undefined
+      // Support both current mode/value shape and legacy saved shapes:
+      // - New: { mode: 'user-choice'|'predefined', value: {...} }
+      // - Legacy pose/expression: { type: 'power_cross' }
+      const savedRestorableValue = (() => {
+        if (!savedValue) return undefined
+        if (savedValue.value !== undefined) return savedValue.value
+        if ((key === 'pose' || key === 'expression') && savedValue.type && savedValue.type !== 'user-choice' && savedValue.type !== 'predefined') {
+          return { type: savedValue.type }
+        }
+        return undefined
+      })()
 
       // CRITICAL: Only merge if current mode is 'user-choice'
       // If mode is 'predefined', admin has locked this value - never overwrite
-      const currentIsUserChoice = currentValue?.mode === 'user-choice'
+      const currentIsUserChoice =
+        currentValue?.mode === 'user-choice' ||
+        currentValue?.type === 'user-choice' ||
+        currentValue?.style === 'user-choice'
 
-      if (savedHasValue && currentValue && currentIsUserChoice) {
+      if (savedRestorableValue !== undefined && currentValue && currentIsUserChoice) {
         // Restore user's saved selection for user-choice settings.
+        // Normalize legacy pose/expression user-choice shape ({ type: 'user-choice' })
+        // to the mode/value wrapper so selectors can reliably read restored values.
+        const shouldNormalizeLegacyChoice =
+          (key === 'pose' || key === 'expression') && currentValue.mode === undefined
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ; (merged as any)[key] = shouldNormalizeLegacyChoice
+          ? { mode: 'user-choice', value: savedRestorableValue }
+          : {
+              ...currentValue,
+              value: savedRestorableValue
+            }
+      } else if (savedRestorableValue !== undefined && !currentValue && (key === 'pose' || key === 'expression')) {
+        // Backward compatibility: older contexts may omit pose/expression keys entirely.
+        // Rehydrate user choice from session so selection survives page reloads.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ; (merged as any)[key] = {
-          ...currentValue,
-          value: savedValue.value
+          mode: 'user-choice',
+          value: savedRestorableValue
         }
       }
       // If currentValue is undefined or mode is 'predefined', keep settings unchanged
@@ -308,43 +335,46 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // Mark as ready for saving after hydration (regardless of skipUpload)
   // This ensures saves work in all flows
   useEffect(() => {
-    console.log('[Load Effect] Running. hydrated:', hydrated, 'hasLoadedSavedSettingsRef:', hasLoadedSavedSettingsRef.current, 'skipUpload:', skipUpload)
     if (!hydrated || hasLoadedSavedSettingsRef.current) {
-      console.log('[Load Effect] Early return - already loaded or not hydrated')
       return
     }
 
-    // If skipUpload is true, load saved settings first
-    if (skipUpload) {
-      console.log('[Load Effect] skipUpload is true, merging saved settings')
-      setPhotoStyleSettings(prev => {
-        // First merge saved style settings (all categories) - uses global key
-        let merged = mergeSavedStyleSettings(prev)
-        // Then merge saved clothing colors (for backward compatibility)
-        merged = mergeSavedColors(merged)
-        return merged
-      })
-    } else {
-      console.log('[Load Effect] skipUpload is false, NOT merging saved settings')
-    }
+    // Always merge saved settings once on hydration. This keeps behavior consistent
+    // across entry paths (refresh, sidebar navigation, direct URL, onboarding redirects).
+    setPhotoStyleSettings(prev => {
+      // First merge saved style settings (all categories) - uses global key
+      let merged = mergeSavedStyleSettings(prev)
+      // Then merge saved clothing colors (for backward compatibility)
+      merged = mergeSavedColors(merged)
+      return merged
+    })
 
     // Mark as ready for saving (always, after hydration)
     hasLoadedSavedSettingsRef.current = true
-    console.log('[Load Effect] Set hasLoadedSavedSettingsRef to true')
   }, [hydrated, skipUpload, mergeSavedStyleSettings, mergeSavedColors])
+
+  // Rehydrate from session whenever this route is (re)entered with skipUpload.
+  // This handles App Router cache restores where component state can be stale
+  // after navigating away (e.g., Selfies -> Generate -> Customize).
+  useEffect(() => {
+    if (!hydrated || !skipUpload) return
+
+    setPhotoStyleSettings(prev => {
+      let merged = mergeSavedStyleSettings(prev)
+      merged = mergeSavedColors(merged)
+      return merged
+    })
+  }, [hydrated, skipUpload, pathname, searchParamsString, mergeSavedStyleSettings, mergeSavedColors])
 
   // Save all style settings to session storage whenever they change
   // IMPORTANT: Only saves when user has explicitly made changes (not on initial load)
   // This prevents overwriting saved settings when page loads with a different package
   useEffect(() => {
-    console.log('[Save Effect] Running. hasLoadedSavedSettingsRef:', hasLoadedSavedSettingsRef.current, 'hasUserMadeChangesRef:', hasUserMadeChangesRef.current, 'hydrated:', hydrated)
     // Skip saving during initial load, if not hydrated, or if user hasn't made changes
     if (!hasLoadedSavedSettingsRef.current || !hydrated || !hasUserMadeChangesRef.current) {
-      console.log('[Save Effect] Early return - not ready to save or no user changes')
       return
     }
 
-    console.log('[Save Effect] Saving settings:', photoStyleSettings)
     // Save all style settings with global key (no context-specific key)
     // This ensures settings persist regardless of which context/package is active
     saveStyleSettings(photoStyleSettings)
@@ -354,7 +384,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     if (clothingColors && isUserChoice(clothingColors) && hasValue(clothingColors)) {
       saveClothingColors(clothingColors.value)
     }
-    console.log('[Save Effect] Save complete')
   }, [photoStyleSettings, hydrated])
 
   // Wrapper for settings onChange that marks user as having made changes
@@ -584,10 +613,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const teamName = session?.user?.person ? 'Team' : undefined
 
   useEffect(() => {
+    // Keep per-step acceptance persisted across route hops.
+    // Clearing this on non-skipUpload entry caused pose/expression to appear
+    // "not set" after navigating away and back.
     setVisitedMobileSteps(new Set())
-    if (!skipUpload) {
-      setAcceptedVisitedStepKeys(new Set())
-    }
   }, [skipUpload])
 
   // NEW CREDIT MODEL: Credits always belong to a person, not team pool
@@ -604,16 +633,20 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   React.useEffect(() => {
     if (typeof window === 'undefined') return
 
+    setAcceptedVisitedLoaded(false)
+
     try {
       const raw = sessionStorage.getItem(acceptedVisitStorageKey)
       if (!raw) {
         setAcceptedVisitedStepKeys(new Set())
+        setAcceptedVisitedLoaded(true)
         return
       }
 
       const parsed = JSON.parse(raw)
       if (!Array.isArray(parsed)) {
         setAcceptedVisitedStepKeys(new Set())
+        setAcceptedVisitedLoaded(true)
         return
       }
 
@@ -621,11 +654,14 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       setAcceptedVisitedStepKeys(new Set(keys))
     } catch {
       setAcceptedVisitedStepKeys(new Set())
+    } finally {
+      setAcceptedVisitedLoaded(true)
     }
   }, [acceptedVisitStorageKey])
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return
+    if (!acceptedVisitedLoaded) return
 
     const keys = Array.from(acceptedVisitedStepKeys)
     if (keys.length > 0) {
@@ -633,7 +669,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     } else {
       sessionStorage.removeItem(acceptedVisitStorageKey)
     }
-  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey])
+  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey, acceptedVisitedLoaded])
 
   const completionState = useCustomizationCompletion({
     photoStyleSettings,

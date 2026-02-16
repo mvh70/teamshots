@@ -1,8 +1,7 @@
 /**
  * Branding Element
  *
- * Contributes logo placement and brand color rules to background generation
- * and logo preservation rules to composition.
+ * Contributes logo placement and brand color rules to generation phases.
  *
  * Implements preparation phase to download logo assets asynchronously.
  */
@@ -14,11 +13,14 @@ import {
   type PreparedAsset,
 } from '../base/StyleElement'
 import {
-  BACKGROUND_BRANDING_PROMPT,
-  ELEMENT_BRANDING_PROMPT,
-  CLOTHING_BRANDING_RULES_BASE,
-} from './config'
-import { generateBrandingPrompt } from './prompt'
+  getContextualBackgroundBrandingRules,
+  generateBrandingPrompt,
+  getBrandingIntegrationRules,
+  getBrandingPromptConfig,
+  getCompositionLayoutBrandingNote,
+  getLogoIntegrityRules,
+  getLogoReferenceDescription,
+} from './prompt'
 import type { KnownClothingStyle } from '../clothing/config'
 import { hasValue } from '../base/element-types'
 import { Logger } from '@/lib/logger'
@@ -28,6 +30,10 @@ import { PutObjectCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
 import { autoRegisterElement } from '../composition/registry'
+
+function mergeUniqueRules(...ruleSets: string[][]): string[] {
+  return [...new Set(ruleSets.flat().map((rule) => rule.trim()).filter(Boolean))]
+}
 
 export class BrandingElement extends StyleElement {
   readonly id = 'branding'
@@ -45,7 +51,7 @@ export class BrandingElement extends StyleElement {
 
   // Branding affects different phases based on position:
   // - clothing: person-generation (step 1a)
-  // - background/elements: background-generation (step 1b) + composition (step 2)
+  // - background/elements: pre-generated in Step 0 and surfaced via background buffer in Step 2
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
@@ -78,9 +84,15 @@ export class BrandingElement extends StyleElement {
       return position === 'background' || position === 'elements'
     }
 
-    // Composition phase: contribute for background/elements branding only
-    // (clothing branding was already applied in step 1a person generation)
+    // Composition phase: branding is already applied before Step 2.
+    // - clothing: applied in Step 1a (overlay or direct)
+    // - background/elements: pre-generated in Step 0 for all background types
     if (phase === 'composition') {
+      return false
+    }
+
+    // Evaluation phase: evaluate background/elements branding in the final image.
+    if (phase === 'evaluation') {
       return position === 'background' || position === 'elements'
     }
 
@@ -234,14 +246,9 @@ export class BrandingElement extends StyleElement {
         // Convert base64 SVG to buffer
         const svgBuffer = Buffer.from(logoImage.base64, 'base64')
 
-        // Convert SVG to PNG using sharp
-        // Set width to 1024px (high quality) and maintain aspect ratio
-        const pngBuffer = await sharp(svgBuffer)
-          .png({ compressionLevel: 6, quality: 100 })
-          .resize(1024, null, {
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
+        // Convert SVG to PNG at high render density without downscaling.
+        const pngBuffer = await sharp(svgBuffer, { density: 300 })
+          .png({ compressionLevel: 0 })
           .toBuffer()
 
         // Convert PNG buffer back to base64
@@ -290,7 +297,7 @@ export class BrandingElement extends StyleElement {
           },
         })
           .composite([{ input: logoBuffer, blend: 'over' }])
-          .png({ compressionLevel: 6 })
+          .png({ compressionLevel: 0 })
           .toBuffer()
 
         finalBase64 = chromaBuffer.toString('base64')
@@ -426,8 +433,8 @@ export class BrandingElement extends StyleElement {
       return this.contributeToBackgroundGeneration(brandingValue, context)
     }
 
-    if (phase === 'composition') {
-      return this.contributeToComposition(brandingValue, context)
+    if (phase === 'evaluation') {
+      return this.contributeToEvaluation(brandingValue, context)
     }
 
     return {}
@@ -498,7 +505,7 @@ export class BrandingElement extends StyleElement {
     if (logoAsset?.data.base64) {
       referenceImages.push({
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown onto the clothing. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
+        description: getLogoReferenceDescription('clothing'),
         type: 'branding' as const,
       })
 
@@ -510,20 +517,9 @@ export class BrandingElement extends StyleElement {
       })
     }
 
-    // CRITICAL: Logo reproduction rules for clothing
-    const logoReproductionRules = [
-      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
-      'COPY the logo PIXEL-FOR-PIXEL from the reference image onto the clothing',
-      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors',
-      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
-      'DO NOT: change any letters, fonts, or text in the logo',
-    ]
-
     return {
-      instructions: [],
-
       mustFollow: [
-        ...logoReproductionRules,
+        ...getLogoIntegrityRules(),
         ...brandingResult.rules
       ],
 
@@ -550,25 +546,38 @@ export class BrandingElement extends StyleElement {
     context: ElementContext
   ): ElementContribution {
     const position = brandingValue.position || 'background'
-
-    // CRITICAL: Read clothing data from accumulated payload for branding placement logic
-    const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
-    const wardrobe = subject?.wardrobe as Record<string, unknown> | undefined
-    const styleKey = (wardrobe?.style_key as KnownClothingStyle | undefined) || 'startup'
-    const detailKey = (wardrobe?.detail_key as string | undefined) || 'dress_shirt'
+    const background = context.settings.background
+    const backgroundType = background && hasValue(background) ? background.value.type : undefined
+    const contextualBackgroundRules = getContextualBackgroundBrandingRules({
+      position,
+      backgroundType,
+    })
 
     // Generate branding prompt with clothing context
     const brandingResult = generateBrandingPrompt({
       branding: context.settings.branding,
-      styleKey,
-      detailKey,
+      styleKey: 'startup',
+      detailKey: 'dress_shirt',
     })
 
     // Build payload structure based on position
     const payload: Record<string, unknown> = {}
     if (position === 'background' || position === 'elements') {
+      const brandingPayload = brandingResult.branding as Record<string, unknown>
+      const existingBrandingRules = Array.isArray(brandingPayload.rules)
+        ? brandingPayload.rules.map((rule) => String(rule))
+        : []
+
       payload.scene = {
-        branding: brandingResult.branding,
+        branding: {
+          ...brandingPayload,
+          rules: mergeUniqueRules(existingBrandingRules, contextualBackgroundRules),
+          logo_integrity: getLogoIntegrityRules(),
+          integration: getBrandingIntegrationRules(),
+        },
+      }
+      payload.composition_layout = {
+        branding_position: getCompositionLayoutBrandingNote(),
       }
     } else {
       // Default to subject.branding for clothing or when position is not specified
@@ -577,185 +586,58 @@ export class BrandingElement extends StyleElement {
       }
     }
 
-    // Select prompt based on position
-    const promptConfig =
-      position === 'elements'
-        ? ELEMENT_BRANDING_PROMPT
-        : position === 'clothing'
-          ? this.getClothingBrandingPrompt()
-          : BACKGROUND_BRANDING_PROMPT
+    const promptConfig = getBrandingPromptConfig(
+      position === 'elements' ? 'elements' : 'background'
+    )
 
-    // Get prepared logo from context
-    const preparedAssets = context.generationContext.preparedAssets
-    const logoAsset = preparedAssets?.get(`${this.id}-logo`)
-
-    // Add reference image if logo was prepared - with emphatic copying instructions
-    const referenceImages = []
-    if (logoAsset?.data.base64) {
-      referenceImages.push({
-        url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
-        type: 'branding' as const,
-      })
-
-      Logger.info('[BrandingElement] Added logo to background generation contribution', {
-        generationId: context.generationContext.generationId,
-        position,
-        styleKey,
-        detailKey,
-      })
-    }
-
-    // CRITICAL: Extremely strict logo reproduction rules - THE LOGO CANNOT BE CHANGED
-    const logoReproductionRules = [
-      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
-      'COPY the logo PIXEL-FOR-PIXEL from the reference image - this is a HARD REQUIREMENT',
-      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors, same proportions',
-      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
-      'DO NOT: change any letters, fonts, or text in the logo',
-      'DO NOT: modify colors, add effects, or change the aspect ratio',
-      'Think of it as placing a STICKER - the sticker image itself cannot change',
-    ]
-
-    const configRules = Array.isArray(promptConfig.rules)
-      ? promptConfig.rules.map((rule) => String(rule))
-      : []
+    const configRules = promptConfig.rules.map((rule) => String(rule))
 
     return {
-      instructions: [
-        typeof promptConfig.logo_source === 'string' ? promptConfig.logo_source : '',
-        typeof promptConfig.placement === 'string' ? promptConfig.placement : '',
-      ].filter(Boolean),
-
       mustFollow: [
-        ...logoReproductionRules,
-        ...configRules
+        ...getLogoIntegrityRules(),
+        ...configRules,
+        ...contextualBackgroundRules,
       ],
 
       payload,
-
-      referenceImages,
 
       metadata: {
         position,
         hasLogo: true,
         logoKey: brandingValue.logoKey,
         logoAssetId: brandingValue.logoAssetId,
-        styleKey,
-        detailKey,
       },
     }
   }
 
   /**
-   * Composition phase contribution
-   * Adds logo reference and placement instructions for background/elements branding
-   * (clothing branding is already on the person from Step 1a)
+   * Evaluation phase contribution
+   * Provides branding-specific evaluation constraints for Step 3.
    */
-  private contributeToComposition(
+  private contributeToEvaluation(
     brandingValue: import('./types').BrandingValue,
     context: ElementContext
   ): ElementContribution {
     const position = brandingValue.position || 'background'
-
-    // Skip if branding is on clothing (already applied in Step 1a)
-    if (position === 'clothing') {
+    if (position !== 'background' && position !== 'elements') {
       return {}
     }
 
-    // Get prepared logo from context
-    const preparedAssets = context.generationContext.preparedAssets
-    const logoAsset = preparedAssets?.get(`${this.id}-logo`)
-
-    if (!logoAsset?.data.base64) {
-      Logger.warn('[BrandingElement] No logo asset found for composition phase', {
-        generationId: context.generationContext.generationId,
-        position,
-      })
-      return {}
-    }
-
-    // Get clothing context for branding placement logic
-    const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
-    const wardrobe = subject?.wardrobe as Record<string, unknown> | undefined
-    const styleKey = (wardrobe?.style_key as KnownClothingStyle | undefined) || 'startup'
-    const detailKey = (wardrobe?.detail_key as string | undefined) || 'dress_shirt'
-
-    // Generate branding prompt with clothing context
-    const brandingResult = generateBrandingPrompt({
-      branding: context.settings.branding,
-      styleKey,
-      detailKey,
-    })
-
-    // Use the SAME config prompts that work in Step 1b background generation
-    // Select prompt based on position - this ensures consistency between Step 1b and Step 2
-    const promptConfig =
-      position === 'elements'
-        ? ELEMENT_BRANDING_PROMPT
-        : BACKGROUND_BRANDING_PROMPT
-
-    // Note: logo_source and placement instructions are already included in the JSON payload
-    // under scene.branding (as part of brandingResult.branding), so we don't duplicate them here.
-    // The JSON provides full context including rules, placement, and logo_source.
-    const instructions: string[] = []
-
-    // CRITICAL: Core logo reproduction rules - THE LOGO CANNOT BE CHANGED
-    // These are the essential rules that reinforce the reference image instructions.
-    // We keep these concise to avoid prompt bloat while maintaining logo integrity.
-    const logoReproductionRules = [
-      'LOGO INTEGRITY: Copy the logo EXACTLY from the reference image - same letters, shapes, colors, proportions',
-      'DO NOT redesign, reinterpret, stylize, or modify the logo in any way',
-      'Think of it as placing a STICKER - the logo image itself cannot change, only its position in the scene',
-    ]
-
-    const mustFollow: string[] = logoReproductionRules
-
-    // Add logo reference image - MUST be labeled "logo" with emphatic copying instructions
-    const referenceImages = [
-      {
-        url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
-        type: 'branding' as const,
-      },
-    ]
-
-    Logger.info('[BrandingElement] Added logo reference for composition phase', {
-      generationId: context.generationContext.generationId,
+    const background = context.settings.background
+    const backgroundType = background && hasValue(background) ? background.value.type : undefined
+    const contextualBackgroundRules = getContextualBackgroundBrandingRules({
       position,
-      hasLogo: true,
+      backgroundType,
     })
-
-    // Build payload with branding configuration for JSON
-    const payload: Record<string, unknown> = {
-      scene: {
-        branding: brandingResult.branding,
-      },
-    }
 
     return {
-      instructions,
-      mustFollow,
-      referenceImages,
-      payload,
+      mustFollow: [...getLogoIntegrityRules(), ...contextualBackgroundRules],
       metadata: {
-        hasBackgroundLogo: true,
         position,
+        evaluatePlacement: true,
         logoKey: brandingValue.logoKey,
         logoAssetId: brandingValue.logoAssetId,
       },
-    }
-  }
-
-  /**
-   * Get clothing branding prompt configuration
-   */
-  private getClothingBrandingPrompt(): Record<string, unknown> {
-    return {
-      logo_source:
-        'Use the attached image labeled "logo" as the branding element for clothing',
-      placement: 'Place logo on clothing garment (shirt, sweater, etc.)',
-      rules: CLOTHING_BRANDING_RULES_BASE,
     }
   }
 

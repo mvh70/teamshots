@@ -61,6 +61,7 @@ export const generatePosePrompt = (
       shoulderPosition: defaultTemplate.pose.shoulders,
       weightDistribution: defaultTemplate.pose.weight_distribution,
       arms: defaultTemplate.pose.arms,
+      sittingPosition: defaultTemplate.pose.sitting_position,
       description: defaultTemplate.pose.description,
       detailedInstructions: defaultTemplate.prompt_instructions
     }
@@ -73,8 +74,8 @@ export const generatePosePrompt = (
     shoulderPosition: template.pose.shoulders,
     weightDistribution: template.pose.weight_distribution,
     arms: template.pose.arms,
+    sittingPosition: template.pose.sitting_position,
     description: template.pose.description,
     detailedInstructions: template.prompt_instructions
   }
 }
-

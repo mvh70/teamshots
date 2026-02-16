@@ -1,4 +1,4 @@
-import { colornames } from 'color-name-list'
+import * as colorNameListModule from 'color-name-list'
 
 // Common color name variations used in presets that need explicit mapping
 export const COMMON_COLOR_MAPPINGS: Record<string, string> = {
@@ -57,6 +57,57 @@ const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
   '#fef3c7': 'Cream',
   '#ffffc2': 'Cream',
 }
+
+type ColorNameEntry = {
+  name: string
+  hex: string
+}
+
+const FALLBACK_COLORNAMES: ColorNameEntry[] = [
+  { name: 'Black', hex: '#000000' },
+  { name: 'White', hex: '#ffffff' },
+  { name: 'Gray', hex: '#808080' },
+]
+
+function isColorNameEntry(value: unknown): value is ColorNameEntry {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const candidate = value as { name?: unknown; hex?: unknown }
+  return typeof candidate.name === 'string' && typeof candidate.hex === 'string'
+}
+
+function toColorNameEntries(value: unknown): ColorNameEntry[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(isColorNameEntry)
+}
+
+function resolveColorNames(): ColorNameEntry[] {
+  const moduleValue = colorNameListModule as unknown as {
+    colornames?: unknown
+    default?: unknown
+    colorNameList?: unknown
+  }
+
+  const candidateSources: unknown[] = [
+    moduleValue.colornames,
+    moduleValue.default,
+    moduleValue.colorNameList,
+    moduleValue.default && typeof moduleValue.default === 'object'
+      ? (moduleValue.default as { colornames?: unknown }).colornames
+      : undefined,
+    moduleValue,
+  ]
+
+  for (const candidate of candidateSources) {
+    const entries = toColorNameEntries(candidate)
+    if (entries.length > 0) {
+      return entries
+    }
+  }
+
+  return FALLBACK_COLORNAMES
+}
+
+const colornames = resolveColorNames()
 
 // Create a lookup map for fast color name to hex conversion from the full database
 const colorMap = new Map(

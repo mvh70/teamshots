@@ -11,7 +11,9 @@
  * - Outfit Transfer
  */
 
-export const FEATURE_FLAGS = {} as const
+export const FEATURE_FLAGS = {
+  v3CanonicalPromptSinglePass: 'v3CanonicalPromptSinglePass',
+} as const
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS
 
@@ -20,7 +22,14 @@ export type FeatureFlagKey = keyof typeof FEATURE_FLAGS
  * @deprecated All features are now permanently enabled. This function always returns true for backward compatibility.
  */
 export function isFeatureEnabled(flag: string): boolean {
-  return true  // All features permanently enabled
+  if (flag === 'v3CanonicalPromptSinglePass') {
+    const envValue = process.env.V3_CANONICAL_PROMPT_SINGLE_PASS
+    if (typeof envValue === 'string') {
+      return envValue.trim().toLowerCase() === 'true'
+    }
+    return process.env.NODE_ENV !== 'production'
+  }
+  return true
 }
 
 /**

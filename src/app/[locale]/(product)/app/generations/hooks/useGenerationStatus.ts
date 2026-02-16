@@ -7,6 +7,14 @@
 import { useCallback, useRef, useEffect } from 'react'
 import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
+const noStoreRequestInit = {
+  cache: 'no-store' as RequestCache,
+  headers: {
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache'
+  }
+}
+
 export interface GenerationStatus {
   id: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
@@ -99,7 +107,7 @@ export function useGenerationStatus({
 
   const { data, error: swrError, isLoading } = useSWR<GenerationStatus>(
     key,
-    swrFetcher,
+    (url: string) => swrFetcher<GenerationStatus>(url, noStoreRequestInit),
     {
       revalidateOnFocus: false,
       dedupingInterval: 500,
@@ -186,7 +194,7 @@ export function useGenerationsList(options?: {
 
   const { data, error, isLoading, mutate: revalidate } = useSWR<GenerationsListResponse>(
     key,
-    swrFetcher,
+    (url: string) => swrFetcher<GenerationsListResponse>(url, noStoreRequestInit),
     {
       revalidateOnFocus: false,
     }

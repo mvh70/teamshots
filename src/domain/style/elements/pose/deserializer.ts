@@ -1,6 +1,11 @@
 import type { PoseSettings, LegacyPoseSettings, PoseValue, PoseType } from './types'
 import { predefined, userChoice } from '../base/element-types'
 
+const POSE_MIGRATION_MAP: Record<string, PoseType> = {
+  power_crossed: 'power_cross',
+  sitting_engaged: 'seated_engagement',
+}
+
 /**
  * Deserializes pose settings from raw data
  * Supports both legacy format (type: 'user-choice' | 'pose_type')
@@ -20,6 +25,9 @@ export function deserialize(
   if ('mode' in rawPose && typeof rawPose.mode === 'string') {
     const mode = rawPose.mode as 'predefined' | 'user-choice'
     const value = rawPose.value as PoseValue | undefined
+    if (value?.type && POSE_MIGRATION_MAP[value.type]) {
+      return { mode, value: { type: POSE_MIGRATION_MAP[value.type] } }
+    }
     return { mode, value }
   }
 
@@ -29,8 +37,9 @@ export function deserialize(
     if (legacyType === 'user-choice') {
       return userChoice()
     }
+    const migratedType = POSE_MIGRATION_MAP[legacyType] || (legacyType as PoseType)
     // Legacy format with actual pose type
-    return predefined({ type: legacyType as PoseType })
+    return predefined({ type: migratedType })
   }
 
   return defaults || userChoice()

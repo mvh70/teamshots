@@ -10,6 +10,7 @@ import { Logger } from '@/lib/logger'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
 import { enqueueGenerationJob, determineWorkflowVersion } from './generation-helpers'
+import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
 
 type Generation = Prisma.GenerationGetPayload<{}>
 
@@ -19,6 +20,7 @@ export interface RegenerateOptions {
   userId?: string
   creditSource: 'individual' | 'team'
   workflowVersion?: 'v3' // Workflow version to use (defaults to v3)
+  debugMode?: boolean
 }
 
 export interface RegenerationResult {
@@ -31,7 +33,7 @@ export class RegenerationService {
    * Regenerates an existing generation with preserved style settings
    */
   static async regenerate(options: RegenerateOptions): Promise<RegenerationResult> {
-    const { sourceGenerationId, personId, userId, creditSource, workflowVersion } = options
+    const { sourceGenerationId, personId, userId, creditSource, workflowVersion, debugMode } = options
 
     // Get the source generation to regenerate from
     const sourceGeneration = await prisma.generation.findFirst({
@@ -108,7 +110,18 @@ export class RegenerationService {
     }
 
     // Extract stored selfie keys (they're already in the serialized settings)
-    const storedSelfieKeys = (serializedStyleSettings as { inputSelfies?: { keys?: string[] } })?.inputSelfies?.keys
+    const storedInputSelfies = (serializedStyleSettings as {
+      inputSelfies?: {
+        keys?: string[]
+        assetIds?: string[]
+        selfieTypeMap?: Record<string, string>
+      }
+    })?.inputSelfies
+    const storedSelfieKeys = storedInputSelfies?.keys
+    const storedSelfieAssetIds = storedInputSelfies?.assetIds
+    const storedSelfieTypeMap = storedInputSelfies?.selfieTypeMap
+    const storedDemographics = (serializedStyleSettings as { demographics?: DemographicProfile })
+      ?.demographics
     
     // Ensure inputSelfies are included in the serialized settings
     if (!serializedStyleSettings.inputSelfies || !Array.isArray(storedSelfieKeys) || storedSelfieKeys.length === 0) {
@@ -150,6 +163,15 @@ export class RegenerationService {
       throw new Error('No selfie keys found in source generation settings')
     }
     const jobSelfieS3Keys = storedSelfieKeys
+    const jobSelfieAssetIds = Array.isArray(storedSelfieAssetIds)
+      ? storedSelfieAssetIds
+      : undefined
+    const jobSelfieTypeMap =
+      storedSelfieTypeMap && typeof storedSelfieTypeMap === 'object'
+        ? storedSelfieTypeMap
+        : undefined
+
+    const effectiveDebugMode = debugMode ?? process.env.NODE_ENV !== 'production'
 
     const job = await enqueueGenerationJob({
       generationId: generation.id,
@@ -157,9 +179,12 @@ export class RegenerationService {
       userId: userId,
       teamId: teamId,
       selfieS3Keys: jobSelfieS3Keys,
+      selfieAssetIds: jobSelfieAssetIds,
+      selfieTypeMap: jobSelfieTypeMap,
+      demographics: storedDemographics,
       prompt: 'Professional headshot with same style as original',
       workflowVersion: determineWorkflowVersion(workflowVersion),
-      debugMode: false,
+      debugMode: effectiveDebugMode,
       creditSource: creditSource,
       priority: creditSource === 'team' ? 1 : 0,
     })
@@ -170,4 +195,3 @@ export class RegenerationService {
     }
   }
 }
-

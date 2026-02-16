@@ -52,7 +52,13 @@ function getPoseTypeFromSettings(value: PoseSettings | LegacyPoseSettings | unde
   }
 
   // Legacy format: { type: '...' }
-  const legacyValue = value as LegacyPoseSettings
+  const legacyValue = value as LegacyPoseSettings & { value?: { type?: PoseType } }
+
+  // Defensive fallback for mixed legacy shape: { type: 'user-choice', value: { type: '...' } }
+  if (legacyValue.value?.type) {
+    return legacyValue.value.type
+  }
+
   if (legacyValue.type === 'user-choice') {
     return undefined
   }

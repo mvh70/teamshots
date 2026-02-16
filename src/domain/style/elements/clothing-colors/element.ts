@@ -135,10 +135,6 @@ export class ClothingColorsElement extends StyleElement {
       // Include color as fallback to ensure consistency if AI shows any trousers
       colorPalette.push(`bottom garment if partially visible (trousers, skirt): ${getColorDisplay(colors.bottom)} color`)
       metadata.bottomColorPartiallyVisible = true
-      // Also add a must-follow rule to ensure color consistency
-      mustFollow.push(
-        `If any bottom garment (trousers, skirt) is partially visible at the waistline, it MUST be ${getColorDisplay(colors.bottom)} color - do not use a random color`
-      )
     } else if (colors.bottom) {
       // Not expected to be visible at all
       metadata.bottomColorNotVisible = true
@@ -155,17 +151,7 @@ export class ClothingColorsElement extends StyleElement {
     // Note: Specific color values are in the JSON payload color_palette
     // No need to repeat them in instructions or mustFollow
 
-    // Add general color matching instructions
     if (colorPalette.length > 0) {
-      instructions.push(
-        'Match all clothing colors exactly as specified',
-        'Colors should appear natural under the lighting conditions'
-      )
-      mustFollow.push(
-        'All visible clothing layers must match the specified colors',
-        'Colors should be accurate and true to the specifications'
-      )
-
       metadata.colorPalette = colorPalette
     }
 

@@ -822,8 +822,22 @@ export default function PhotoStyleSettings({
       isIncomplete &&
       highlightedFieldKey !== category.key
     const canActivateCard = desktopProgressiveActivationEnabled
-    const isLastCard = allCategories[allCategories.length - 1]?.key === category.key
-    const showContinueHint = desktopProgressiveActivationEnabled && isHighlightedField && hasValueSet && !isLastCard && uneditedFieldKeys.length > 0
+    const currentEditableIndex = editableCategoryKeys.indexOf(category.key)
+    const nextIncompleteEditableKey = currentEditableIndex >= 0
+      ? (
+        editableCategoryKeys
+          .slice(currentEditableIndex + 1)
+          .find((key) => {
+            const acceptedOnVisit = acceptedOnVisitSet.has(key) && Boolean(visitedStepKeys?.has(key))
+            return uneditedFieldSet.has(key) && !acceptedOnVisit
+          }) ?? null
+      )
+      : null
+    const showContinueHint =
+      desktopProgressiveActivationEnabled &&
+      isHighlightedField &&
+      hasValueSet &&
+      Boolean(nextIncompleteEditableKey)
     const userChoiceCardClass = 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
 
     return (
@@ -836,11 +850,9 @@ export default function PhotoStyleSettings({
           className="hidden md:flex absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 z-10 items-center cursor-pointer"
           onClick={(e) => {
             e.stopPropagation()
-            // Navigate to the next card in visual order (not next unedited)
-            const keys = allCategories.map(c => c.key)
-            const currentIdx = keys.indexOf(category.key)
-            if (currentIdx < 0 || currentIdx >= keys.length - 1) return
-            const nextKey = keys[currentIdx + 1]
+            if (!nextIncompleteEditableKey) return
+            // Navigate to the next incomplete editable customization.
+            const nextKey = nextIncompleteEditableKey
             // Auto-acknowledge branding if we're leaving it
             if (category.key === 'branding' && value.branding?.value === undefined) {
               const newSettings = { ...value }
@@ -1150,6 +1162,11 @@ export default function PhotoStyleSettings({
     mobileExtraSteps,
     allCategories
   })
+
+  const editableCategoryKeys = React.useMemo(
+    () => currentEditableCategories.map((category) => category.key),
+    [currentEditableCategories]
+  )
 
   const lockedSectionsVisible = true
 

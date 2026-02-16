@@ -47,7 +47,13 @@ export function useInvitedGenerations(token: string) {
   const key = token ? `/api/team/member/generations?token=${token}` : null
 
   const fetcher = useCallback(async (url: string): Promise<InvitedGenerationsResponse> => {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache'
+      }
+    })
     if (!response.ok) {
       throw new Error('Failed to fetch generations')
     }

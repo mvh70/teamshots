@@ -1,7 +1,7 @@
 import { PhotoStyleSettings, CategoryType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
 import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
-import * as backgroundElement from '../../elements/background'
+import { deserialize as deserializeBackground } from '../../elements/background/deserializer'
 import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
 import { deserialize as clothingDeserialize } from '../../elements/clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
@@ -128,7 +128,7 @@ export const headshot1: ClientStylePackage = {
       // Deserialize only the categories exposed to users via visibleCategories
       // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
       // Note: aspectRatio is derived from preset/shotType, not a direct user input
-      const backgroundResult = backgroundElement.deserialize(inner)
+      const backgroundResult = deserializeBackground(inner)
       const brandingResult = brandingDeserialize(inner)
       const clothingResult = clothingDeserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
@@ -147,4 +147,3 @@ export const headshot1: ClientStylePackage = {
     }
   }
 }
-

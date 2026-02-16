@@ -24,6 +24,7 @@ import { trackInvitedMemberGenerationStarted } from '@/lib/track'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import { DEFAULT_CUSTOMIZATION_STEPS_META, buildSelfieStepIndicator } from '@/lib/customizationSteps'
 import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
+import { loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -120,6 +121,55 @@ export default function InviteCustomizationPage() {
     () => `teamshots_invite_accepted_visited_steps_${token}`,
     [token]
   )
+  const styleSettingsStorageScope = useMemo(() => `invite_${token}`, [token])
+
+  const mergeSavedStyleSettings = useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
+    const savedSettings = loadStyleSettings(styleSettingsStorageScope)
+    if (!savedSettings) {
+      return settings
+    }
+
+    const merged = { ...settings }
+    const categoriesToMerge = [
+      'background', 'clothing', 'clothingColors', 'shotType',
+      'branding', 'expression', 'pose', 'customClothing'
+    ] as const
+
+    for (const key of categoriesToMerge) {
+      const currentValue = settings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
+      const savedValue = savedSettings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
+
+      const savedRestorableValue = (() => {
+        if (!savedValue) return undefined
+        if (savedValue.value !== undefined) return savedValue.value
+        if ((key === 'pose' || key === 'expression') && savedValue.type && savedValue.type !== 'user-choice' && savedValue.type !== 'predefined') {
+          return { type: savedValue.type }
+        }
+        return undefined
+      })()
+
+      const currentIsUserChoice =
+        currentValue?.mode === 'user-choice' ||
+        currentValue?.type === 'user-choice' ||
+        currentValue?.style === 'user-choice'
+
+      if (savedRestorableValue !== undefined && currentValue && currentIsUserChoice) {
+        // Normalize legacy pose/expression user-choice shape ({ type: 'user-choice' })
+        // to the mode/value wrapper so selectors can reliably read restored values.
+        const shouldNormalizeLegacyChoice =
+          (key === 'pose' || key === 'expression') && currentValue.mode === undefined
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ; (merged as any)[key] = shouldNormalizeLegacyChoice
+          ? { mode: 'user-choice', value: savedRestorableValue }
+          : {
+              ...currentValue,
+              value: savedRestorableValue
+            }
+      }
+    }
+
+    return merged
+  }, [styleSettingsStorageScope])
 
   // Wrapper for setPhotoStyleSettings that also marks steps as visited on desktop
   const setPhotoStyleSettings = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
@@ -202,16 +252,18 @@ export default function InviteCustomizationPage() {
         ? pkg.persistenceAdapter.deserialize(contextData.settings)
         : pkg.defaultSettings
 
-      setPhotoStyleSettings(deserializedSettings)
+      setPhotoStyleSettings(mergeSavedStyleSettings(deserializedSettings))
       setOriginalContextSettings(deserializedSettings)
       setPackageId(pkg.id)
     } catch (error) {
       console.error('Error loading context settings:', error)
       const headshot1Pkg = getPackageConfig('headshot1')
-      setPhotoStyleSettings(headshot1Pkg.defaultSettings)
+      const fallbackSettings = headshot1Pkg.defaultSettings
+      setPhotoStyleSettings(mergeSavedStyleSettings(fallbackSettings))
+      setOriginalContextSettings(fallbackSettings)
       setPackageId('headshot1')
     }
-  }, [token])
+  }, [token, mergeSavedStyleSettings])
 
   const validateInvite = useCallback(async () => {
     try {
@@ -396,6 +448,12 @@ export default function InviteCustomizationPage() {
       sessionStorage.removeItem(acceptedVisitStorageKey)
     }
   }, [acceptedVisitedStepKeys, acceptedVisitStorageKey])
+
+  // Persist invite customization settings by token scope across reloads.
+  useEffect(() => {
+    if (!hydrated || !originalContextSettings) return
+    saveStyleSettings(photoStyleSettings, styleSettingsStorageScope)
+  }, [photoStyleSettings, hydrated, originalContextSettings, styleSettingsStorageScope])
 
   const canGenerate = validSelectedIds.length >= 2 &&
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&

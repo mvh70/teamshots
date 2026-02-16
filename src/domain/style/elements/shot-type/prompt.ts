@@ -32,3 +32,18 @@ export function generateShotTypePrompt(settings: PhotoStyleSettings): ShotTypePr
   }
 }
 
+export function getStep1aShotTypeFramingConstraint(params: {
+  bodyBoundaryInstruction?: string
+  shotDescription: string
+}): string {
+  const framingInstruction =
+    params.bodyBoundaryInstruction || `Frame as ${params.shotDescription} per JSON framing section.`
+  return `1. **Framing:** ${framingInstruction}`
+}
+
+export function getStep2ShotTypeFramingConstraint(params: {
+  shotType: string
+  shotDescription: string
+}): string {
+  return `1. **Framing:** The person is already framed as ${params.shotType} (${params.shotDescription}). Maintain this exact framing and crop point; do NOT reframe.`
+}

@@ -3,7 +3,7 @@ import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import type { GenerationContext, GenerationPayload, ReferenceImage } from '@/types/generation'
-import type { PhotoStyleSettings } from '@/types/photo-style'
+import type { PhotoStyleSettings, ClothingColorValue } from '@/types/photo-style'
 import { ClientStylePackage } from '../packages/types'
 import { mergeUserSettings } from '../packages/shared/utils'
 import { resolveShotType } from '../elements/shot-type/config'
@@ -25,11 +25,13 @@ import '../elements/quality/GlobalQualityElement' // Register Global Quality Ele
  * - Payload composition via Registry
  */
 export class BasePackageServer {
+    private readonly s3Client = createS3Client({ forcePathStyle: false })
+
     constructor(protected readonly packageConfig: ClientStylePackage) {
         if (!packageConfig) {
-            console.error('[BasePackageServer] Constructor received UNDEFINED packageConfig!')
+            Logger.error('[BasePackageServer] Constructor received undefined packageConfig')
         } else if (!packageConfig.defaultSettings) {
-            console.error('[BasePackageServer] Constructor received packageConfig WITHOUT defaultSettings!', { pkgId: packageConfig.id })
+            Logger.error('[BasePackageServer] Constructor received packageConfig without defaultSettings', { pkgId: packageConfig.id })
         }
     }
 
@@ -38,7 +40,7 @@ export class BasePackageServer {
      * Packages can override specific steps if needed, but the default flow covers 90% of cases.
      */
     async buildGenerationPayload(context: GenerationContext): Promise<GenerationPayload> {
-        const { generationId, personId, styleSettings, selfieKeys, processedSelfies, selfieTypeMap, options } = context
+        const { generationId, personId, styleSettings, selfieKeys, processedSelfies, selfieTypeMap, demographics, options } = context
         const pkg = this.packageConfig
 
         // 1. Telemetry
@@ -47,6 +49,11 @@ export class BasePackageServer {
 
         // 2. Settings Resolution
         const effectiveSettings = this.resolveEffectiveSettings(styleSettings)
+
+        // Hydrate partial clothing colors so prompt composition receives complete layer colors.
+        // This prevents cases where UI displays default/fallback colors but only a subset
+        // of colors is persisted (e.g., missing baseLayer for multi-layer outfits).
+        this.hydratePartialClothingColors(effectiveSettings)
 
         // Hook for packages to modify settings before processing (e.g. injecting film types)
         this.customizeSettings(effectiveSettings)
@@ -81,7 +88,6 @@ export class BasePackageServer {
         }
 
         const bucketName = getS3BucketName()
-        const s3Client = createS3Client({ forcePathStyle: false })
 
         // 5. Build Composites
         let faceComposite: ReferenceImage | undefined
@@ -115,7 +121,7 @@ export class BasePackageServer {
             styleSettings: effectiveSettings,
             selfieKeys,
             getSelfieBuffer,
-            downloadAsset: (key) => downloadAssetAsBase64({ bucketName, s3Client, key }),
+            downloadAsset: (key) => downloadAssetAsBase64({ bucketName, s3Client: this.s3Client, key }),
             generationId,
             shotDescription: shotText,
             aspectRatioDescription,
@@ -138,6 +144,9 @@ export class BasePackageServer {
                 selfieS3Keys: selfieKeys,
                 userId: personId,
                 generationId,
+                demographics,
+                hasFaceComposite: Boolean(faceComposite),
+                hasBodyComposite: Boolean(bodyComposite),
             },
             existingContributions: [],
         }
@@ -205,6 +214,69 @@ export class BasePackageServer {
             userSettings,
             pkg.visibleCategories
         )
+    }
+
+    /**
+     * Fill missing clothing color fields when the user provided a partial palette.
+     *
+     * Notes:
+     * - Only runs when at least one clothing color is explicitly set.
+     * - Skips `source: 'outfit'` to avoid interfering with outfit-transfer matching.
+     * - Uses package defaults first, then shared fallbacks matching UI behavior.
+     */
+    protected hydratePartialClothingColors(settings: PhotoStyleSettings): void {
+        if (!settings.clothingColors || !hasValue(settings.clothingColors)) {
+            return
+        }
+
+        const current = settings.clothingColors.value
+        const source = current.source
+        if (source === 'outfit') {
+            return
+        }
+
+        const hasAnyExplicitColor = Boolean(
+            current.topLayer ||
+            current.baseLayer ||
+            current.bottom ||
+            current.shoes
+        )
+        if (!hasAnyExplicitColor) {
+            return
+        }
+
+        const pkgDefaults = this.packageConfig.defaultSettings.clothingColors
+        const defaultColors = pkgDefaults && hasValue(pkgDefaults) ? pkgDefaults.value : undefined
+
+        const fallbackColors = {
+            topLayer: '#2C3E50',
+            baseLayer: '#F8F9FA',
+            bottom: '#1A1A2E',
+            shoes: '#2D2D2D',
+        }
+
+        const merged: ClothingColorValue = {
+            ...current,
+            topLayer: current.topLayer ?? defaultColors?.topLayer ?? fallbackColors.topLayer,
+            baseLayer: current.baseLayer ?? defaultColors?.baseLayer ?? fallbackColors.baseLayer,
+            bottom: current.bottom ?? defaultColors?.bottom ?? fallbackColors.bottom,
+            shoes: current.shoes ?? defaultColors?.shoes ?? fallbackColors.shoes,
+        }
+
+        const changed =
+            merged.topLayer !== current.topLayer ||
+            merged.baseLayer !== current.baseLayer ||
+            merged.bottom !== current.bottom ||
+            merged.shoes !== current.shoes
+
+        if (!changed) {
+            return
+        }
+
+        settings.clothingColors = {
+            ...settings.clothingColors,
+            value: merged,
+        }
     }
 
     /**

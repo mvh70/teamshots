@@ -1,7 +1,7 @@
 import { PhotoStyleSettings, CategoryType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
 import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
-import * as backgroundElement from '../../elements/background'
+import { deserialize as deserializeBackground } from '../../elements/background/deserializer'
 import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
 import { deserialize as clothingDeserialize } from '../../elements/clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
@@ -132,7 +132,7 @@ export const freepackage: ClientStylePackage = {
 
       // Deserialize visible categories only
       // visibleCategories: ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression']
-      const backgroundResult = backgroundElement.deserialize(inner)
+      const backgroundResult = deserializeBackground(inner)
       const brandingResult = brandingDeserialize(inner)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const clothingResult = clothingDeserialize(inner, DEFAULTS.clothing)

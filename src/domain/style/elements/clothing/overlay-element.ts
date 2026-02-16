@@ -35,21 +35,16 @@ import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
 import type { BrandingSettings, BrandingValue } from '../branding/types'
 import type { ClothingValue } from './types'
-import { WARDROBE_DETAILS, generateWardrobePrompt } from './prompt'
-import type { KnownClothingStyle } from './config'
+import {
+  buildClothingOverlayGenerationPrompt,
+  getClothingOverlayContributionFreedomRules,
+  getClothingOverlayContributionMustFollowRules,
+  getClothingTemplateReferenceDescription,
+} from './prompt'
 import { AssetService } from '@/domain/services/AssetService'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { Asset } from '@prisma/client'
 import { autoRegisterElement } from '../composition/registry'
-
-interface ClothingTemplate {
-  description: string
-  layers: string[]
-  logoLayer: string
-  logoPosition: string
-  logoStyle: string
-  isLayered: boolean
-}
 
 export class ClothingOverlayElement extends StyleElement {
   readonly id = 'clothing-overlay'
@@ -247,7 +242,6 @@ export class ClothingOverlayElement extends StyleElement {
       // 4. Generate clothing overlay with logo
       const overlayResult = await this.generateClothingOverlay({
         clothing: clothingValue,
-        branding,
         logoData,
         generationId,
         clothingColors,
@@ -324,20 +318,8 @@ export class ClothingOverlayElement extends StyleElement {
 
     // Always provide instructions/mustFollow (like CustomClothingElement does)
     // Reference image is only added if overlay was successfully prepared
-    const mustFollow = [
-      'Use the clothing overlay as the PRIMARY reference for garment composition, colors, logo placement, and overall styling.',
-      'FABRIC QUALITY: The overlay is a low-resolution compositional guide. Do NOT replicate the fabric texture from the overlay pixel-for-pixel. Instead, generate photorealistic, high-quality fabric textures (cotton weave, wool texture, silk sheen, etc.) appropriate to each garment type. The fabric should look continuous, natural, and physically plausible with proper folds, draping, and light interaction.',
-      'Replicate the EXACT garment types, colors, patterns, logos, and layering shown in the overlay - but render all fabrics at full quality with continuous, seamless textures.',
-      'Logo handling: The logo in the overlay may have a bright GREEN (chroma key) background for visibility. Do NOT include the green background - only reproduce the logo elements themselves on the fabric.',
-      'Logo handling: Preserve the base-layer logo exactly as shown. If an outer layer naturally covers part of it, that is expected. Do NOT relocate or "save" the logo.',
-      'Do NOT modify, reinterpret, or add clothing elements. For clothing/branding/logo info, ignore all other references and use the overlay only.',
-    ]
-
-    const freedom = [
-      'The clothing overlay shows ONLY the core garments in a flat-lay arrangement - it does NOT show the person.',
-      'All facial features and personal accessories (glasses, earrings, watches, jewelry) come from the SELFIE references, NOT from the clothing overlay.',
-      'If the selfies show glasses, include those same glasses.',
-    ]
+    const mustFollow = getClothingOverlayContributionMustFollowRules()
+    const freedom = getClothingOverlayContributionFreedomRules()
 
     const metadata: Record<string, unknown> = {
       hasClothingOverlay: true,
@@ -350,7 +332,7 @@ export class ClothingOverlayElement extends StyleElement {
     if (overlay?.data.base64) {
       referenceImages.push({
         url: `data:${overlay.data.mimeType};base64,${overlay.data.base64}`,
-        description: 'CLOTHING TEMPLATE - Compositional guide showing garment types, colors, layering, and logo placement. Use this for WHAT to dress the person in and WHERE the logo goes, but generate your own high-quality photorealistic fabric textures - do NOT copy the low-resolution fabric from this reference. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements on the fabric.',
+        description: getClothingTemplateReferenceDescription(),
         type: 'clothing' as const,
       })
 
@@ -383,7 +365,6 @@ export class ClothingOverlayElement extends StyleElement {
    */
   private async generateClothingOverlay(params: {
     clothing: ClothingValue
-    branding: BrandingValue
     logoData: { base64: string; mimeType: string }
     generationId?: string
     clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
@@ -391,7 +372,7 @@ export class ClothingOverlayElement extends StyleElement {
     | { success: true; data: { base64: string }; usage?: { inputTokens: number; outputTokens: number } }
     | { success: false; error: string; code?: string }
   > {
-    const { clothing, branding, logoData, generationId, clothingColors } = params
+    const { clothing, logoData, generationId, clothingColors } = params
     const startTime = Date.now()
 
     try {
@@ -400,7 +381,11 @@ export class ClothingOverlayElement extends StyleElement {
       // Build prompt for clothing overlay generation
       // Get shot type from settings if available
       const shotType = (clothing as any).shotType || 'medium-shot'
-      const prompt = this.buildOverlayPrompt(clothing, branding, shotType, clothingColors)
+      const prompt = buildClothingOverlayGenerationPrompt({
+        clothing,
+        shotType,
+        clothingColors,
+      })
 
       Logger.info('[ClothingOverlayElement] Generated overlay prompt', {
         generationId,
@@ -492,350 +477,6 @@ export class ClothingOverlayElement extends StyleElement {
 
       return { success: false, error: 'Overlay generation failed', code: 'GEMINI_ERROR' }
     }
-  }
-
-  /**
-   * Build prompt for overlay generation
-   */
-  private buildOverlayPrompt(
-    clothing: ClothingValue,
-    branding: BrandingValue,
-    shotType: string = 'medium-shot',
-    clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
-  ): string {
-    // CRITICAL: Use the SAME wardrobe generation logic as ClothingElement
-    // This ensures 100% consistency between overlay generation and regular person generation
-    const wardrobeResult = generateWardrobePrompt({
-      clothing,
-      clothingColors: clothingColors ? { mode: 'predefined', value: clothingColors } : undefined,
-      shotType: shotType as any
-    })
-
-    const { styleKey, detailKey, descriptor, wardrobe } = wardrobeResult
-
-    // Get clothing-specific template for logo placement
-    const template = this.getClothingTemplate(`${styleKey}-${detailKey}`)
-
-    // Determine what items to show based on shot type
-    // CRITICAL: medium-shot cuts at waist - do NOT show pants (only full-body and three-quarter show pants)
-    const showPants = shotType === 'full-body' || shotType === 'three-quarter' || shotType === 'full-length'
-    const showShoes = shotType === 'full-body' || shotType === 'full-length'
-
-    // Build layer descriptions from the wardrobe structure
-    const layerDescriptions: string[] = []
-
-    // Determine if this is a single-layer garment (no outer layer)
-    const isSingleLayer = !descriptor.outerLayer
-
-    // Extract the actual garment descriptions from wardrobe
-    if (wardrobe.top_layer) {
-      const layerName = isSingleLayer ? 'Main garment' : 'Outer layer'
-      layerDescriptions.push(`${layerName}: ${wardrobe.top_layer}`)
-    }
-
-    if (wardrobe.base_layer && !isSingleLayer) {
-      layerDescriptions.push(`Base layer: ${wardrobe.base_layer}`)
-    }
-
-    // Add color specifications from the color_palette (generated by generateWardrobePrompt)
-    const colorPalette = wardrobe.color_palette as string[] | undefined
-    if (colorPalette && colorPalette.length > 0) {
-      layerDescriptions.push(`\nCOLOR SPECIFICATIONS:`)
-      colorPalette.forEach(colorSpec => {
-        layerDescriptions.push(`- ${colorSpec}`)
-      })
-    }
-
-    if (showPants) {
-      const bottomColor = clothingColors?.bottom || 'coordinating neutral color'
-      layerDescriptions.push(
-        `\nPants: Professional ${styleKey === 'business' ? 'dress pants or trousers' : 'casual pants or chinos'} in ${bottomColor} color`
-      )
-    }
-
-    // Check for belt in inherent accessories - show belt when pants are visible
-    const inherentAccessories = wardrobe.inherent_accessories as string[] | undefined
-    const showBelt = showPants && inherentAccessories?.includes('belt')
-    if (showBelt) {
-      layerDescriptions.push(
-        `\nBelt: Professional leather belt in a coordinating color (black or brown to match shoes/pants)`
-      )
-    }
-
-    if (showShoes) {
-      const shoesColor = clothingColors?.shoes
-      const shoesType = styleKey === 'business' ? 'Professional dress shoes' : 'Clean casual shoes'
-      const shoesDescription = shoesColor ? `${shoesType} in ${shoesColor} color` : shoesType
-      layerDescriptions.push(`\nShoes: ${shoesDescription}`)
-    }
-
-    // Count actual garments (not color specs)
-    const garmentCount = (wardrobe.top_layer ? 1 : 0) +
-                         (wardrobe.base_layer && !isSingleLayer ? 1 : 0) +
-                         (showPants ? 1 : 0) +
-                         (showBelt ? 1 : 0) +
-                         (showShoes ? 1 : 0)
-
-    // Build layout requirements based on garment structure
-    const layoutParts = [`STANDARDIZED LAYOUT REQUIREMENTS:
-- Arrange items in a GRID layout on a clean white background with ALL items FULLY SEPARATED
-- CRITICAL: NO overlapping - each garment must be completely visible with clear space between items
-- CRITICAL: Show EXACTLY ${garmentCount} item(s) total - no more, no less`]
-
-    if (isSingleLayer) {
-      // Single-layer garments: only one main garment (hoodie, t-shirt, polo, dress)
-      layoutParts.push(`- Main garment (${wardrobe.top_layer}) laid perfectly flat, facing forward, symmetrical, fully spread out, 100% visible`)
-    } else {
-      // Multi-layer garments: base layer + outer layer (business casual, etc.)
-      layoutParts.push(`- Base layer (${wardrobe.base_layer}) in its own space, 100% visible with no obstructions`)
-      layoutParts.push(`- Outer layer (${wardrobe.top_layer}) in its own separate space, NOT touching or overlapping the base layer`)
-    }
-
-    if (showPants) {
-      layoutParts.push(`- Pants in their own separate space below, NOT touching upper garments`)
-    }
-    if (showBelt) {
-      layoutParts.push(`- Belt positioned near/on the pants waistband area, showing buckle and leather strap`)
-    }
-    if (showShoes) {
-      layoutParts.push(`- Shoes in their own separate space at the bottom, NOT touching other items`)
-    }
-
-    layoutParts.push(`- Minimum 5cm spacing between ALL items - no parts of any garment should touch`)
-    layoutParts.push(`- All items laid perfectly flat, facing forward, symmetrical, fully spread out`)
-    layoutParts.push(`- Professional product catalog photography style showing each item individually`)
-    layoutParts.push(`- Soft, even studio lighting with minimal shadows`)
-    layoutParts.push(`- Each garment should be photographed as if it's a standalone product listing`)
-
-    const layoutInstructions = layoutParts.join('\n')
-
-    return `
-CREATE A PROFESSIONAL CLOTHING TEMPLATE WITH LOGO:
-
-You are creating a standardized flat-lay photograph showing clothing items with a company logo.
-
-CLOTHING ITEMS TO SHOW:
-${layerDescriptions.map((layer, i) => `${i + 1}. ${layer}`).join('\n')}
-
-${layoutInstructions}
-
-LOGO PLACEMENT - CRITICAL REQUIREMENTS:
-TARGET GARMENT: ${template.logoLayer}
-POSITION: ${template.logoPosition}
-STYLE: ${template.logoStyle}
-
-LOGO REPRODUCTION RULES (MUST FOLLOW EXACTLY):
-1. COPY the logo from the reference image with PERFECT ACCURACY - every letter, icon, and element must be included
-2. CRITICAL: If the logo has a bright GREEN background, that is a CHROMA KEY for visibility only - do NOT include the green background. Only reproduce the logo elements (text, icons, graphics) on the fabric.
-3. CRITICAL: Include EVERY letter and character visible in the logo - DO NOT skip or omit any text
-4. If the logo contains text, reproduce each letter individually and completely - check that all letters are present
-5. If the logo contains icons or graphics, reproduce every line, shape, and detail exactly
-6. DO NOT modify, stylize, or reinterpret the logo design in any way
-7. DO NOT alter logo colors - use the EXACT colors from the reference for each element (ignore the green chroma background)
-8. DO NOT change logo proportions or aspect ratio
-9. The logo should appear ${template.logoStyle} on the fabric with all elements intact
-10. Size: The logo should be proportional (approx 8-12cm width on the garment)
-11. ONLY place the logo on the base layer garment - NEVER on outer layers
-12. The logo must be clearly visible and sharp with ALL text/graphics legible
-13. Before finalizing, verify that EVERY letter and element from the reference logo is present in your output
-
-CRITICAL QUALITY STANDARDS:
-- Photorealistic fabric textures (cotton weave, wool texture, etc.)
-- Sharp focus on all garments, especially the logo area
-- Consistent, neutral white background (RGB 255,255,255)
-- No shadows or gradients on the background
-- Professional lighting that shows fabric detail without harsh shadows
-- The logo must be the EXACT same as the reference image
-
-FORBIDDEN:
-- DO NOT add creative styling or artistic interpretation
-- DO NOT modify the logo design in any way
-- DO NOT add text labels or annotations
-- DO NOT show a person wearing the clothes
-- DO NOT use colored or patterned backgrounds
-- DO NOT overlap or layer garments on top of each other
-- DO NOT arrange items in a way that hides any part of any garment
-- DO NOT create an artistic composition - this is a technical product reference
-- DO NOT include the green chroma key background from the logo reference - only the logo elements
-
-OUTPUT SPECIFICATIONS:
-- PNG image with white background
-- All items clearly visible and properly colored
-- Logo EXACTLY matching the reference image with ALL letters and elements present, correctly positioned on base layer
-
-LOGO REFERENCE: Use the attached logo image as your ONLY source for logo design, colors, and proportions. Copy it EXACTLY with every single letter, character, icon, and graphic element included.
-
-FINAL VERIFICATION BEFORE OUTPUT:
-1. Compare your generated logo against the reference image
-2. Count the letters/characters in the reference and verify your output has the same count
-3. Check that every icon, line, and graphic element from the reference is present
-4. Confirm all colors match the reference exactly
-5. Only output the image once you've verified 100% accuracy
-`.trim()
-  }
-
-  /**
-   * Get clothing template for specific style
-   */
-  private getClothingTemplate(styleKey: string): ClothingTemplate {
-    const templates: Record<string, ClothingTemplate> = {
-      // LAYERED STYLES (Multi-layer clothing)
-      'business-casual': {
-        description: 'Business casual with jacket over deluxe t-shirt',
-        layers: ['Base layer: Deluxe t-shirt (substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck)', 'Outer layer: Blazer or suit jacket, worn open'],
-        logoLayer: 'Base layer (deluxe t-shirt)',
-        logoPosition: 'Center chest, slightly below neckline',
-        logoStyle: 'printed or embroidered',
-        isLayered: true,
-      },
-
-      'business-formal': {
-        description: 'Business formal with dress shirt visible',
-        layers: ['Base layer: Formal dress shirt', 'Outer layer: Suit jacket, partially open'],
-        logoLayer: 'Base layer (dress shirt)',
-        logoPosition: 'Upper right chest, where pocket would be',
-        logoStyle: 'embroidered crest',
-        isLayered: true,
-      },
-
-      'business-pantsuit': {
-        description: 'Pantsuit with blouse visible',
-        layers: ['Base layer: Blouse or dress shirt', 'Outer layer: Suit jacket, partially open'],
-        logoLayer: 'Base layer (blouse)',
-        logoPosition: 'Upper right chest, where pocket would be',
-        logoStyle: 'embroidered crest',
-        isLayered: true,
-      },
-
-      'business-blouse': {
-        description: 'Blouse with blazer',
-        layers: ['Base layer: Blouse', 'Outer layer: Blazer, partially open'],
-        logoLayer: 'Base layer (blouse)',
-        logoPosition: 'Upper right chest',
-        logoStyle: 'embroidered',
-        isLayered: true,
-      },
-
-      'startup-button-down': {
-        description: 'Casual button-down over t-shirt',
-        layers: ['Base layer: T-shirt', 'Outer layer: Button-down shirt, worn open'],
-        logoLayer: 'Base layer (t-shirt)',
-        logoPosition: 'Center chest',
-        logoStyle: 'screen printed',
-        isLayered: true,
-      },
-
-      'startup-cardigan': {
-        description: 'Cardigan over t-shirt or dress',
-        layers: ['Base layer: T-shirt or dress', 'Outer layer: Cardigan, worn open'],
-        logoLayer: 'Base layer',
-        logoPosition: 'Center chest',
-        logoStyle: 'printed',
-        isLayered: true,
-      },
-
-      // SINGLE-LAYER STYLES (One garment)
-      'startup-t-shirt': {
-        description: 'Casual t-shirt',
-        layers: ['T-shirt'],
-        logoLayer: 'T-shirt',
-        logoPosition: 'Center chest, slightly below neckline',
-        logoStyle: 'screen printed',
-        isLayered: false,
-      },
-
-      'startup-hoodie': {
-        description: 'Casual hoodie',
-        layers: ['Hoodie'],
-        logoLayer: 'Hoodie chest',
-        logoPosition: 'Center chest, slightly below neckline, above hoodie pocket',
-        logoStyle: 'screen printed or embroidered',
-        isLayered: false,
-      },
-
-      'startup-polo': {
-        description: 'Polo shirt',
-        layers: ['Polo shirt'],
-        logoLayer: 'Polo shirt',
-        logoPosition: 'Left chest, where traditional polo logo would be',
-        logoStyle: 'embroidered, small to medium sized',
-        isLayered: false,
-      },
-
-      'startup-blouse': {
-        description: 'Blouse',
-        layers: ['Blouse'],
-        logoLayer: 'Blouse',
-        logoPosition: 'Center chest or upper left chest',
-        logoStyle: 'embroidered',
-        isLayered: false,
-      },
-
-      'startup-dress': {
-        description: 'Dress',
-        layers: ['Dress'],
-        logoLayer: 'Dress bodice',
-        logoPosition: 'Center chest area of bodice',
-        logoStyle: 'embroidered or printed',
-        isLayered: false,
-      },
-
-      'startup-jumpsuit': {
-        description: 'Jumpsuit',
-        layers: ['Jumpsuit'],
-        logoLayer: 'Jumpsuit bodice',
-        logoPosition: 'Center chest',
-        logoStyle: 'embroidered or printed',
-        isLayered: false,
-      },
-
-      'business-dress': {
-        description: 'Professional dress',
-        layers: ['Dress'],
-        logoLayer: 'Dress bodice',
-        logoPosition: 'Upper left chest as subtle embroidered crest',
-        logoStyle: 'tasteful embroidered mark',
-        isLayered: false,
-      },
-
-      'black-tie-tuxedo': {
-        description: 'Tuxedo with dress shirt visible',
-        layers: ['Base layer: Dress shirt', 'Outer layer: Tuxedo jacket, partially open'],
-        logoLayer: 'Base layer (dress shirt)',
-        logoPosition: 'Upper right chest, where pocket would be',
-        logoStyle: 'embroidered crest',
-        isLayered: true,
-      },
-
-      'black-tie-suit': {
-        description: 'Formal suit with dress shirt visible',
-        layers: ['Base layer: Dress shirt', 'Outer layer: Suit jacket, partially open'],
-        logoLayer: 'Base layer (dress shirt)',
-        logoPosition: 'Upper right chest, where pocket would be',
-        logoStyle: 'embroidered crest',
-        isLayered: true,
-      },
-
-      'black-tie-dress': {
-        description: 'Elegant evening dress',
-        layers: ['Gown/dress'],
-        logoLayer: 'Gown bodice',
-        logoPosition: 'Upper left chest as elegant embroidered crest',
-        logoStyle: 'tasteful applique',
-        isLayered: false,
-      },
-
-      'black-tie-gown': {
-        description: 'Formal evening gown',
-        layers: ['Gown'],
-        logoLayer: 'Gown bodice',
-        logoPosition: 'Upper left chest as elegant embroidered crest',
-        logoStyle: 'tasteful applique',
-        isLayered: false,
-      },
-    }
-
-    return templates[styleKey] || templates['startup-t-shirt'] // Default fallback
   }
 
   /**

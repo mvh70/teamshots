@@ -1,7 +1,15 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { PROVIDER_DEFAULTS } from './config'
-import type { GeminiGenerationResult, GeminiReferenceImage, GeminiUsageMetadata, GenerationOptions } from './gemini'
+import { detectImageFormat } from '@/lib/image-format'
+import type { GenerationOptions } from './gemini'
+import {
+  logGemini3Thinking,
+  validateReferenceImages,
+  type GeminiGenerationResult,
+  type GeminiReferenceImage,
+  type GeminiUsageMetadata,
+} from './gemini-shared'
 
 /**
  * Generate images using OpenRouter (routes to providers like Vertex/AI Studio/Replicate)
@@ -21,18 +29,7 @@ export async function generateWithGeminiOpenRouter(
 
   // Validate reference images (if provided)
   if (images && images.length > 0) {
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i]
-      if (!img.base64 || !img.mimeType) {
-        Logger.error('generateWithGeminiOpenRouter: Invalid reference image', {
-          index: i,
-          hasBase64: !!img.base64,
-          hasMimeType: !!img.mimeType,
-          description: img.description?.substring(0, 100)
-        })
-        throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
-      }
-    }
+    validateReferenceImages(images, 'generateWithGeminiOpenRouter')
   }
 
   // Build multimodal content: prompt first, then description + image pairs (if any)
@@ -91,9 +88,13 @@ export async function generateWithGeminiOpenRouter(
 
   // Set a reasonable timeout to fail fast and fallback to next provider
   // OpenRouter can be slow or unresponsive, don't wait forever
-  const OPENROUTER_TIMEOUT_MS = 15000 // 15 seconds
+  const OPENROUTER_TIMEOUT_MS = 60000
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+  let timedOut = false
+  const timeoutId = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, OPENROUTER_TIMEOUT_MS)
 
   try {
     // Use direct fetch to OpenRouter API instead of SDK to support all parameters
@@ -109,8 +110,6 @@ export async function generateWithGeminiOpenRouter(
       signal: controller.signal
     })
 
-    clearTimeout(timeoutId)
-
     if (!response.ok) {
       const errorText = await response.text()
       Logger.error('OpenRouter API request failed', {
@@ -124,9 +123,11 @@ export async function generateWithGeminiOpenRouter(
     const data = await response.json() as {
       choices?: Array<{
         message?: {
-          content?: Array<{ type: string; image_url?: { url?: string } }> | string
+          content?: Array<{ type: string; text?: string; image_url?: { url?: string } }> | string
           images?: Array<{ image_url?: { url?: string } }>
+          reasoning?: string | Array<{ type?: string; text?: string }>
         }
+        reasoning?: string
       }>
       usage?: {
         prompt_tokens?: number
@@ -144,6 +145,35 @@ export async function generateWithGeminiOpenRouter(
     }
 
     const message = data.choices?.[0]?.message
+    const thinkingTextParts: string[] = []
+    if (typeof message?.content === 'string') {
+      thinkingTextParts.push(message.content)
+    } else if (Array.isArray(message?.content)) {
+      for (const item of message.content) {
+        if (item.type === 'text' && item.text) {
+          thinkingTextParts.push(item.text)
+        } else if (item.type === 'reasoning' && item.text) {
+          thinkingTextParts.push(item.text)
+        }
+      }
+    }
+    if (typeof message?.reasoning === 'string' && message.reasoning.trim().length > 0) {
+      thinkingTextParts.push(message.reasoning)
+    } else if (Array.isArray(message?.reasoning)) {
+      for (const part of message.reasoning) {
+        if (part?.text && part.text.trim().length > 0) {
+          thinkingTextParts.push(part.text)
+        }
+      }
+    }
+    if (typeof data.choices?.[0]?.reasoning === 'string' && data.choices[0].reasoning.trim().length > 0) {
+      thinkingTextParts.push(data.choices[0].reasoning)
+    }
+    const thinking = logGemini3Thinking({
+      provider: 'openrouter',
+      modelName,
+      texts: thinkingTextParts
+    })
 
     // Extract images from response - they can be in different formats
     let imagesData: Array<{ image_url?: { url?: string } }> = []
@@ -200,10 +230,12 @@ export async function generateWithGeminiOpenRouter(
           textContent.matchAll(/data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/g)
         )
         if (dataUrlMatches.length > 0) {
-          const recovered = dataUrlMatches.map((m) => {
+          const recovered = await Promise.all(dataUrlMatches.map(async (m) => {
             const base64 = m[2]
-            return Buffer.from(base64, 'base64')
-          })
+            const buffer = Buffer.from(base64, 'base64')
+            await detectImageFormat(buffer)
+            return buffer
+          }))
           usage.imagesGenerated = recovered.length
           Logger.warn('OpenRouter returned images embedded in text content; recovered via data URL parsing', {
             model: modelName,
@@ -240,7 +272,7 @@ export async function generateWithGeminiOpenRouter(
       throw new Error(`OpenRouter returned no images${textContent ? `: ${textContent.substring(0, 200)}` : ''}`)
     }
 
-    const buffers = imagesData.map((img) => {
+    const buffers = await Promise.all(imagesData.map(async (img) => {
       const dataUrl = img.image_url?.url || ''
       if (!dataUrl.includes('base64,')) {
         Logger.error('Invalid image data URL format', { dataUrl: dataUrl.substring(0, 100) })
@@ -250,8 +282,10 @@ export async function generateWithGeminiOpenRouter(
       if (!base64) {
         throw new Error('Invalid image data returned from OpenRouter - missing base64 data')
       }
-      return Buffer.from(base64, 'base64')
-    })
+      const buffer = Buffer.from(base64, 'base64')
+      await detectImageFormat(buffer)
+      return buffer
+    }))
 
     usage.imagesGenerated = buffers.length
 
@@ -263,13 +297,12 @@ export async function generateWithGeminiOpenRouter(
     return {
       images: buffers,
       usage,
-      providerUsed: 'openrouter'
+      providerUsed: 'openrouter',
+      thinking,
     }
   } catch (error) {
-    clearTimeout(timeoutId)
-
     // Handle timeout/abort errors
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (timedOut || (error instanceof Error && error.name === 'AbortError')) {
       Logger.error('OpenRouter request timed out', {
         timeoutMs: OPENROUTER_TIMEOUT_MS,
         model: modelName,
@@ -285,5 +318,7 @@ export async function generateWithGeminiOpenRouter(
       aspectRatio
     })
     throw error
+  } finally {
+    clearTimeout(timeoutId)
   }
 }

@@ -33,7 +33,6 @@ export default function BackgroundSelector({
 }: BackgroundSelectorProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [, setImageLoaded] = useState(false)
   const previewSetRef = useRef<string | null>(null)
 
   // Extract the current value for easier access
@@ -77,11 +76,6 @@ export default function BackgroundSelector({
     onChange(wrapWithCurrentMode({ ...bgValue, color: colorValue.hex }))
   }
 
-  const handleGradientColorChange = (colorValue: ColorValue) => {
-    if (!bgValue) return
-    onChange(wrapWithCurrentMode({ ...bgValue, color: colorValue.hex }))
-  }
-
   const handlePromptChange = (prompt: string) => {
     if (!bgValue) return
     onChange(wrapWithCurrentMode({ ...bgValue, prompt }))
@@ -93,7 +87,6 @@ export default function BackgroundSelector({
     // Local preview immediately
     const localUrl = URL.createObjectURL(file)
     setPreviewUrl(localUrl)
-    setImageLoaded(true)
 
     try {
       // Use the same upload method as selfies (proxy endpoint)
@@ -127,7 +120,7 @@ export default function BackgroundSelector({
       onChange(wrapWithCurrentMode({ ...bgValue, type: 'custom', key }))
     } catch (e) {
       console.error('Background upload failed', e)
-      // Keep preview; remove remote key on error
+      setPreviewUrl(null)
       onChange(wrapWithCurrentMode({ ...bgValue, type: 'custom', key: undefined }))
     }
   }
@@ -137,26 +130,24 @@ export default function BackgroundSelector({
   // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
   /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
-    const currentKey = bgValue?.type === 'custom' ? bgValue.key : null
+    const currentKey = bgValue?.type === 'custom' ? (bgValue.assetId || bgValue.key) : null
 
     // Only set preview if key changed and we haven't set it yet
     if (currentKey && previewSetRef.current !== currentKey) {
       const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
       setPreviewUrl(`/api/files/get?key=${encodeURIComponent(currentKey)}${tokenParam}`)
-      setImageLoaded(true)
-      previewSetRef.current = currentKey
+        previewSetRef.current = currentKey
     } else if (!currentKey && previewSetRef.current) {
       // Clear preview if no key
       setPreviewUrl(null)
-      setImageLoaded(false)
       previewSetRef.current = null
     }
-  }, [bgValue?.type, bgValue?.key, token])
+  }, [bgValue?.type, bgValue?.key, bgValue?.assetId, token])
   /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
     }
@@ -164,7 +155,7 @@ export default function BackgroundSelector({
 
 
   return (
-    <div className={`${className}`}>
+    <div className={className}>
       {showHeader && (
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -249,7 +240,7 @@ export default function BackgroundSelector({
                 <div className="mt-3 pl-4 pr-4 pb-2">
                   <ColorWheelPicker
                     value={bgValue?.color || '#667eea'}
-                    onChange={handleGradientColorChange}
+                    onChange={handleColorChange}
                     disabled={isPredefined || isDisabled}
                   />
                 </div>
@@ -276,8 +267,6 @@ export default function BackgroundSelector({
         </div>
       )}
 
-      {/* Removed separate ColorPickers for neutral and gradient as they are now integrated in the list */}
-
       {bgValue?.type === 'custom' && (
         <div className="space-y-3">
           <label className={`block text-sm font-medium text-gray-700 ${
@@ -294,8 +283,7 @@ export default function BackgroundSelector({
                   width={400}
                   height={224}
                   className="absolute inset-0 w-full h-full object-cover" 
-                  onLoad={() => setImageLoaded(true)} 
-                  onError={() => setImageLoaded(false)}
+                  onError={() => setPreviewUrl(null)}
                   unoptimized
                 />
                 <div className={`absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent ${

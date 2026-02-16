@@ -1,25 +1,20 @@
-import type { BackgroundSettings, BackgroundValue, BackgroundType, BackgroundEnvironment, BackgroundModifier } from './types'
+import type { BackgroundSettings, BackgroundValue, BackgroundType } from './types'
 import { predefined, userChoice } from '../base/element-types'
 
 /**
  * Deserializes background settings from raw data
  *
- * Supports three formats:
+ * Supports two formats:
  * 1. New format: { mode: 'predefined'|'user-choice', value?: BackgroundValue }
  * 2. Legacy format: { type: 'office'|'user-choice'|..., key?, color?, ... }
- * 3. Simple string format: 'office', 'gradient', etc.
  */
-const ALLOWED_TYPES: readonly string[] = [
-  'office',
-  'neutral',
-  'gradient',
-  'custom',
-  'tropical-beach',
-  'busy-city'
-]
+const ALLOWED_TYPES = [
+  'office', 'neutral', 'gradient', 'custom', 'tropical-beach', 'busy-city',
+  'cafe', 'outdoor', 'solid', 'urban', 'stage', 'dark_studio', 'team_bright', 'lifestyle',
+] as const satisfies readonly BackgroundType[]
 
 function isValidBackgroundType(type: unknown): type is BackgroundType {
-  return typeof type === 'string' && ALLOWED_TYPES.includes(type)
+  return typeof type === 'string' && (ALLOWED_TYPES as readonly string[]).includes(type)
 }
 
 function extractBackgroundValue(bgObj: Record<string, unknown>): BackgroundValue {
@@ -31,8 +26,7 @@ function extractBackgroundValue(bgObj: Record<string, unknown>): BackgroundValue
     assetId: typeof bgObj.assetId === 'string' ? bgObj.assetId : undefined,
     prompt: typeof bgObj.prompt === 'string' ? bgObj.prompt : undefined,
     color: typeof bgObj.color === 'string' ? bgObj.color : undefined,
-    environment: typeof bgObj.environment === 'string' ? (bgObj.environment as BackgroundEnvironment) : undefined,
-    modifier: typeof bgObj.modifier === 'string' ? (bgObj.modifier as BackgroundModifier) : undefined
+    modifier: typeof bgObj.modifier === 'string' ? bgObj.modifier : undefined,
   }
 }
 
@@ -49,9 +43,19 @@ export function deserialize(raw: Record<string, unknown>, defaults?: BackgroundS
 
     // Detect new format (has 'mode' field)
     if ('mode' in bgObj && typeof bgObj.mode === 'string') {
-      const mode = bgObj.mode as 'predefined' | 'user-choice'
-      const value = bgObj.value as BackgroundValue | undefined
-      return { mode, value }
+      const mode = bgObj.mode
+      if (mode !== 'predefined' && mode !== 'user-choice') {
+        return defaults || userChoice()
+      }
+      const rawValue = bgObj.value
+      if (mode === 'predefined' && !rawValue) {
+        return defaults || predefined({ type: 'office' })
+      }
+      if (typeof rawValue === 'object' && rawValue !== null) {
+        return { mode: mode as 'predefined' | 'user-choice', value: extractBackgroundValue(rawValue as Record<string, unknown>) }
+      }
+      // user-choice with no value, or predefined with non-object value
+      return { mode: mode as 'predefined' | 'user-choice', value: undefined }
     }
 
     // Migrate from legacy format (has 'type' field)
@@ -72,38 +76,6 @@ export function deserialize(raw: Record<string, unknown>, defaults?: BackgroundS
     return defaults || userChoice()
   }
 
-  // Handle simple string format (e.g., 'office', 'gradient')
-  if (typeof rawBg === 'string') {
-    if (rawBg === 'user-choice') {
-      return userChoice()
-    }
-
-    if (isValidBackgroundType(rawBg)) {
-      return predefined({
-        type: rawBg,
-        prompt: typeof raw['backgroundPrompt'] === 'string' ? raw['backgroundPrompt'] : undefined
-      })
-    }
-  }
-
   return defaults || userChoice()
-}
-
-/**
- * Resolves background assetId from settings
- * Returns assetId if present, otherwise returns undefined (caller can use key)
- */
-export function getBackgroundAssetId(background?: BackgroundSettings): string | undefined {
-  if (!background || !background.value) return undefined
-  return background.value.assetId
-}
-
-/**
- * Gets the effective background key (prefers assetId, falls back to key)
- * Use this when you need an identifier for the background image
- */
-export function getBackgroundIdentifier(background?: BackgroundSettings): string | undefined {
-  if (!background || !background.value) return undefined
-  return background.value.assetId ?? background.value.key
 }
 

@@ -112,6 +112,111 @@
       }
     }
   },
+  "lp": {
+    "teamHeadshots": {
+      "meta": {
+        "title": "Team Headshots Landing Page - 3 Free Test Photos",
+        "description": "Create professional team headshots in 60 seconds. Keep every employee on-brand with one unified style and a one-time payment."
+      },
+      "labels": {
+        "before": "Before",
+        "after": "After"
+      },
+      "hero": {
+        "title": "Professional Team Headshots in 60 Seconds",
+        "subtitle": "Convert everyday selfies into polished team headshots with one consistent brand style for every employee.",
+        "cta": "Get 3 Free Headshots",
+        "badges": {
+          "teams": "500+ Teams",
+          "speed": "60 Seconds",
+          "payment": "One-Time Payment"
+        },
+        "visual": {
+          "beforeAlt": "Before example selfie for team headshots landing page",
+          "afterAlt": "After example professional headshot for team headshots landing page"
+        }
+      },
+      "socialProof": {
+        "title": "Real Team Results",
+        "subtitle": "Two real customer examples. Same person, better professional outcome.",
+        "linkedin": "View LinkedIn",
+        "examples": {
+          "david": {
+            "name": "David Robles",
+            "role": "Senior Executive",
+            "company": "Evendo",
+            "beforeAlt": "David Robles selfie before AI enhancement",
+            "afterAlt": "David Robles professional headshot after AI enhancement"
+          },
+          "clarice": {
+            "name": "Clarice Pinto",
+            "role": "Founder",
+            "company": "Pausetiv",
+            "beforeAlt": "Clarice Pinto selfie before AI enhancement",
+            "afterAlt": "Clarice Pinto professional headshot after AI enhancement"
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "How It Works",
+        "subtitle": "Everything your team needs is visible upfront.",
+        "steps": {
+          "setBrand": {
+            "title": "Set Brand",
+            "description": "Choose backgrounds, logo placement, and style rules once for the whole team."
+          },
+          "inviteTeam": {
+            "title": "Invite Team",
+            "description": "Send invites in bulk and track progress from one admin dashboard."
+          },
+          "uploadSelfie": {
+            "title": "Upload Selfie",
+            "description": "Each teammate uploads one clear selfie from any phone or laptop."
+          },
+          "download": {
+            "title": "Download",
+            "description": "Approve and download consistent final photos for all team profiles."
+          }
+        }
+      },
+      "builtForTeams": {
+        "title": "Built for Teams, Not Solo Hobby Use",
+        "subtitle": "TeamShots gives managers control and consistency at scale.",
+        "features": {
+          "bulkInvite": {
+            "title": "Bulk Team Invites",
+            "description": "Invite everyone at once and monitor completion from a single view."
+          },
+          "brandControl": {
+            "title": "Brand Enforcement",
+            "description": "Lock approved backgrounds and style settings so every headshot matches your brand."
+          },
+          "adminDashboard": {
+            "title": "Admin Dashboard",
+            "description": "Centralize approvals, exports, and seat management in one workflow."
+          },
+          "consistentOutput": {
+            "title": "Consistent Output",
+            "description": "Keep a unified look across LinkedIn, website, and internal directories."
+          }
+        }
+      },
+      "pricing": {
+        "title": "Simple Team Pricing",
+        "subtitle": "No subscriptions and no competing package maze.",
+        "priceLine": "{price}/person · {photos} photos each · One-time payment",
+        "cta": "Get 3 Free Headshots"
+      },
+      "finalCta": {
+        "kicker": "Ready for launch",
+        "title": "Your team deserves a unified look",
+        "subtitle": "Start with three free test photos and see quality before you pay.",
+        "cta": "Get 3 Free Headshots",
+        "disclaimer": "3 free test photos with watermark - no credit card required.",
+        "support": "Questions? Contact {email}"
+      }
+    }
+  },
   "landing": {
     "teamshotspro": {
       "hero": {

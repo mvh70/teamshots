@@ -7,7 +7,6 @@
 import { Worker, Job, UnrecoverableError } from 'bullmq'
 import sharp from 'sharp'
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { randomUUID } from 'node:crypto'
 
 import { ImageGenerationJobData, redis } from '@/queue'
 import { prisma } from '@/lib/prisma'
@@ -17,21 +16,17 @@ import { Telemetry } from '@/lib/telemetry'
 import { Env } from '@/lib/env'
 import { sendSupportNotificationEmail } from '@/lib/email'
 import type { SupportNotificationAttachment } from '@/lib/email'
+import { detectImageFormat, mimeTypeFromFileName } from '@/lib/image-format'
 import { getProgressMessage, formatProgressWithAttempt } from '@/lib/generation-progress-messages'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { PhotoStyleSettings } from '@/types/photo-style'
-import { isRateLimitError, MAX_RATE_LIMIT_RETRIES, RATE_LIMIT_SLEEP_MS } from '@/lib/rate-limit-retry'
+import { isRateLimitError } from '@/lib/rate-limit-retry'
 import { asRecord } from '@/lib/type-guards'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
 import type { CostReason, CostResult } from '@/domain/services/CostTrackingService'
 import type { AIModelId, AIProvider } from '@/config/ai-costs'
 import { AssetService } from '@/domain/services/AssetService'
 
-// Import shared utilities for V1 workflow improvements
-import { executeWithRateLimitRetry, createProgressRetryCallback } from './generate-image/utils/retry-handler'
-
-import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
-import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { hasValue } from '@/domain/style/elements/base/element-types'
 import { extractPackageId } from '@/domain/style/settings-resolver'
@@ -40,16 +35,23 @@ import type { ImageEvaluationResult } from './generate-image/evaluator'
 import { executeV3Workflow } from './generate-image/workflow-v3'
 import { EvaluationFailedError } from './generate-image/errors'
 import {
+  downloadAssetAsBuffer,
   downloadAssetAsBase64,
+  detectImageFormatFromBase64,
   uploadGeneratedImagesToS3,
   prepareSelfies
 } from './generate-image/s3-utils'
 import type { V3WorkflowState, PersistedImageReference } from '@/types/workflow'
 import { getWorkflowState, setWorkflowState } from './generate-image/utils/workflow-state'
-import { cacheComposite, cachedCompositeToReference, type CompositeType } from '@/lib/composite-cache'
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
+
+const VALID_SELFIE_KEY_PATTERN = /^selfies\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/
+
+export function destroyGenerateImageResources(): void {
+  s3Client.destroy()
+}
 
 // Note: RATE_LIMIT_SLEEP_MS and MAX_RATE_LIMIT_RETRIES now exported from @/lib/rate-limit-retry
 
@@ -121,6 +123,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       } catch (costError) {
         // Don't fail the generation if cost tracking fails
+        Telemetry.increment('generation.cost_tracking.failure')
         Logger.warn('Cost tracking failed', {
           generationId,
           stepName: params.stepName,
@@ -131,6 +134,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
     let workflowState = getWorkflowState(job)
     let cleanupAfterSuccess = false
+    const debugMode = process.env.NODE_ENV !== 'production' && providerOptions?.debugMode === true
 
     const persistWorkflowState = async (nextState: V3WorkflowState | undefined) => {
       workflowState = nextState
@@ -144,53 +148,34 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       buffer: Buffer,
       meta: { fileName: string; description?: string; mimeType?: string }
     ): Promise<PersistedImageReference> => {
+      const detected = meta.mimeType ? undefined : await detectImageFormat(buffer)
+      const mimeType = meta.mimeType ?? detected?.mimeType ?? 'image/png'
       const relativeKey = buildIntermediateKey(meta.fileName)
       await s3Client.send(
         new PutObjectCommand({
           Bucket: BUCKET_NAME,
           Key: getS3Key(relativeKey),
           Body: buffer,
-          ContentType: meta.mimeType ?? 'image/png'
+          ContentType: mimeType
         })
       )
       return {
         key: relativeKey,
-        mimeType: meta.mimeType ?? 'image/png',
+        mimeType,
         description: meta.description
       }
     }
 
     const downloadIntermediateAsset = async (reference: PersistedImageReference): Promise<Buffer> => {
-      const asset = await downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key: reference.key })
+      if (!reference.key.startsWith(`generations/${personId}/${generationId}/`)) {
+        throw new Error(`Intermediate asset key outside generation scope: ${reference.key}`)
+      }
+
+      const asset = await downloadAssetAsBuffer({ bucketName: BUCKET_NAME, s3Client, key: reference.key })
       if (!asset) {
         throw new Error(`Intermediate asset missing: ${reference.key}`)
       }
-      return Buffer.from(asset.base64, 'base64')
-    }
-
-    const referenceFromPersisted = async (reference: PersistedImageReference) => {
-      let buffer: Buffer
-
-      // Check if this is a local cache reference (prefixed with 'local:')
-      if (reference.key.startsWith('local:')) {
-        const localPath = reference.key.slice(6) // Remove 'local:' prefix
-        const fs = await import('fs/promises')
-        try {
-          buffer = await fs.readFile(localPath)
-          Logger.debug('Loaded composite from local cache', { path: localPath })
-        } catch {
-          throw new Error(`Local cached composite missing: ${localPath}`)
-        }
-      } else {
-        // S3 reference
-        buffer = await downloadIntermediateAsset(reference)
-      }
-
-      return {
-        base64: buffer.toString('base64'),
-        mimeType: reference.mimeType,
-        description: reference.description
-      }
+      return asset.buffer
     }
 
     const deleteIntermediateAssets = async (references: PersistedImageReference[]): Promise<void> => {
@@ -218,14 +203,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       const refs: PersistedImageReference[] = []
 
-      if (state.composites?.selfie) refs.push(state.composites.selfie)
-      if (state.composites?.faceComposite) refs.push(state.composites.faceComposite)
-      if (state.composites?.bodyComposite) refs.push(state.composites.bodyComposite)
-      if (state.composites?.background) refs.push(state.composites.background)
-      if (state.composites?.garmentCollage) refs.push(state.composites.garmentCollage)
       if (state.step1a?.personImage) refs.push(state.step1a.personImage)
-      if (state.step1a?.backgroundImage) refs.push(state.step1a.backgroundImage)
-      if (state.step1b?.backgroundImage) refs.push(state.step1b.backgroundImage)
 
       return refs
     }
@@ -257,6 +235,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         where: { id: generationId },
         select: {
           id: true,
+          personId: true,
           status: true,
           styleSettings: true
         }
@@ -264,6 +243,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       if (!generation) {
         throw new Error(`Generation record not found for ID: ${generationId}. The generation may have been deleted or never created.`)
+      }
+
+      if (generation.personId !== personId) {
+        throw new UnrecoverableError(
+          `Generation/person mismatch: generation ${generationId} belongs to ${generation.personId}, job has ${personId}`
+        )
       }
 
       // Update generation status to processing (only if it exists)
@@ -308,6 +293,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         throw new Error(`Generation ${generationId} is missing styleSettings. This should never happen for valid generations.`)
       }
 
+      if (typeof prompt !== 'string' || prompt.length > 50000) {
+        throw new UnrecoverableError('Invalid prompt payload in job data')
+      }
+
       const savedStyleSettings = asRecord(generation.styleSettings)
       if (!savedStyleSettings) {
         throw new Error(`Generation ${generationId} has invalid styleSettings format. Expected object, got: ${typeof generation.styleSettings}`)
@@ -348,6 +337,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         throw new Error('At least one selfieS3Key is required')
       }
 
+      if (!providedKeys.every((key) => VALID_SELFIE_KEY_PATTERN.test(key))) {
+        throw new UnrecoverableError('Invalid selfieS3Keys format in job payload')
+      }
+
       // V3 is the only supported workflow version
       const workflowVersion = 'v3'
 
@@ -359,180 +352,47 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       })
 
       let basePrompt: string
-      let mustFollowRulesFromPayload: string[] = []
-      let freedomRulesFromPayload: string[] = []
       let referenceImages =
         [] as {
           description?: string
           base64: string
           mimeType: string
         }[]
-      let labelInstruction: string | undefined
       let aspectRatioFromPayload: string
       let aspectRatioDescription: string
+      let v3SelfieComposite: { base64: string; mimeType: string; description?: string } | undefined
+      let v3FaceComposite: { base64: string; mimeType: string; description?: string } | undefined
+      let v3BodyComposite: { base64: string; mimeType: string; description?: string } | undefined
 
-      // Check if custom clothing is configured
-      const hasCustomClothing = Boolean(
-        mergedStyleSettings.customClothing?.value &&
-        (mergedStyleSettings.customClothing.value.outfitS3Key || mergedStyleSettings.customClothing.value.assetId)
-      )
+      const generationPayload = await stylePackage.buildGenerationPayload({
+        generationId,
+        personId,
+        userId,
+        prompt,
+        demographics,
+        styleSettings: mergedStyleSettings as PhotoStyleSettings,
+        selfieKeys: providedKeys,
+        processedSelfies,
+        selfieTypeMap,
+        options: {
+          workflowVersion,
+        },
+      })
 
-      // Can only use cached payload if:
-      // 1. V3 workflow
-      // 2. Has cached payload and selfie composite
-      // 3. If custom clothing is configured, must have garment collage in state
-      const canUseCachedPayload =
-        workflowVersion === 'v3' &&
-        Boolean(workflowState?.cachedPayload) &&
-        Boolean(workflowState?.composites?.selfie) &&
-        (!hasCustomClothing || Boolean(workflowState?.composites?.garmentCollage))
+      basePrompt = generationPayload.prompt
+      referenceImages = generationPayload.referenceImages
+      aspectRatioFromPayload = generationPayload.aspectRatio
+      aspectRatioDescription = generationPayload.aspectRatioDescription
+      v3SelfieComposite = generationPayload.selfieComposite
+      v3FaceComposite = generationPayload.faceComposite
+      v3BodyComposite = generationPayload.bodyComposite
 
-      if (canUseCachedPayload && workflowState?.cachedPayload) {
-        basePrompt = workflowState.cachedPayload.prompt
-        mustFollowRulesFromPayload = workflowState.cachedPayload.mustFollowRules
-        freedomRulesFromPayload = workflowState.cachedPayload.freedomRules
-        aspectRatioFromPayload = workflowState.cachedPayload.aspectRatio
-        aspectRatioDescription = workflowState.cachedPayload.aspectRatioDescription
-
-        // Restore garment collage from workflow state if it exists
-        if (workflowState.composites?.garmentCollage) {
-          const garmentCollage = await referenceFromPersisted(workflowState.composites.garmentCollage)
-          referenceImages.push(garmentCollage)
-          Logger.info('[DEBUG] Restored garment collage from workflow state', {
-            generationId,
-            s3Key: workflowState.composites.garmentCollage.key
-          })
-        }
-      } else {
-        const generationPayload = await stylePackage.buildGenerationPayload({
-          generationId,
-          personId,
-          userId,
-          prompt,
-          styleSettings: mergedStyleSettings as PhotoStyleSettings,
-          selfieKeys: providedKeys,
-          processedSelfies,
-          selfieTypeMap, // Pass selfie type map for split composite building
-          options: {
-            workflowVersion
-          }
-        })
-
-        basePrompt = generationPayload.prompt
-        mustFollowRulesFromPayload = generationPayload.mustFollowRules || []
-        freedomRulesFromPayload = generationPayload.freedomRules || []
-        referenceImages = generationPayload.referenceImages
-        labelInstruction = generationPayload.labelInstruction
-        aspectRatioFromPayload = generationPayload.aspectRatio
-        aspectRatioDescription = generationPayload.aspectRatioDescription
-
-        // Cache split composites (face/body) locally for workflow retry support
-        // Uses local filesystem instead of S3 for instant write/read (auto-cleanup after 10 min)
-        if (workflowVersion === 'v3') {
-          const compositePatch: V3WorkflowState['composites'] = {
-            ...(workflowState?.composites ?? {})
-          }
-
-          // Cache face composite locally if available
-          if (generationPayload.faceComposite) {
-            const cachedFace = await cacheComposite(
-              Buffer.from(generationPayload.faceComposite.base64, 'base64'),
-              generationId,
-              'face',
-              {
-                description: generationPayload.faceComposite.description,
-                mimeType: generationPayload.faceComposite.mimeType ?? 'image/png'
-              }
-            )
-            // Store local path with 'local:' prefix to distinguish from S3 keys
-            compositePatch.faceComposite = {
-              key: `local:${cachedFace.path}`,
-              description: generationPayload.faceComposite.description,
-              mimeType: cachedFace.mimeType
-            }
-            Logger.info('Cached face composite locally', {
-              generationId,
-              path: cachedFace.path
-            })
-          }
-
-          // Cache body composite locally if available
-          if (generationPayload.bodyComposite) {
-            const cachedBody = await cacheComposite(
-              Buffer.from(generationPayload.bodyComposite.base64, 'base64'),
-              generationId,
-              'body',
-              {
-                description: generationPayload.bodyComposite.description,
-                mimeType: generationPayload.bodyComposite.mimeType ?? 'image/png'
-              }
-            )
-            // Store local path with 'local:' prefix to distinguish from S3 keys
-            compositePatch.bodyComposite = {
-              key: `local:${cachedBody.path}`,
-              description: generationPayload.bodyComposite.description,
-              mimeType: cachedBody.mimeType
-            }
-            Logger.info('Cached body composite locally', {
-              generationId,
-              path: cachedBody.path
-            })
-          }
-
-          // Update workflow state if we added any split composites
-          if (compositePatch.faceComposite || compositePatch.bodyComposite) {
-            const patch: V3WorkflowState = {
-              ...workflowState,
-              composites: compositePatch
-            }
-            await persistWorkflowState(patch)
-            workflowState = patch
-          }
-        }
-
-        // Cache garment collage locally if it was generated
-        const garmentCollage = referenceImages.find((ref) =>
-          ref.description?.toLowerCase().includes('garment') ||
-          ref.description?.toLowerCase().includes('collage')
-        )
-
-        if (garmentCollage && workflowVersion === 'v3') {
-          const cachedGarment = await cacheComposite(
-            Buffer.from(garmentCollage.base64, 'base64'),
-            generationId,
-            'garment',
-            {
-              description: garmentCollage.description,
-              mimeType: garmentCollage.mimeType ?? 'image/png'
-            }
-          )
-
-          const patch: V3WorkflowState = {
-            ...workflowState,
-            composites: {
-              ...(workflowState?.composites ?? {}),
-              garmentCollage: {
-                key: `local:${cachedGarment.path}`,
-                description: garmentCollage.description,
-                mimeType: cachedGarment.mimeType
-              }
-            }
-          }
-
-          await persistWorkflowState(patch)
-          workflowState = patch
-
-          Logger.info('Cached garment collage locally', {
-            generationId,
-            path: cachedGarment.path
-          })
-        }
+      if (!v3SelfieComposite && !v3FaceComposite && !v3BodyComposite) {
+        throw new Error('V3 workflow requires at least one selfie/face/body composite reference.')
       }
 
-      const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
-
       try {
-        await job.updateProgress({ progress: 20, message: formatProgress(getProgressMessage(), 20) })
+        await job.updateProgress({ progress: 12, message: formatProgress(getProgressMessage('starting-preprocessing'), 12) })
       } catch (err: unknown) {
         Logger.warn('Failed to update prompt generation progress', {
           error: err instanceof Error ? err.message : String(err)
@@ -546,111 +406,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // V3 is the only supported workflow
       try {
         const v3SelfieReferences = selfieReferences.map((ref, index) => ({
-          label: ref.label || `SELFIE${index + 1}`,
+          label: providedKeys[index] || ref.label || `SELFIE${index + 1}`,
           base64: ref.base64,
           mimeType: ref.mimeType
         }))
-
-        let v3SelfieComposite
-        let v3FaceComposite: { base64: string; mimeType: string; description?: string } | undefined
-        let v3BodyComposite: { base64: string; mimeType: string; description?: string } | undefined
-
-        if (workflowState?.composites?.selfie) {
-          v3SelfieComposite = await referenceFromPersisted(workflowState.composites.selfie)
-        } else {
-          const generatedComposite = referenceImages.find((reference) =>
-            reference.description?.toLowerCase().includes('composite')
-          )
-
-          if (!generatedComposite && !workflowState?.composites?.faceComposite && !workflowState?.composites?.bodyComposite) {
-            // Only throw if we have NO composites at all (neither specific nor combined)
-            // If we have split composites, we don't strictly need a combined one
-            // Note: usage of workflowState is sufficient as it was populated with split composites just before this block
-            const hasSplitComposites = Boolean(workflowState?.composites?.faceComposite || workflowState?.composites?.bodyComposite)
-            if (!hasSplitComposites) {
-              throw new Error('V3 workflow requires a selfie composite, but none was generated.')
-            }
-            Logger.info('V3: Skipping default selfie composite (using split composites)', { generationId })
-          }
-
-          v3SelfieComposite = generatedComposite
-
-          // Cache selfie composite locally if it exists
-          let cachedSelfiePath: string | undefined
-          if (generatedComposite) {
-            const cachedSelfie = await cacheComposite(
-              Buffer.from(generatedComposite.base64, 'base64'),
-              generationId,
-              'selfie',
-              {
-                description: generatedComposite.description,
-                mimeType: generatedComposite.mimeType ?? 'image/png'
-              }
-            )
-            cachedSelfiePath = cachedSelfie.path
-          }
-
-          const patch: V3WorkflowState = {
-            ...workflowState,
-            cachedPayload: {
-              prompt: basePrompt,
-              mustFollowRules: mustFollowRulesFromPayload,
-              freedomRules: freedomRulesFromPayload,
-              aspectRatio: aspectRatioFromPayload,
-              aspectRatioDescription
-            },
-            composites: {
-              ...(workflowState?.composites ?? {}),
-            }
-          }
-
-          if (workflowState?.composites && typeof patch.composites !== 'undefined') {
-            if (generatedComposite && cachedSelfiePath) {
-              patch.composites.selfie = {
-                key: `local:${cachedSelfiePath}`,
-                description: generatedComposite.description,
-                mimeType: generatedComposite.mimeType ?? 'image/png'
-              }
-            }
-          } else if (generatedComposite && cachedSelfiePath) {
-            patch.composites = {
-              ...(workflowState?.composites ?? {}),
-              selfie: {
-                key: `local:${cachedSelfiePath}`,
-                description: generatedComposite.description,
-                mimeType: generatedComposite.mimeType ?? 'image/png'
-              }
-            }
-          }
-
-          await persistWorkflowState(patch)
-          workflowState = patch
-
-          if (generatedComposite && cachedSelfiePath) {
-            Logger.info('Cached selfie composite locally', {
-              generationId,
-              path: cachedSelfiePath
-            })
-          }
-        }
-
-        // Load face composite from workflow state if available
-        if (workflowState?.composites?.faceComposite) {
-          v3FaceComposite = await referenceFromPersisted(workflowState.composites.faceComposite)
-          Logger.info('Loaded face composite from workflow state', {
-            generationId,
-            hasFaceComposite: true
-          })
-        }
-
-        // Load body composite from workflow state if available
-        if (workflowState?.composites?.bodyComposite) {
-          v3BodyComposite = await referenceFromPersisted(workflowState.composites.bodyComposite)
-          Logger.info('Loaded body composite from workflow state', {
-            generationId,
-            hasBodyComposite: true
-          })
-        }
 
         const intermediateStorage = {
           saveBuffer: uploadIntermediateAsset,
@@ -661,26 +420,21 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           job,
           generationId,
           personId,
-          userId,
           teamId,
           selfieReferences: v3SelfieReferences,
           selfieAssetIds,
-          backgroundAssetId: job.data.backgroundAssetId,
-          logoAssetId: job.data.logoAssetId,
           demographics, // Aggregated demographics from selfies
           selfieComposite: v3SelfieComposite,
           faceComposite: v3FaceComposite, // Split face composite (front_view + side_view selfies)
           bodyComposite: v3BodyComposite, // Split body composite (partial_body + full_body selfies)
           styleSettings: mergedStyleSettings,
           prompt: basePrompt,
-          mustFollowRules: mustFollowRulesFromPayload,
-          freedomRules: freedomRulesFromPayload,
           referenceImages, // Pre-built references from package (e.g., outfit collage)
           aspectRatio: aspectRatioFromPayload,
           downloadAsset: (key) => downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key }),
           currentAttempt,
           maxAttempts,
-          debugMode: providerOptions?.debugMode === true,
+          debugMode,
           stopAfterStep: providerOptions?.stopAfterStep as number | undefined,
           workflowState,
           persistWorkflowState,
@@ -723,14 +477,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           if (workflowState?.step1a?.personAssetId) {
             parentAssetIds.push(workflowState.step1a.personAssetId)
           }
-          if (workflowState?.step1b?.backgroundAssetId) {
-            parentAssetIds.push(workflowState.step1b.backgroundAssetId)
-          }
 
           const outputAsset = await AssetService.createAsset({
             s3Key: finalImageKey,
             type: 'generated',
-            mimeType: 'image/png',
+            mimeType: mimeTypeFromFileName(finalImageKey),
             ownerType: teamId ? 'team' : 'person',
             teamId: teamId ?? undefined,
             personId: personId,
@@ -802,7 +553,14 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       Telemetry.increment('generation.worker.success')
 
       if (cleanupAfterSuccess) {
-        await cleanupIntermediateState()
+        try {
+          await cleanupIntermediateState()
+        } catch (cleanupError) {
+          Logger.warn('Failed to cleanup intermediate assets after success', {
+            generationId,
+            error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+          })
+        }
       }
 
       return {
@@ -813,12 +571,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       }
 
     } catch (error) {
-      // FORCE LOG TO CONSOLE
-      console.error('🔥 CRITICAL WORKER FAILURE 🔥', error)
-      if (error instanceof Error) {
-        console.error('Stack:', error.stack)
-        console.error('Cause:', error.cause)
-      }
+      Logger.error('Critical image generation worker failure', {
+        generationId,
+        error: error instanceof Error ? error.message : String(error)
+      })
 
       Telemetry.increment('generation.worker.error')
       // Extract comprehensive error details
@@ -828,39 +584,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         name: error instanceof Error ? error.name : 'Unknown',
       }
 
-      // Try to extract additional details from the error object (e.g., Gemini API response)
+      // Allowlist only non-sensitive fields from provider errors.
       if (error && typeof error === 'object') {
-        // Google SDK errors often have additional properties
         if ('status' in error) errorDetails.status = error.status
         if ('statusText' in error) errorDetails.statusText = error.statusText
-        if ('response' in error) {
-          try {
-            errorDetails.response = JSON.stringify(error.response)
-            // Enhance error message with response details if available
-            errorMessage = `${errorMessage} | Response: ${JSON.stringify(error.response)}`
-          } catch {
-            errorDetails.response = String(error.response)
-            errorMessage = `${errorMessage} | Response: ${String(error.response)}`
-          }
-        }
-        if ('cause' in error) {
-          try {
-            errorDetails.cause = JSON.stringify(error.cause)
-            errorMessage = `${errorMessage} | Cause: ${JSON.stringify(error.cause)}`
-          } catch {
-            errorDetails.cause = String(error.cause)
-            errorMessage = `${errorMessage} | Cause: ${String(error.cause)}`
-          }
-        }
-        // Check for Gemini-specific error properties
         if ('code' in error) errorDetails.code = error.code
-        if ('details' in error) {
-          try {
-            errorDetails.details = JSON.stringify(error.details)
-          } catch {
-            errorDetails.details = String(error.details)
-          }
-        }
       }
 
       // Check if this is a rate limit error (429) - filter out stack trace
@@ -895,20 +623,18 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         ? errorMessage.substring(0, maxErrorMessageLength) + '...[truncated]'
         : errorMessage
 
-      // Send support notification email on failure (only on final attempt to avoid spam)
-      const maxAttempts = job.opts?.attempts || 3
-
-      // Check if this is a V2 workflow failure (internal retries exhausted)
-      // These errors indicate logical failure after multiple internal attempts, so we shouldn't retry the whole job
-      // NOTE: EvaluationFailedError is NOT a workflow failure - it should trigger retries
+      // Check if this is a workflow failure (internal retries exhausted)
+      // These errors indicate logical failure after multiple internal attempts, so we shouldn't retry the whole job.
+      // NOTE: EvaluationFailedError is NOT a workflow failure - it should trigger retries.
       const isWorkflowFailure = error instanceof Error && (
-        error.message.includes('Step 1 failed after') ||
-        error.message.includes('Step 5 failed after') ||
-        error.message.includes('Step 7 failed after') ||
-        error.message.includes('Step 4 validation failed')
+        error.message.includes('V3 Step 1a failed after') ||
+        error.message.includes('V3 Step 3 final evaluation failed after') ||
+        error.message.includes('V3 Step 2→3 retry loop completed without result')
       )
+      const isApiBudgetExceeded =
+        error instanceof Error && error.message.includes('V3 API call budget exceeded')
 
-      const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure
+      const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure || isApiBudgetExceeded
 
       if (isFinalAttempt) {
         try {
@@ -923,6 +649,18 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         // Send evaluation failure notification with image attachments ONLY on final attempt
         if (error instanceof EvaluationFailedError) {
           try {
+            const attachmentImages: string[] = []
+            if (error.imageS3Key) {
+              const attachmentAsset = await downloadAssetAsBase64({
+                bucketName: BUCKET_NAME,
+                s3Client,
+                key: error.imageS3Key,
+              })
+              if (attachmentAsset?.base64) {
+                attachmentImages.push(attachmentAsset.base64)
+              }
+            }
+
             await notifyEvaluationFailure({
               generationId: error.generationId,
               personId,
@@ -932,7 +670,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
               evaluations: [error.evaluation],
               aspectRatioDescription: error.aspectRatio,
               shotLabel: 'N/A',
-              imageBase64: [error.imageBase64]
+              imageBase64: attachmentImages
             })
             evaluationFailureEmailSent = true
           } catch (notifyError) {
@@ -954,8 +692,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         // Make retry message more prominent by keeping it at current progress
         const retryMessage = `🔄 Attempt ${currentAttempt} of ${maxAttempts} failed. Retrying...`
         await job.updateProgress({ progress: currentProgress, message: retryMessage })
-        // Wait a bit to ensure the message is visible before retry
-        await new Promise(resolve => setTimeout(resolve, 2000))
       }
 
       // Update generation status to failed on final attempt
@@ -1058,9 +794,8 @@ User Email: ${userEmail || 'N/A'}
 Job ID: ${job.id}
 Attempts: ${job.attemptsMade}/${maxAttempts}
 
-Error: ${finalErrorMessage}
-Error Stack: ${error instanceof Error ? error.stack : 'N/A'}
-Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
+Error Name: ${error instanceof Error ? error.name : 'UnknownError'}
+Error Message: ${finalErrorMessage}`,
               metadata: {
                 generationId,
                 personId,
@@ -1071,8 +806,11 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
                 maxAttempts,
                 errorMessage: finalErrorMessage,
                 errorName: error instanceof Error ? error.name : 'Unknown',
-                errorDetails,
-                selfieS3Keys,
+                errorDetails: {
+                  name: error instanceof Error ? error.name : 'Unknown',
+                  message: finalErrorMessage,
+                },
+                selfieCount: selfieS3Keys?.length ?? 0,
                 packageId: errorPackageId
               }
             })
@@ -1090,7 +828,7 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
       }
 
       // Rethrow to trigger retry mechanism if attempts remain
-      if (isWorkflowFailure) {
+      if (isWorkflowFailure || isApiBudgetExceeded) {
         throw new UnrecoverableError(error instanceof Error ? error.message : String(error))
       }
       throw error
@@ -1190,20 +928,22 @@ async function notifyEvaluationFailure({
     }
 
     const attachments: SupportNotificationAttachment[] = []
-    evaluations.forEach((evaluation, index) => {
+    for (let index = 0; index < evaluations.length; index += 1) {
+      const evaluation = evaluations[index]
       if (evaluation.status === 'Approved') {
-        return
+        continue
       }
       const base64 = imageBase64[index]
       if (!base64) {
-        return
+        continue
       }
+      const imageFormat = detectImageFormatFromBase64(base64)
       attachments.push({
-        filename: `${generationId}-attempt-${attempt}-variation-${index + 1}.png`,
+        filename: `${generationId}-attempt-${attempt}-variation-${index + 1}.${imageFormat.extension}`,
         base64,
-        mimeType: 'image/png'
+        mimeType: imageFormat.mimeType
       })
-    })
+    }
 
     await sendSupportNotificationEmail({
       subject: `Image QA Rejection - Generation ${generationId}`,
@@ -1225,91 +965,4 @@ async function notifyEvaluationFailure({
   }
 }
 
-// Note: isRateLimitError and rate limit retry logic now centralized in @/lib/rate-limit-retry
-
-function isModelNotFoundError(error: unknown): boolean {
-  const metadata = collectErrorMetadata(error)
-  if (metadata.statusCodes.includes(404)) {
-    return true
-  }
-
-  return metadata.messages.some((message) => {
-    const normalized = message.toLowerCase()
-    return normalized.includes('not found') && normalized.includes('model')
-  })
-}
-
-function collectErrorMetadata(error: unknown): { statusCodes: number[]; messages: string[] } {
-  const statusCodes: number[] = []
-  const messages: string[] = []
-  const seen = new Set<unknown>()
-  const queue: unknown[] = [error]
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current || seen.has(current)) {
-      continue
-    }
-    seen.add(current)
-
-    if (typeof current === 'string') {
-      messages.push(current)
-      try {
-        const parsed = JSON.parse(current) as unknown
-        queue.push(parsed)
-      } catch {
-        // ignore parse errors
-      }
-      continue
-    }
-
-    if (typeof current !== 'object') {
-      continue
-    }
-
-    const maybeStatus = (current as { status?: unknown }).status
-    if (typeof maybeStatus === 'number') {
-      statusCodes.push(maybeStatus)
-    }
-
-    const maybeCode = (current as { code?: unknown }).code
-    if (typeof maybeCode === 'number') {
-      statusCodes.push(maybeCode)
-    }
-
-    const maybeMessage = (current as { message?: unknown }).message
-    if (typeof maybeMessage === 'string') {
-      messages.push(maybeMessage)
-    }
-
-    const nestedCandidates: unknown[] = []
-    const maybeResponse = (current as { response?: unknown }).response
-    if (maybeResponse) nestedCandidates.push(maybeResponse)
-
-    const maybeError = (current as { error?: unknown }).error
-    if (maybeError) nestedCandidates.push(maybeError)
-
-    const maybeDetails = (current as { details?: unknown }).details
-    if (maybeDetails) nestedCandidates.push(maybeDetails)
-
-    const maybeCause = (current as { cause?: unknown }).cause
-    if (maybeCause) nestedCandidates.push(maybeCause)
-
-    for (const candidate of nestedCandidates) {
-      if (candidate !== undefined && candidate !== null) {
-        queue.push(candidate)
-      }
-    }
-  }
-
-  return {
-    statusCodes,
-    messages
-  }
-}
-
-// Note: asRecord now centralized in @/lib/type-guards
-// Note: isRateLimitError, RATE_LIMIT_SLEEP_MS, and delay now centralized in @/lib/rate-limit-retry
-
 export default imageGenerationWorker
-

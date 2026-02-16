@@ -128,17 +128,3 @@ export function logEvaluationResult(
   }
 }
 
-/**
- * Check if maximum attempts reached and throw if evaluation failed
- */
-export function checkMaxAttemptsAndThrow(
-  stepName: string,
-  attempt: number,
-  maxAttempts: number,
-  evaluation: ImageEvaluationResult
-): void {
-  if (attempt >= maxAttempts) {
-    throw new Error(`${stepName} failed after ${maxAttempts} attempts: ${evaluation.reason}`)
-  }
-}
-

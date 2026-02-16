@@ -1,4 +1,4 @@
-import { writeFile as fsWriteFile } from 'node:fs/promises'
+import { mkdir as fsMkdir, writeFile as fsWriteFile } from 'node:fs/promises'
 
 import sharp from 'sharp'
 import path from 'path'
@@ -9,50 +9,69 @@ import { DownloadAssetFn, ReferenceImage } from '@/types/generation'
 import { hasValue } from '@/domain/style/elements/base/element-types'
 
 type SelfieBufferProvider = (selfieKey: string) => Promise<Buffer>
+const MAX_COMPOSITE_SMALLEST_SIDE_PX = 1536
+const COMPOSITE_JPEG_QUALITY = 90
 
-// Maximum dimension for each selfie in composite (prevents massive composites causing API timeouts)
-const MAX_SELFIE_DIMENSION = 1024
+function targetDimensionsForSmallestSide(
+  width: number,
+  height: number,
+  maxSmallestSide: number
+): { width: number; height: number } {
+  const smallestSide = Math.min(width, height)
+  if (smallestSide <= maxSmallestSide) {
+    return { width, height }
+  }
+  const scale = maxSmallestSide / smallestSide
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  }
+}
 
 /**
- * Process a selfie buffer: apply EXIF orientation and resize if needed
+ * Process a selfie buffer: apply EXIF orientation and cap largest inputs for composites.
  */
 async function processSelfieBuffer(buffer: Buffer): Promise<{ buffer: Buffer; width: number; height: number }> {
-  const selfieSharp = sharp(buffer)
-  const metadata = await selfieSharp.metadata()
+  const oriented = await sharp(buffer).rotate().toBuffer({ resolveWithObject: true })
+  const orientedWidth = oriented.info.width
+  const orientedHeight = oriented.info.height
 
-  // Apply EXIF orientation
-  let orientedBuffer = buffer
-  if (metadata.orientation && metadata.orientation > 1) {
-    let rotationAngle = 0
-    if (metadata.orientation === 3) rotationAngle = 180
-    else if (metadata.orientation === 6) rotationAngle = -90
-    else if (metadata.orientation === 8) rotationAngle = 90
+  const target = targetDimensionsForSmallestSide(
+    orientedWidth,
+    orientedHeight,
+    MAX_COMPOSITE_SMALLEST_SIDE_PX
+  )
 
-    if (rotationAngle !== 0) {
-      orientedBuffer = await selfieSharp
-        .rotate(rotationAngle)
-        .withMetadata({ orientation: 1 })
-        .toBuffer()
+  if (target.width === orientedWidth && target.height === orientedHeight) {
+    return {
+      buffer: oriented.data,
+      width: orientedWidth,
+      height: orientedHeight,
     }
   }
 
-  // Get dimensions after orientation
-  const orientedMetadata = await sharp(orientedBuffer).metadata()
-  let finalBuffer = orientedBuffer
-  let width = orientedMetadata.width ?? 0
-  let height = orientedMetadata.height ?? 0
+  const resized = await sharp(oriented.data)
+    .resize({
+      width: target.width,
+      height: target.height,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .toBuffer({ resolveWithObject: true })
 
-  // Resize if larger than MAX_SELFIE_DIMENSION
-  if (width > MAX_SELFIE_DIMENSION || height > MAX_SELFIE_DIMENSION) {
-    finalBuffer = await sharp(orientedBuffer)
-      .resize(MAX_SELFIE_DIMENSION, MAX_SELFIE_DIMENSION, { fit: 'inside', withoutEnlargement: true })
-      .toBuffer()
-    const resizedMetadata = await sharp(finalBuffer).metadata()
-    width = resizedMetadata.width ?? 0
-    height = resizedMetadata.height ?? 0
+  Logger.info('Downscaled selfie before composite build', {
+    originalWidth: orientedWidth,
+    originalHeight: orientedHeight,
+    resizedWidth: resized.info.width,
+    resizedHeight: resized.info.height,
+    maxSmallestSide: MAX_COMPOSITE_SMALLEST_SIDE_PX,
+  })
+
+  return {
+    buffer: resized.data,
+    width: resized.info.width,
+    height: resized.info.height,
   }
-
-  return { buffer: finalBuffer, width, height }
 }
 
 /**
@@ -152,21 +171,22 @@ export async function buildSelfieComposite({
     create: {
       width: canvasWidth,
       height: canvasHeight,
-      channels: 4,
-      background: { r: 255, g: 255, b: 255, alpha: 1 }
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 }
     }
   })
-    .png()
     .composite(elements)
+    .jpeg({ quality: COMPOSITE_JPEG_QUALITY, chromaSubsampling: '4:4:4', mozjpeg: true })
     .toBuffer()
 
   const compositeBase64 = compositeBuffer.toString('base64')
 
   // Save debug file
   try {
-    const filename = `${labelPrefix.toLowerCase().replace(/-/g, '')}-composite-${generationId}.png`
+    const filename = `${labelPrefix.toLowerCase().replace(/-/g, '')}-composite-${generationId}.jpg`
     const tmpDir = path.join(process.cwd(), 'tmp', 'v3-debug')
     const filePath = path.join(tmpDir, filename)
+    await fsMkdir(tmpDir, { recursive: true })
     await fsWriteFile(filePath, compositeBuffer)
     Logger.debug('Wrote composite reference image', { filePath })
   } catch (error) {
@@ -176,7 +196,7 @@ export async function buildSelfieComposite({
   }
 
   return {
-    mimeType: 'image/png',
+    mimeType: 'image/jpeg',
     base64: compositeBase64,
     description
   }
@@ -451,6 +471,7 @@ export async function buildBackgroundComposite({
     const tmpDir = path.join(process.cwd(), 'tmp', 'v3-debug')
     const filePath = path.join(tmpDir, filename)
 
+    await fsMkdir(tmpDir, { recursive: true })
     await fsWriteFile(filePath, compositeBuffer)
     Logger.debug('Wrote background composite reference image to temporary directory', { filePath })
   } catch (error) {

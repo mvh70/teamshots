@@ -20,6 +20,8 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   operationName: 'operation'
 }
 
+const progressHighWaterMark = new Map<string, number>()
+
 /**
  * Delay utility
  */
@@ -55,9 +57,12 @@ export async function executeWithRateLimitRetry<T>(
           throw error
         }
 
-        const waitSeconds = Math.round(sleepMs / 1000)
+        const jitterMs = Math.floor(Math.random() * sleepMs * 0.5)
+        const jitteredSleepMs = sleepMs + jitterMs
+        const waitSeconds = Math.round(jitteredSleepMs / 1000)
         Logger.warn(`${operationName} rate limited; waiting before retry`, {
           waitSeconds,
+          jitterMs,
           rateLimitRetries,
           maxRetries
         })
@@ -67,7 +72,7 @@ export async function executeWithRateLimitRetry<T>(
           await onRetry(rateLimitRetries, waitSeconds)
         }
 
-        await delay(sleepMs)
+        await delay(jitteredSleepMs)
         continue
       }
       
@@ -112,20 +117,14 @@ export async function updateJobProgress(
 ): Promise<void> {
   try {
     const jobId = job.id ?? 'unknown'
-
-    // Get current progress from job (stored in Redis, shared across workers)
-    // job.progress can be a number or an object like { progress: number, message: string }
-    const currentProgress = typeof job.progress === 'object' && job.progress !== null && 'progress' in job.progress
-      ? (job.progress as { progress: number }).progress
-      : typeof job.progress === 'number'
-      ? job.progress
-      : 0
+    const currentProgress = progressHighWaterMark.get(String(jobId)) ?? 0
 
     // Only update if progress increases OR if force update is requested
     if (targetProgress > currentProgress || forceUpdate) {
       // Never let progress go backwards - use the higher value
       const actualProgress = Math.max(targetProgress, currentProgress)
       await job.updateProgress({ progress: actualProgress, message })
+      progressHighWaterMark.set(String(jobId), actualProgress)
 
       Logger.debug('Updated job progress', {
         jobId,
@@ -155,7 +154,7 @@ export async function updateJobProgress(
  * Keeping for backwards compatibility but it does nothing
  */
 export function cleanupProgressTracker(_jobId: string): void {
-  // No-op: Progress is now tracked via job.progress in Redis
+  progressHighWaterMark.delete(_jobId)
 }
 
 /**

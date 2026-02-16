@@ -24,6 +24,18 @@ import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
 import { prisma } from '@/lib/prisma'
 import { autoRegisterElement } from '../composition/registry'
+import {
+  buildGarmentCollagePrompt,
+  buildGarmentDescriptionAnalysisPrompt,
+  getCustomClothingContributionInstructions,
+  getCustomClothingContributionMustFollowRules,
+  getCustomClothingGarmentAnalysisInstruction,
+  getCustomClothingLogoReferenceDescription,
+  getCustomClothingOutfitReferenceDescription,
+  getCustomClothingReferenceDescription,
+  getCustomClothingWardrobeFallbackDescription,
+  getCustomClothingWardrobeInstruction,
+} from './prompt'
 
 /**
  * Structured description of garments in the collage
@@ -369,24 +381,10 @@ export class CustomClothingElement extends StyleElement {
     })
 
     // Instructions for wearing the custom clothing
-    const instructions = [
-      'The person must wear the exact clothing items shown in the garment collage reference image',
-      'Match all visible clothing details: style, fit, patterns, and textures',
-      'Ensure all garments are worn appropriately and naturally',
-    ]
+    const instructions = getCustomClothingContributionInstructions()
 
     // Strict rules for clothing matching (aligned with ClothingOverlayElement)
-    const mustFollow = [
-      'Use the garment collage as the PRIMARY reference for all garment styling and details.',
-      'Replicate the EXACT appearance of the clothing shown in the collage - colors, patterns, logos, and all visible details are already correctly applied.',
-      'CRITICAL: If garments in the collage have a logo on them, preserve this logo exactly as shown when dressing the person.',
-      'When layering outer garments (jackets, blazers) over base layers, it is NATURAL and EXPECTED for the outer layer to partially cover or obscure parts of any logo.',
-      'DO NOT attempt to move, relocate, or "save" the logo from being covered - realistic fabric layering means logos can be partially hidden by outer garments.',
-      'The logo belongs to the base layer fabric - let outer layers fall naturally over it as they would in real clothing.',
-      'The clothing in the collage is complete and final - do not modify, reinterpret, or add any elements.',
-      'No duplicate accessories - only include items from collage once.',
-      'DO NOT use any other reference images for clothing, branding, or logo information - the collage contains everything needed.',
-    ]
+    const mustFollow = getCustomClothingContributionMustFollowRules()
 
     // Build metadata with clothing information
     const metadata: Record<string, unknown> = {
@@ -426,7 +424,7 @@ export class CustomClothingElement extends StyleElement {
     if (collageAsset?.data.base64) {
       referenceImages.push({
         url: `data:${collageAsset.data.mimeType || 'image/png'};base64,${collageAsset.data.base64}`,
-        description: 'GARMENT COLLAGE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed.',
+        description: getCustomClothingReferenceDescription(),
         type: 'clothing' as const,
       })
 
@@ -459,8 +457,8 @@ export class CustomClothingElement extends StyleElement {
     const payload: Record<string, unknown> = {
       wardrobe: {
         source: 'garment_collage',
-        instruction: 'CRITICAL: Dress the person EXACTLY as shown in the GARMENT COLLAGE reference image. The collage shows all clothing items extracted from the original outfit - replicate these items precisely on the person.',
-        description: clothingValue?.description || 'Professional outfit as shown in the garment collage reference image',
+        instruction: getCustomClothingWardrobeInstruction(),
+        description: clothingValue?.description || getCustomClothingWardrobeFallbackDescription(),
         colors: clothingValue?.colors ? {
           topLayer: clothingValue.colors.topLayer,
           baseLayer: clothingValue.colors.baseLayer,
@@ -482,7 +480,7 @@ export class CustomClothingElement extends StyleElement {
     // Add instruction about using the structured garment analysis
     if (garmentDescription) {
       instructions.push(
-        'Use the garmentAnalysis data in the wardrobe section for precise clothing details including item types, colors, materials, and layering information'
+        getCustomClothingGarmentAnalysisInstruction()
       )
       mustFollow.push(
         `CLOTHING ITEMS: The outfit consists of: ${garmentDescription.items.map(item => `${item.color.primary} ${item.type} (${item.category})`).join(', ')}.`,
@@ -542,35 +540,7 @@ export class CustomClothingElement extends StyleElement {
 
       const model = await getVertexGenerativeModel(modelName)
 
-      const prompt = `Analyze this garment collage image and provide a detailed JSON description of all clothing items and accessories visible.
-
-Return ONLY a valid JSON object with no markdown formatting, no code blocks, just the raw JSON.
-
-The JSON must follow this exact structure:
-{
-  "items": [
-    {
-      "category": "outerwear" | "top" | "bottom" | "footwear" | "accessory",
-      "type": "string (e.g., blazer, shirt, pants, sneakers, watch)",
-      "color": {
-        "primary": "string (main color)",
-        "secondary": "string | null (accent color if any)",
-        "pattern": "solid" | "striped" | "checkered" | "patterned" | "textured"
-      },
-      "material": "string | null (e.g., cotton, wool, leather, denim)",
-      "style": "string (e.g., formal, casual, business-casual, sporty)",
-      "fit": "string | null (e.g., slim, regular, loose, tailored)",
-      "details": ["array of notable features like buttons, pockets, logos, embroidery"]
-    }
-  ],
-  "overallStyle": "string (e.g., business professional, smart casual, formal)",
-  "colorPalette": ["array of dominant colors in the outfit"],
-  "layering": "string describing how items layer (e.g., 'blazer over button-up shirt')",
-  "hasLogo": boolean,
-  "logoDescription": "string | null (describe logo if present)"
-}
-
-Be precise and objective. Only describe items that are clearly visible in the collage.`
+      const prompt = buildGarmentDescriptionAnalysisPrompt()
 
       // Build parts array with text prompt and image
       const parts = [
@@ -679,49 +649,14 @@ Be precise and objective. Only describe items that are clearly visible in the co
     try {
       const { generateWithGemini } = await import('@/queue/workers/generate-image/gemini')
 
-      const prompt = `Create a high-quality flat-lay garment collage from the attached outfit image.
-
-GOAL: Extract and display ONLY the actual clothing items and accessories visible in the input image.
-
-LAYOUT INSTRUCTIONS:
-- Disassemble the outfit into its individual components.
-- Arrange items in a clean, organized grid or knolling pattern on a neutral background (white or light gray).
-- Ensure even spacing and no overlaps.
-- Each item must be clearly separated.
-- Add a subtle drop shadow to give depth.
-- Label each item with a clean, sans-serif text label next to it (e.g., "Jacket", "Shirt", "Pants").
-
-CRITICAL RULES (ANTI-HALLUCINATION):
-1. NO DUPLICATES: Each physical item from the source image must appear EXACTLY ONCE. Do not show the same shirt twice.
-2. ONLY VISIBLE ITEMS: Do not invent items. If the person is not wearing a watch, do not add a watch. If you cannot see shoes, do not add shoes.
-3. NO HUMAN PARTS: Do not include hands, feet, heads, or bodies. Only the inanimate clothing/accessories.
-4. EXACT MATCH: The extracted items must look identical to the source (same color, pattern, texture, logo).
-
-ITEMS TO EXTRACT (ONLY IF VISIBLE):
-- Outerwear (Jacket, Coat, Blazer) - if present
-- Tops (Shirt, T-shirt, Sweater, Hoodie)
-- Bottoms (Pants, Jeans, Shorts, Skirt)
-- Footwear (One pair of shoes/boots) - IF VISIBLE
-- Accessories (ONLY IF CLEARLY VISIBLE: Watch, Glasses, Hat, Bag, Belt, Scarf, Jewelry)
-
-${
-  logo
-    ? `LOGO PLACEMENT (MANDATORY):
-- You MUST place the provided logo on the primary top garment (Shirt/T-shirt/Hoodie).
-- If there is an outer layer (Jacket), place the logo on the inner layer (Shirt) if visible, otherwise on the Jacket.
-- Position the logo naturally on the chest area.
-- It should look like it is printed or embroidered on the fabric.`
-    : ''
-}
-
-Style: Clean, commercial product photography.`
+      const prompt = buildGarmentCollagePrompt(Boolean(logo))
 
       // Build reference images
       const images = [
         {
           mimeType: outfitMimeType,
           base64: outfitImageBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
-          description: 'Outfit image to extract garments from',
+          description: getCustomClothingOutfitReferenceDescription(),
         },
       ]
 
@@ -730,7 +665,7 @@ Style: Clean, commercial product photography.`
         images.push({
           mimeType: logo.mimeType,
           base64: logo.base64.replace(/^data:image\/[a-z]+;base64,/, ''),
-          description: 'Logo to place on garments',
+          description: getCustomClothingLogoReferenceDescription(),
         })
       }
 

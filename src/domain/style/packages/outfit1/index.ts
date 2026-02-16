@@ -1,7 +1,7 @@
 import { PhotoStyleSettings, CategoryType, BackgroundValue, ExpressionValue, PoseValue } from '@/types/photo-style'
 import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
-import * as backgroundElement from '../../elements/background'
+import { deserialize as deserializeBackground } from '../../elements/background/deserializer'
 import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
 import { deserializeCustomClothing } from '../../elements/custom-clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
@@ -129,7 +129,7 @@ export const outfit1: ClientStylePackage = {
       // Debug logging removed - using Logger instead if needed
 
       // Deserialize categories
-      const backgroundResult = backgroundElement.deserialize(inner)
+      const backgroundResult = deserializeBackground(inner)
       const brandingResult = brandingDeserialize(inner)
       const customClothingResult = deserializeCustomClothing(
         typeof inner.customClothing === 'string'

@@ -20,6 +20,36 @@ const DEFAULT_CONFIG: CompositeConfig = {
   titleFontSize: 32,
   labelFontSize: 24
 }
+const MAX_COMPOSITE_SMALLEST_SIDE_PX = 1536
+const COMPOSITE_JPEG_QUALITY = 90
+
+async function downscaleForCompositeIfNeeded(buffer: Buffer): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const oriented = await sharp(buffer).rotate().toBuffer({ resolveWithObject: true })
+  const width = oriented.info.width
+  const height = oriented.info.height
+  const smallestSide = Math.min(width, height)
+  if (smallestSide <= MAX_COMPOSITE_SMALLEST_SIDE_PX) {
+    return { buffer: oriented.data, width, height }
+  }
+
+  const scale = MAX_COMPOSITE_SMALLEST_SIDE_PX / smallestSide
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+  const resized = await sharp(oriented.data)
+    .resize({
+      width: targetWidth,
+      height: targetHeight,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    buffer: resized.data,
+    width: resized.info.width,
+    height: resized.info.height
+  }
+}
 
 /**
  * Build a composite image from selfie buffers with labels
@@ -74,10 +104,9 @@ export async function buildSelfieCompositeFromBuffers(
        throw new Error(`Selfie buffer at index ${index} is empty`)
     }
 
-    const selfieSharp = sharp(selfieBuffer)
-    const selfieMetadata = await selfieSharp.metadata()
-    const selfieWidth = selfieMetadata.width ?? 0
-    const selfieHeight = selfieMetadata.height ?? 0
+    const processedSelfie = await downscaleForCompositeIfNeeded(selfieBuffer)
+    const selfieWidth = processedSelfie.width
+    const selfieHeight = processedSelfie.height
 
     const labelOverlay = await createTextOverlayDynamic(
       `SUBJECT1-SELFIE${index + 1}`,
@@ -91,7 +120,7 @@ export async function buildSelfieCompositeFromBuffers(
 
     maxContentWidth = Math.max(maxContentWidth, selfieWidth, labelWidth)
     selfieEntries.push({
-      selfieBuffer,
+      selfieBuffer: processedSelfie.buffer,
       selfieWidth,
       selfieHeight,
       labelOverlay,
@@ -129,12 +158,12 @@ export async function buildSelfieCompositeFromBuffers(
     create: {
       width: canvasWidth,
       height: canvasHeight,
-      channels: 4,
-      background: { r: 255, g: 255, b: 255, alpha: 1 }
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 }
     }
   })
-    .png()
     .composite(elements)
+    .jpeg({ quality: COMPOSITE_JPEG_QUALITY, chromaSubsampling: '4:4:4', mozjpeg: true })
     .toBuffer()
 
   const compositeBase64 = compositeBuffer.toString('base64')
@@ -157,7 +186,7 @@ export async function buildSelfieCompositeFromBuffers(
   })
 
   return {
-    mimeType: 'image/png',
+    mimeType: 'image/jpeg',
     base64: compositeBase64,
     description: 'REFERENCE IMAGE - Subject Face: This composite shows labeled selfies (SUBJECT1-SELFIE1, SUBJECT1-SELFIE2, etc.) of the SAME person from different angles. You MUST preserve this person\'s exact facial features, identity, skin tone, and unique characteristics in the generated image. The face in the output must be recognizable as this same individual.'
   }
@@ -272,4 +301,3 @@ export async function buildAspectRatioFormatReference({
     description: `FORMAT GUIDE - ${aspectRatioDescription} (${width}x${height}). This shows the target dimensions ONLY. Do NOT include any borders, frames, or letterboxing in the output. Generate the image to fill the entire canvas edge-to-edge.`
   }
 }
-

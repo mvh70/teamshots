@@ -74,9 +74,15 @@ export default function PhotoUpload({
   const modalRef = useRef<HTMLDivElement>(null);
   const hasAutoOpenedRef = useRef(false);
   const awaitingIOSCameraCaptureRef = useRef(false);
-  const resetUploadState = () => {
+const resetUploadState = () => {
     setIsUploading(false);
     setUploadingFileCount(0);
+  };
+
+  const highResCameraConstraints: MediaTrackConstraints = {
+    facingMode: "user",
+    width: { ideal: 2560, max: 3840 },
+    height: { ideal: 2048, max: 2160 }
   };
 
   useEffect(() => {
@@ -525,13 +531,9 @@ export default function PhotoUpload({
         // Permission query failed, continue with direct access
       }
       
-      const s = await navigator.mediaDevices.getUserMedia({ 
-        audio: false, 
-        video: { 
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
+      const s = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: highResCameraConstraints
       });
       
       setStream(s);
@@ -730,7 +732,7 @@ export default function PhotoUpload({
       if (success) {
         closeCamera();
       }
-    }, "image/jpeg", 0.92);
+    }, "image/jpeg", 0.95);
   };
 
   return (
@@ -1039,5 +1041,4 @@ export default function PhotoUpload({
     </div>
   );
 }
-
 

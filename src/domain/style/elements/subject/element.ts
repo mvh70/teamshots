@@ -8,6 +8,8 @@
 
 import { StyleElement, ElementContext, ElementContribution } from '../base/StyleElement'
 import { autoRegisterElement } from '../composition/registry'
+import { generateSubjectCompositionPrompt, generateSubjectPersonPrompt } from './prompt'
+import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
 
 export class SubjectElement extends StyleElement {
   readonly id = 'subject'
@@ -33,39 +35,38 @@ export class SubjectElement extends StyleElement {
     const selfieCount = generationContext.selfieS3Keys?.length || 0
     const hasFaceComposite = !!generationContext.hasFaceComposite
     const hasBodyComposite = !!generationContext.hasBodyComposite
-    const hasCombinedOnly = !hasFaceComposite && !hasBodyComposite
+    const demographics = this.extractDemographicProfile(generationContext.demographics)
 
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
-      selfieCount, phase: 'person-generation', hasFaceComposite, hasBodyComposite, hasCombinedOnly,
+      selfieCount,
+      phase: 'person-generation',
+      hasFaceComposite,
+      hasBodyComposite,
+      hasCombinedOnly: !hasFaceComposite && !hasBodyComposite,
+      hasDemographics: !!demographics,
     }
 
     if (selfieCount === 0) return { metadata }
 
-    const identityPayload: Record<string, unknown> = {
-      source: 'attached selfies',
-      primary_rule: 'Select ONE selfie as primary face basis - never average or blend faces into a new person',
-      recognition: 'The result must be instantly recognizable as this specific person',
+    const subjectPrompt = generateSubjectPersonPrompt({
+      selfieCount,
+      hasFaceComposite,
+      hasBodyComposite,
+      demographics,
+    })
+    mustFollow.push(...subjectPrompt.mustFollow)
+
+    const subjectPayload: Record<string, unknown> = {
+      identity: subjectPrompt.identityPayload
     }
-
-    const composites: string[] = []
-    if (hasFaceComposite) composites.push('FACE COMPOSITE for facial structure, features, skin texture')
-    if (hasBodyComposite) composites.push('BODY COMPOSITE for body proportions, posture, hands')
-    if (hasCombinedOnly) composites.push('SELFIE COMPOSITE as reference for complete subject')
-    if (composites.length > 0) identityPayload.composites = composites
-
-    // Identity preservation rules — single source via mustFollow only
-    // (Previously duplicated in both payload.preservation and mustFollow)
-    mustFollow.push(
-      'Do NOT alter the fundamental facial structure from the selfies',
-      'Do NOT add or remove accessories not shown in selfies (glasses, earrings, watches)',
-      'No beautification or idealization - preserve authentic appearance including moles, scars, freckles',
-      'Preserve exact colors: eye color, skin tone, hair color'
-    )
+    if (subjectPrompt.demographicGuidance) {
+      subjectPayload.demographic_guidance = subjectPrompt.demographicGuidance
+    }
 
     return {
       mustFollow,
-      payload: { subject: { identity: identityPayload } },
+      payload: { subject: subjectPayload },
       metadata,
     }
   }
@@ -78,25 +79,15 @@ export class SubjectElement extends StyleElement {
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = { phase: 'composition', hasFaceComposite, hasBodyComposite }
 
-    const identityPayload: Record<string, unknown> = {
-      source: 'attached selfies',
-      preserve_from_base: ['pose', 'expression', 'eye direction', 'clothing', 'body position', 'hair style'],
-      refine_to_match_selfies: ['facial structure', 'head shape', 'skin texture', 'distinctive marks'],
-    }
-
-    const composites: string[] = []
-    if (hasFaceComposite) composites.push('FACE COMPOSITE to refine head shape, facial structure, proportions')
-    if (hasBodyComposite) composites.push('BODY COMPOSITE to adjust body proportions and hands')
-    if (composites.length > 0) identityPayload.composites = composites
-
-    mustFollow.push(
-      'PRESERVE from BASE: pose, expression, eye direction, clothing, body position, hair style',
-      'REFINE to match selfies: facial structure, head shape, skin texture, distinctive marks'
-    )
+    const subjectPrompt = generateSubjectCompositionPrompt({
+      hasFaceComposite,
+      hasBodyComposite,
+    })
+    mustFollow.push(...subjectPrompt.mustFollow)
 
     return {
       mustFollow,
-      payload: { subject: { identity: identityPayload } },
+      payload: { subject: { identity: subjectPrompt.identityPayload } },
       metadata,
     }
   }
@@ -107,6 +98,35 @@ export class SubjectElement extends StyleElement {
 
   get priority(): number {
     return 10
+  }
+
+  private extractDemographicProfile(raw: unknown): DemographicProfile | undefined {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return undefined
+    }
+
+    const source = raw as Record<string, unknown>
+    const profile: DemographicProfile = {}
+
+    if (typeof source.gender === 'string' && source.gender !== 'unknown') {
+      profile.gender = source.gender as DemographicProfile['gender']
+    }
+
+    if (typeof source.ageRange === 'string') {
+      profile.ageRange = source.ageRange
+    } else if (typeof source.age_range === 'string') {
+      profile.ageRange = source.age_range
+    }
+
+    if (typeof source.ethnicity === 'string' && source.ethnicity !== 'unknown') {
+      profile.ethnicity = source.ethnicity as DemographicProfile['ethnicity']
+    }
+
+    if (!profile.gender && !profile.ageRange && !profile.ethnicity) {
+      return undefined
+    }
+
+    return profile
   }
 }
 

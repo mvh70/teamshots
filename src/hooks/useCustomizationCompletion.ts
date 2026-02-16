@@ -73,11 +73,27 @@ export function useCustomizationCompletion({
     return getPackageConfig(packageId).defaultSettings as Record<string, unknown>
   }, [packageId])
 
+  const activeStepKeySet = useMemo(() => {
+    if (!stepKeys || stepKeys.length === 0) return undefined
+    return new Set(stepKeys.filter((key): key is string => Boolean(key)))
+  }, [stepKeys])
+
+  const scopedRawUneditedFields = useMemo(() => {
+    if (!activeStepKeySet) return rawUneditedFields
+    return rawUneditedFields.filter((key) => activeStepKeySet.has(key))
+  }, [rawUneditedFields, activeStepKeySet])
+
+  const acceptedOnVisitSet = useMemo(() => {
+    if (acceptedOnVisitKeys.length === 0) return new Set<string>()
+    if (!activeStepKeySet) return new Set(acceptedOnVisitKeys)
+    return new Set(acceptedOnVisitKeys.filter((key) => activeStepKeySet.has(key)))
+  }, [acceptedOnVisitKeys, activeStepKeySet])
+
   // Some steps (e.g. clothingColors) can be accepted without modification.
   // Once visited, they should no longer block completion.
   const uneditedFields = useMemo(() => {
-    if (acceptedOnVisitKeys.length === 0) return rawUneditedFields
-    const acceptedSet = new Set(acceptedOnVisitKeys)
+    if (acceptedOnVisitSet.size === 0) return scopedRawUneditedFields
+    const acceptedSet = acceptedOnVisitSet
     const current = photoStyleSettings as Record<string, unknown>
     const baseline = (originalContextSettings as Record<string, unknown> | undefined) ?? packageDefaults
 
@@ -126,7 +142,7 @@ export function useCustomizationCompletion({
       return false
     }
 
-    const unedited = rawUneditedFields.filter((key) => {
+    const unedited = scopedRawUneditedFields.filter((key) => {
       if (!acceptedSet.has(key)) return true
       return !acceptedVisitedStepKeys.has(key)
     })
@@ -141,8 +157,8 @@ export function useCustomizationCompletion({
 
     return unedited
   }, [
-    rawUneditedFields,
-    acceptedOnVisitKeys,
+    scopedRawUneditedFields,
+    acceptedOnVisitSet,
     acceptedVisitedStepKeys,
     photoStyleSettings,
     originalContextSettings,

@@ -53,8 +53,8 @@ export class ShotTypeElement extends StyleElement {
    */
   private contributeToPersonGeneration(shotType: ShotTypeConfig): ElementContribution {
     // Person-generation phase: framing rules are handled by:
-    // - Hard Constraint #2 in v3-step1a-person-generation.ts (bodyBoundaryInstruction)
-    //   which includes MUST SHOW, MUST NOT SHOW, and CUT POINT specifications
+    // - getStep1aShotTypeFramingConstraint() in shot-type/prompt.ts
+    //   which applies shot-type-specific body boundary instructions
     // - JSON framing section (shot_type, crop_points, composition)
     //
     // We only contribute the payload and metadata here to avoid duplication.
@@ -82,10 +82,8 @@ export class ShotTypeElement extends StyleElement {
    * Ensures framing is maintained when composing person with background
    */
   private contributeToComposition(shotType: ShotTypeConfig): ElementContribution {
-    // Composition phase: framing preservation is handled by Hard Constraint #1 in
-    // v3-step2-final-composition.ts which explicitly states:
-    // "Do NOT change the person's identity, pose, expression, clothing, or crop point.
-    // The person is already framed as [shot type] - maintain this exact framing."
+    // Composition phase: framing preservation is handled by
+    // getStep2ShotTypeFramingConstraint() in shot-type/prompt.ts.
     //
     // We only contribute metadata here to avoid duplication.
     // Note: We intentionally do NOT add "Adjust background scale or positioning" freedom

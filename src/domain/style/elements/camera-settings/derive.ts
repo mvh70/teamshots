@@ -105,18 +105,18 @@ function getISO(input: CameraSettingsInput): number {
   // Outdoor
   if (backgroundEnvironment === 'outdoor') {
     if (backgroundModifier === 'bright') return 100
-    if (backgroundModifier === 'shade') return 400
-    return 200  // Overcast or default outdoor
+    if (backgroundModifier === 'shade') return 100
+    return 100  // Overcast or default outdoor
   }
 
   // Indoor
   if (backgroundEnvironment === 'indoor') {
-    if (backgroundModifier === 'bright') return 200
-    if (backgroundModifier === 'dim') return 1600
-    return 400  // Natural light default
+    if (backgroundModifier === 'bright') return 100
+    if (backgroundModifier === 'dim') return 100
+    return 100  // Natural light default
   }
 
-  return 400  // Safe universal default
+  return 100  // Safe universal default
 }
 
 /**

@@ -41,24 +41,10 @@ const STEP_MESSAGES: Record<string, ProgressMessage[]> = {
     { message: 'Almost ready for your wow moment...', emoji: '🎯' },
   ],
   'starting-preprocessing': [
-    { message: 'Starting your professional transformation...', emoji: '🚀' },
-    { message: 'Your photo is about to get incredible...', emoji: '✨' },
-    { message: 'Preparing something you\'ll want to share...', emoji: '📸' },
-    { message: 'Your professional upgrade begins now...', emoji: '⚡' },
-    { message: 'Get ready for your best professional photos yet...', emoji: '🌟' },
-    { message: 'This is going to be worth the wait...', emoji: '⏳' },
-    { message: 'Your LinkedIn transformation starts here...', emoji: '💼' },
-    { message: 'Creating photos that boost your confidence...', emoji: '💫' },
+    { message: '[1/4] Setting up your photo session...', emoji: '🚀' },
   ],
   'completed-preprocessing': [
-    { message: 'Your professional photos are ready...', emoji: '✨' },
-    { message: 'You\'re going to love what we created...', emoji: '💫' },
-    { message: 'Your transformation is complete...', emoji: '🚀' },
-    { message: 'Ready for your wow moment...', emoji: '🌟' },
-    { message: 'These photos are going to change everything...', emoji: '⚡' },
-    { message: 'Your best professional self awaits...', emoji: '👑' },
-    { message: 'You\'re about to see something incredible...', emoji: '🎯' },
-    { message: 'Your professional photos are ready to impress...', emoji: '📸' },
+    { message: 'Your photo is ready!', emoji: '✨' },
   ],
   'v2-generating-person': [
     { message: 'Crafting your professional silhouette...', emoji: '🎨' },
@@ -92,37 +78,29 @@ const STEP_MESSAGES: Record<string, ProgressMessage[]> = {
     { message: 'You\'re about to meet your professional twin...', emoji: '👯' },
     { message: 'Your true professional image is ready...', emoji: '🚀' },
   ],
+  'v3-preparing-assets': [
+    { message: '[1/4] Preparing your brand materials...', emoji: '📦' },
+  ],
+  'v3-evaluating-branding': [
+    { message: '[1/4] Validating logo quality...', emoji: '🔎' },
+  ],
   'v3-generating-person': [
-    { message: 'Crafting your professional silhouette...', emoji: '🎨' },
-    { message: 'Building you from the ground up...', emoji: '🧱' },
-    { message: 'Your professional foundation is taking shape...', emoji: '🏗️' },
-    { message: 'Getting your pose and style just right...', emoji: '✨' },
-    { message: 'Making you look professional and approachable...', emoji: '💼' },
-    { message: 'Your professional self is emerging...', emoji: '🌟' },
+    { message: '[2/4] Creating your portrait...', emoji: '🎨' },
   ],
   'v3-generating-background': [
-    { message: 'Setting the stage for your professional debut...', emoji: '🎭' },
-    { message: 'Preparing the perfect backdrop...', emoji: '🖼️' },
-    { message: 'Your brand environment is coming together...', emoji: '🏢' },
-    { message: 'Creating the right atmosphere for success...', emoji: '⚡' },
-    { message: 'Making sure your background tells your story...', emoji: '📖' },
-    { message: 'Your professional setting is almost ready...', emoji: '🎯' },
+    { message: '[2/4] Generating your background...', emoji: '🖼️' },
+  ],
+  'v3-person-complete': [
+    { message: '[2/4] Portrait done! Preparing the scene...', emoji: '✅' },
+  ],
+  'v3-preparing-composition': [
+    { message: '[3/4] Composing the final photo...', emoji: '🧩' },
   ],
   'v3-compositing': [
-    { message: 'Bringing you and your world together...', emoji: '🤝' },
-    { message: 'Your professional image is becoming one...', emoji: '🔗' },
-    { message: 'Merging your presence with your environment...', emoji: '🌍' },
-    { message: 'This is where the magic happens...', emoji: '✨' },
-    { message: 'Your complete professional picture emerges...', emoji: '🎨' },
-    { message: 'Almost there - you\'re looking cohesive...', emoji: '💫' },
+    { message: '[3/4] Placing you in the scene...', emoji: '🤝' },
   ],
   'v3-refining': [
-    { message: 'Adding those final personal touches...', emoji: '🔍' },
-    { message: 'Making sure it\'s really you...', emoji: '👀' },
-    { message: 'Your authentic self shines through...', emoji: '🌟' },
-    { message: 'Perfecting the details that matter most...', emoji: '⚡' },
-    { message: 'You\'re about to meet your professional twin...', emoji: '👯' },
-    { message: 'Your true professional image is ready...', emoji: '🚀' },
+    { message: '[4/4] Final quality check...', emoji: '🔍' },
   ],
 }
 
@@ -198,4 +176,3 @@ export function formatProgressWithAttempt(
   const formatted = formatProgressMessage(progressMsg)
   return `Generation #${currentAttempt}\n${progress}% - ${formatted}`
 }
-

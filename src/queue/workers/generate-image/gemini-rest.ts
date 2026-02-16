@@ -4,11 +4,24 @@ import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { isRateLimitError } from '@/lib/rate-limit-retry'
 import { PROVIDER_DEFAULTS } from './config'
+import {
+  assertValidModelName,
+  extractThinkingTextParts,
+  isGemini3ModelName,
+  logGemini3Thinking,
+  validateReferenceImages,
+  type GeminiReferenceImage,
+  type GeminiUsageMetadata,
+} from './gemini-shared'
 
-export interface GeminiReferenceImage {
-  mimeType: string
-  base64: string
-  description?: string
+const GOOGLE_GEN_AI_CLIENTS = new Map<string, GoogleGenAI>()
+
+function getOrCreateGoogleGenAiClient(apiKey: string): GoogleGenAI {
+  const existing = GOOGLE_GEN_AI_CLIENTS.get(apiKey)
+  if (existing) return existing
+  const client = new GoogleGenAI({ apiKey })
+  GOOGLE_GEN_AI_CLIENTS.set(apiKey, client)
+  return client
 }
 
 export interface GenerationOptions {
@@ -23,41 +36,12 @@ export interface GenerationOptions {
 }
 
 /**
- * Usage metadata returned from Gemini API calls
- */
-export interface GeminiUsageMetadata {
-  inputTokens?: number
-  outputTokens?: number
-  totalTokens?: number
-  imagesGenerated: number
-  durationMs: number
-}
-
-/**
  * Result of a Gemini generation call (internal - without provider info)
  */
-export interface GeminiGenerationResult {
+export interface GeminiRestGenerationResult {
   images: Buffer[]
   usage: GeminiUsageMetadata
-}
-
-// Map Vertex AI safety settings to REST API format
-function mapSafetySettings(vertexSettings?: Array<{
-  category: HarmCategory
-  threshold: 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
-}>): Array<{
-  category: HarmCategory
-  threshold: 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
-}> | undefined {
-  if (!vertexSettings) return undefined
-
-  return vertexSettings.map(setting => ({
-    category: setting.category,
-    threshold: setting.threshold === 'BLOCK_ONLY_HIGH' ? 'BLOCK_ONLY_HIGH' :
-               setting.threshold === 'BLOCK_MEDIUM_AND_ABOVE' ? 'BLOCK_MEDIUM_AND_ABOVE' :
-               setting.threshold === 'BLOCK_LOW_AND_ABOVE' ? 'BLOCK_LOW_AND_ABOVE' :
-               'BLOCK_NONE'
-  }))
+  thinking?: string
 }
 
 /**
@@ -73,8 +57,9 @@ async function generateWithGemini3DirectFetch(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   startTime: number = Date.now()
-): Promise<GeminiGenerationResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+): Promise<GeminiRestGenerationResult> {
+  assertValidModelName(modelName)
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
 
   Logger.info('Calling Gemini 3 via direct fetch', {
     modelName,
@@ -109,6 +94,11 @@ async function generateWithGemini3DirectFetch(
     responseModalities: ['Text', 'Image']
   }
 
+  // Request thought parts explicitly for Gemini 3 models so they can be logged.
+  generationConfig.thinkingConfig = {
+    includeThoughts: true
+  }
+
   // Add imageConfig if aspect ratio or resolution is specified
   const effectiveResolution = resolution ?? PROVIDER_DEFAULTS.rest.resolution
   if (aspectRatio || effectiveResolution) {
@@ -120,16 +110,25 @@ async function generateWithGemini3DirectFetch(
 
   const requestBody = {
     contents: [{
+      role: 'user',
       parts
     }],
     generationConfig
   }
 
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000)
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    }).finally(() => {
+      clearTimeout(timeoutId)
     })
 
     if (!response.ok) {
@@ -148,6 +147,7 @@ async function generateWithGemini3DirectFetch(
         content?: {
           parts?: Array<{
             text?: string
+            thought?: boolean
             inlineData?: { mimeType: string; data: string }
           }>
         }
@@ -185,6 +185,13 @@ async function generateWithGemini3DirectFetch(
       }
     }
 
+    const thinkingTextParts = extractThinkingTextParts(responseParts)
+    const thinking = logGemini3Thinking({
+      provider: 'gemini-rest',
+      modelName,
+      texts: thinkingTextParts
+    })
+
     if (generatedImages.length === 0) {
       Logger.error('Gemini 3 returned no images', {
         modelName,
@@ -213,7 +220,8 @@ async function generateWithGemini3DirectFetch(
 
     return {
       images: generatedImages,
-      usage
+      usage,
+      thinking,
     }
   } catch (error) {
     Logger.error('Gemini 3 direct fetch failed', {
@@ -249,7 +257,7 @@ export async function generateWithGeminiRest(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
-): Promise<GeminiGenerationResult> {
+): Promise<GeminiRestGenerationResult> {
   const startTime = Date.now()
   // Support both GOOGLE_CLOUD_API_KEY and GEMINI_API_KEY
   const apiKey = Env.string('GOOGLE_CLOUD_API_KEY', '') || Env.string('GEMINI_API_KEY', '')
@@ -264,9 +272,9 @@ export async function generateWithGeminiRest(
   }
 
   // Initialize the REST API client
-  const ai = new GoogleGenAI({
-    apiKey: apiKey,
-  })
+  assertValidModelName(modelName)
+
+  const ai = getOrCreateGoogleGenAiClient(apiKey)
 
   // Set up generation config based on user's example
   const generationConfig = {
@@ -276,7 +284,7 @@ export async function generateWithGeminiRest(
     imageConfig: {
       aspectRatio: aspectRatio ?? "1:1",
       imageSize: resolution ?? PROVIDER_DEFAULTS.rest.resolution,
-      outputMimeType: "image/png",
+      outputMimeType: 'image/jpeg',
     },
   }
 
@@ -300,7 +308,7 @@ export async function generateWithGeminiRest(
     },
   ]
 
-  const safetySettings = mapSafetySettings(options?.safetySettings) || defaultSafetySettings
+  const safetySettings = options?.safetySettings || defaultSafetySettings
 
   // Validate images before sending
   if (!images || images.length === 0) {
@@ -311,19 +319,11 @@ export async function generateWithGeminiRest(
     throw new Error('No reference images provided to Gemini API')
   }
 
-  // Validate each image has required fields and log missing descriptions
+  validateReferenceImages(images, 'generateWithGeminiRest')
+
+  // Warn if description is missing (critical for model understanding)
   for (let i = 0; i < images.length; i++) {
     const img = images[i]
-    if (!img.base64 || !img.mimeType) {
-      Logger.error('generateWithGeminiRest: Invalid reference image', {
-        index: i,
-        hasBase64: !!img.base64,
-        hasMimeType: !!img.mimeType,
-        description: img.description?.substring(0, 100)
-      })
-      throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
-    }
-    // Warn if description is missing (critical for model understanding)
     if (!img.description || img.description.trim().length === 0) {
       Logger.warn('generateWithGeminiRest: Reference image missing description', {
         index: i,
@@ -384,6 +384,8 @@ export async function generateWithGeminiRest(
     })
   }
   
+  const shouldLogDetailedParts = process.env.NODE_ENV !== 'production'
+
   Logger.info('Sending Gemini REST API request', {
     modelName,
     partsCount: contents[0].parts.length,
@@ -391,33 +393,37 @@ export async function generateWithGeminiRest(
     expectedTextParts,
     imagePartsCount: imageParts.length,
     expectedImageParts,
-    partsStructure: contents[0].parts.map((part, idx) => {
-      if ('text' in part) {
-        const isPrompt = idx === 0
-        const isDescription = !isPrompt && part.text.includes('REFERENCE IMAGE') || part.text.includes('Company logo') || part.text.includes('Custom background') || part.text.includes('FORMAT')
-        return {
+    partsStructure: shouldLogDetailedParts
+      ? contents[0].parts.map((part, idx) => {
+          if ('text' in part) {
+            const isPrompt = idx === 0
+            const isDescription = (!isPrompt && part.text.includes('REFERENCE IMAGE')) || part.text.includes('Company logo') || part.text.includes('Custom background') || part.text.includes('FORMAT')
+            return {
+              index: idx,
+              type: isPrompt ? 'prompt' : isDescription ? 'description' : 'text',
+              preview: part.text.substring(0, 150) + (part.text.length > 150 ? '...' : ''),
+              length: part.text.length
+            }
+          } else if ('inlineData' in part) {
+            return {
+              index: idx,
+              type: 'image',
+              mimeType: part.inlineData.mimeType,
+              dataLength: part.inlineData.data.length
+            }
+          }
+          return { index: idx, type: 'unknown' }
+        })
+      : undefined,
+    imageDetails: shouldLogDetailedParts
+      ? images.map((img, idx) => ({
           index: idx,
-          type: isPrompt ? 'prompt' : (isDescription ? 'description' : 'text'),
-          preview: part.text.substring(0, 150) + (part.text.length > 150 ? '...' : ''),
-          length: part.text.length
-        }
-      } else if ('inlineData' in part) {
-        return {
-          index: idx,
-          type: 'image',
-          mimeType: part.inlineData.mimeType,
-          dataLength: part.inlineData.data.length
-        }
-      }
-      return { index: idx, type: 'unknown' }
-    }),
-    imageDetails: images.map((img, idx) => ({
-      index: idx,
-      mimeType: img.mimeType,
-      base64Length: img.base64?.length || 0,
-      hasDescription: !!img.description,
-      description: img.description?.substring(0, 150) || 'NO_DESCRIPTION'
-    })),
+          mimeType: img.mimeType,
+          base64Length: img.base64?.length || 0,
+          hasDescription: !!img.description,
+          description: img.description?.substring(0, 150) || 'NO_DESCRIPTION'
+        }))
+      : undefined,
     hasAspectRatio: !!aspectRatio,
     hasResolution: !!resolution,
     generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined
@@ -437,7 +443,13 @@ export async function generateWithGeminiRest(
 
     // Use non-streaming for image generation (per official docs)
     // Image generation doesn't work properly with streaming
-    const response = await ai.models.generateContent(req)
+    const IMAGE_TIMEOUT_MS = 120000
+    const response = await Promise.race([
+      ai.models.generateContent(req),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Gemini REST image request timed out after ${IMAGE_TIMEOUT_MS}ms`)), IMAGE_TIMEOUT_MS)
+      ),
+    ])
 
     // Extract generated images from response
     const generatedImages: Buffer[] = []

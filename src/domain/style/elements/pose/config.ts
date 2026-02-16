@@ -16,6 +16,7 @@ export interface PoseTemplate {
     weight_distribution: string
     arms: string
     description: string
+    sitting_position?: string
   }
   prompt_instructions: string
 }
@@ -23,13 +24,11 @@ export interface PoseTemplate {
 export const ALL_POSE_IDS: PoseType[] = [
   'power_classic',
   'classic_corporate',
-  'power_crossed',
   'power_cross',
   'casual_confident',
   'approachable_cross',
   'approachable_lean',
   'walking_confident',
-  'sitting_engaged',
   'executive_seated',
   'thinker',
   'slimming_three_quarter',
@@ -69,20 +68,6 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
     },
     prompt_instructions:
       'Classic corporate headshot: subject stands square to camera with even, relaxed shoulders and a direct, trustworthy gaze.'
-  },
-  power_crossed: {
-    id: 'power_crossed',
-    icon: '💪',
-    pose: {
-      body_angle: 'Slight angle',
-      head_position: 'Turned to camera',
-      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
-      shoulders: 'Relaxed',
-      weight_distribution: 'Back foot',
-      arms: 'Crossed confidently',
-      description: 'Assertive professional stance'
-    },
-    prompt_instructions: 'Subject with arms crossed, projecting confidence and authority.'
   },
   power_cross: {
     id: 'power_cross',
@@ -172,20 +157,6 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
     prompt_instructions:
       'Three-quarter slimming turn: body angled 45° away from camera, head turned back toward camera with chin slightly up and over the front shoulder for a dynamic, slimming profile-ready look.'
   },
-  sitting_engaged: {
-    id: 'sitting_engaged',
-    icon: '🪑',
-    pose: {
-      body_angle: 'Seated, leaning forward',
-      head_position: 'Attentive',
-      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
-      shoulders: 'Relaxed',
-      weight_distribution: 'Seated',
-      arms: 'On knees or table',
-      description: 'Engaged seated posture'
-    },
-    prompt_instructions: 'Subject seated, leaning forward slightly, engaged and attentive.'
-  },
   executive_seated: {
     id: 'executive_seated',
     icon: '🛋️',
@@ -196,7 +167,8 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       shoulders: 'Open',
       weight_distribution: 'Seated',
       arms: 'On armrests or lap',
-      description: 'Comfortable executive seating'
+      description: 'Comfortable executive seating',
+      sitting_position: 'Seated back comfortably, weight resting against chair back'
     },
     prompt_instructions: 'Subject seated comfortably, relaxed and authoritative.'
   },
@@ -239,7 +211,9 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       shoulders: 'Relaxed down, but leaning forward to create a smaller gap between subject and lens',
       weight_distribution: 'Centered on chair, upper body weight leaning on forearms/thighs',
       arms: 'Forearms resting on thighs, hands loosely clasped',
-      description: 'Warm and attentive seated pose, implying active listening across a desk'
+      description: 'Warm and attentive seated pose, implying active listening across a desk',
+      sitting_position:
+        'Seated upright, hinged forward from hips approximately 15 degrees, weight on forearms/thighs'
     },
     prompt_instructions:
       'Seated engagement pose: subject seated, hinged forward from hips approximately 15 degrees, with forearms resting on thighs or a table surface and hands loosely clasped. Head level and engaged, slightly pushed forward (turtle technique) to avoid neck bunching. Ensure arms do not cross high enough to block any logo if branding is present. This creates a warm, attentive pose that implies active listening across a desk.'

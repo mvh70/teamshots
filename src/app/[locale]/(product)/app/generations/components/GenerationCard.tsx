@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { formatDate } from '@/lib/format'
 import { LoadingSpinner } from '@/components/ui'
 import { GenerationRating } from '@/components/feedback/GenerationRating'
-import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useGenerationStatus } from '../hooks/useGenerationStatus'
 import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirmationDialog'
 import { trackPhotoDownloaded, trackRegenerateClicked } from '@/lib/track'
@@ -43,6 +43,82 @@ export type GenerationListItem = {
 }
 
 const MAX_IMAGE_RETRY_ATTEMPTS = 2
+const TIMED_PROGRESS_DURATION_MS = 90_000
+const PROGRESS_MILESTONE_STEP = 10
+const WORKFLOW_PROGRESS_MILESTONES = [10, 15, 30, 40, 50, 60, 85, 100] as const
+type ProgressTheme = 'runner' | 'butterfly' | 'lion'
+
+const getProgressTheme = (id: string): ProgressTheme => {
+  const hash = Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  const themes: ProgressTheme[] = ['runner', 'butterfly', 'lion']
+  return themes[hash % themes.length]
+}
+
+const stripProgressPercentage = (message?: string) => {
+  if (!message) return ''
+  return message
+    .replace(/\s*\d{1,3}%/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[-–—:|]\s*$/, '')
+    .trim()
+}
+
+const compactProgressMessage = (message?: string) => {
+  if (!message) return ''
+  const withoutPrefix = message.replace(/^generation\s*#?\d+\s*[-:]\s*/i, '').trim()
+  if (withoutPrefix.length <= 58) return withoutPrefix
+  return `${withoutPrefix.slice(0, 57).trimEnd()}…`
+}
+
+const extractWorkflowStepFromMessage = (message?: string) => {
+  if (!message) return null
+  const match = message.match(/\[(\d)\s*\/\s*4\]/)
+  if (!match) return null
+  const step = Number.parseInt(match[1], 10)
+  if (!Number.isFinite(step) || step < 1 || step > 4) return null
+  return step as 1 | 2 | 3 | 4
+}
+
+const normalizeProgressPercent = (progress?: number) => {
+  if (typeof progress !== 'number' || !Number.isFinite(progress)) return null
+  // Some job systems report progress as 0..1 instead of 0..100.
+  const normalized = progress > 0 && progress < 1 ? progress * 100 : progress
+  const clamped = Math.max(0, Math.min(100, normalized))
+  // Anchor tiny non-zero values to first meaningful workflow milestone.
+  if (clamped > 0 && clamped < 15) return 15
+  return clamped
+}
+
+const inferWorkflowStepFromProgress = (progress?: number) => {
+  const normalized = normalizeProgressPercent(progress)
+  if (normalized === null || normalized <= 0) return null
+  if (normalized >= 85) return 4 as const
+  if (normalized >= 50) return 3 as const
+  if (normalized >= 15) return 2 as const
+  return 1 as const
+}
+
+const FALLBACK_WORKFLOW_MESSAGES: Record<1 | 2 | 3 | 4, string> = {
+  1: '[1/4] Preparing your photo session...',
+  2: '[2/4] Creating your portrait...',
+  3: '[3/4] Composing the final photo...',
+  4: '[4/4] Final quality check...'
+}
+
+const getNextMilestone = (currentProgress: number) => {
+  return WORKFLOW_PROGRESS_MILESTONES.find(milestone => currentProgress < milestone) ?? 100
+}
+
+const easeInOutCubic = (t: number) => {
+  if (t < 0.5) {
+    return 4 * t * t * t
+  }
+  return 1 - Math.pow(-2 * t + 2, 3) / 2
+}
+
+const getStableHash = (value: string) => {
+  return Array.from(value).reduce((acc, char) => ((acc * 31) + char.charCodeAt(0)) >>> 0, 7)
+}
 
 const buildImageUrl = (key: string, retryVersion: number, token?: string) => {
   const params = new URLSearchParams({ key })
@@ -152,6 +228,19 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   //    However, if we have a generatedImageUrl (even if extraction failed), we're not waiting anymore
   const isWaitingForKeys = currentStatus === 'completed' && !effectiveGeneratedKey && !effectiveAcceptedKey && !hasGeneratedImageUrl && !isFailed
   const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || isWaitingForKeys
+  const [timedProgressPercent, setTimedProgressPercent] = useState(0)
+  const realProgressValue = normalizeProgressPercent(currentJobStatus?.progress)
+  const realProgressMilestone = realProgressValue === null
+    ? null
+    : Math.floor(realProgressValue / PROGRESS_MILESTONE_STEP) * PROGRESS_MILESTONE_STEP
+  const progressTheme = getProgressTheme(item.id)
+  const runnerHash = getStableHash(`${item.id}-runner`)
+  const isFemaleRunner = runnerHash % 2 === 0
+  const runnerTargetAnimal = (runnerHash >> 1) % 2 === 0 ? '🐶' : '🐱'
+  const showRunnerTargetHeart = (runnerHash >> 2) % 3 === 0
+  const butterflyFlower = ['🌸', '🌺', '🌼'][runnerHash % 3]
+  const segmentRef = useRef<{ milestone: number | null, startTime: number }>({ milestone: null, startTime: 0 })
+  const generationStartRef = useRef<number | null>(null)
 
   // Debug logging for race condition investigation
   useEffect(() => {
@@ -183,6 +272,90 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       }
     }
   }, [currentStatus, effectiveGeneratedKey, effectiveAcceptedKey, hasGeneratedImageUrl, isWaitingForKeys])
+
+  useEffect(() => {
+    if (!isIncomplete) {
+      setTimedProgressPercent(0)
+      segmentRef.current = { milestone: null, startTime: 0 }
+      generationStartRef.current = null
+      return
+    }
+
+    if (isWaitingForKeys) {
+      setTimedProgressPercent(100)
+      segmentRef.current = { milestone: 100, startTime: Date.now() }
+      return
+    }
+
+    if (generationStartRef.current === null) {
+      const createdAtMs = Date.parse(item.createdAt)
+      generationStartRef.current = Number.isNaN(createdAtMs) ? Date.now() : createdAtMs
+    }
+    const generationStartTime = generationStartRef.current
+    if (segmentRef.current.milestone !== realProgressValue) {
+      segmentRef.current = { milestone: realProgressValue, startTime: Date.now() }
+    }
+
+    const updateTimedProgress = () => {
+      const elapsed = Date.now() - generationStartTime
+      const elapsedPercent = Math.max(0, Math.min(100, (elapsed / TIMED_PROGRESS_DURATION_MS) * 100))
+      const milestone = realProgressValue
+
+      const { targetPercent, nextMilestone } = (() => {
+        if (milestone === null) return { targetPercent: elapsedPercent, nextMilestone: null as number | null }
+
+        const resolvedNextMilestone = getNextMilestone(milestone)
+        if (resolvedNextMilestone <= milestone) {
+          return { targetPercent: milestone, nextMilestone: resolvedNextMilestone }
+        }
+
+        const segmentRange = resolvedNextMilestone - milestone
+        const segmentDurationMs = Math.max(18_000, TIMED_PROGRESS_DURATION_MS * (segmentRange / 60))
+        const segmentElapsedMs = Math.max(0, Date.now() - segmentRef.current.startTime)
+        const initialSegmentProgress = Math.min(1, segmentElapsedMs / segmentDurationMs)
+        const easedInitialProgress = easeInOutCubic(initialSegmentProgress)
+        // Keep creeping toward (but never crossing) the next milestone during long phases.
+        const creepingFactor = 1 - Math.exp(-segmentElapsedMs / segmentDurationMs)
+        const compositeProgress = Math.max(easedInitialProgress * 0.6, creepingFactor)
+        const towardNextMilestone = milestone + (segmentRange * compositeProgress * 0.96)
+        return {
+          targetPercent: Math.max(milestone, Math.min(towardNextMilestone, resolvedNextMilestone)),
+          nextMilestone: resolvedNextMilestone
+        }
+      })()
+
+      setTimedProgressPercent(prev => {
+        if (milestone !== null && prev < milestone) return milestone
+
+        let nextValue = prev
+        if (targetPercent !== null && targetPercent > prev) {
+          const delta = targetPercent - prev
+          const nearTarget = delta < 0.8
+          const smoothing = nearTarget ? 0.2 : 0.35
+          nextValue = Math.min(targetPercent, prev + (delta * smoothing))
+        }
+
+        // Safety creep: keep visible forward motion toward next milestone.
+        if (nextMilestone !== null && milestone !== null && nextMilestone > milestone) {
+          const segmentRange = nextMilestone - milestone
+          const ticksPerTimeline = TIMED_PROGRESS_DURATION_MS / 500
+          const minStepPerTick = Math.max(0.04, (segmentRange / ticksPerTimeline) * 0.8)
+          const ceiling = nextMilestone - 0.35
+          const creeped = Math.min(ceiling, prev + minStepPerTick)
+          nextValue = Math.max(nextValue, creeped)
+        }
+
+        return nextValue
+      })
+    }
+
+    updateTimedProgress()
+    const intervalId = window.setInterval(updateTimedProgress, 500)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [isIncomplete, isWaitingForKeys, item.createdAt, realProgressMilestone, realProgressValue])
 
   // Add timeout for waiting for keys to prevent infinite spinner
   // If we've been waiting for more than 5 seconds, force a page reload to get fresh data
@@ -331,6 +504,37 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   const [canScrollDown, setCanScrollDown] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const photoContainerRef = useRef<HTMLDivElement>(null) // Ref for the photo container
+  const [showInfoPopover, setShowInfoPopover] = useState(false)
+  const [infoPopoverPosition, setInfoPopoverPosition] = useState({ top: 0, left: 0 })
+  const [infoPopoverPlacement, setInfoPopoverPlacement] = useState<'top' | 'bottom'>('bottom')
+  const infoButtonRef = useRef<HTMLButtonElement | null>(null)
+  const infoPopoverRef = useRef<HTMLDivElement | null>(null)
+
+  const updateInfoPopoverPosition = () => {
+    const buttonEl = infoButtonRef.current
+    if (!buttonEl) return
+
+    const buttonRect = buttonEl.getBoundingClientRect()
+    const popoverEl = infoPopoverRef.current
+    const popoverWidth = popoverEl?.offsetWidth ?? 256
+    const popoverHeight = popoverEl?.offsetHeight ?? 140
+    const viewportPadding = 8
+    const gap = 8
+
+    let left = buttonRect.left
+    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - popoverWidth - viewportPadding))
+
+    let top = buttonRect.bottom + gap
+    let placement: 'top' | 'bottom' = 'bottom'
+    if (top + popoverHeight + viewportPadding > window.innerHeight) {
+      top = buttonRect.top - popoverHeight - gap
+      placement = 'top'
+    }
+    top = Math.max(viewportPadding, top)
+
+    setInfoPopoverPosition({ top, left })
+    setInfoPopoverPlacement(placement)
+  }
 
   // Emit custom event when generated image is loaded (for tour triggering)
   useEffect(() => {
@@ -507,6 +711,53 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     }
   }, []) // updateFromEvent uses refs, so it's stable
 
+  useEffect(() => {
+    if (!showInfoPopover) return
+
+    updateInfoPopoverPosition()
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (
+        infoButtonRef.current?.contains(target) ||
+        infoPopoverRef.current?.contains(target)
+      ) {
+        return
+      }
+      setShowInfoPopover(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowInfoPopover(false)
+      }
+    }
+
+    const handleReposition = () => {
+      updateInfoPopoverPosition()
+    }
+
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true)
+    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('touchstart', handleOutsideClick)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('touchstart', handleOutsideClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showInfoPopover])
+
+  useEffect(() => {
+    if (isIncomplete || isFailed) {
+      setShowInfoPopover(false)
+    }
+  }, [isIncomplete, isFailed])
+
   // Don't render if failed generation has been hidden
   if (failedGenerationHidden && currentStatus === 'failed') {
     return null
@@ -522,6 +773,42 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     return null
   }
 
+  const progressCharacter = progressTheme === 'runner'
+    ? (isFemaleRunner ? '🏃‍♀️' : '🏃‍♂️')
+    : progressTheme === 'butterfly'
+      ? '🦋'
+      : timedProgressPercent < 35
+        ? '🐱'
+        : timedProgressPercent < 70
+          ? '🐯'
+          : '🦁'
+
+  const progressCharacterLeft = Math.max(2, Math.min(98, timedProgressPercent))
+  const rawGenerationMessage = compactProgressMessage(stripProgressPercentage(currentJobStatus?.message))
+  const displayedWorkflowStep = extractWorkflowStepFromMessage(rawGenerationMessage)
+  const inferredWorkflowStep = inferWorkflowStepFromProgress(currentJobStatus?.progress)
+  const generationMessage = (
+    inferredWorkflowStep !== null
+      && displayedWorkflowStep !== null
+      && displayedWorkflowStep < inferredWorkflowStep
+  )
+    ? FALLBACK_WORKFLOW_MESSAGES[inferredWorkflowStep]
+    : rawGenerationMessage || (
+      inferredWorkflowStep !== null
+        ? FALLBACK_WORKFLOW_MESSAGES[inferredWorkflowStep]
+        : t('generating', { default: 'Generating...' })
+    )
+  const nextMilestoneForPulse = realProgressValue === null ? null : getNextMilestone(realProgressValue)
+  const milestoneRangeForPulse = (realProgressValue !== null && nextMilestoneForPulse !== null)
+    ? Math.max(1, nextMilestoneForPulse - realProgressValue)
+    : null
+  const isPlateauingNearMilestone = !isWaitingForKeys
+    && realProgressValue !== null
+    && nextMilestoneForPulse !== null
+    && nextMilestoneForPulse > realProgressValue
+    && milestoneRangeForPulse !== null
+    && timedProgressPercent >= (realProgressValue + (milestoneRangeForPulse * 0.75))
+
   return (
     <div
       className="relative rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
@@ -529,7 +816,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
       <div
         className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
         ref={photoContainerRef}
-        onClick={(e) => {
+        onClick={() => {
           // Robust image URL retrieval with fallback for live generations
           const basicUrl = getDisplayImageUrl()
           const imageUrl = basicUrl || (liveGeneration?.generatedImageUrls?.[0] ?
@@ -546,7 +833,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
           className="absolute inset-0 bg-gray-50 overflow-hidden select-none"
         >
           {/* BACKGROUND: Single selfie or collage of multiple input selfies */}
-          {Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
+          {!isIncomplete && (Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
             <div className="absolute inset-0 grid bg-gray-200"
               style={{
                 gridTemplateColumns: item.inputSelfieUrls.length <= 2 ? 'repeat(2, 1fr)'
@@ -592,7 +879,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                 }
               }}
             />
-          )}
+          ))}
 
           {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
           {isFailed ? (
@@ -616,7 +903,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
             </div>
           ) : isWaitingForKeys ? (
             // Status is completed but waiting for image keys to arrive
-            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="absolute inset-0 z-20 bg-gray-100 flex items-center justify-center relative">
               <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
                 <p className="text-xs text-gray-600 whitespace-pre-line">
@@ -626,11 +913,11 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
             </div>
           ) : isIncomplete ? (
             // Placeholder for incomplete generation - show full spinner
-            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="absolute inset-0 z-20 bg-gray-100 flex items-center justify-center relative">
               <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
                 <p className="text-xs text-gray-600 whitespace-pre-line">
-                  {currentJobStatus?.message || t('generating', { default: 'Generating...' })}
+                  {generationMessage}
                 </p>
               </div>
             </div>
@@ -686,6 +973,63 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
             </div>
           )}
 
+          {/* Timed progress bar - always docked at the bottom while generating */}
+          {isIncomplete && !isFailed && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-2 pb-2">
+              <div className="relative h-4">
+                <div className="absolute inset-x-0 bottom-0 h-1.5 overflow-hidden rounded-full bg-gray-300/70">
+                  <div
+                    className="h-full bg-brand-primary transition-[width] duration-500 ease-linear"
+                    style={{ width: `${timedProgressPercent}%` }}
+                  />
+                  {isPlateauingNearMilestone && (
+                    <span
+                      className="absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-primary/70 animate-ping"
+                      style={{ left: `${progressCharacterLeft}%` }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                <span
+                  className={`pointer-events-none absolute bottom-0 -translate-x-1/2 -translate-y-[55%] text-[13px] leading-none ${
+                    progressTheme === 'butterfly'
+                      ? 'animate-bounce'
+                      : (isPlateauingNearMilestone ? 'animate-pulse' : '')
+                  }`}
+                  style={{
+                    left: `${progressCharacterLeft}%`,
+                    transform: progressTheme === 'runner'
+                      ? 'translateX(-50%) translateY(-55%) scaleX(-1)'
+                      : 'translateX(-50%) translateY(-55%)',
+                  }}
+                >
+                  {progressCharacter}
+                </span>
+                {progressTheme === 'runner' && (
+                  <span
+                    className={`pointer-events-none absolute bottom-0 right-0 translate-y-[-55%] text-[12px] leading-none ${
+                      isPlateauingNearMilestone ? 'animate-pulse' : ''
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {showRunnerTargetHeart ? `${runnerTargetAnimal}❤️` : runnerTargetAnimal}
+                  </span>
+                )}
+                {progressTheme === 'butterfly' && (
+                  <span
+                    className={`pointer-events-none absolute bottom-0 right-0 translate-y-[-55%] text-[12px] leading-none ${
+                      isPlateauingNearMilestone ? 'animate-pulse' : ''
+                    }`}
+                    style={{ right: '2px', fontSize: '15px' }}
+                    aria-hidden="true"
+                  >
+                    {butterflyFlower}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scroll hint arrow when content overflows */}
           {!isIncomplete && canScrollDown && (
             <button
@@ -737,43 +1081,70 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
         </div>
       </div>
 
-      {/* Info icon with hover popup - positioned outside all overflow-hidden containers */}
-      {!isIncomplete && (
-        <div className="absolute top-2 left-2 z-30 group">
+      {/* Info icon with floating popover rendered in a portal */}
+      {!isIncomplete && !isFailed && (
+        <div className="absolute top-2 left-2 z-30">
           <button
+            ref={infoButtonRef}
+            type="button"
             className="w-6 h-6 rounded-full bg-white/90 hover:bg-white shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowInfoPopover(prev => !prev)
+            }}
+            aria-haspopup="dialog"
+            aria-expanded={showInfoPopover}
+            aria-label="View generation details"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
-          {/* Hover popup */}
-          <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Generated by:</span>
-                <span className="font-medium text-gray-700">
-                  {item.generationType === 'team' ? (
-                    item.isOwnGeneration || item.personUserId === currentUserId
-                      ? t('generatedBy.you')
-                      : item.personFirstName || 'Team member'
-                  ) : t('generatedBy.you')}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Date:</span>
-                <span className="font-medium text-gray-700">{formatDate(item.createdAt)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Photo style:</span>
-                <span className="font-medium text-gray-700">{item.contextName || 'Freestyle'}</span>
-              </div>
-            </div>
-            {/* Arrow */}
-            <div className="absolute -top-1 left-3 w-2 h-2 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
-          </div>
         </div>
+      )}
+
+      {showInfoPopover && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={infoPopoverRef}
+          role="dialog"
+          aria-label="Generation details"
+          className="w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-[10001]"
+          style={{
+            position: 'fixed',
+            top: infoPopoverPosition.top,
+            left: infoPopoverPosition.left,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Generated by:</span>
+              <span className="font-medium text-gray-700">
+                {item.generationType === 'team' ? (
+                  item.isOwnGeneration || item.personUserId === currentUserId
+                    ? t('generatedBy.you')
+                    : item.personFirstName || 'Team member'
+                ) : t('generatedBy.you')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Date:</span>
+              <span className="font-medium text-gray-700">{formatDate(item.createdAt)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Photo style:</span>
+              <span className="font-medium text-gray-700">{item.contextName || 'Freestyle'}</span>
+            </div>
+          </div>
+          <div
+            className={`absolute left-3 w-2 h-2 bg-white border-gray-200 transform rotate-45 ${
+              infoPopoverPlacement === 'bottom'
+                ? '-top-1 border-l border-t'
+                : '-bottom-1 border-r border-b'
+            }`}
+          />
+        </div>,
+        document.body
       )}
 
       <div className="p-3 pb-4">
@@ -934,5 +1305,3 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     </div>
   )
 }
-
-

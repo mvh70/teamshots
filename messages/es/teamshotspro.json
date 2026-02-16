@@ -112,6 +112,111 @@
       }
     }
   },
+  "lp": {
+    "teamHeadshots": {
+      "meta": {
+        "title": "Landing de Headshots para Equipos - 3 Fotos de Prueba Gratis",
+        "description": "Crea headshots profesionales para tu equipo en 60 segundos. Mantiene a cada empleado alineado con tu marca con un solo estilo."
+      },
+      "labels": {
+        "before": "Antes",
+        "after": "Despues"
+      },
+      "hero": {
+        "title": "Headshots Profesionales de Equipo en 60 Segundos",
+        "subtitle": "Convierte selfies normales en headshots profesionales con un estilo de marca consistente para todo tu equipo.",
+        "cta": "Obten 3 Headshots Gratis",
+        "badges": {
+          "teams": "500+ Equipos",
+          "speed": "60 Segundos",
+          "payment": "Pago Unico"
+        },
+        "visual": {
+          "beforeAlt": "Ejemplo antes del headshot de equipo",
+          "afterAlt": "Ejemplo despues del headshot profesional de equipo"
+        }
+      },
+      "socialProof": {
+        "title": "Resultados Reales para Equipos",
+        "subtitle": "Dos ejemplos reales de clientes. Misma persona, mejor resultado profesional.",
+        "linkedin": "Ver LinkedIn",
+        "examples": {
+          "david": {
+            "name": "David Robles",
+            "role": "Ejecutivo Senior",
+            "company": "Evendo",
+            "beforeAlt": "Selfie de David Robles antes de la mejora con IA",
+            "afterAlt": "Headshot profesional de David Robles despues de la mejora con IA"
+          },
+          "clarice": {
+            "name": "Clarice Pinto",
+            "role": "Fundadora",
+            "company": "Pausetiv",
+            "beforeAlt": "Selfie de Clarice Pinto antes de la mejora con IA",
+            "afterAlt": "Headshot profesional de Clarice Pinto despues de la mejora con IA"
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Como Funciona",
+        "subtitle": "Todo lo que necesitas para tu equipo en un flujo simple.",
+        "steps": {
+          "setBrand": {
+            "title": "Define Marca",
+            "description": "Configura fondos, logo y reglas visuales una sola vez para todo el equipo."
+          },
+          "inviteTeam": {
+            "title": "Invita al Equipo",
+            "description": "Invita en lote y sigue el progreso desde un panel administrativo."
+          },
+          "uploadSelfie": {
+            "title": "Sube Selfie",
+            "description": "Cada persona sube una selfie clara desde su movil o laptop."
+          },
+          "download": {
+            "title": "Descarga",
+            "description": "Aprueba y descarga fotos finales consistentes para todos los perfiles."
+          }
+        }
+      },
+      "builtForTeams": {
+        "title": "Hecho para Equipos, No para Uso Individual",
+        "subtitle": "TeamShots da control y consistencia a los managers.",
+        "features": {
+          "bulkInvite": {
+            "title": "Invitaciones en Lote",
+            "description": "Invita a todo el equipo de una vez y controla el avance desde una sola vista."
+          },
+          "brandControl": {
+            "title": "Control de Marca",
+            "description": "Bloquea fondos y estilos aprobados para mantener coherencia en cada headshot."
+          },
+          "adminDashboard": {
+            "title": "Panel de Admin",
+            "description": "Centraliza aprobaciones, exportaciones y gestion de asientos en un solo flujo."
+          },
+          "consistentOutput": {
+            "title": "Resultado Consistente",
+            "description": "Mantiene una imagen unificada en LinkedIn, web y directorios internos."
+          }
+        }
+      },
+      "pricing": {
+        "title": "Precios Simples para Equipos",
+        "subtitle": "Sin suscripciones y sin paquetes confusos.",
+        "priceLine": "{price}/persona · {photos} fotos por persona · Pago unico",
+        "cta": "Obten 3 Headshots Gratis"
+      },
+      "finalCta": {
+        "kicker": "Listo para lanzar",
+        "title": "Tu equipo merece una imagen unificada",
+        "subtitle": "Empieza con tres fotos de prueba gratis y valida la calidad antes de pagar.",
+        "cta": "Obten 3 Headshots Gratis",
+        "disclaimer": "3 fotos de prueba gratis con marca de agua - sin tarjeta de credito.",
+        "support": "Preguntas? Contacta a {email}"
+      }
+    }
+  },
   "landing": {
     "teamshotspro": {
       "hero": {

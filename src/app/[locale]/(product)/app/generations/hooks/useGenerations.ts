@@ -4,6 +4,14 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import type { GenerationListItem } from '../components/GenerationCard'
 import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
+const noStoreRequestInit = {
+  cache: 'no-store' as RequestCache,
+  headers: {
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache'
+  }
+}
+
 interface GenerationsApiResponse {
   generations?: Record<string, unknown>[]
   items?: Record<string, unknown>[]
@@ -95,7 +103,7 @@ export function useGenerations(
   // Fetch generations with smart polling
   const { data: generationsData, isLoading } = useSWR<GenerationsApiResponse>(
     generationsKey,
-    swrFetcher,
+    (url: string) => swrFetcher<GenerationsApiResponse>(url, noStoreRequestInit),
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000,
@@ -126,7 +134,14 @@ export function useGenerations(
                 .map(async (id) => {
                   try {
                     const detail = await swrFetcher<{ status: string; errorMessage?: string }>(
-                      `/api/generations/${id}`
+                      `/api/generations/${id}`,
+                      {
+                        cache: 'no-store',
+                        headers: {
+                          'Cache-Control': 'no-cache',
+                          Pragma: 'no-cache'
+                        }
+                      }
                     )
                     if (detail.status === 'failed') {
                       notifiedFailuresRef.current.add(id)

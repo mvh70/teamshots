@@ -1,5 +1,7 @@
 import { readFile as fsReadFile } from 'node:fs/promises'
 
+import sharp from 'sharp'
+
 import { VertexAI, HarmCategory, HarmBlockThreshold } from '@google-cloud/vertexai'
 import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetting } from '@google-cloud/vertexai'
 
@@ -10,6 +12,7 @@ import { isRateLimitError, isTransientServiceError } from '@/lib/rate-limit-retr
 import {
   MODEL_CONFIG,
   STAGE_MODEL,
+  STAGE_RESOLUTION,
   DEFAULT_MODEL,
   PROVIDER_FALLBACK_ORDER,
   PROVIDER_DEFAULTS,
@@ -18,16 +21,37 @@ import {
   type ModelProvider,
   type StageName,
 } from './config'
+import {
+  assertValidModelName,
+  extractTextFromResponseParts,
+  extractThinkingTextParts,
+  isGemini3ModelName,
+  logGemini3Thinking,
+  validateReferenceImages,
+  type GeminiGenerationResult,
+  type GeminiReferenceImage,
+  type GeminiTextGenerationResult,
+  type GeminiTextUsageMetadata,
+  type GeminiUsageMetadata,
+} from './gemini-shared'
 
-export interface GeminiReferenceImage {
-  mimeType: string
-  base64: string
-  description?: string
-}
+export type {
+  GeminiGenerationResult,
+  GeminiReferenceImage,
+  GeminiTextGenerationResult,
+  GeminiTextUsageMetadata,
+  GeminiUsageMetadata,
+} from './gemini-shared'
 
-const MODEL_CACHE = new Map<string, GenerativeModel>()
+const MODEL_CACHE = new Map<string, Promise<GenerativeModel>>()
 let cachedProjectId: string | null = null
-let cachedLocation: string | null = null
+
+const CACHED_CREDENTIALS = {
+  openrouter: !!Env.string('OPENROUTER_API_KEY', ''),
+  vertex: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
+  rest: !!Env.string('GOOGLE_CLOUD_API_KEY', '') || !!Env.string('GEMINI_API_KEY', ''),
+  replicate: !!Env.string('REPLICATE_API_TOKEN', ''),
+} as const
 
 async function resolveProjectId(): Promise<string> {
   if (cachedProjectId) {
@@ -66,42 +90,36 @@ async function resolveProjectId(): Promise<string> {
 export async function getVertexGenerativeModel(modelName: string): Promise<GenerativeModel> {
   // Use model name exactly as provided - trust .env values are correct
   const normalizedModelName = modelName.trim()
+  const location = Env.string('GOOGLE_LOCATION', 'global')
+  const cacheKey = `${location}:${normalizedModelName}`
 
-  const cached = MODEL_CACHE.get(normalizedModelName)
+  const cached = MODEL_CACHE.get(cacheKey)
   if (cached) {
     return cached
   }
 
-  const projectId = await resolveProjectId()
-  const location = Env.string('GOOGLE_LOCATION', 'global')
-  
-  // Clear cache if location changed (models are location-specific)
-  if (cachedLocation !== null && cachedLocation !== location) {
-    Logger.warn('Location changed, clearing model cache', {
-      oldLocation: cachedLocation,
-      newLocation: location
-    })
-    MODEL_CACHE.clear()
-  }
-  cachedLocation = location
-  
-  
-  const vertexAI = new VertexAI({ project: projectId, location })
-  
-  try {
-    const model = vertexAI.getGenerativeModel({ model: normalizedModelName })
-    MODEL_CACHE.set(normalizedModelName, model)
-    Logger.debug('Successfully initialized Vertex AI model', { modelName: normalizedModelName, location })
-    return model
-  } catch (error) {
-    Logger.error('Failed to initialize Vertex AI model', {
-      modelName: normalizedModelName,
-      location,
-      error: error instanceof Error ? error.message : String(error),
-      note: 'If using gemini-3-pro-image-preview, verify it is available in Vertex AI. It may only be available via REST API (ai.google.dev) currently.'
-    })
-    throw error
-  }
+  const modelPromise = (async () => {
+    const projectId = await resolveProjectId()
+    const vertexAI = new VertexAI({ project: projectId, location })
+
+    try {
+      const model = vertexAI.getGenerativeModel({ model: normalizedModelName })
+      Logger.debug('Successfully initialized Vertex AI model', { modelName: normalizedModelName, location })
+      return model
+    } catch (error) {
+      MODEL_CACHE.delete(cacheKey)
+      Logger.error('Failed to initialize Vertex AI model', {
+        modelName: normalizedModelName,
+        location,
+        error: error instanceof Error ? error.message : String(error),
+        note: 'If using gemini-3-pro-image-preview, verify it is available in Vertex AI. It may only be available via REST API (ai.google.dev) currently.'
+      })
+      throw error
+    }
+  })()
+
+  MODEL_CACHE.set(cacheKey, modelPromise)
+  return modelPromise
 }
 
 export interface GenerationOptions {
@@ -119,61 +137,24 @@ export interface GenerationOptions {
 }
 
 /**
- * Usage metadata returned from generation calls
- */
-export interface GeminiUsageMetadata {
-  inputTokens?: number
-  outputTokens?: number
-  totalTokens?: number
-  imagesGenerated: number
-  durationMs: number
-}
-
-/**
- * Usage metadata for text-only generation calls
- */
-export interface GeminiTextUsageMetadata {
-  inputTokens?: number
-  outputTokens?: number
-  totalTokens?: number
-  durationMs: number
-}
-
-/**
- * Result of a text generation call with usage metadata
- */
-export interface GeminiTextGenerationResult {
-  text: string
-  usage: GeminiTextUsageMetadata
-  providerUsed: 'vertex' | 'gemini-rest' | 'openrouter'
-}
-
-/**
  * Internal result type (without provider info)
  */
 interface GeminiGenerationResultInternal {
   images: Buffer[]
   usage: GeminiUsageMetadata
+  thinking?: string
 }
-
-/**
- * Result of a generation call with usage metadata
- */
-export interface GeminiGenerationResult extends GeminiGenerationResultInternal {
-  providerUsed: 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter'  // Track which provider actually succeeded
-}
-
-/**
- * Provider types for Gemini image generation
- */
-type GeminiProvider = 'vertex' | 'rest' | 'replicate' | 'openrouter'
 
 /**
  * Normalize provider names to the values we persist in cost tracking
  */
-function normalizeProvider(provider: GeminiProvider): 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter' {
+function normalizeProvider(provider: ModelProvider): 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter' {
   return provider === 'rest' ? 'gemini-rest' : provider
 }
+
+const GEMINI3_THINKING_CONFIG = {
+  includeThoughts: true
+} as const
 
 /**
  * Convert Vertex AI safety settings to REST API format
@@ -197,32 +178,130 @@ function convertToRestOptions(options?: GenerationOptions) {
  * Providers are tried in the order defined in config, skipping those without credentials or model support.
  * @param model The canonical model name from MODEL_CONFIG
  */
-function buildProviderOrder(model: ModelName): GeminiProvider[] {
-  // Check available credentials
-  const credentials: Record<ModelProvider, boolean> = {
-    openrouter: !!Env.string('OPENROUTER_API_KEY', ''),
-    vertex: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
-    rest: !!Env.string('GOOGLE_CLOUD_API_KEY', '') || !!Env.string('GEMINI_API_KEY', ''),
-    replicate: !!Env.string('REPLICATE_API_TOKEN', ''),
-  }
-
+function buildProviderOrder(model: ModelName): ModelProvider[] {
   // Get model config to check which providers support this model
   const modelConfig = MODEL_CONFIG[model]
 
   // Build provider list following PROVIDER_FALLBACK_ORDER
   // Only include providers that have credentials AND support this model
-  const providers: GeminiProvider[] = []
+  const providers: ModelProvider[] = []
 
   for (const provider of PROVIDER_FALLBACK_ORDER) {
-    const hasCredentials = credentials[provider]
+    const hasCredentials = CACHED_CREDENTIALS[provider]
     const modelSupported = modelConfig.providers[provider] !== null
 
     if (hasCredentials && modelSupported) {
-      providers.push(provider as GeminiProvider)
+      providers.push(provider)
     }
   }
 
   return providers
+}
+
+/**
+ * When Gemini returns multiple images, sort by pixel count (largest first)
+ * so images[0] is always the highest-resolution result.
+ */
+async function selectLargestImage(result: GeminiGenerationResult): Promise<GeminiGenerationResult> {
+  if (result.images.length <= 1) return result
+
+  const withMeta = await Promise.all(
+    result.images.map(async (buf, idx) => {
+      const meta = await sharp(buf).metadata()
+      const pixels = (meta.width || 0) * (meta.height || 0)
+      return { buf, idx, pixels, width: meta.width || 0, height: meta.height || 0 }
+    })
+  )
+
+  withMeta.sort((a, b) => b.pixels - a.pixels)
+
+  Logger.debug('Multiple images returned — sorted by resolution', {
+    count: withMeta.length,
+    dimensions: withMeta.map(m => `${m.width}x${m.height}`),
+    selectedIndex: withMeta[0].idx,
+  })
+
+  return { ...result, images: withMeta.map(m => m.buf) }
+}
+
+function extensionFromMimeType(mimeType?: string): string {
+  const normalized = (mimeType || '').toLowerCase()
+  if (normalized.includes('png')) return 'png'
+  if (normalized.includes('webp')) return 'webp'
+  if (normalized.includes('gif')) return 'gif'
+  if (normalized.includes('bmp')) return 'bmp'
+  return 'jpg'
+}
+
+function slugifyAttachmentName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\\/]/g, '-')
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function inferAttachmentName(image: GeminiReferenceImage, index: number): string {
+  const extension = extensionFromMimeType(image.mimeType)
+  const explicit = typeof image.name === 'string' ? image.name.trim() : ''
+
+  if (explicit) {
+    if (/\.[a-z0-9]+$/i.test(explicit)) return explicit
+    return `${explicit}.${extension}`
+  }
+
+  const description = typeof image.description === 'string' ? image.description.trim() : ''
+  if (description) {
+    const quoted = description.match(/labeled\s+"([^"]+)"/i)?.[1] || description.match(/"([^"]+)"/)?.[1]
+    const prefix = quoted || description.split(/[.:\-]/)[0]
+    const slug = slugifyAttachmentName(prefix).slice(0, 64)
+    if (slug) {
+      return `${slug}.${extension}`
+    }
+  }
+
+  return `reference-${index + 1}.${extension}`
+}
+
+function summarizeAttachment(
+  image: GeminiReferenceImage,
+  index: number
+): {
+  index: number
+  name: string
+  mimeType: string
+  approxSizeKb: number
+  description?: string
+} {
+  return {
+    index: index + 1,
+    name: inferAttachmentName(image, index),
+    mimeType: image.mimeType,
+    approxSizeKb: Math.round((image.base64.length * 0.75) / 1024),
+    description: image.description ? image.description.substring(0, 140) : undefined,
+  }
+}
+
+function logRequestAttachments(params: {
+  requestType: 'image' | 'text'
+  model: ModelName
+  stage?: StageName
+  prompt: string
+  images: GeminiReferenceImage[]
+}): void {
+  const { requestType, model, stage, prompt, images } = params
+  const attachments = images.map((image, index) => summarizeAttachment(image, index))
+
+  Logger.info('Gemini request payload attachments', {
+    requestType,
+    model,
+    stage,
+    promptLength: prompt.length,
+    attachmentCount: attachments.length,
+    attachments,
+  })
 }
 
 export async function generateWithGemini(
@@ -232,10 +311,11 @@ export async function generateWithGemini(
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
 ): Promise<GeminiGenerationResult> {
-  // Resolve model from stage config, or use default
+  // Resolve model and resolution from stage config
   const model: ModelName = options?.stage
     ? STAGE_MODEL[options.stage]
     : DEFAULT_MODEL
+  const effectiveResolution = resolution ?? (options?.stage ? STAGE_RESOLUTION[options.stage] : undefined)
 
   // Build provider order based on PROVIDER_FALLBACK_ORDER from config
   const providers = buildProviderOrder(model)
@@ -252,6 +332,13 @@ export async function generateWithGemini(
 
   // Only log provider config at debug level
   Logger.debug('Gemini providers', { providers: providers.join(','), model, stage: options?.stage })
+  logRequestAttachments({
+    requestType: 'image',
+    model,
+    stage: options?.stage,
+    prompt,
+    images,
+  })
 
   // Try each provider in order, fallback on rate limit errors
   let lastError: unknown
@@ -261,7 +348,7 @@ export async function generateWithGemini(
     const providerUsed = normalizeProvider(provider)
 
     // Get the provider-specific model name
-    const providerModelName = getModelNameForProvider(model, provider as ModelProvider)
+    const providerModelName = getModelNameForProvider(model, provider)
     if (!providerModelName) {
       Logger.warn(`Model ${model} not available on ${provider}, skipping`, { model, provider })
       continue
@@ -278,22 +365,22 @@ export async function generateWithGemini(
     try {
       if (provider === 'vertex') {
         Logger.debug(`Using Vertex AI client (provider ${i + 1}/${providers.length})`, { providerModelName })
-        const result = await generateWithGeminiVertex(prompt, images, providerModelName, aspectRatio, resolution, options)
-        return { ...result, providerUsed: 'vertex' }
+        const result = await generateWithGeminiVertex(prompt, images, providerModelName, aspectRatio, effectiveResolution, options)
+        return await selectLargestImage({ ...result, providerUsed: 'vertex' })
       } else if (provider === 'rest') {
         Logger.debug(`Using Gemini REST API client (provider ${i + 1}/${providers.length})`, { providerModelName })
-        const result = await generateWithGeminiRest(prompt, images, providerModelName, aspectRatio, resolution, convertToRestOptions(options))
-        return { ...result, providerUsed: 'gemini-rest' }
+        const result = await generateWithGeminiRest(prompt, images, providerModelName, aspectRatio, effectiveResolution, convertToRestOptions(options))
+        return await selectLargestImage({ ...result, providerUsed: 'gemini-rest' })
       } else if (provider === 'replicate') {
         Logger.debug(`Using Replicate API client (provider ${i + 1}/${providers.length})`, { providerModelName })
         const { generateWithGeminiReplicate } = await import('./gemini-replicate')
-        const result = await generateWithGeminiReplicate(prompt, images, providerModelName, aspectRatio, resolution)
-        return { ...result, providerUsed: 'replicate' }
+        const result = await generateWithGeminiReplicate(prompt, images, providerModelName, aspectRatio, effectiveResolution)
+        return await selectLargestImage({ ...result, providerUsed: 'replicate' })
       } else if (provider === 'openrouter') {
         Logger.debug(`Using OpenRouter API client (provider ${i + 1}/${providers.length})`, { providerModelName })
         const { generateWithGeminiOpenRouter } = await import('./gemini-openrouter')
-        const result = await generateWithGeminiOpenRouter(prompt, images, providerModelName, aspectRatio, resolution, options)
-        return { ...result, providerUsed: 'openrouter' }
+        const result = await generateWithGeminiOpenRouter(prompt, images, providerModelName, aspectRatio, effectiveResolution, options)
+        return await selectLargestImage({ ...result, providerUsed: 'openrouter' })
       }
     } catch (error) {
       // Attach the attempted provider so failure tracking can log it correctly
@@ -309,11 +396,10 @@ export async function generateWithGemini(
       // Be more defensive - check for "returned no images" OR "IMAGE_OTHER" in the message
       const errorMessage = error instanceof Error ? error.message : String(error)
       const isImageOtherError = (
-        (errorMessage.includes('OpenRouter returned no images') ||
-         errorMessage.includes('returned no images') ||
-         errorMessage.includes('returned no image URLs') || // Replicate error
-         errorMessage.includes('IMAGE_OTHER')) &&
-        (provider === 'openrouter' || provider === 'replicate')
+        errorMessage.includes('OpenRouter returned no images') ||
+        errorMessage.includes('returned no images') ||
+        errorMessage.includes('returned no image URLs') || // Replicate error
+        errorMessage.includes('IMAGE_OTHER')
       )
 
       // Check if this is a safety filter error - different providers have different thresholds
@@ -410,7 +496,9 @@ export async function generateTextWithGemini(
   // Build provider order based on PROVIDER_FALLBACK_ORDER from config
   // Filter out replicate since it doesn't support text-only generation
   const allProviders = buildProviderOrder(model)
-  const providers = allProviders.filter(p => p !== 'replicate') as Exclude<GeminiProvider, 'replicate'>[]
+  const providers = allProviders.filter(
+    (provider): provider is Exclude<ModelProvider, 'replicate'> => provider !== 'replicate'
+  )
 
   if (providers.length === 0) {
     throw new Error(
@@ -422,6 +510,13 @@ export async function generateTextWithGemini(
   }
 
   Logger.debug('Text generation providers', { providers: providers.join(','), model, stage: options?.stage })
+  logRequestAttachments({
+    requestType: 'text',
+    model,
+    stage: options?.stage,
+    prompt,
+    images,
+  })
 
   // Try each provider in order, fallback on rate limit errors
   let lastError: unknown
@@ -431,7 +526,7 @@ export async function generateTextWithGemini(
     const providerUsed = normalizeProvider(provider) as 'vertex' | 'gemini-rest' | 'openrouter'
 
     // Get the provider-specific model name
-    const providerModelName = getModelNameForProvider(model, provider as ModelProvider)
+    const providerModelName = getModelNameForProvider(model, provider)
     if (!providerModelName) {
       Logger.warn(`Model ${model} not available on ${provider}, skipping`, { model, provider })
       continue
@@ -506,18 +601,41 @@ async function generateTextWithGeminiVertex(
 
   const contents: Content[] = [{ role: 'user', parts }]
 
-  const generationConfig: { temperature?: number; topK?: number; topP?: number } = {}
+  const generationConfig: {
+    temperature?: number
+    topK?: number
+    topP?: number
+    thinkingConfig?: {
+      includeThoughts?: boolean
+    }
+  } = {}
   if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
   if (options?.topK !== undefined) generationConfig.topK = options.topK
   if (options?.topP !== undefined) generationConfig.topP = options.topP
+  if (isGemini3ModelName(modelName)) generationConfig.thinkingConfig = GEMINI3_THINKING_CONFIG
 
-  const response = await model.generateContent({
-    contents,
-    ...(Object.keys(generationConfig).length > 0 ? { generationConfig } : {}),
-  })
+  const TEXT_TIMEOUT_MS = 60000
+  const response = await Promise.race([
+    model.generateContent({
+      contents,
+      ...(Object.keys(generationConfig).length > 0 ? { generationConfig } : {}),
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Vertex text request timed out after ${TEXT_TIMEOUT_MS}ms`)), TEXT_TIMEOUT_MS)
+    ),
+  ])
 
   const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-  const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+  const thinkingTextParts = extractThinkingTextParts(
+    responseParts as Array<{ text?: string; thought?: boolean }>
+  )
+  logGemini3Thinking({
+    provider: 'vertex',
+    modelName,
+    texts: thinkingTextParts
+  })
+  const nonThoughtParts = responseParts as Array<{ text?: string; thought?: boolean }>
+  const textPart = extractTextFromResponseParts(nonThoughtParts)
   const usageMetadata = response.response.usageMetadata
 
   return {
@@ -545,8 +663,9 @@ async function generateTextWithGeminiRestInternal(
   if (!apiKey) {
     throw new Error('GOOGLE_CLOUD_API_KEY or GEMINI_API_KEY required for REST API')
   }
+  assertValidModelName(modelName)
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
 
   const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
     { text: prompt }
@@ -559,21 +678,32 @@ async function generateTextWithGeminiRestInternal(
   }
 
   const requestBody: Record<string, unknown> = {
-    contents: [{ parts }],
+    contents: [{ role: 'user', parts }],
   }
 
-  if (options?.temperature !== undefined || options?.topK !== undefined || options?.topP !== undefined) {
-    requestBody.generationConfig = {
-      ...(options.temperature !== undefined && { temperature: options.temperature }),
-      ...(options.topK !== undefined && { topK: options.topK }),
-      ...(options.topP !== undefined && { topP: options.topP }),
-    }
+  const generationConfig: Record<string, unknown> = {}
+  if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
+  if (options?.topK !== undefined) generationConfig.topK = options.topK
+  if (options?.topP !== undefined) generationConfig.topP = options.topP
+  if (isGemini3ModelName(modelName)) generationConfig.thinkingConfig = GEMINI3_THINKING_CONFIG
+
+  if (Object.keys(generationConfig).length > 0) {
+    requestBody.generationConfig = generationConfig
   }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(requestBody),
+    signal: controller.signal,
+  }).finally(() => {
+    clearTimeout(timeoutId)
   })
 
   if (!response.ok) {
@@ -586,7 +716,17 @@ async function generateTextWithGeminiRestInternal(
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number }
   }
 
-  const textPart = data.candidates?.[0]?.content?.parts?.find(p => p.text)?.text ?? ''
+  const responseParts = data.candidates?.[0]?.content?.parts ?? []
+  const thinkingTextParts = extractThinkingTextParts(
+    responseParts as Array<{ text?: string; thought?: boolean }>
+  )
+  logGemini3Thinking({
+    provider: 'gemini-rest',
+    modelName,
+    texts: thinkingTextParts
+  })
+  const nonThoughtParts = responseParts as Array<{ text?: string; thought?: boolean }>
+  const textPart = extractTextFromResponseParts(nonThoughtParts)
 
   return {
     text: textPart,
@@ -639,6 +779,8 @@ async function generateTextWithGeminiOpenRouterInternal(
   if (options?.topP !== undefined) requestBody.top_p = options.topP
   if (options?.topK !== undefined) requestBody.top_k = options.topK
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -648,6 +790,9 @@ async function generateTextWithGeminiOpenRouterInternal(
       'X-Title': 'TeamShots',
     },
     body: JSON.stringify(requestBody),
+    signal: controller.signal,
+  }).finally(() => {
+    clearTimeout(timeoutId)
   })
 
   if (!response.ok) {
@@ -696,19 +841,7 @@ async function generateWithGeminiVertex(
     throw new Error('No reference images provided to Gemini API')
   }
 
-  // Validate each image has required fields
-  for (let i = 0; i < images.length; i++) {
-    const img = images[i]
-    if (!img.base64 || !img.mimeType) {
-      Logger.error('generateWithGeminiVertex: Invalid reference image', {
-        index: i,
-        hasBase64: !!img.base64,
-        hasMimeType: !!img.mimeType,
-        description: img.description?.substring(0, 100)
-      })
-      throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
-    }
-  }
+  validateReferenceImages(images, 'generateWithGeminiVertex')
 
   const model = await getVertexGenerativeModel(modelName)
 
@@ -754,6 +887,9 @@ async function generateWithGeminiVertex(
     topK?: number
     topP?: number
     candidateCount?: number
+    thinkingConfig?: {
+      includeThoughts?: boolean
+    }
     imageConfig?: {
       aspectRatio?: string
       imageSize?: '1K' | '2K' | '4K'
@@ -765,6 +901,7 @@ async function generateWithGeminiVertex(
   if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
   if (options?.topK !== undefined) generationConfig.topK = options.topK
   if (options?.topP !== undefined) generationConfig.topP = options.topP
+  if (isGemini3ModelName(modelName)) generationConfig.thinkingConfig = GEMINI3_THINKING_CONFIG
   
   // Apply resolution using default from PROVIDER_DEFAULTS if not explicitly provided
   const effectiveResolution = resolution ?? PROVIDER_DEFAULTS.vertex.resolution
@@ -814,12 +951,18 @@ async function generateWithGeminiVertex(
   })
 
   try {
-    const response: GenerateContentResult = await model.generateContent({
-      contents,
-      safetySettings,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...(Object.keys(generationConfig).length > 0 ? { generationConfig: generationConfig as any } : {})
-    })
+    const IMAGE_TIMEOUT_MS = 120000
+    const response: GenerateContentResult = await Promise.race([
+      model.generateContent({
+        contents,
+        safetySettings,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(Object.keys(generationConfig).length > 0 ? { generationConfig: generationConfig as any } : {})
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Vertex image request timed out after ${IMAGE_TIMEOUT_MS}ms`)), IMAGE_TIMEOUT_MS)
+      ),
+    ])
 
     const candidate = response.response.candidates?.[0]
     const finishReason = candidate?.finishReason ? String(candidate.finishReason) : undefined
@@ -831,6 +974,15 @@ async function generateWithGeminiVertex(
         generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
       }
     }
+
+    const thinkingTextParts = extractThinkingTextParts(
+      responseParts as Array<{ text?: string; thought?: boolean }>
+    )
+    const thinking = logGemini3Thinking({
+      provider: 'vertex',
+      modelName: normalizedModelName,
+      texts: thinkingTextParts
+    })
 
     // Extract usage metadata if available
     const usageMetadata = response.response.usageMetadata
@@ -881,72 +1033,25 @@ async function generateWithGeminiVertex(
     return {
       images: generatedImages,
       usage,
+      thinking,
     }
   } catch (error) {
-    // Extract comprehensive error details
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    
-    // Build detailed error info
+    const errorObject = error as {
+      name?: unknown
+      code?: unknown
+      status?: unknown
+      statusCode?: unknown
+      statusText?: unknown
+    }
     const errorDetails: Record<string, unknown> = {
       message: errorMessage,
-      name: error instanceof Error ? error.name : 'Unknown',
-      stack: errorStack,
+      name: typeof errorObject?.name === 'string' ? errorObject.name : 'Unknown',
+      code: errorObject?.code,
+      status: errorObject?.status ?? errorObject?.statusCode,
+      statusText: errorObject?.statusText,
     }
-    
-    // Extract all enumerable properties from error object
-    if (error && typeof error === 'object') {
-      // Capture common error properties
-      if ('status' in error) errorDetails.status = error.status
-      if ('statusCode' in error) errorDetails.statusCode = error.statusCode
-      if ('statusText' in error) errorDetails.statusText = error.statusText
-      if ('code' in error) errorDetails.code = error.code
-      if ('response' in error) {
-        try {
-          // Try to stringify response, but handle circular refs
-          const responseStr = typeof error.response === 'string' 
-            ? error.response 
-            : JSON.stringify(error.response, null, 2)
-          errorDetails.response = responseStr.length > 2000 
-            ? responseStr.substring(0, 2000) + '...[truncated]' 
-            : responseStr
-        } catch {
-          errorDetails.response = String(error.response).substring(0, 2000)
-        }
-      }
-      if ('cause' in error) {
-        try {
-          errorDetails.cause = typeof error.cause === 'string'
-            ? error.cause
-            : JSON.stringify(error.cause, null, 2)
-        } catch {
-          errorDetails.cause = String(error.cause)
-        }
-      }
-      if ('details' in error) {
-        try {
-          errorDetails.details = typeof error.details === 'string'
-            ? error.details
-            : JSON.stringify(error.details, null, 2)
-        } catch {
-          errorDetails.details = String(error.details)
-        }
-      }
-      
-      // Capture any other enumerable properties
-      for (const [key, value] of Object.entries(error)) {
-        if (!['message', 'name', 'stack'].includes(key) && !(key in errorDetails)) {
-          try {
-            errorDetails[key] = typeof value === 'string' 
-              ? value 
-              : JSON.stringify(value, null, 2)
-          } catch {
-            errorDetails[key] = String(value)
-          }
-        }
-      }
-    }
-    
+
     // Check if this is a JSON parsing error (likely HTML response)
     if (errorMessage.includes('Unexpected token') && (errorMessage.includes('<!DOCTYPE') || errorMessage.includes('<!doctype'))) {
       const location = Env.string('GOOGLE_LOCATION', 'global')
@@ -961,12 +1066,6 @@ async function generateWithGeminiVertex(
           : 'Verify that the location and model are available in your project.'
       })
       
-      // Also log to console with full details for debugging
-      console.error('\n=== FULL ERROR DETAILS ===')
-      console.error('Error Object:', error)
-      console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
-      console.error('========================\n')
-      
       throw new Error(
         `Vertex AI API error: Received HTML response instead of JSON. ` +
         `This may indicate an invalid location or endpoint configuration. ` +
@@ -980,29 +1079,17 @@ async function generateWithGeminiVertex(
     const isRateLimit = isRateLimitError(error)
     
     if (isRateLimit) {
-      // For rate limit errors, log without stack trace
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { stack, ...errorDetailsWithoutStack } = errorDetails
       Logger.error('Gemini image generation rate limited (429)', {
         modelName,
-        ...errorDetailsWithoutStack
+        ...errorDetails
       })
     } else {
-      // Log all other errors with full details
       Logger.error('Gemini image generation failed', {
         modelName,
         ...errorDetails
       })
-      
-      // Also log to console for full visibility (only for non-rate-limit errors)
-      console.error('\n=== FULL ERROR DETAILS ===')
-      console.error('Error Object:', error)
-      console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
-      console.error('========================\n')
     }
 
     throw error
   }
 }
-
-

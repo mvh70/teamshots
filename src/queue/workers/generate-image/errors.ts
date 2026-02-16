@@ -1,10 +1,10 @@
-import { ImageEvaluationResult } from './evaluator'
+import type { ImageEvaluationResult } from './evaluator'
 
 export class EvaluationFailedError extends Error {
   public readonly evaluation: ImageEvaluationResult
-  public readonly imageBase64: string
+  public readonly imageS3Key?: string
   public readonly generationId: string
-  public readonly prompt: string
+  public readonly promptHash: string
   public readonly attempt: number
   public readonly aspectRatio: string
 
@@ -12,9 +12,9 @@ export class EvaluationFailedError extends Error {
     message: string,
     params: {
       evaluation: ImageEvaluationResult
-      imageBase64: string
+      imageS3Key?: string
       generationId: string
-      prompt: string
+      promptHash: string
       attempt: number
       aspectRatio: string
     }
@@ -22,9 +22,9 @@ export class EvaluationFailedError extends Error {
     super(message)
     this.name = 'EvaluationFailedError'
     this.evaluation = params.evaluation
-    this.imageBase64 = params.imageBase64
+    this.imageS3Key = params.imageS3Key
     this.generationId = params.generationId
-    this.prompt = params.prompt
+    this.promptHash = params.promptHash
     this.attempt = params.attempt
     this.aspectRatio = params.aspectRatio
   }

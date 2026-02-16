@@ -100,64 +100,64 @@ function getLightingDirection(input: LightingInput): string {
 }
 
 /**
- * Calculate lighting setup/equipment based on environment
+ * Describe lighting behavior (not visible equipment) based on environment
  */
 function getLightingSetup(input: LightingInput): string[] {
   const { backgroundEnvironment, backgroundModifier, subjectCount } = input
 
-  // Studio setup
+  // Studio behavior
   if (backgroundEnvironment === 'studio') {
     if (subjectCount >= 4) {
       return [
-        'Two softboxes (3x4ft) for even coverage',
-        'White reflector for fill',
-        'Rim light for separation'
+        'Primary illumination is evenly distributed across all subjects',
+        'Shadows remain soft with gentle fill and low contrast',
+        'Subtle edge separation keeps subjects distinct from the background'
       ]
     }
     return [
-      'Large Softbox Key Light (soft and wrapping)',
-      'White reflector fill',
-      "Cool Rim Light (Backlight) on subject's hair and shoulders to separate from background"
+      'Primary key light is soft, broad, and wrapping from camera-left',
+      'Fill light behavior keeps shadows gentle while preserving facial definition',
+      "A subtle cool edge highlight separates hair and shoulders from the background"
     ]
   }
 
-  // Outdoor setup
+  // Outdoor behavior
   if (backgroundEnvironment === 'outdoor') {
     if (backgroundModifier === 'bright') {
       return [
-        'Natural sunlight diffused through clouds or scrim',
-        'Large white reflector for fill',
-        'Avoid harsh direct sun'
+        'Sunlight appears softened and controlled for comfortable contrast',
+        'Shadows are lifted naturally to preserve detail in facial features',
+        'Avoid harsh high-noon contrast or blown highlights'
       ]
     }
     if (backgroundModifier === 'shade') {
       return [
-        'Open shade as primary light source',
-        'White or silver reflector for direction'
+        'Open shade provides the primary soft directional light',
+        'Subtle directional shaping maintains depth without harsh edges'
       ]
     }
     return [
-      'Natural ambient light',
-      'White reflector for shaping'
+      'Natural ambient daylight remains the dominant source',
+      'Lighting is balanced for flattering facial contrast and clean skin tone'
     ]
   }
 
-  // Indoor setup
+  // Indoor behavior
   if (backgroundEnvironment === 'indoor') {
     if (backgroundModifier === 'bright') {
       return [
-        'Large window as key light source',
-        'White reflector opposite for fill',
-        'Position subject 3-6ft from window'
+        'Window-side light provides broad, soft key illumination',
+        'Ambient bounce preserves shadow detail on the opposite side',
+        'Directionality is clear while transitions remain soft and flattering'
       ]
     }
     return [
-      'Natural window light',
-      'White or silver reflector for fill'
+      'Natural window-influenced light is soft and realistic',
+      'Balanced fill keeps contrast professional and controlled'
     ]
   }
 
-  return ['Softbox (3x4ft or larger) + reflector opposite']
+  return ['Soft, balanced portrait lighting with controlled contrast']
 }
 
 /**
@@ -222,13 +222,12 @@ function getLightingDescription(input: LightingInput, quality: string): string {
     if (quality === 'Warm Golden Hour' || quality === 'Cool Blue Hour') {
       return 'Natural ambient light with warm color temperature and soft directional quality ideal for portraits.'
     }
-    return 'Natural outdoor lighting enhanced with reflector fill for balanced, flattering illumination.'
+    return 'Natural outdoor lighting with balanced, flattering illumination.'
   }
 
   if (backgroundEnvironment === 'indoor') {
-    return 'Natural window light with reflector fill creating soft, flattering illumination with gentle shadow transitions.'
+    return 'Natural window light creating soft, flattering illumination with gentle shadow transitions.'
   }
 
   return 'Flattering professional lighting with gentle transitions and minimal harsh shadows.'
 }
-

@@ -34,8 +34,14 @@ export function isRateLimitError(error: unknown): boolean {
 export function isTransientServiceError(error: unknown): boolean {
   const metadata = collectErrorMetadata(error)
 
-  // Check for 503 (Service Unavailable) or 408 (Request Timeout) status codes
-  if (metadata.statusCodes.includes(503) || metadata.statusCodes.includes(408)) {
+  // Check for common transient HTTP status codes
+  if (
+    metadata.statusCodes.includes(500) ||
+    metadata.statusCodes.includes(502) ||
+    metadata.statusCodes.includes(503) ||
+    metadata.statusCodes.includes(504) ||
+    metadata.statusCodes.includes(408)
+  ) {
     return true
   }
 
@@ -44,7 +50,18 @@ export function isTransientServiceError(error: unknown): boolean {
     const normalized = message.toLowerCase()
     return normalized.includes('service unavailable') ||
            normalized.includes('service temporarily unavailable') ||
+           normalized.includes('internal server error') ||
+           normalized.includes('bad gateway') ||
+           normalized.includes('gateway timeout') ||
+           normalized.includes('terminated') ||
+           normalized.includes('fetch failed') ||
+           normalized.includes('socket hang up') ||
+           normalized.includes('unexpected end of json input') ||
+           normalized.includes('operation was aborted') ||
            normalized.includes('503') ||
+           normalized.includes('500') ||
+           normalized.includes('502') ||
+           normalized.includes('504') ||
            normalized.includes('408') ||
            normalized.includes('request timeout') ||
            // HTML error responses (<!DOCTYPE or <!doctype)
@@ -217,4 +234,3 @@ function collectErrorMetadata(error: unknown): { statusCodes: number[]; messages
 // Export constants for backward compatibility
 export const RATE_LIMIT_SLEEP_MS = 60_000
 export const MAX_RATE_LIMIT_RETRIES = 3
-

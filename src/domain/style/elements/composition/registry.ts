@@ -15,6 +15,7 @@ import {
   ReferenceImage,
 } from '../base/StyleElement'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { Logger } from '@/lib/logger'
 
 /**
  * Validation result for all elements
@@ -74,7 +75,14 @@ function deepMergePayload(
       conflicts.push(...nestedConflicts)
     } else {
       // Not both objects - check for conflict
-      if (JSON.stringify(targetValue) !== JSON.stringify(sourceValue)) {
+      const primitivesDiffer =
+        (targetValue === null || typeof targetValue !== 'object') &&
+        (sourceValue === null || typeof sourceValue !== 'object') &&
+        targetValue !== sourceValue
+      const complexDiffer =
+        !primitivesDiffer && JSON.stringify(targetValue) !== JSON.stringify(sourceValue)
+
+      if (primitivesDiffer || complexDiffer) {
         conflicts.push(sourcePath)
       }
       // Override with source value
@@ -227,16 +235,15 @@ class ElementCompositionRegistry {
     // Validate dependencies
     const dependencyErrors = this.validateDependencies(element)
     if (dependencyErrors.length > 0) {
-      console.warn(
-        `[ElementComposition] Element ${element.id} has missing dependencies:`,
-        dependencyErrors
-      )
+      Logger.warn(`[ElementComposition] Element ${element.id} has missing dependencies`, {
+        dependencyErrors,
+      })
       // Don't throw - warn instead to allow forward references
       // Elements can be registered in any order, validation happens at runtime
     }
 
     this.elements.set(element.id, element)
-    console.log(`[ElementComposition] Registered element: ${element.id} (${element.name})`)
+    Logger.info(`[ElementComposition] Registered element: ${element.id} (${element.name})`)
   }
 
   /**
@@ -274,7 +281,7 @@ class ElementCompositionRegistry {
         // If package specifies activeElements, only those elements can contribute
         // This gives packages full control over which elements run
         if (activeElements && !activeElements.includes(element.id)) {
-          console.log(
+          Logger.debug(
             `[ElementComposition] Skipping ${element.id} - not in package's activeElements`
           )
           return false
@@ -282,10 +289,9 @@ class ElementCompositionRegistry {
 
         return element.isRelevantForPhase(context)
       } catch (error) {
-        console.error(
-          `[ElementComposition] Error checking relevance for ${element.id}:`,
-          error
-        )
+        Logger.error(`[ElementComposition] Error checking relevance for ${element.id}`, {
+          error: error instanceof Error ? error.message : String(error),
+        })
         return false
       }
     })
@@ -304,7 +310,9 @@ class ElementCompositionRegistry {
     try {
       return this.topologicalSort(relevantElements)
     } catch (error) {
-      console.error('[ElementComposition] Topological sort failed:', error)
+      Logger.error('[ElementComposition] Topological sort failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
       // Fallback to priority-only sorting if topological sort fails
       return relevantElements.sort((a, b) => a.priority - b.priority)
     }
@@ -445,10 +453,9 @@ class ElementCompositionRegistry {
   async composeContributions(context: ElementContext): Promise<ElementContribution> {
     const relevantElements = this.getRelevantElements(context)
 
-    console.log(
-      `[ElementComposition] Composing contributions for phase: ${context.phase}`,
-      `(${relevantElements.length} relevant elements)`
-    )
+    Logger.debug(`[ElementComposition] Composing contributions for phase: ${context.phase}`, {
+      relevantCount: relevantElements.length,
+    })
 
     const allInstructions: string[] = []
     const allMustFollow: string[] = []
@@ -464,20 +471,18 @@ class ElementCompositionRegistry {
         // Validate contribution
         const validation = this.validateContribution(contribution, element.id)
         if (!validation.valid) {
-          console.error(
-            `[ElementComposition] Element ${element.id} produced invalid contribution:`,
-            validation.errors
-          )
+          Logger.error(`[ElementComposition] Element ${element.id} produced invalid contribution`, {
+            errors: validation.errors,
+          })
           // Skip this contribution but continue with others
           continue
         }
 
         // Log warnings if any
         if (validation.warnings.length > 0) {
-          console.warn(
-            `[ElementComposition] Element ${element.id} contribution warnings:`,
-            validation.warnings
-          )
+          Logger.warn(`[ElementComposition] Element ${element.id} contribution warnings`, {
+            warnings: validation.warnings,
+          })
         }
 
         if (contribution.instructions?.length) {
@@ -506,10 +511,9 @@ class ElementCompositionRegistry {
           const conflicts = deepMergePayload(accumulatedPayload, contribution.payload)
 
           if (conflicts.length > 0) {
-            console.warn(
-              `[ElementComposition] Element ${element.id} payload conflicts at paths:`,
-              conflicts.join(', ')
-            )
+            Logger.warn(`[ElementComposition] Element ${element.id} payload conflicts`, {
+              conflicts,
+            })
           }
 
           // Update context so next elements can read accumulated payload
@@ -519,18 +523,16 @@ class ElementCompositionRegistry {
         // Update context with cumulative contributions for next element
         context.existingContributions.push(contribution)
 
-        console.log(
-          `[ElementComposition] ${element.id} contributed:`,
-          `${contribution.instructions?.length || 0} instructions,`,
-          `${contribution.mustFollow?.length || 0} rules,`,
-          `${contribution.referenceImages?.length || 0} images,`,
-          `${contribution.payload ? 'payload' : 'no payload'}`
-        )
+        Logger.debug(`[ElementComposition] ${element.id} contributed`, {
+          instructions: contribution.instructions?.length || 0,
+          mustFollow: contribution.mustFollow?.length || 0,
+          referenceImages: contribution.referenceImages?.length || 0,
+          hasPayload: Boolean(contribution.payload),
+        })
       } catch (error) {
-        console.error(
-          `[ElementComposition] Element ${element.id} failed to contribute:`,
-          error
-        )
+        Logger.error(`[ElementComposition] Element ${element.id} failed to contribute`, {
+          error: error instanceof Error ? error.message : String(error),
+        })
         // Continue with other elements - one failure shouldn't break the whole system
       }
     }
@@ -562,7 +564,9 @@ class ElementCompositionRegistry {
             errors.push(...elementErrors.map((err) => `[${element.id}] ${err}`))
           }
         } catch (error) {
-          console.error(`[ElementComposition] Validation error in ${element.id}:`, error)
+          Logger.error(`[ElementComposition] Validation error in ${element.id}`, {
+            error: error instanceof Error ? error.message : String(error),
+          })
           errors.push(`[${element.id}] Validation failed: ${error}`)
         }
       }
@@ -624,7 +628,10 @@ export function autoRegisterElement(element: StyleElement): void {
     } catch (error) {
       // Element might already be registered - this is OK for idempotency
       if (error instanceof Error && !error.message.includes('already registered')) {
-        console.error(`[${element.id}] Auto-registration error:`, error.message)
+        Logger.error('Auto-registration error', {
+          elementId: element.id,
+          error: error.message,
+        })
       }
     }
   }

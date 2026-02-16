@@ -802,7 +802,7 @@ export async function POST(request: NextRequest) {
     let backgroundAssetId: string | undefined
     let logoAssetId: string | undefined
     try {
-      const { getBackgroundIdentifier } = await import('@/domain/style/elements/background/deserializer')
+      const { getBackgroundIdentifier } = await import('@/domain/style/elements/background/utils')
       const { getLogoIdentifier } = await import('@/domain/style/elements/branding/deserializer')
 
       // Resolve background asset if present

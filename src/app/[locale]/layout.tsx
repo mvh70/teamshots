@@ -3,8 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
-import ConditionalHeader from '@/components/ConditionalHeader';
-import Footer from '@/components/Footer';
+import LocaleChrome from '@/components/LocaleChrome';
 import { Work_Sans, Inter } from 'next/font/google';
 import { getLandingVariant } from '@/config/landing-content';
 import { getBrand } from '@/config/brand';
@@ -55,22 +54,16 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <NextIntlClientProvider messages={messages}>
       <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
-          {/* Conditional header that only shows on non-app routes */}
-          <ConditionalHeader
-            brandName={brand.name}
-            brandLogo={brand.logo.light}
-            variant={variant}
-          />
+        <LocaleChrome
+          brandName={brand.name}
+          brandLogoLight={brand.logo.light}
+          brandLogoDark={brand.logo.dark}
+          brandContact={brand.contact}
+          variant={variant}
+        >
           {children}
-          {/* Footer that shows on public routes (landing, pricing, etc.) */}
-          <Footer 
-            brandName={brand.name}
-            brandLogo={brand.logo.dark}
-            brandContact={brand.contact}
-            variant={variant}
-          />
+        </LocaleChrome>
       </div>
     </NextIntlClientProvider>
   );
 }
-

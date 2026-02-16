@@ -10,36 +10,6 @@ export const RETRY_CONFIG = {
 
   /** Sleep duration when rate limited (milliseconds) */
   RATE_LIMIT_SLEEP_MS: 60000, // 60 seconds
-
-  /** Maximum local generation attempts for V1 workflow */
-  MAX_LOCAL_GENERATION_ATTEMPTS: 2,
-
-  /** Wait time before retry message is visible (milliseconds) */
-  RETRY_MESSAGE_DELAY_MS: 2000
-} as const
-
-// Image Composition Configuration
-export const COMPOSITION_CONFIG = {
-  /** Margin around composite image (pixels) */
-  MARGIN: 20,
-
-  /** Spacing between selfies in composite (pixels) */
-  SELFIE_SPACING: 10,
-
-  /** Font size for title text (pixels) */
-  TITLE_FONT_SIZE: 32,
-
-  /** Font size for label text (pixels) */
-  LABEL_FONT_SIZE: 24,
-
-  /** Text color for labels */
-  LABEL_COLOR: '#000000',
-
-  /** Margin around text overlays (pixels) */
-  TEXT_MARGIN: 12,
-
-  /** Margin around label text (pixels) */
-  LABEL_TEXT_MARGIN: 8
 } as const
 
 // Evaluation Tolerances
@@ -48,7 +18,17 @@ export const EVALUATION_CONFIG = {
   DIMENSION_TOLERANCE_PX: 50,
 
   /** Tolerance for aspect ratio mismatch (ratio) - 5% to handle model variations */
-  ASPECT_RATIO_TOLERANCE: 0.05
+  ASPECT_RATIO_TOLERANCE: 0.05,
+
+  /** Retry count for evaluation parsing/API retries before rejecting */
+  MAX_EVAL_RETRIES: 3,
+} as const
+
+export const PROMINENCE = {
+  MIN_PERCENT: 40,
+  MAX_PERCENT: 60,
+  label: '40-60%',
+  evalLabel: '40-60%+',
 } as const
 
 // AI Generation Parameters
@@ -66,60 +46,19 @@ export const AI_CONFIG = {
   REFINEMENT_TEMPERATURE: 0.2
 } as const
 
-// Progress Tracking Configuration
-export const PROGRESS_CONFIG = {
-  /** Minimum time between identical progress updates (milliseconds) */
-  UPDATE_DEBOUNCE_MS: 100
-} as const
-
-// Workflow Step Progress Percentages
-// NOTE: Step 1b is disabled, so only Step 1a runs
+// Workflow step progress percentages
 export const PROGRESS_STEPS = {
-  // V3 Workflow
   V3_INIT: 5,
-  V3_PREPARING: 10,
-  // Step 1a: Person generation
-  V3_GENERATING_PERSON: 15, // Step 1a: Person generation start
-  V3_GENERATING_BACKGROUND: 20, // Step 1b: DISABLED (kept for backward compatibility)
-  V3_EVALUATING_PERSON: 30, // Step 1a eval
-  V3_EVALUATING_BACKGROUND: 30, // Step 1b: DISABLED (kept for backward compatibility)
-  V3_PERSON_COMPLETE: 40, // Step 1a complete (person + eval done)
-  V3_BACKGROUND_COMPLETE: 40, // Step 1b: DISABLED (kept for backward compatibility)
-  // Step 2: Composition happens after Step 1a completes
-  V3_COMPOSITING: 60, // Step 2: Composition/refinement with background and branding
-  V3_FINAL_EVAL: 85, // Step 3: Final evaluation
+  V3_PREPARING: 13,
+  V3_EVALUATING_BRANDING: 14,
+  V3_GENERATING_PERSON: 15,
+  V3_EVALUATING_PERSON: 30,
+  V3_PERSON_COMPLETE: 40,
+  V3_PREPARING_COMPOSITION: 50,
+  V3_COMPOSITING: 60,
+  V3_FINAL_EVAL: 85,
   V3_COMPLETE: 100,
-
-  // V1 Workflow
-  V1_INIT: 10,
-  V1_PREPROCESSING: 15,
-  V1_PROMPT_READY: 20,
-  V1_GENERATING: 55,
-  V1_GENERATED: 60,
-  V1_EVALUATING: 65,
-  V1_APPROVED: 70,
-  V1_UPLOADING: 80,
-  V1_COMPLETE: 100
 } as const
-
-// Export combined config for convenience
-export const WORKFLOW_CONFIG = {
-  retry: RETRY_CONFIG,
-  composition: COMPOSITION_CONFIG,
-  evaluation: EVALUATION_CONFIG,
-  ai: AI_CONFIG,
-  progress: PROGRESS_CONFIG,
-  progressSteps: PROGRESS_STEPS
-} as const
-
-// Type exports for type-safe access
-export type RetryConfig = typeof RETRY_CONFIG
-export type CompositionConfig = typeof COMPOSITION_CONFIG
-export type EvaluationConfig = typeof EVALUATION_CONFIG
-export type AIConfig = typeof AI_CONFIG
-export type ProgressConfig = typeof PROGRESS_CONFIG
-export type ProgressSteps = typeof PROGRESS_STEPS
-export type WorkflowConfig = typeof WORKFLOW_CONFIG
 
 // =============================================================================
 // Model Configuration
@@ -214,10 +153,10 @@ export type ModelName = keyof typeof MODEL_CONFIG
 export const STAGE_MODEL = {
   CLOTHING_COLLAGE: 'gemini-2.5-flash-image' as ModelName,
   CLOTHING_OVERLAY: 'gemini-2.5-flash-image' as ModelName,
+  BACKGROUND_BRANDING: 'gemini-2.5-flash-image' as ModelName,
   STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName, // EXPERIMENT: Gemini 3 @ 1K for both steps
-  STEP_1B_BACKGROUND: 'gemini-2.5-flash-image' as ModelName,
   STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
-  EVALUATION: 'grok-4-fast' as ModelName,
+  EVALUATION: 'gemini-2.5-flash' as ModelName,
   GARMENT_ANALYSIS: 'gemini-2.5-flash' as ModelName,
   SELFIE_CLASSIFICATION: 'gemini-2.5-flash' as ModelName,
 } as const
@@ -229,48 +168,17 @@ export const DEFAULT_MODEL: ModelName = 'gemini-2.5-flash-image'
 
 /** Per-stage resolution overrides (undefined = use PROVIDER_DEFAULTS) */
 export const STAGE_RESOLUTION: Partial<Record<StageName, '1K' | '2K' | '4K'>> = {
-  // EXPERIMENT: Both steps at 1K resolution
-  // STEP_2_COMPOSITION: '2K', // Disabled - testing 1K output
+  CLOTHING_COLLAGE: '1K',
+  CLOTHING_OVERLAY: '1K',
+  BACKGROUND_BRANDING: '1K',
+  STEP_1A_PERSON: '2K',
+  STEP_2_COMPOSITION: '2K',
 }
 
 /**
  * Get the provider-specific model name for a given canonical model and provider.
  * Returns null if the model is not available on the provider.
  */
-export function getModelNameForProvider(
-  model: ModelName,
-  provider: ModelProvider
-): string | null {
+export function getModelNameForProvider(model: ModelName, provider: ModelProvider): string | null {
   return MODEL_CONFIG[model].providers[provider]
 }
-
-/**
- * Get the first available provider for a model based on PROVIDER_FALLBACK_ORDER.
- * Returns the first provider in the fallback order that supports this model.
- */
-export function getFirstAvailableProvider(model: ModelName): ModelProvider | null {
-  const modelConfig = MODEL_CONFIG[model]
-  for (const provider of PROVIDER_FALLBACK_ORDER) {
-    if (modelConfig.providers[provider] !== null) {
-      return provider
-    }
-  }
-  return null
-}
-
-/**
- * Get the model configuration for a given stage.
- */
-export function getStageModelConfig(stage: StageName): {
-  model: ModelName
-  firstAvailableProvider: ModelProvider | null
-  getProviderModelName: (provider: ModelProvider) => string | null
-} {
-  const model = STAGE_MODEL[stage]
-  return {
-    model,
-    firstAvailableProvider: getFirstAvailableProvider(model),
-    getProviderModelName: (provider: ModelProvider) => getModelNameForProvider(model, provider),
-  }
-}
-

@@ -9,6 +9,8 @@
  */
 
 import { Logger } from '@/lib/logger'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { DownloadAssetFn } from '@/types/generation'
 import type { S3Client } from '@aws-sdk/client-s3'
@@ -21,6 +23,7 @@ import {
 
 export interface V3Step0Input {
   styleSettings: PhotoStyleSettings
+  canonicalPrompt?: Record<string, unknown>
   downloadAsset: DownloadAssetFn
   s3Client: S3Client
   generationId: string
@@ -124,6 +127,7 @@ export async function executeStep0Preparation(
 ): Promise<V3Step0Output> {
   const {
     styleSettings,
+    canonicalPrompt,
     downloadAsset,
     s3Client,
     generationId,
@@ -132,6 +136,8 @@ export async function executeStep0Preparation(
     selfieS3Keys,
     debugMode,
   } = input
+
+  const safeGenerationId = generationId.replace(/[^a-zA-Z0-9_-]/g, '')
 
   Logger.info('V3 Step 0: Starting asset preparation', {
     generationId,
@@ -151,6 +157,8 @@ export async function executeStep0Preparation(
       // Pass services for elements to use
       downloadAsset,
       s3Client,
+      // Canonical prompt for elements to extract structured data from
+      canonicalPrompt,
     },
     existingContributions: [],
   }
@@ -215,6 +223,8 @@ export async function executeStep0Preparation(
         },
       }
 
+      // Contract: siblings in the same batch must not read assets produced by each other.
+      // They only get visibility into assets from prior completed batches (dependency order).
       const batchPromises = batch.map(async (element) => {
         try {
           Logger.debug(`V3 Step 0: Preparing assets for ${element.id}`, {
@@ -252,7 +262,7 @@ export async function executeStep0Preparation(
       const batchResults = await Promise.all(batchPromises)
 
       // Process batch results and add to prepared assets
-      batchResults.forEach((result) => {
+      for (const result of batchResults) {
         if (result.success) {
           const key = `${result.elementId}-${result.asset.assetType}`
           preparedAssets.set(key, result.asset)
@@ -264,13 +274,37 @@ export async function executeStep0Preparation(
               generationId,
             })
           }
+          // Save intermediate to collages folder for debugging
+          if (debugMode && result.asset.data.base64) {
+            try {
+              const tmpDir = path.resolve(path.join(process.cwd(), 'tmp', 'collages'))
+              await fs.mkdir(tmpDir, { recursive: true })
+              const ext = result.asset.data.mimeType?.includes('jpeg') ? 'jpg' : 'png'
+              const filename = `${safeGenerationId}-step0-${result.elementId}-${result.asset.assetType}.${ext}`
+              const filePath = path.resolve(path.join(tmpDir, filename))
+              if (!filePath.startsWith(tmpDir)) {
+                throw new Error('Resolved debug path is outside expected directory')
+              }
+              await fs.writeFile(filePath, Buffer.from(result.asset.data.base64, 'base64'))
+              Logger.info(`V3 Step 0: Saved intermediate to collages`, {
+                path: `tmp/collages/${filename}`,
+                size: `${Math.round(result.asset.data.base64.length * 0.75 / 1024)}KB`,
+                generationId,
+              })
+            } catch (saveError) {
+              Logger.warn('V3 Step 0: Failed to save intermediate', {
+                elementId: result.elementId,
+                error: saveError instanceof Error ? saveError.message : String(saveError),
+              })
+            }
+          }
         } else {
           preparationErrors.push({
             elementId: result.elementId,
             error: result.error,
           })
         }
-      })
+      }
     }
   }
 

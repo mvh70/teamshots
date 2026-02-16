@@ -4,6 +4,11 @@ import { Logger } from '@/lib/logger'
 import { deriveGenerationType } from '@/domain/generation/utils'
 import { extendInviteExpiry } from '@/lib/invite-utils'
 
+// Disable caching for this route - invite generations are polled for live progress updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -149,7 +154,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ generations: transformedGenerations })
+    return NextResponse.json(
+      { generations: transformedGenerations },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0'
+        }
+      }
+    )
   } catch (error) {
     Logger.error('Error fetching generations', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

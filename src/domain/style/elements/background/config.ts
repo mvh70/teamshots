@@ -1,4 +1,3 @@
-import { NEUTRAL_COLORS, GRADIENT_COLORS } from './colors'
 import type { BackgroundEnvironment, BackgroundSettings } from './types'
 import type { ElementConfig } from '../registry'
 import { deserialize } from './deserializer'
@@ -52,9 +51,6 @@ export function getBackgroundEnvironment(backgroundType?: string): BackgroundEnv
   }
   return BACKGROUND_ENVIRONMENT_MAP[backgroundType] || 'studio'
 }
-
-// Re-export color palettes for backward compatibility
-export { NEUTRAL_COLORS, GRADIENT_COLORS }
 
 /**
  * Element registry config for background
