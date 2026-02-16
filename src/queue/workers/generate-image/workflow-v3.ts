@@ -13,7 +13,6 @@ import { hasValue } from '@/domain/style/elements/base/element-types'
 import type { PreparedAsset } from '@/domain/style/elements/composition'
 import { AssetService } from '@/domain/services/AssetService'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
-import { isFeatureEnabled } from '@/config/feature-flags'
 
 import { executeStep0Preparation } from './steps/v3-step0-preparation'
 import { executeV3Step0Eval } from './steps/v3-step0-eval'
@@ -150,10 +149,6 @@ export async function executeV3Workflow({
   onCostTracking,
 }: V3WorkflowInput): Promise<{ approvedImageBuffers: Buffer[] }> {
   Logger.debug('V3 workflow start', { generationId, personId, teamId })
-
-  if (!isFeatureEnabled('v3CanonicalPromptSinglePass')) {
-    throw new Error('V3 canonical prompt single-pass is disabled')
-  }
 
   const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
   const expectedWidth = aspectRatioConfig.width
