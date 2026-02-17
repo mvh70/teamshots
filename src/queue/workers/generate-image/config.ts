@@ -73,9 +73,9 @@ export type ModelProvider = 'vertex' | 'rest' | 'openrouter' | 'replicate'
  * Providers not in this list or without credentials/model support are skipped.
  */
 export const PROVIDER_FALLBACK_ORDER: ModelProvider[] = [
-  'openrouter',
   'rest',
   'vertex',
+  'openrouter',
   'replicate'
 ]
 

@@ -91,7 +91,7 @@ const STEP_MESSAGES: Record<string, ProgressMessage[]> = {
     { message: '[2/4] Generating your background...', emoji: '🖼️' },
   ],
   'v3-person-complete': [
-    { message: '[2/4] Portrait done! Preparing the scene...', emoji: '✅' },
+    { message: '[3/4] Portrait done! Preparing the scene...', emoji: '✅' },
   ],
   'v3-preparing-composition': [
     { message: '[3/4] Composing the final photo...', emoji: '🧩' },

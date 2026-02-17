@@ -53,6 +53,13 @@ function extractSuggestedAdjustments(structuredEvaluation: StructuredEvaluation)
         )
       }
 
+      if (key === 'wardrobe_and_colors_match') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: Match the wardrobe structure and clothing colors exactly to subject.wardrobe guidance ' +
+          'and garment-collage reference (if provided). Do not change garment type, layers, or substitute colors.'
+        )
+      }
+
       if (key === 'face_similarity') {
         adjustments.push(
           '⚠️ CRITICAL FIX: The face MUST closely match the reference selfies. ' +
@@ -127,4 +134,3 @@ export function logEvaluationResult(
     Logger.warn(`${stepName}: Not approved`, payload)
   }
 }
-

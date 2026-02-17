@@ -111,6 +111,7 @@ generated-images/
 # next-agents-md
 .next-docs/
 .next-e2e/
+.next-debug/
 
 # Sentry Config File
 .env.sentry-build-plugin

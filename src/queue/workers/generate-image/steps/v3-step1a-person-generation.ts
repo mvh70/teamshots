@@ -78,6 +78,36 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>
 }
 
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
+function promptHasWardrobeColorGuidance(projectedPrompt: Record<string, unknown>): boolean {
+  const subject = asObject(projectedPrompt.subject)
+  const subjectWardrobe = asObject(subject?.wardrobe)
+  const topLevelWardrobe = asObject(projectedPrompt.wardrobe)
+  const garmentAnalysis = asObject(topLevelWardrobe?.garmentAnalysis)
+  const topLevelColors = asObject(topLevelWardrobe?.colors)
+
+  const hasSubjectPalette = asStringArray(subjectWardrobe?.color_palette).length > 0
+  const hasTopLevelPalette = asStringArray(topLevelWardrobe?.color_palette).length > 0
+  const hasGarmentAnalysisPalette = asStringArray(garmentAnalysis?.colorPalette).length > 0
+  const hasTopLevelColorFields = Boolean(
+    topLevelColors &&
+      Object.values(topLevelColors).some(
+        (value) => typeof value === 'string' && value.trim().length > 0
+      )
+  )
+
+  return (
+    hasSubjectPalette ||
+    hasTopLevelPalette ||
+    hasGarmentAnalysisPalette ||
+    hasTopLevelColorFields
+  )
+}
+
 function extensionFromMimeType(mimeType?: string): string {
   const normalized = (mimeType || '').toLowerCase()
   if (normalized.includes('png')) return 'png'
@@ -347,11 +377,13 @@ export async function executeV3Step1a(input: V3Step1aInput): Promise<V3Step1aOut
     ref.description?.toUpperCase().includes('GARMENT COLLAGE')
   ) ?? false
   const hasClothingReference = hasClothingOverlay || hasGarmentCollage
+  const hasWardrobeColorGuidance = promptHasWardrobeColorGuidance(projectedPrompt)
 
   const hardConstraints = getStep1aHardConstraints({
     bodyBoundaryInstruction: bodyBoundaryInstruction ?? undefined,
     shotDescription,
     hasClothingReference,
+    hasWardrobeColorGuidance,
   })
 
   const allowAuthorizedLogosInStep1a = !!(

@@ -7,7 +7,7 @@
 
 import { StyleElement, ElementContext, ElementContribution } from '../base/StyleElement'
 import { hasValue } from '../base/element-types'
-import { EXPRESSION_LABELS } from './prompt'
+import { EXPRESSION_LABELS, getExpressionMustFollow } from './prompt'
 import { autoRegisterElement } from '../composition/registry'
 
 export class ExpressionElement extends StyleElement {
@@ -37,7 +37,7 @@ export class ExpressionElement extends StyleElement {
     }
 
     const exprValue = expression.value
-    const mustFollow: string[] = []
+    const mustFollow: string[] = getExpressionMustFollow(exprValue.type)
     const metadata: Record<string, unknown> = {
       expressionType: exprValue.type,
     }

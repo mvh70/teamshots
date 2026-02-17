@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, signOut, getSession } from 'next-auth/react'
 import {useTranslations, useLocale} from 'next-intl'
@@ -29,21 +29,6 @@ export default function SignUpPage() {
   const [infoMessage] = useState('')
 
   const router = useRouter()
-
-  // Keep OAuth start and callback on the same host to preserve PKCE cookies.
-  useEffect(() => {
-    const canonicalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL
-    if (!canonicalBaseUrl) return
-    try {
-      const canonical = new URL(canonicalBaseUrl)
-      if (window.location.hostname !== canonical.hostname) {
-        const target = `${canonical.protocol}//${canonical.host}${window.location.pathname}${window.location.search}${window.location.hash}`
-        window.location.replace(target)
-      }
-    } catch {
-      // Ignore invalid canonical URL config
-    }
-  }, [])
 
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {

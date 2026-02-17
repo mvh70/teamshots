@@ -46,6 +46,7 @@ export function getStep1aHardConstraints(params: {
   bodyBoundaryInstruction?: string
   shotDescription: string
   hasClothingReference: boolean
+  hasWardrobeColorGuidance: boolean
 }): string[] {
   const hardConstraints = [
     '**HARD CONSTRAINTS (Non-Negotiable):**',
@@ -56,9 +57,18 @@ export function getStep1aHardConstraints(params: {
     '2. **Background:** Solid neutral grey (#808080) only. No gradients, props, environment, or text.',
   ]
 
+  let nextRuleNumber = 3
+
   if (params.hasClothingReference) {
     hardConstraints.push(
-      '3. **Clothing:** Use the clothing reference as PRIMARY source for all garment styling.'
+      `${nextRuleNumber}. **Clothing:** Use the clothing reference as PRIMARY source for all garment styling.`
+    )
+    nextRuleNumber += 1
+  }
+
+  if (params.hasWardrobeColorGuidance) {
+    hardConstraints.push(
+      `${nextRuleNumber}. **Wardrobe colors:** Follow the wardrobe color guidance in the prompt JSON exactly for every visible garment. Do not shift, swap, desaturate, or reinterpret garment colors.`
     )
   }
 

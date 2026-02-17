@@ -319,7 +319,6 @@ export async function executeV3Workflow({
       job,
       PROGRESS_STEPS.V3_PREPARING,
       formatProgress(getProgressMessage('v3-preparing-assets'), PROGRESS_STEPS.V3_PREPARING),
-      attempt > 1
     )
 
     const step0Result = await executeStep0Preparation({
@@ -431,7 +430,6 @@ export async function executeV3Workflow({
           job,
           PROGRESS_STEPS.V3_EVALUATING_BRANDING,
           formatProgress(getProgressMessage('v3-evaluating-branding'), PROGRESS_STEPS.V3_EVALUATING_BRANDING),
-          step0Attempt > 1
         )
 
         const step0EvalOutput = await executeWithRateLimitRetry(
@@ -820,7 +818,6 @@ export async function executeV3Workflow({
         job,
         PROGRESS_STEPS.V3_COMPOSITING,
         formatProgress(getProgressMessage('v3-compositing'), PROGRESS_STEPS.V3_COMPOSITING),
-        isStep2Retry
       )
 
       const compositionComments = [...allEvaluatorComments, ...step2EvalFeedback]
@@ -883,7 +880,6 @@ export async function executeV3Workflow({
         job,
         PROGRESS_STEPS.V3_FINAL_EVAL,
         formatProgress({ message: '[4/4] Final quality check...', emoji: '🎯' }, PROGRESS_STEPS.V3_FINAL_EVAL),
-        isStep2Retry
       )
 
       const step3Output = await executeWithRateLimitRetry(
@@ -986,7 +982,6 @@ export async function executeV3Workflow({
           job,
           PROGRESS_STEPS.V3_COMPOSITING,
           formatProgress({ message: '[3/4] Refining composition...', emoji: '🔄' }, PROGRESS_STEPS.V3_COMPOSITING),
-          true
         )
         continue
       }

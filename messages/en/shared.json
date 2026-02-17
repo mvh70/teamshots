@@ -238,6 +238,21 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Service"
   },
+  "contact": {
+    "title": "Contact Us",
+    "description": "Get in touch with our team",
+    "form": {
+      "name": "Your name",
+      "email": "Email address",
+      "subject": "Subject",
+      "message": "Message",
+      "submit": "Send Message",
+      "sending": "Sending...",
+      "success": "Message sent. We'll get back to you shortly.",
+      "error": "Something went wrong. Please try again.",
+      "rateLimited": "Too many requests. Please try again later."
+    }
+  },
   "pricing": {
     "title": "Simple, use-based pricing",
     "subtitle": "No subscriptions or hidden fees. Pay only for the photos you generate.",

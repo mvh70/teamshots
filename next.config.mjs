@@ -224,7 +224,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+const sentryConfig = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -261,3 +261,11 @@ export default withSentryConfig(nextConfig, {
     },
   },
 });
+
+// Sentry adds `ioredis` to serverExternalPackages by default, but BullMQ imports
+// `ioredis/built/utils`, which cannot be externalized reliably by Node resolution.
+// Keep other Sentry externals intact while forcing ioredis to be bundled.
+sentryConfig.serverExternalPackages = (sentryConfig.serverExternalPackages || [])
+  .filter((pkg) => pkg !== 'ioredis');
+
+export default sentryConfig;

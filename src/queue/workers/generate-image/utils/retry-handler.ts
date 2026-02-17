@@ -99,48 +99,38 @@ export function formatProgressWithAttempt(
 
 /**
  * Safe progress update with error handling
- * Ensures progress never goes backwards
+ * Ensures progress number never goes backwards, but always updates the message.
  *
  * BullMQ stores job.progress in Redis, so it's shared across all workers.
- * We use this as the source of truth instead of an in-memory Map.
  *
  * @param job - The BullMQ job
  * @param targetProgress - The desired progress percentage (0-100)
  * @param message - The status message to display
- * @param forceUpdate - Force the update even if progress hasn't increased (for message-only updates)
  */
 export async function updateJobProgress(
   job: Job,
   targetProgress: number,
   message: string,
-  forceUpdate = false
 ): Promise<void> {
   try {
     const jobId = job.id ?? 'unknown'
     const currentProgress = progressHighWaterMark.get(String(jobId)) ?? 0
 
-    // Only update if progress increases OR if force update is requested
-    if (targetProgress > currentProgress || forceUpdate) {
-      // Never let progress go backwards - use the higher value
-      const actualProgress = Math.max(targetProgress, currentProgress)
-      await job.updateProgress({ progress: actualProgress, message })
-      progressHighWaterMark.set(String(jobId), actualProgress)
+    // Never let progress number go backwards, but always update the message
+    const actualProgress = Math.max(targetProgress, currentProgress)
+    await job.updateProgress({ progress: actualProgress, message })
 
-      Logger.debug('Updated job progress', {
-        jobId,
-        targetProgress,
-        actualProgress,
-        currentProgress,
-        messagePreview: message.substring(0, 50)
-      })
-    } else {
-      Logger.debug('Skipped progress update (would go backwards)', {
-        jobId,
-        targetProgress,
-        currentProgress,
-        messagePreview: message.substring(0, 50)
-      })
+    if (actualProgress > currentProgress) {
+      progressHighWaterMark.set(String(jobId), actualProgress)
     }
+
+    Logger.debug('Updated job progress', {
+      jobId,
+      targetProgress,
+      actualProgress,
+      currentProgress,
+      messagePreview: message.substring(0, 50)
+    })
   } catch (error) {
     Logger.warn('Failed to update job progress', {
       progress: targetProgress,

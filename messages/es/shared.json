@@ -239,6 +239,21 @@
     "privacy": "Política de Privacidad",
     "terms": "Términos de Servicio"
   },
+  "contact": {
+    "title": "Contáctenos",
+    "description": "Ponte en contacto con nuestro equipo",
+    "form": {
+      "name": "Tu nombre",
+      "email": "Correo electrónico",
+      "subject": "Asunto",
+      "message": "Mensaje",
+      "submit": "Enviar mensaje",
+      "sending": "Enviando...",
+      "success": "Mensaje enviado. Te responderemos pronto.",
+      "error": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo más tarde."
+    }
+  },
   "pricing": {
     "title": "Precios simples basados en uso",
     "subtitle": "Sin suscripciones ni tarifas ocultas. Paga solo por las fotos que generas.",

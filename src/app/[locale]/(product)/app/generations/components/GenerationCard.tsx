@@ -93,7 +93,7 @@ const inferWorkflowStepFromProgress = (progress?: number) => {
   const normalized = normalizeProgressPercent(progress)
   if (normalized === null || normalized <= 0) return null
   if (normalized >= 85) return 4 as const
-  if (normalized >= 50) return 3 as const
+  if (normalized >= 40) return 3 as const
   if (normalized >= 15) return 2 as const
   return 1 as const
 }

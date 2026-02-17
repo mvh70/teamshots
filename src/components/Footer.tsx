@@ -92,6 +92,9 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
             <Link href="/legal/terms" className="text-gray-400 hover:text-white transition-colors duration-300">
               {tFooter('terms')}
             </Link>
+            <Link href="/contact" className="text-gray-400 hover:text-white transition-colors duration-300">
+              {tFooter('contact')}
+            </Link>
             {hasGdpr && (
               <span className="text-gray-400 flex items-center gap-1.5">
                 <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

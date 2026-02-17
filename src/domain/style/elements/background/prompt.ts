@@ -209,6 +209,7 @@ const STEP2_BACKGROUND_COMPOSITING_INSTRUCTIONS: Record<
   immutable: [
     '**Compositing Instructions (Immutable Background):**',
     '- Use the attached BACKGROUND REFERENCE as-is. Do not regenerate, repaint, or restyle the background. Natural crop/reframe is allowed when needed for output format, but do not compress.',
+    '- Do not mirror, flip, or reverse the background image in any direction.',
     '- Place the person centrally in the background composition.',
     '- Add soft contact shadow and subtle ambient occlusion where subject meets the scene.',
     '- Match visible background lighting first (direction, color temperature, shadow behavior). Use JSON lighting as secondary guidance only.',

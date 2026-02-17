@@ -94,7 +94,12 @@ describe('executeV3Step1a prompt artifact pass-through', () => {
       expectedWidth: 1024,
       expectedHeight: 1024,
       canonicalPrompt: {
-        subject: { expression: 'calm' },
+        subject: {
+          expression: 'calm',
+          wardrobe: {
+            color_palette: ['top_layer (formal): navy color', 'base_layer (shirt underneath): white color'],
+          },
+        },
         framing: { shot_type: 'medium-shot' },
       },
       step1aArtifacts: {
@@ -114,5 +119,6 @@ describe('executeV3Step1a prompt artifact pass-through', () => {
     expect(prompt).toContain('Match lighting direction from camera left')
     expect(prompt).toContain('Keep natural skin texture')
     expect(prompt).toContain('Use soft shadows under the jawline')
+    expect(prompt).toContain('**Wardrobe colors:** Follow the wardrobe color guidance in the prompt JSON exactly')
   })
 })
