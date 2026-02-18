@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev --experimental-https -p 3000",
-    "build": "npx prisma generate && next build --webpack",
+    "build": "npx prisma generate && NODE_OPTIONS='--max-old-space-size=4096' next build --webpack",
     "start": "next start",
     "start:prod": "concurrently \"npm run start\" \"npm run worker\"",
     "lint": "eslint",
