@@ -108,7 +108,7 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
           {variant === 'teamshotspro' && (
             <div className="mb-8 flex justify-center">
               <a href="https://launchigniter.com/product/teamshotspro?ref=badge-teamshotspro" target="_blank" rel="noopener noreferrer">
-                <img src="https://launchigniter.com/api/badge/teamshotspro?theme=light" alt="Featured on LaunchIgniter" width={212} height={55} />
+                <img src="https://launchigniter.com/api/badge/teamshotspro?theme=light" alt="Featured on LaunchIgniter" width={150} height={39} />
               </a>
             </div>
           )}
