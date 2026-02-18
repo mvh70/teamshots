@@ -2,6 +2,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 import path from 'node:path';
 
 const requestConfigPath = './src/i18n/request.ts';
+const shouldUploadSentrySourceMaps = process.env.SENTRY_UPLOAD_SOURCE_MAPS === '1';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -48,6 +49,8 @@ const nextConfig = {
     // optimizeCss disabled - requires @parcel/watcher native bindings that fail in Nixpacks builds
     // optimizeCss: true,
     scrollRestoration: true,
+    // Recommended by Next.js for lower build-memory peaks on large webpack builds.
+    webpackMemoryOptimizations: true,
     optimizePackageImports: [
       '@heroicons/react',
       'lucide-react',
@@ -239,7 +242,10 @@ const sentryConfig = withSentryConfig(nextConfig, {
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
+  widenClientFileUpload: shouldUploadSentrySourceMaps,
+  sourcemaps: {
+    disable: !shouldUploadSentrySourceMaps,
+  },
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
