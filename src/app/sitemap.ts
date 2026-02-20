@@ -6,7 +6,12 @@ import { SOLUTIONS } from '@/config/solutions'
 import { routing } from '@/i18n/routing'
 import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
 
-const STATIC_LAST_MODIFIED = new Date('2025-06-01')
+// Use the start of the current month as a reasonable "last modified" for static pages.
+// This avoids hardcoding a date that goes stale and signals freshness to search engines.
+const STATIC_LAST_MODIFIED = (() => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+})()
 
 function parsePublishedDate(publishedAt: string | number | null | undefined): Date | null {
   if (!publishedAt) return null
