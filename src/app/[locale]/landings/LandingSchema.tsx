@@ -1,8 +1,10 @@
+import type { BrandConfig } from '@/config/brand';
 import type { LandingVariant } from '@/config/landing-content';
+import { organizationSchema, SUPPORTED_LANGUAGES, inLanguageForLocale } from '@/lib/schema';
 
 interface LandingSchemaProps {
   baseUrl: string;
-  brandName: string;
+  brand: BrandConfig;
   locale: string;
   variant: LandingVariant;
   faqItems: Array<{ question: string; answer: string }>;
@@ -10,11 +12,12 @@ interface LandingSchemaProps {
 
 export function LandingSchema({
   baseUrl,
-  brandName,
+  brand,
   locale,
   variant,
   faqItems,
 }: LandingSchemaProps) {
+  const brandName = brand.name;
   const pageUrl = locale === 'en' ? baseUrl : `${baseUrl}/${locale}`;
 
   // WebSite schema - critical for search features
@@ -32,7 +35,7 @@ export function LandingSchema({
       '@id': `${baseUrl}#organization`,
       name: brandName,
     },
-    inLanguage: ['en-US', 'es-ES'],
+    inLanguage: SUPPORTED_LANGUAGES,
   };
 
   // WebPage schema
@@ -56,48 +59,19 @@ export function LandingSchema({
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/branding/og-image.jpg`,
+      url: `${baseUrl}${brand.ogImage}`,
     },
-    speakable: {
-      '@type': 'SpeakableSpecification',
-      cssSelector: ['h1', 'h2', '.text-xl'],
-    },
-    inLanguage: locale === 'es' ? 'es-ES' : 'en-US',
+    inLanguage: inLanguageForLocale(locale),
   };
 
   // Organization schema with detailed info
-  const organizationSchema = {
+  const orgSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    '@id': `${baseUrl}#organization`,
-    name: brandName,
-    url: baseUrl,
-    logo: {
-      '@type': 'ImageObject',
-      url: `${baseUrl}/branding/teamshotspro_trans.webp`,
-      width: 300,
-      height: 60,
-    },
-    image: `${baseUrl}/branding/og-image.jpg`,
+    ...organizationSchema(brand, baseUrl),
     description: variant === 'teamshotspro'
-      ? 'TeamShotsPro provides AI-powered professional headshots for teams. Get consistent, on-brand corporate photos from selfies in 60 seconds.'
-      : 'Professional AI headshot service. Transform selfies into studio-quality photos instantly.',
+      ? `${brandName} provides AI-powered professional headshots for teams. Get consistent, on-brand corporate photos from selfies in 60 seconds.`
+      : `${brandName} provides AI-powered professional headshots. Transform selfies into studio-quality photos instantly.`,
     foundingDate: '2025',
-    sameAs: [
-      'https://www.linkedin.com/company/teamshotspro',
-      'https://twitter.com/teamshotspro',
-    ],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'support@teamshotspro.com',
-      contactType: 'customer support',
-      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Dutch'],
-    },
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: 'Dubai',
-      addressCountry: 'AE',
-    },
   };
 
   // SoftwareApplication schema - positions product as a web app
@@ -303,7 +277,7 @@ export function LandingSchema({
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
       <script
         type="application/ld+json"

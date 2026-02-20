@@ -141,7 +141,7 @@ export default async function SolucionesPage({ params }: Props) {
 
   // Get translations for schema data
   const baseUrl = getBaseUrl(headersList)
-  const brandName = getBrand(headersList).name
+  const brand = getBrand(headersList)
   const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
 
   // Extract data for schema
@@ -150,12 +150,6 @@ export default async function SolucionesPage({ params }: Props) {
     description: t('seo.description'),
   }
   const faqItems = t.raw('faq.items') as Array<{ question: string; answer: string }>
-  const testimonials = t.raw('testimonials.items') as Array<{
-    quote: string;
-    author: string;
-    role: string;
-    company: string;
-  }>
   const howItWorksSteps = t.raw('howItWorks.steps') as Array<{
     number: string;
     title: string;
@@ -168,12 +162,11 @@ export default async function SolucionesPage({ params }: Props) {
       {/* SEO Schema Markup */}
       <SolutionSchema
         baseUrl={baseUrl}
-        brandName={brandName}
+        brand={brand}
         locale={locale}
         solution={solution}
         seo={seo}
         faqItems={faqItems}
-        testimonials={testimonials}
         howItWorksSteps={howItWorksSteps}
         comparisonRows={comparisonRows}
       />

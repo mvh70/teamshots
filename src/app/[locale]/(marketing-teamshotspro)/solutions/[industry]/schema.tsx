@@ -1,10 +1,10 @@
-import Script from 'next/script';
-
+import type { BrandConfig } from '@/config/brand';
 import type { SolutionConfig } from '@/config/solutions';
+import { organizationSchema, inLanguageForLocale } from '@/lib/schema';
 
 interface SolutionSchemaProps {
   baseUrl: string;
-  brandName: string;
+  brand: BrandConfig;
   locale: string;
   solution: SolutionConfig;
   seo: {
@@ -12,12 +12,6 @@ interface SolutionSchemaProps {
     description: string;
   };
   faqItems: Array<{ question: string; answer: string }>;
-  testimonials: Array<{
-    quote: string;
-    author: string;
-    role: string;
-    company: string;
-  }>;
   howItWorksSteps: Array<{
     number: string;
     title: string;
@@ -28,15 +22,15 @@ interface SolutionSchemaProps {
 
 export function SolutionSchema({
   baseUrl,
-  brandName,
+  brand,
   locale,
   solution,
   seo,
   faqItems,
-  testimonials,
   howItWorksSteps,
   comparisonRows,
 }: SolutionSchemaProps) {
+  const brandName = brand.name;
   const pageUrl = locale === 'en'
     ? `${baseUrl}/solutions/${solution.slug}`
     : `${baseUrl}/${locale}/solutions/${solution.slug}`;
@@ -67,11 +61,7 @@ export function SolutionSchema({
       '@type': 'ImageObject',
       url: `${baseUrl}${solution.heroImage}`,
     },
-    speakable: {
-      '@type': 'SpeakableSpecification',
-      cssSelector: ['h1', 'h2', '.text-xl'],
-    },
-    inLanguage: locale === 'es' ? 'es-ES' : 'en-US',
+    inLanguage: inLanguageForLocale(locale),
     potentialAction: {
       '@type': 'ReadAction',
       target: pageUrl,
@@ -129,30 +119,10 @@ export function SolutionSchema({
   };
 
   // Organization schema
-  const organizationSchema = {
+  const orgSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    '@id': `${baseUrl}#organization`,
-    name: brandName,
-    url: baseUrl,
-    logo: {
-      '@type': 'ImageObject',
-      url: `${baseUrl}/branding/teamshotspro_trans.webp`,
-      width: 300,
-      height: 60,
-    },
-    image: `${baseUrl}/branding/og-image.jpg`,
+    ...organizationSchema(brand, baseUrl),
     description: `${brandName} provides AI-powered professional headshots for ${solution.label.toLowerCase()} teams.`,
-    sameAs: [
-      'https://www.linkedin.com/company/teamshotspro',
-      'https://twitter.com/teamshotspro',
-    ],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'support@teamshotspro.com',
-      contactType: 'customer support',
-      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Dutch'],
-    },
   };
 
   // BreadcrumbList schema - navigation path
@@ -220,48 +190,6 @@ export function SolutionSchema({
       }
     : null;
 
-  // Review/Testimonial schema - for social proof
-  const reviewSchema = testimonials.length > 0
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'Product',
-        '@id': `${pageUrl}#product-reviews`,
-        name: `${brandName} for ${solution.label}`,
-        description: seo.description,
-        brand: {
-          '@type': 'Brand',
-          name: brandName,
-        },
-        review: testimonials.map((testimonial) => ({
-          '@type': 'Review',
-          reviewRating: {
-            '@type': 'Rating',
-            ratingValue: '5',
-            bestRating: '5',
-          },
-          author: {
-            '@type': 'Person',
-            name: testimonial.author,
-            jobTitle: testimonial.role,
-            worksFor: {
-              '@type': 'Organization',
-              name: testimonial.company,
-            },
-          },
-          reviewBody: testimonial.quote,
-        })),
-        aggregateRating: testimonials.length >= 3
-          ? {
-              '@type': 'AggregateRating',
-              ratingValue: '5',
-              reviewCount: testimonials.length.toString(),
-              bestRating: '5',
-              worstRating: '1',
-            }
-          : undefined,
-      }
-    : null;
-
   // Comparison table as ItemList
   const comparisonSchema = comparisonRows.length > 0
     ? {
@@ -281,50 +209,36 @@ export function SolutionSchema({
 
   return (
     <>
-      <Script
-        id="solution-webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Script
-        id="solution-service-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
-      <Script
-        id="solution-organization-schema"
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
-      <Script
-        id="solution-breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {faqSchema && (
-        <Script
-          id="solution-faq-schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
       {howToSchema && (
-        <Script
-          id="solution-howto-schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
         />
       )}
-      {reviewSchema && (
-        <Script
-          id="solution-review-schema"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewSchema) }}
-        />
-      )}
       {comparisonSchema && (
-        <Script
-          id="solution-comparison-schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(comparisonSchema) }}
         />

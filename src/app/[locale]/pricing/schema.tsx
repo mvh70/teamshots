@@ -1,10 +1,10 @@
-import Script from 'next/script';
-
+import type { BrandConfig } from '@/config/brand';
 import type { LandingVariant } from '@/config/landing-content';
+import { organizationSchema, inLanguageForLocale } from '@/lib/schema';
 
 interface PricingSchemaProps {
   baseUrl: string;
-  brandName: string;
+  brand: BrandConfig;
   locale: string;
   variant: LandingVariant | undefined;
   // Individual pricing (for individualshots variant)
@@ -22,7 +22,7 @@ interface PricingSchemaProps {
 
 export function PricingSchema({
   baseUrl,
-  brandName,
+  brand,
   locale,
   variant,
   individualPrice,
@@ -34,6 +34,7 @@ export function PricingSchema({
   photosPerSeat,
   faqItems,
 }: PricingSchemaProps) {
+  const brandName = brand.name;
   const pageUrl = locale === 'en'
     ? `${baseUrl}/pricing`
     : `${baseUrl}/${locale}/pricing`;
@@ -65,13 +66,9 @@ export function PricingSchema({
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/branding/og-image.jpg`,
+      url: `${baseUrl}${brand.ogImage}`,
     },
-    speakable: {
-      '@type': 'SpeakableSpecification',
-      cssSelector: ['h1', 'h2', '.text-xl'],
-    },
-    inLanguage: locale === 'es' ? 'es-ES' : 'en-US',
+    inLanguage: inLanguageForLocale(locale),
     potentialAction: {
       '@type': 'ReadAction',
       target: pageUrl,
@@ -91,7 +88,7 @@ export function PricingSchema({
           name: brandName,
         },
         category: 'Photography Services',
-        image: `${baseUrl}/branding/og-image.jpg`,
+        image: `${baseUrl}${brand.ogImage}`,
         offers: {
           '@type': 'AggregateOffer',
           priceCurrency: 'USD',
@@ -122,7 +119,7 @@ export function PricingSchema({
           name: brandName,
         },
         category: 'Photography Services',
-        image: `${baseUrl}/branding/og-image.jpg`,
+        image: `${baseUrl}${brand.ogImage}`,
         offers: [
           individualPrice && {
             '@type': 'Offer',
@@ -216,23 +213,9 @@ export function PricingSchema({
   };
 
   // Organization schema
-  const organizationSchema = {
+  const orgSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    '@id': `${baseUrl}#organization`,
-    name: brandName,
-    url: baseUrl,
-    logo: `${baseUrl}/branding/teamshotspro_trans.webp`,
-    sameAs: [
-      'https://www.linkedin.com/company/teamshotspro',
-      'https://twitter.com/teamshotspro',
-    ],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'support@teamshotspro.com',
-      contactType: 'customer support',
-      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Dutch'],
-    },
+    ...organizationSchema(brand, baseUrl),
   };
 
   // BreadcrumbList schema
@@ -273,34 +256,28 @@ export function PricingSchema({
 
   return (
     <>
-      <Script
-        id="pricing-webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Script
-        id="pricing-product-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
-      <Script
-        id="pricing-service-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
-      <Script
-        id="pricing-organization-schema"
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
-      <Script
-        id="pricing-breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {faqSchema && (
-        <Script
-          id="pricing-faq-schema"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />

@@ -1,13 +1,15 @@
-import Script from 'next/script';
+import type { BrandConfig } from '@/config/brand';
+import { organizationSchema, inLanguageForLocale } from '@/lib/schema';
 
 interface CostCalculatorSchemaProps {
   baseUrl: string;
-  brandName: string;
+  brand: BrandConfig;
   locale: string;
   t: (key: string) => string;
 }
 
-export function CostCalculatorSchema({ baseUrl, brandName, locale, t }: CostCalculatorSchemaProps) {
+export function CostCalculatorSchema({ baseUrl, brand, locale, t }: CostCalculatorSchemaProps) {
+  const brandName = brand.name;
   const pageUrl = locale === 'en'
     ? `${baseUrl}/headshot-cost-calculator`
     : `${baseUrl}/${locale}/headshot-cost-calculator`;
@@ -37,13 +39,9 @@ export function CostCalculatorSchema({ baseUrl, brandName, locale, t }: CostCalc
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/branding/og-image.jpg`,
+      url: `${baseUrl}${brand.ogImage}`,
     },
-    speakable: {
-      '@type': 'SpeakableSpecification',
-      cssSelector: ['h1', '.text-lg', '.text-sm.text-text-muted'],
-    },
-    inLanguage: locale === 'es' ? 'es-ES' : 'en-US',
+    inLanguage: inLanguageForLocale(locale),
     potentialAction: {
       '@type': 'ReadAction',
       target: pageUrl,
@@ -81,7 +79,7 @@ export function CostCalculatorSchema({ baseUrl, brandName, locale, t }: CostCalc
     },
   };
 
-  // SoftwareApplication schema for the main product
+  // SoftwareApplication schema for the main product (no fake aggregateRating)
   const softwareApplicationSchema = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -98,32 +96,12 @@ export function CostCalculatorSchema({ baseUrl, brandName, locale, t }: CostCalc
       priceCurrency: 'USD',
       offerCount: '5',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '127',
-      bestRating: '5',
-      worstRating: '1',
-    },
   };
 
   // Organization schema
-  const organizationSchema = {
+  const orgSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: brandName,
-    url: baseUrl,
-    logo: `${baseUrl}/branding/teamshotspro_trans.webp`,
-    sameAs: [
-      'https://www.linkedin.com/company/teamshotspro',
-      'https://twitter.com/teamshotspro',
-    ],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'support@teamshotspro.com',
-      contactType: 'customer support',
-      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Dutch'],
-    },
+    ...organizationSchema(brand, baseUrl),
   };
 
   // BreadcrumbList schema
@@ -230,44 +208,37 @@ export function CostCalculatorSchema({ baseUrl, brandName, locale, t }: CostCalc
     totalTime: 'PT1M',
     tool: {
       '@type': 'HowToTool',
-      name: 'TeamShotsPro Cost Calculator',
+      name: `${brandName} Cost Calculator`,
     },
   };
 
   return (
     <>
-      <Script
-        id="webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Script
-        id="web-application-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationSchema) }}
       />
-      <Script
-        id="software-application-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
       />
-      <Script
-        id="organization-schema"
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
-      <Script
-        id="breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <Script
-        id="faq-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <Script
-        id="howto-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />

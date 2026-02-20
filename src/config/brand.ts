@@ -52,6 +52,7 @@ export interface BrandConfig {
   legal: BrandLegal;
   colors: BrandColors;
   cta: BrandCta;
+  sameAs?: string[];
 }
 
 // Shared configuration (same across all brands)
@@ -134,6 +135,10 @@ const TEAM_BRAND: BrandConfig = {
   },
   colors: SHARED_CONFIG.colors,
   cta: TEAM_CTA,
+  sameAs: [
+    'https://www.linkedin.com/company/teamshotspro',
+    'https://twitter.com/teamshotspro',
+  ],
 };
 
 const EXTENSION_BRAND: BrandConfig = {

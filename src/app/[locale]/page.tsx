@@ -105,7 +105,7 @@ export default async function Page({ params }: Props) {
     <>
       <LandingSchema
         baseUrl={baseUrl}
-        brandName={brand.name}
+        brand={brand}
         locale={locale}
         variant={variant}
         faqItems={FAQ_ITEMS_EN}

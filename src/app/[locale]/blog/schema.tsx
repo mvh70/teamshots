@@ -1,11 +1,11 @@
-import Script from 'next/script';
-
+import type { BrandConfig } from '@/config/brand';
 import type { BlogPost } from '@/config/blog';
 import type { LandingVariant } from '@/config/landing-content';
+import { organizationSchema, SUPPORTED_LANGUAGES, inLanguageForLocale } from '@/lib/schema';
 
 interface BlogIndexSchemaProps {
   baseUrl: string;
-  brandName: string;
+  brand: BrandConfig;
   locale: string;
   variant: LandingVariant | undefined;
   title: string;
@@ -15,13 +15,14 @@ interface BlogIndexSchemaProps {
 
 export function BlogIndexSchema({
   baseUrl,
-  brandName,
+  brand,
   locale,
   variant,
   title,
   description,
   posts,
 }: BlogIndexSchemaProps) {
+  const brandName = brand.name;
   const pageUrl = locale === 'en'
     ? `${baseUrl}/blog`
     : `${baseUrl}/${locale}/blog`;
@@ -51,7 +52,7 @@ export function BlogIndexSchema({
         ? 'AI team headshots, professional photography, and corporate branding'
         : 'AI headshots and professional photography',
     },
-    inLanguage: locale === 'es' ? 'es-ES' : 'en-US',
+    inLanguage: inLanguageForLocale(locale),
     potentialAction: {
       '@type': 'ReadAction',
       target: pageUrl,
@@ -87,32 +88,12 @@ export function BlogIndexSchema({
   };
 
   // Organization schema
-  const organizationSchema = {
+  const orgSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    '@id': `${baseUrl}#organization`,
-    name: brandName,
-    url: baseUrl,
-    logo: {
-      '@type': 'ImageObject',
-      url: `${baseUrl}/branding/teamshotspro_trans.webp`,
-      width: 300,
-      height: 60,
-    },
-    image: `${baseUrl}/branding/og-image.jpg`,
+    ...organizationSchema(brand, baseUrl),
     description: variant === 'teamshotspro'
       ? `${brandName} provides AI-powered professional headshots for teams. Get consistent, on-brand corporate photos from selfies in 60 seconds.`
       : `${brandName} provides AI-powered professional headshots. Transform selfies into studio-quality photos instantly.`,
-    sameAs: [
-      'https://www.linkedin.com/company/teamshotspro',
-      'https://twitter.com/teamshotspro',
-    ],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'support@teamshotspro.com',
-      contactType: 'customer support',
-      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Dutch'],
-    },
   };
 
   // BreadcrumbList schema
@@ -156,33 +137,28 @@ export function BlogIndexSchema({
       },
       'query-input': 'required name=search_term_string',
     },
-    inLanguage: ['en-US', 'es-ES'],
+    inLanguage: SUPPORTED_LANGUAGES,
   };
 
   return (
     <>
-      <Script
-        id="blog-webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
-      <Script
-        id="blog-collection-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchema) }}
       />
-      <Script
-        id="blog-organization-schema"
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
       />
-      <Script
-        id="blog-breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <Script
-        id="blog-website-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
       />

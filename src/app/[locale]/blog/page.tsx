@@ -78,7 +78,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     <>
       <BlogIndexSchema
         baseUrl={baseUrl}
-        brandName={brandName}
+        brand={brand}
         locale={locale}
         variant={variant}
         title={title}

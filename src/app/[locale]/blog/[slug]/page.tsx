@@ -20,6 +20,10 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>
 }
 
+function hasPublishedSpanishTranslation(status: string | null | undefined): boolean {
+  return status === 'published' || status === 'approved'
+}
+
 function normalizeIsoDate(
   dateValue: string | number | Date | null | undefined
 ): string | undefined {
@@ -92,6 +96,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const redirectSlug = getRedirectForSlug(brandId, slug)
   if (redirectSlug && redirectSlug !== slug) {
+    if (locale === 'es') {
+      const redirectPost = getBlogPostBySlug(brandId, redirectSlug, locale)
+      if (!redirectPost || !hasPublishedSpanishTranslation(redirectPost.spanishStatus)) {
+        permanentRedirect(`/blog/${redirectSlug}`)
+      }
+    }
     permanentRedirect(`/${locale}/blog/${redirectSlug}`)
   }
 
@@ -103,7 +113,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // Check if Spanish translation is available
-  const spanishAvailable = post.spanishStatus === 'published' || post.spanishStatus === 'approved'
+  const spanishAvailable = hasPublishedSpanishTranslation(post.spanishStatus)
+  if (locale === 'es' && !spanishAvailable) {
+    permanentRedirect(`/blog/${slug}`)
+  }
 
   // Use Spanish or English metadata based on locale
   const title = locale === 'es' && post.spanishTitle ? post.spanishTitle : post.title
@@ -161,6 +174,12 @@ export default async function BlogPostPage({ params }: Props) {
   // Get blog post from CMS
   const redirectSlug = getRedirectForSlug(brandId, slug)
   if (redirectSlug && redirectSlug !== slug) {
+    if (locale === 'es') {
+      const redirectPost = getBlogPostBySlug(brandId, redirectSlug, locale)
+      if (!redirectPost || !hasPublishedSpanishTranslation(redirectPost.spanishStatus)) {
+        permanentRedirect(`/blog/${redirectSlug}`)
+      }
+    }
     permanentRedirect(`/${locale}/blog/${redirectSlug}`)
   }
 
@@ -170,15 +189,21 @@ export default async function BlogPostPage({ params }: Props) {
     // Check if this slug has been consolidated/redirected
     const fallbackRedirectSlug = getRedirectForSlug(brandId, slug)
     if (fallbackRedirectSlug) {
+      if (locale === 'es') {
+        const fallbackPost = getBlogPostBySlug(brandId, fallbackRedirectSlug, locale)
+        if (!fallbackPost || !hasPublishedSpanishTranslation(fallbackPost.spanishStatus)) {
+          permanentRedirect(`/blog/${fallbackRedirectSlug}`)
+        }
+      }
       permanentRedirect(`/${locale}/blog/${fallbackRedirectSlug}`)
     }
     notFound()
   }
 
   // If requesting Spanish but translation isn't published, show 404
-  const spanishAvailable = post.spanishStatus === 'published' || post.spanishStatus === 'approved'
+  const spanishAvailable = hasPublishedSpanishTranslation(post.spanishStatus)
   if (locale === 'es' && !spanishAvailable) {
-    notFound()
+    permanentRedirect(`/blog/${slug}`)
   }
 
   // Get content based on locale

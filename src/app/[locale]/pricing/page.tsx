@@ -95,7 +95,7 @@ export default async function PricingPage({ params }: Props) {
     <>
       <PricingSchema
         baseUrl={baseUrl}
-        brandName={brand.name}
+        brand={brand}
         locale={locale}
         variant={variant}
         individualPrice={PRICING_CONFIG.individual.price}

@@ -69,7 +69,7 @@ export default async function HeadshotCostCalculatorPage({ params }: Props) {
 
   return (
     <>
-      <CostCalculatorSchema baseUrl={baseUrl} brandName={brand.name} locale={locale} t={t} />
+      <CostCalculatorSchema baseUrl={baseUrl} brand={brand} locale={locale} t={t} />
       <CostCalculator />
     </>
   );
