@@ -8,10 +8,33 @@ import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
 
 const STATIC_LAST_MODIFIED = new Date('2025-06-01')
 
+function parsePublishedDate(publishedAt: string | number | null | undefined): Date | null {
+  if (!publishedAt) return null
+
+  if (typeof publishedAt === 'number') {
+    const parsed = new Date(publishedAt > 1_000_000_000_000 ? publishedAt : publishedAt * 1000)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const value = String(publishedAt).trim()
+  if (!value) return null
+
+  if (/^\d{13}$/.test(value)) {
+    const parsed = new Date(Number(value))
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  if (/^\d{10}$/.test(value)) {
+    const parsed = new Date(Number(value) * 1000)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 function getPublishedLastModified(publishedAt: string | number | null | undefined): Date {
-  if (!publishedAt) return STATIC_LAST_MODIFIED
-  const parsed = new Date(String(publishedAt))
-  return Number.isNaN(parsed.getTime()) ? STATIC_LAST_MODIFIED : parsed
+  return parsePublishedDate(publishedAt) ?? STATIC_LAST_MODIFIED
 }
 
 /**
