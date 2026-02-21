@@ -24,7 +24,7 @@ import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 import { useRefreshOnClassificationComplete } from '@/hooks/useRefreshOnClassificationComplete'
-import { mapInviteSelfiesToGridItems } from '@/lib/selfieGridItems'
+import { mapSelfieListItemsToGridItems, type SelfieListItem } from '@/lib/selfieGridItems'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -186,22 +186,12 @@ export default function SelfiesPage() {
     throw new Error('Invite selfie page requires invite mode selfie management')
   }
 
-  // Type assertion: in invite mode, uploads is always Selfie[]
-  type Selfie = {
-    id: string
-    key: string
-    url: string
-    uploadedAt: string
-    used?: boolean
-    selfieType?: string | null
-    selfieTypeConfidence?: number | null
-    isProper?: boolean | null
-    improperReason?: string | null
-    lightingQuality?: string | null
-    backgroundQuality?: string | null
-  }
-  const selfies = hookSelfies as Selfie[]
-  const gridItems = useMemo(() => mapInviteSelfiesToGridItems(selfies), [selfies])
+  // Type assertion: in invite mode, uploads now follow the shared /api/uploads/list contract
+  const selfies = hookSelfies as SelfieListItem[]
+  const gridItems = useMemo(
+    () => mapSelfieListItemsToGridItems(selfies, { token }),
+    [selfies, token]
+  )
 
   // Count all selected selfies, including newly uploaded ones that may not be in hookSelfies yet
   // The filtering was causing newly uploaded selfies to not count toward the continue button

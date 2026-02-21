@@ -2,24 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { extractPackageId } from '@/domain/style/settings-resolver'
-import { extendInviteExpiry } from '@/lib/invite-utils'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    // Validate the token, check expiry, and get invite data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
+    const invite = await prisma.teamInvite.findUnique({
+      where: { id: inviteAccess.access.inviteId },
       include: {
         team: {
           include: {
@@ -33,11 +28,6 @@ export async function GET(request: NextRequest) {
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
-
-    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
-    extendInviteExpiry(invite.id).catch(() => {
-      // Silently fail - expiry extension is best effort
-    })
 
     // Get the context - prefer invite.context (the context saved when invite was created)
     // This ensures the invite uses the context it was created with, even if team admin changes active context later
@@ -81,4 +71,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

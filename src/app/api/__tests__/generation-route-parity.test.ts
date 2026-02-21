@@ -279,6 +279,8 @@ describe('generation route parity', () => {
       return Promise.resolve(null)
     })
     ;(prisma.team.findUnique as jest.Mock).mockResolvedValue({
+      adminId: 'admin-1',
+      activeContextId: null,
       admin: {
         planPeriod: 'monthly',
         planTier: 'individual',
@@ -286,14 +288,15 @@ describe('generation route parity', () => {
     })
     ;(prisma.teamInvite.findFirst as jest.Mock).mockResolvedValue({
       id: 'invite-1',
+      token: 'invite-token',
+      teamId: 'team-1',
+      contextId: null,
+      email: 'invitee@example.com',
       person: {
         id: 'person-1',
         teamId: 'team-1',
-        team: {
-          id: 'team-1',
-          activeContextId: null,
-          adminId: 'admin-1',
-        },
+        userId: null,
+        email: 'invitee@example.com',
       },
     })
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({
@@ -371,5 +374,88 @@ describe('generation route parity', () => {
     expect(invitePayload.selfieAssetIds).toEqual(normalPayload.selfieAssetIds)
     expect(invitePayload.selfieTypeMap).toEqual(normalPayload.selfieTypeMap)
     expect(invitePayload.demographics).toEqual(normalPayload.demographics)
+  })
+
+  it('rejects invite generation create when invite is expired or missing', async () => {
+    ;(prisma.teamInvite.findFirst as jest.Mock).mockResolvedValueOnce(null)
+
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(401)
+    expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
+  })
+
+  it('rejects invite generation create when invite member no longer belongs to invite team', async () => {
+    ;(prisma.teamInvite.findFirst as jest.Mock).mockResolvedValueOnce({
+      id: 'invite-1',
+      token: 'invite-token',
+      teamId: 'team-1',
+      contextId: null,
+      email: 'invitee@example.com',
+      person: {
+        id: 'person-1',
+        teamId: 'team-2',
+        userId: null,
+        email: 'invitee@example.com',
+      },
+    })
+
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(403)
+    expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
+  })
+
+  it('rejects disallowed style categories in invite generation create', async () => {
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg'],
+        styleSettings: {
+          packageId: 'freepackage',
+          forbiddenCategory: { mode: 'user-choice', value: 'x' },
+        },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(400)
+    expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
+  })
+
+  it('rejects invite generation create when team admin does not own requested package', async () => {
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg'],
+        styleSettings: { packageId: 'headshot1' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(403)
+    expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
   })
 })

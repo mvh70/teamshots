@@ -16,6 +16,7 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { deriveGenerationType } from '@/domain/generation/utils'
 import { UserService } from '@/domain/services/UserService'
+import { getGenerationJobStatus } from '@/domain/generation/job-status'
 
 // Define the type for the generation object returned by prisma.generation.findMany
 // Note: generationType is NOT included here because it's derived from person.teamId, not stored in DB
@@ -168,43 +169,16 @@ export async function GET(request: NextRequest) {
       prisma.generation.count({ where: where })
     ])
 
-    // Helper function to get job status for processing generations
-    const getJobStatus = async (generationId: string, status: string) => {
-      if (status !== 'pending' && status !== 'processing') {
-        return null
-      }
-      try {
-        const { imageGenerationQueue } = await import('@/queue')
-        const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
-        if (job) {
-          // Handle progress as either number or object { progress: number, message?: string }
-          const progressData = typeof job.progress === 'object' && job.progress !== null
-            ? job.progress as { progress?: number; message?: string }
-            : { progress: job.progress as number }
-          return {
-            id: job.id,
-            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number'
-              ? progressData.progress
-              : (typeof job.progress === 'number' ? job.progress : 0),
-            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string'
-              ? progressData.message
-              : undefined,
-            attemptsMade: job.attemptsMade,
-            processedOn: job.processedOn,
-            finishedOn: job.finishedOn,
-            failedReason: job.failedReason,
-          }
-        }
-      } catch (error) {
-        Logger.warn('Failed to get job status in list', { error: error instanceof Error ? error.message : String(error) })
-      }
-      return null
-    }
-
     // Get job status for processing generations in parallel
     type Generation = typeof generations[number];
     const processingGenerations = generations.filter((g: Generation) => g.status === 'pending' || g.status === 'processing')
-    const jobStatusPromises = processingGenerations.map((g: Generation) => getJobStatus(g.id, g.status))
+    const jobStatusPromises = processingGenerations.map((g: Generation) =>
+      getGenerationJobStatus({
+        generationId: g.id,
+        status: g.status,
+        logContext: 'generations-list',
+      })
+    )
     const jobStatuses = await Promise.all(jobStatusPromises)
     const jobStatusMap = new Map(processingGenerations.map((g: Generation, i: number) => [g.id, jobStatuses[i]]))
 

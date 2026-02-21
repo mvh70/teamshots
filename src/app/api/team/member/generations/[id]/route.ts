@@ -4,6 +4,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 // S3 configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
 const s3 = createS3Client({ forcePathStyle: true })
@@ -25,25 +26,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Generation ID is required' }, { status: 400 })
     }
 
-    // Validate the token and find the person
-    const invite = await prisma.teamInvite.findFirst({
-      where: { token, usedAt: { not: null } },
-      include: { person: true }
-    })
-    if (!invite) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    if (!invite.person) {
-      await SecurityLogger.logSuspiciousActivity(
-        'unknown_user',
-        'team_generation_delete_attempt_person_not_found',
-        { inviteToken: token, generationId }
-      )
-      return NextResponse.json({ error: 'Person not found for this token' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Get generation and verify ownership
     const generation = await prisma.generation.findFirst({

@@ -25,6 +25,8 @@ import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import { DEFAULT_CUSTOMIZATION_STEPS_META, buildSelfieStepIndicator } from '@/lib/customizationSteps'
 import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
 import { loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
+import { mergeSavedUserChoiceStyleSettings } from '@/lib/style-settings-merge'
+import { usePersistedStringSet } from '@/hooks/usePersistedStringSet'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -55,8 +57,43 @@ interface DashboardStats {
 interface Selfie {
   id: string
   key: string
-  url: string
   used?: boolean
+}
+
+function parseInviteSelfiesResponse(data: unknown): Selfie[] {
+  if (!isNonNullObject(data)) {
+    return []
+  }
+
+  if (Array.isArray((data as { items?: unknown }).items)) {
+    return ((data as { items: unknown[] }).items)
+      .filter((item): item is { id: string; uploadedKey: string; hasGenerations?: boolean } =>
+        isNonNullObject(item) &&
+        typeof item.id === 'string' &&
+        typeof item.uploadedKey === 'string'
+      )
+      .map((item) => ({
+        id: item.id,
+        key: item.uploadedKey,
+        used: Boolean(item.hasGenerations),
+      }))
+  }
+
+  if (Array.isArray((data as { selfies?: unknown }).selfies)) {
+    return ((data as { selfies: unknown[] }).selfies)
+      .filter((item): item is { id: string; key: string; used?: boolean } =>
+        isNonNullObject(item) &&
+        typeof item.id === 'string' &&
+        typeof item.key === 'string'
+      )
+      .map((item) => ({
+        id: item.id,
+        key: item.key,
+        used: Boolean(item.used),
+      }))
+  }
+
+  return []
 }
 
 /**
@@ -93,7 +130,6 @@ export default function InviteCustomizationPage() {
     index: 0
   })
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
-  const [acceptedVisitedStepKeys, setAcceptedVisitedStepKeys] = useState<Set<string>>(new Set())
   // Navigation methods exposed by PhotoStyleSettings
   const [navMethods, setNavMethods] = useState<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -122,53 +158,17 @@ export default function InviteCustomizationPage() {
     [token]
   )
   const styleSettingsStorageScope = useMemo(() => `invite_${token}`, [token])
+  const {
+    value: acceptedVisitedStepKeys,
+    setValue: setAcceptedVisitedStepKeys,
+  } = usePersistedStringSet(acceptedVisitStorageKey)
 
   const mergeSavedStyleSettings = useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
-    const savedSettings = loadStyleSettings(styleSettingsStorageScope)
-    if (!savedSettings) {
-      return settings
-    }
-
-    const merged = { ...settings }
-    const categoriesToMerge = [
-      'background', 'clothing', 'clothingColors', 'shotType',
-      'branding', 'expression', 'pose', 'customClothing'
-    ] as const
-
-    for (const key of categoriesToMerge) {
-      const currentValue = settings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
-      const savedValue = savedSettings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
-
-      const savedRestorableValue = (() => {
-        if (!savedValue) return undefined
-        if (savedValue.value !== undefined) return savedValue.value
-        if ((key === 'pose' || key === 'expression') && savedValue.type && savedValue.type !== 'user-choice' && savedValue.type !== 'predefined') {
-          return { type: savedValue.type }
-        }
-        return undefined
-      })()
-
-      const currentIsUserChoice =
-        currentValue?.mode === 'user-choice' ||
-        currentValue?.type === 'user-choice' ||
-        currentValue?.style === 'user-choice'
-
-      if (savedRestorableValue !== undefined && currentValue && currentIsUserChoice) {
-        // Normalize legacy pose/expression user-choice shape ({ type: 'user-choice' })
-        // to the mode/value wrapper so selectors can reliably read restored values.
-        const shouldNormalizeLegacyChoice =
-          (key === 'pose' || key === 'expression') && currentValue.mode === undefined
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ; (merged as any)[key] = shouldNormalizeLegacyChoice
-          ? { mode: 'user-choice', value: savedRestorableValue }
-          : {
-              ...currentValue,
-              value: savedRestorableValue
-            }
-      }
-    }
-
-    return merged
+    return mergeSavedUserChoiceStyleSettings({
+      settings,
+      savedSettings: loadStyleSettings(styleSettingsStorageScope),
+      allowMissingPoseExpression: false,
+    })
   }, [styleSettingsStorageScope])
 
   // Wrapper for setPhotoStyleSettings that also marks steps as visited on desktop
@@ -307,9 +307,7 @@ export default function InviteCustomizationPage() {
       )
       if (response.ok) {
         const data = await response.json()
-        const selfies = isNonNullObject(data) && Array.isArray((data as { selfies?: unknown }).selfies)
-          ? (data as { selfies: Selfie[] }).selfies
-          : []
+        const selfies = parseInviteSelfiesResponse(data)
         setAvailableSelfies(selfies)
       }
     } catch (error) {
@@ -330,9 +328,7 @@ export default function InviteCustomizationPage() {
           throw new Error('Failed to refresh selfies')
         }
         const updatedData = await updatedResponse.json()
-        const updatedSelfies = isNonNullObject(updatedData) && Array.isArray((updatedData as { selfies?: unknown }).selfies)
-          ? (updatedData as { selfies: Selfie[] }).selfies
-          : []
+        const updatedSelfies = parseInviteSelfiesResponse(updatedData)
         const newSelfie = updatedSelfies.find((s) => s.key === key)
         if (newSelfie) {
           await toggleSelect(newSelfie.id, true)
@@ -414,40 +410,6 @@ export default function InviteCustomizationPage() {
     acceptedOnVisitKeys: acceptedOnVisitKeys,
     acceptedOnVisitVisitedKeys: acceptedVisitedStepKeys
   })
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    try {
-      const raw = sessionStorage.getItem(acceptedVisitStorageKey)
-      if (!raw) {
-        setAcceptedVisitedStepKeys(new Set())
-        return
-      }
-
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) {
-        setAcceptedVisitedStepKeys(new Set())
-        return
-      }
-
-      const keys = parsed.filter((key): key is string => typeof key === 'string')
-      setAcceptedVisitedStepKeys(new Set(keys))
-    } catch {
-      setAcceptedVisitedStepKeys(new Set())
-    }
-  }, [acceptedVisitStorageKey])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const keys = Array.from(acceptedVisitedStepKeys)
-    if (keys.length > 0) {
-      sessionStorage.setItem(acceptedVisitStorageKey, JSON.stringify(keys))
-    } else {
-      sessionStorage.removeItem(acceptedVisitStorageKey)
-    }
-  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey])
 
   // Persist invite customization settings by token scope across reloads.
   useEffect(() => {

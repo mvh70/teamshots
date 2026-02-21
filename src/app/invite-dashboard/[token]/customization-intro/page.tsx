@@ -14,6 +14,7 @@ import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -40,20 +41,18 @@ export default function InviteCustomizationIntroPage() {
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   const { markSeenCustomizationIntro, setPendingGeneration, markInFlow, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META, visitedSteps } = useGenerationFlowState()
+  const { context, updateContext } = useOnboardingState()
 
   // Track scroll state for header transition (mobile only)
   const [isScrolled, setIsScrolled] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Track hidden screens from onboarding context (persisted in database)
-  const [hiddenScreens, setHiddenScreens] = useState<string[]>([])
-  const [contextLoaded, setContextLoaded] = useState(false)
   const [isSavingPreference, setIsSavingPreference] = useState(false)
   const hasAutoSkippedRef = useRef(false)
 
   // Check if force parameter is set (from info icon click) - always show when forced
   const forceShow = searchParams.get('force') === '1'
-  const skipCustomizationIntro = !forceShow && hiddenScreens.includes('customization-intro')
+  const skipCustomizationIntro = !forceShow && context.hiddenScreens?.includes('customization-intro')
 
   // Load selfie count for progress dock
   const { selectedIds, loadSelected } = useSelfieSelection({ token })
@@ -79,33 +78,13 @@ export default function InviteCustomizationIntroPage() {
     fetchStats()
   }, [loadSelected, fetchStats])
 
-  // Load onboarding context to check if screen is hidden
-  useEffect(() => {
-    const loadOnboardingContext = async () => {
-      try {
-        const response = await fetch(`/api/onboarding/context?token=${token}`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.hiddenScreens && Array.isArray(data.hiddenScreens)) {
-            setHiddenScreens(data.hiddenScreens)
-          }
-        }
-      } catch (error) {
-        console.error('Error loading onboarding context:', error)
-      } finally {
-        setContextLoaded(true)
-      }
-    }
-    loadOnboardingContext()
-  }, [token])
-
   // Auto-skip if customization-intro is hidden (user previously clicked "Don't show again")
   useEffect(() => {
     // Never auto-skip if force parameter is set (user clicked info icon)
     const isForced = searchParams.get('force') === '1'
     if (isForced) return
 
-    if (hydrated && contextLoaded && skipCustomizationIntro && !hasAutoSkippedRef.current) {
+    if (hydrated && context._loaded && skipCustomizationIntro && !hasAutoSkippedRef.current) {
       hasAutoSkippedRef.current = true
       // Mark as seen in session storage too
       markSeenCustomizationIntro()
@@ -113,7 +92,7 @@ export default function InviteCustomizationIntroPage() {
       markInFlow()
       router.replace(`/invite-dashboard/${token}/customization`)
     }
-  }, [hydrated, contextLoaded, skipCustomizationIntro, router, token, markSeenCustomizationIntro, setPendingGeneration, markInFlow, searchParams])
+  }, [hydrated, context._loaded, skipCustomizationIntro, router, token, markSeenCustomizationIntro, setPendingGeneration, markInFlow, searchParams])
 
   // Build step indicator for customization intro (after selfie selection)
   // Note: hasEnoughSelfies is computed later in the file, so we use selectedIds.length directly here
@@ -163,9 +142,10 @@ export default function InviteCustomizationIntroPage() {
         body: JSON.stringify({ screenName: 'customization-intro', token })
       })
       const data = await response.json().catch(() => ({}))
-      if (data.hiddenScreens) {
-        setHiddenScreens(data.hiddenScreens)
-      }
+      const updatedHiddenScreens = Array.from(
+        new Set([...(context.hiddenScreens || []), ...((Array.isArray(data.hiddenScreens) ? data.hiddenScreens : ['customization-intro']) as string[])])
+      )
+      updateContext({ hiddenScreens: updatedHiddenScreens })
     } catch (error) {
       console.error('[CustomizationIntroPage] Failed to persist skip preference', error)
     } finally {
@@ -223,7 +203,7 @@ export default function InviteCustomizationIntroPage() {
   const shouldRedirect = !forceShow && skipCustomizationIntro
 
   // Show skeleton while hydrating or loading context, or if about to redirect
-  if (!hydrated || !contextLoaded || shouldRedirect) {
+  if (!hydrated || !context._loaded || shouldRedirect) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Header skeleton */}

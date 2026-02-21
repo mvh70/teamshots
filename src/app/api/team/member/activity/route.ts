@@ -2,42 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { deriveGenerationType } from '@/domain/generation/utils'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
-
-    // Validate the token, check expiry, and get person data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
-      include: {
-        person: true
-      }
-    })
-
-    if (!invite) {
-      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
-    }
-
-    // Verify person is still a member of the team
-    if (invite.person && invite.person.teamId !== invite.teamId) {
-      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
-    }
-
-    if (!invite.person) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Get recent activity
     const generations = await prisma.generation.findMany({

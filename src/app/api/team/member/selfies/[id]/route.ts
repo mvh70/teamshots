@@ -4,6 +4,7 @@ import { Logger } from '@/lib/logger'
 import { isSelfieUsedInGenerations } from '@/domain/selfie/usage'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
@@ -25,17 +26,8 @@ export async function DELETE(
     let personId: string | null = null
 
     // Try team invite token first
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null }
-      },
-      select: {
-        personId: true
-      }
-    })
-
-    personId = invite?.personId || null
+    const inviteAccess = await resolveInviteAccess({ token })
+    personId = inviteAccess.ok ? inviteAccess.access.person.id : null
 
     // If not found, try mobile handoff token
     if (!personId) {

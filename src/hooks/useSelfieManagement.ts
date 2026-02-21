@@ -13,12 +13,13 @@ interface UploadListItem {
   personCount?: number | null
   isProper?: boolean | null
   improperReason?: string | null
+  lightingQuality?: string | null
+  backgroundQuality?: string | null
 }
 
-interface Selfie {
+interface InviteLegacySelfie {
   id: string
   key: string
-  url: string
   uploadedAt: string
   used?: boolean
   status?: 'pending' | 'approved' | 'rejected'
@@ -63,12 +64,32 @@ interface IndividualResult extends BaseResult {
 }
 
 interface InviteResult extends BaseResult {
-  uploads: Selfie[]
+  uploads: UploadListItem[]
   handlePhotoUpload: (file: File) => Promise<{ key: string; url?: string }>
   handleSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
 }
 
 export type UseSelfieManagementResult = IndividualResult | InviteResult
+
+function isUploadListItems(value: unknown): value is UploadListItem[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && 'uploadedKey' in item)
+}
+
+function toUploadListItemFromLegacy(selfie: InviteLegacySelfie): UploadListItem {
+  return {
+    id: selfie.id,
+    uploadedKey: selfie.key,
+    validated: selfie.status === 'approved',
+    createdAt: selfie.uploadedAt,
+    hasGenerations: Boolean(selfie.used),
+    selfieType: selfie.selfieType,
+    selfieTypeConfidence: selfie.selfieTypeConfidence,
+    isProper: selfie.isProper,
+    improperReason: selfie.improperReason,
+    lightingQuality: selfie.lightingQuality,
+    backgroundQuality: selfie.backgroundQuality,
+  }
+}
 
 export function useSelfieManagement(options: UseSelfieManagementOptions = {}): UseSelfieManagementResult {
   const {
@@ -86,7 +107,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
   const selectionHook = useSelfieSelection({ token })
 
   // Invite-specific state
-  const [inviteUploads, setInviteUploads] = useState<Selfie[]>([])
+  const [inviteUploads, setInviteUploads] = useState<UploadListItem[]>([])
   const [inviteLoading, setInviteLoading] = useState(!inviteMode)
   const [inviteError, setInviteError] = useState<string | null>(null)
 
@@ -115,7 +136,13 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
 
       if (response.ok) {
         const data = await response.json()
-        setInviteUploads(data.selfies || [])
+        if (isUploadListItems(data.items)) {
+          setInviteUploads(data.items)
+        } else if (Array.isArray(data.selfies)) {
+          setInviteUploads((data.selfies as InviteLegacySelfie[]).map(toUploadListItemFromLegacy))
+        } else {
+          setInviteUploads([])
+        }
       } else {
         setInviteError('Failed to fetch selfies')
       }

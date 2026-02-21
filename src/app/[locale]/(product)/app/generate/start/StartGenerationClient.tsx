@@ -35,6 +35,8 @@ import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSet
 import { isUserChoice, hasValue, userChoice } from '@/domain/style/elements/base/element-types'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
+import { mergeSavedUserChoiceStyleSettings } from '@/lib/style-settings-merge'
+import { usePersistedStringSet } from '@/hooks/usePersistedStringSet'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -112,8 +114,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
   const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
-  const [acceptedVisitedStepKeys, setAcceptedVisitedStepKeys] = useState<Set<string>>(() => new Set())
-  const [acceptedVisitedLoaded, setAcceptedVisitedLoaded] = useState(false)
   // Navigation methods exposed by PhotoStyleSettings for mobile sticky footer (use ref to avoid re-render loops)
   const navMethodsRef = React.useRef<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -265,71 +265,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const mergeSavedStyleSettings = React.useCallback((
     settings: PhotoStyleSettingsType
   ): PhotoStyleSettingsType => {
-    const savedSettings = loadStyleSettings() // Global key - no context-specific key
-    if (!savedSettings) {
-      return settings
-    }
-
-    // Start with current settings
-    const merged = { ...settings }
-
-    // For each category in saved settings, only merge if current mode is 'user-choice'
-    const categoriesToMerge = [
-      'background', 'clothing', 'clothingColors', 'shotType',
-      'branding', 'expression', 'pose', 'customClothing'
-    ] as const
-
-    for (const key of categoriesToMerge) {
-      const currentValue = settings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
-      const savedValue = savedSettings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
-
-      // Support both current mode/value shape and legacy saved shapes:
-      // - New: { mode: 'user-choice'|'predefined', value: {...} }
-      // - Legacy pose/expression: { type: 'power_cross' }
-      const savedRestorableValue = (() => {
-        if (!savedValue) return undefined
-        if (savedValue.value !== undefined) return savedValue.value
-        if ((key === 'pose' || key === 'expression') && savedValue.type && savedValue.type !== 'user-choice' && savedValue.type !== 'predefined') {
-          return { type: savedValue.type }
-        }
-        return undefined
-      })()
-
-      // CRITICAL: Only merge if current mode is 'user-choice'
-      // If mode is 'predefined', admin has locked this value - never overwrite
-      const currentIsUserChoice =
-        currentValue?.mode === 'user-choice' ||
-        currentValue?.type === 'user-choice' ||
-        currentValue?.style === 'user-choice'
-
-      if (savedRestorableValue !== undefined && currentValue && currentIsUserChoice) {
-        // Restore user's saved selection for user-choice settings.
-        // Normalize legacy pose/expression user-choice shape ({ type: 'user-choice' })
-        // to the mode/value wrapper so selectors can reliably read restored values.
-        const shouldNormalizeLegacyChoice =
-          (key === 'pose' || key === 'expression') && currentValue.mode === undefined
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ; (merged as any)[key] = shouldNormalizeLegacyChoice
-          ? { mode: 'user-choice', value: savedRestorableValue }
-          : {
-              ...currentValue,
-              value: savedRestorableValue
-            }
-      } else if (savedRestorableValue !== undefined && !currentValue && (key === 'pose' || key === 'expression')) {
-        // Backward compatibility: older contexts may omit pose/expression keys entirely.
-        // Rehydrate user choice from session so selection survives page reloads.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ; (merged as any)[key] = {
-          mode: 'user-choice',
-          value: savedRestorableValue
-        }
-      }
-      // If currentValue is undefined or mode is 'predefined', keep settings unchanged
-      // - predefined: admin's value is authoritative, never overwrite
-      // - undefined: package doesn't support this setting, don't add it
-    }
-
-    return merged
+    return mergeSavedUserChoiceStyleSettings({
+      settings,
+      savedSettings: loadStyleSettings(),
+      allowMissingPoseExpression: true,
+    })
   }, [])
 
   // Mark as ready for saving after hydration (regardless of skipUpload)
@@ -629,47 +569,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     const scope = activeContext?.id ? `context_${activeContext.id}` : `package_${effectivePackageId}`
     return `teamshots_accepted_visited_steps_${scope}`
   }, [activeContext?.id, effectivePackageId])
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    setAcceptedVisitedLoaded(false)
-
-    try {
-      const raw = sessionStorage.getItem(acceptedVisitStorageKey)
-      if (!raw) {
-        setAcceptedVisitedStepKeys(new Set())
-        setAcceptedVisitedLoaded(true)
-        return
-      }
-
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) {
-        setAcceptedVisitedStepKeys(new Set())
-        setAcceptedVisitedLoaded(true)
-        return
-      }
-
-      const keys = parsed.filter((key): key is string => typeof key === 'string')
-      setAcceptedVisitedStepKeys(new Set(keys))
-    } catch {
-      setAcceptedVisitedStepKeys(new Set())
-    } finally {
-      setAcceptedVisitedLoaded(true)
-    }
-  }, [acceptedVisitStorageKey])
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!acceptedVisitedLoaded) return
-
-    const keys = Array.from(acceptedVisitedStepKeys)
-    if (keys.length > 0) {
-      sessionStorage.setItem(acceptedVisitStorageKey, JSON.stringify(keys))
-    } else {
-      sessionStorage.removeItem(acceptedVisitStorageKey)
-    }
-  }, [acceptedVisitedStepKeys, acceptedVisitStorageKey, acceptedVisitedLoaded])
+  const {
+    value: acceptedVisitedStepKeys,
+    setValue: setAcceptedVisitedStepKeys,
+    loaded: acceptedVisitedLoaded,
+  } = usePersistedStringSet(acceptedVisitStorageKey)
 
   const completionState = useCustomizationCompletion({
     photoStyleSettings,

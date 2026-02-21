@@ -2,49 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
-import { extendInviteExpiry } from '@/lib/invite-utils'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    // Validate the token, check expiry, and get person data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
-      include: {
-        person: true
-      }
-    })
-
-    if (!invite) {
-      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
-    }
-
-    // Verify person is still a member of the team
-    if (invite.person && invite.person.teamId !== invite.teamId) {
-      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
-    }
-
-    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
-    extendInviteExpiry(invite.id).catch(() => {
-      // Silently fail - expiry extension is best effort
-    })
-
-    if (!invite.person) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Get selfies for the person
     const selfies = await prisma.selfie.findMany({
@@ -66,33 +36,45 @@ export async function GET(request: NextRequest) {
     // Get sets of used selfie IDs and keys
     const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(person.id)
 
-    // Transform selfies to include URLs and proper field names
-    const tokenParam = `token=${encodeURIComponent(token)}`
-
-    const transformedSelfies = selfies.map((selfie) => {
-      const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}&${tokenParam}`
-      Logger.info('Generated selfie URL', { url, key: selfie.key })
-      // Check if selfie is used: either by ID or by key
+    const items = selfies.map((selfie) => {
       const isUsed = usedSelfieIds.has(selfie.id) || usedSelfieKeys.has(selfie.key)
-      // Extract classification fields from JSON
       const classification = extractFromClassification(selfie.classification)
       return {
         id: selfie.id,
-        key: selfie.key,
-        url,
-        uploadedAt: selfie.createdAt.toISOString(),
-        status: selfie.userApproved ? 'approved' : 'uploaded',
-        used: isUsed,
+        uploadedKey: selfie.key,
+        validated: selfie.userApproved,
+        createdAt: selfie.createdAt.toISOString(),
+        hasGenerations: isUsed,
         selfieType: classification.selfieType,
         selfieTypeConfidence: classification.selfieTypeConfidence,
         isProper: classification.isProper,
         improperReason: classification.improperReason,
         lightingQuality: classification.lightingQuality,
-        backgroundQuality: classification.backgroundQuality
+        backgroundQuality: classification.backgroundQuality,
       }
     })
 
-    return NextResponse.json({ selfies: transformedSelfies })
+    // Backward-compatible shape for existing invite UI consumers.
+    const tokenParam = `token=${encodeURIComponent(inviteAccess.access.token)}`
+    const selfiesResponse = items.map((item) => {
+      const url = `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}&${tokenParam}`
+      return {
+        id: item.id,
+        key: item.uploadedKey,
+        url,
+        uploadedAt: item.createdAt,
+        status: item.validated ? 'approved' : 'uploaded',
+        used: item.hasGenerations,
+        selfieType: item.selfieType,
+        selfieTypeConfidence: item.selfieTypeConfidence,
+        isProper: item.isProper,
+        improperReason: item.improperReason,
+        lightingQuality: item.lightingQuality,
+        backgroundQuality: item.backgroundQuality,
+      }
+    })
+
+    return NextResponse.json({ items, selfies: selfiesResponse })
   } catch (error) {
     Logger.error('Error fetching selfies', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -107,37 +89,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing token or selfieKey' }, { status: 400 })
     }
 
-    // Validate the token, check expiry, and get person data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
-      include: {
-        person: true
-      }
-    })
-
-    if (!invite) {
-      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    // Verify person is still a member of the team
-    if (invite.person && invite.person.teamId !== invite.teamId) {
-      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
-    }
-
-    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
-    extendInviteExpiry(invite.id).catch(() => {
-      // Silently fail - expiry extension is best effort
-    })
-
-    if (!invite.person) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Create selfie record - auto-select since user explicitly approved in upload flow
     const selfie = await prisma.selfie.create({

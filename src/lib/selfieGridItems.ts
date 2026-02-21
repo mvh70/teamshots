@@ -7,7 +7,7 @@ interface SelfieGridClassificationFields {
   backgroundQuality?: string | null
 }
 
-interface SessionSelfieListItem extends SelfieGridClassificationFields {
+export interface SelfieListItem extends SelfieGridClassificationFields {
   id: string
   uploadedKey: string
   createdAt: string
@@ -36,11 +36,16 @@ export interface SelfieGridItem {
   backgroundQuality?: string | null
 }
 
-export function mapSessionSelfiesToGridItems(items: SessionSelfieListItem[]): SelfieGridItem[] {
+export function mapSelfieListItemsToGridItems(
+  items: SelfieListItem[],
+  options?: { token?: string }
+): SelfieGridItem[] {
+  const tokenSuffix = options?.token ? `&token=${encodeURIComponent(options.token)}` : ''
+
   return items.map((item) => ({
     id: item.id,
     key: item.uploadedKey,
-    url: `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}`,
+    url: `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}${tokenSuffix}`,
     uploadedAt: item.createdAt,
     used: item.hasGenerations,
     selfieType: item.selfieType,
@@ -52,8 +57,20 @@ export function mapSessionSelfiesToGridItems(items: SessionSelfieListItem[]): Se
   }))
 }
 
-export function mapInviteSelfiesToGridItems(items: InviteSelfieListItem[]): SelfieGridItem[] {
-  return items.map((item) => ({
+export function mapSessionSelfiesToGridItems(items: SelfieListItem[]): SelfieGridItem[] {
+  return mapSelfieListItemsToGridItems(items)
+}
+
+export function mapInviteSelfiesToGridItems(items: InviteSelfieListItem[] | SelfieListItem[], token?: string): SelfieGridItem[] {
+  if (items.length === 0) {
+    return []
+  }
+
+  if ('uploadedKey' in items[0]) {
+    return mapSelfieListItemsToGridItems(items as SelfieListItem[], token ? { token } : undefined)
+  }
+
+  return (items as InviteSelfieListItem[]).map((item) => ({
     id: item.id,
     key: item.key,
     url: item.url,

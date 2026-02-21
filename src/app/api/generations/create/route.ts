@@ -45,6 +45,12 @@ import { RegenerationService } from '@/domain/generation'
 import { deriveGenerationType } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 import {
+  findDisallowedStyleCategory,
+  hasPackageAccess,
+  resolveGenerationContextSettings,
+  resolveGenerationStyleSettings,
+} from '@/domain/generation/create-validation'
+import {
   enqueueGenerationJob,
   determineWorkflowVersion,
   createGenerationWithCreditReservation,
@@ -392,13 +398,6 @@ export async function POST(request: NextRequest) {
 
     // Free package is always accessible to everyone (no ownership check needed)
     if (requestedPackageId !== 'freepackage') {
-      type PrismaWithUserPackage = typeof prisma & {
-        userPackage: {
-          findFirst: (...args: unknown[]) => Promise<{ id: string } | null>
-        }
-      }
-      const prismaEx = prisma as unknown as PrismaWithUserPackage
-
       // For team generations, check if team admin owns the package
       // For personal generations, check if user owns the package
       let userIdToCheck = session.user.id
@@ -414,12 +413,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const hasPackage = await prismaEx.userPackage.findFirst({
-        where: {
-          userId: userIdToCheck,
-          packageId: requestedPackageId
-        }
-      })
+      const hasPackage = await hasPackageAccess(userIdToCheck, requestedPackageId)
 
       if (!hasPackage) {
         await SecurityLogger.logSuspiciousActivity(
@@ -434,30 +428,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get context if provided (contextId might be a name, not an ID)
-    let resolvedContextId = null
-    let contextStyleSettings = null
-    if (contextId) {
-      // First try to find by ID
-      let context = await prisma.context.findUnique({
-        where: { id: contextId },
-        select: { id: true, name: true, settings: true }
-      })
-
-      // If not found by ID, try to find by name
-      if (!context) {
-        context = await prisma.context.findFirst({
-          where: { name: contextId },
-          select: { id: true, name: true, settings: true }
-        })
-      }
-
-      if (context) {
-        resolvedContextId = context.id
-        // Use the full settings object instead of just stylePreset string
-        contextStyleSettings = context.settings || {}
-      }
-    }
+    let { resolvedContextId, contextStyleSettings } = await resolveGenerationContextSettings(contextId)
 
 
     // Check credits using CreditService
@@ -575,45 +546,27 @@ export async function POST(request: NextRequest) {
 
     // Calculate final style settings before creating generation
     const packageId = (styleSettings?.packageId as string) || PACKAGES_CONFIG.defaultPlanPackage
-    const packageConfig = getPackageConfig(packageId)
     const resolvedPackageId = packageId
 
-    // Server-side category validation: ensure users can only set visible categories
-    if (styleSettings) {
-      const allowedCategories = new Set([
-        ...packageConfig.visibleCategories,
-        'packageId',
-        'presetId',
-        'aspectRatio',
-        'subjectCount',
-        'usageContext',
-        'style' // Legacy field
-      ])
-
-      for (const key of Object.keys(styleSettings)) {
-        if (!allowedCategories.has(key)) {
-          Logger.warn('Attempted to set non-visible category', {
-            packageId,
-            category: key,
-            userId: session.user.id
-          })
-          return NextResponse.json(
-            { error: `Category '${key}' is not allowed for package '${packageId}'` },
-            { status: 400 }
-          )
-        }
-      }
+    const typedStyleSettings = (styleSettings || {}) as Record<string, unknown>
+    const disallowedCategory = findDisallowedStyleCategory(typedStyleSettings, packageId)
+    if (disallowedCategory) {
+      Logger.warn('Attempted to set non-visible category', {
+        packageId,
+        category: disallowedCategory,
+        userId: session.user.id
+      })
+      return NextResponse.json(
+        { error: `Category '${disallowedCategory}' is not allowed for package '${packageId}'` },
+        { status: 400 }
+      )
     }
 
-    // Convert raw settings to PhotoStyleSettings objects for the resolver
-    const contextSettingsObj = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
-      ? packageConfig.persistenceAdapter.deserialize(contextStyleSettings as Record<string, unknown>)
-      : null
-
-    // Let the package extract UI settings from the raw request data
-    const userModificationsObj = styleSettings ? packageConfig.extractUiSettings(styleSettings) : null
-
-    let finalStyleSettingsObj = resolvePhotoStyleSettings(packageId, contextSettingsObj, userModificationsObj)
+    let finalStyleSettingsObj = resolveGenerationStyleSettings({
+      packageId,
+      contextStyleSettings,
+      styleSettings: typedStyleSettings,
+    })
 
     // Enforce free package style for free-plan users or when team admin is on free plan
     // Skip enforcement for invited users (they get package from invite)
@@ -661,7 +614,11 @@ export async function POST(request: NextRequest) {
               // Deserialize admin settings from the context
               const adminSettings = getPackageConfig('freepackage').persistenceAdapter.deserialize(freeCtx.settings as Record<string, unknown>)
               // Merge admin settings (base) with user settings (overlay) - update the object directly
-              finalStyleSettingsObj = resolvePhotoStyleSettings('freepackage', adminSettings, finalStyleSettingsObj)
+              finalStyleSettingsObj = resolvePhotoStyleSettings(
+                'freepackage',
+                adminSettings,
+                finalStyleSettingsObj
+              ) as unknown as Record<string, unknown>
               Logger.debug('Free package - merged admin settings with user customizations')
             }
           }

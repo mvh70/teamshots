@@ -11,6 +11,7 @@ import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
 import { getRegenerationCount } from '@/domain/pricing'
 import { UserService } from '@/domain/services/UserService'
+import { SecurityLogger } from '@/lib/security-logger'
 import {
   enqueueGenerationJob,
   determineWorkflowVersion,
@@ -18,7 +19,13 @@ import {
   serializeStyleSettingsForGeneration,
   enrichGenerationJobFromSelfies,
 } from '@/domain/generation/generation-helpers'
-import { extendInviteExpiry } from '@/lib/invite-utils'
+import { resolveInviteAccess } from '@/lib/invite-access'
+import {
+  findDisallowedStyleCategory,
+  hasPackageAccess,
+  resolveGenerationContextSettings,
+  resolveGenerationStyleSettings,
+} from '@/domain/generation/create-validation'
 
 // Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
@@ -35,13 +42,13 @@ export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
     // Rate limit per invite token
-    const rlKey = `generation:invite:${token}`
+    const rlKey = `generation:invite:${inviteAccess.access.token}`
     const rate = await checkRateLimit(rlKey, RATE_LIMITS.generation.limit, RATE_LIMITS.generation.window)
     if (!rate.success) {
       return NextResponse.json(
@@ -50,29 +57,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate invite token and person
-    const invite = await prisma.teamInvite.findFirst({
-      where: { token, usedAt: { not: null } },
-      include: { person: { include: { team: true } } },
-    })
-
-    if (!invite || !invite.person || !invite.person.teamId) {
-      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
-    }
-
-    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
-    extendInviteExpiry(invite.id).catch(() => {
-      // Silently fail - expiry extension is best effort
-    })
+    const invite = inviteAccess.access
 
     const body = await request.json()
     const { selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)
-    
+
     // Determine workflow version
     const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
 
     // Check invite's remaining credits first (invited members have their own allocation)
-    const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.id)
+    const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.inviteId)
     if (inviteCreditsRemaining < PRICING_CONFIG.credits.perGeneration) {
       return NextResponse.json(
         {
@@ -85,18 +79,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Enforce team credits for invite flow
-    const teamId = invite.person.teamId
-
-    // OPTIMIZATION: Run independent queries in parallel
-    const [resolved, teamUser] = await Promise.all([
+    const [resolved, team] = await Promise.all([
       resolveSelfies({ personId: invite.person.id, selfieKeys, selfieIds }),
-      // Check team credits (invitees may have personal allocation tracked separately)
-      prisma.user.findFirst({
-        where: { person: { teamId } },
-        select: { id: true },
-      })
+      prisma.team.findUnique({
+        where: { id: invite.teamId },
+        select: {
+          adminId: true,
+          activeContextId: true,
+          admin: {
+            select: {
+              planPeriod: true,
+              planTier: true,
+            },
+          },
+        },
+      }),
     ])
+
+    if (!team?.adminId) {
+      return NextResponse.json({ error: 'Team admin not found' }, { status: 404 })
+    }
+
+    const teamAdminId = team.adminId
+
     // Fallback: if only one resolved but multiple are selected for this person, merge them
     let selfieKeysForJob = resolved.selfieS3Keys
     if (!Array.isArray(selfieKeysForJob) || selfieKeysForJob.length <= 1) {
@@ -111,16 +116,48 @@ export async function POST(request: NextRequest) {
       } catch {}
     }
 
-    // NEW CREDIT MODEL: Credits are tracked per person, not per team pool
-    // The check at line 75 (getTeamInviteRemainingCredits) already validates the person has sufficient credits
-    // No additional "team credits" validation needed - the person's balance IS their allocation
-    const userContext = await UserService.getUserContext(teamUser?.id || invite.person.team?.adminId || '')
+    const userContext = await UserService.getUserContext(teamAdminId)
 
-    // Prepare style settings (serialize via package adapter if provided)
     const finalPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
+    const hasRequestedPackage = await hasPackageAccess(teamAdminId, finalPackageId)
+    if (!hasRequestedPackage) {
+      await SecurityLogger.logSuspiciousActivity(
+        teamAdminId,
+        'unauthorized_package_usage',
+        { packageId: finalPackageId, inviteId: invite.inviteId, personId: invite.person.id, userIdChecked: teamAdminId }
+      )
+      return NextResponse.json(
+        { error: 'You do not have access to this style package.' },
+        { status: 403 }
+      )
+    }
+
+    const typedStyleSettings = (styleSettings || {}) as Record<string, unknown>
+    const disallowedCategory = findDisallowedStyleCategory(typedStyleSettings, finalPackageId)
+    if (disallowedCategory) {
+      Logger.warn('Attempted to set non-visible category in invite generation', {
+        packageId: finalPackageId,
+        category: disallowedCategory,
+        inviteId: invite.inviteId,
+        personId: invite.person.id,
+      })
+      return NextResponse.json(
+        { error: `Category '${disallowedCategory}' is not allowed for package '${finalPackageId}'` },
+        { status: 400 }
+      )
+    }
+
+    const requestedContextId = contextId ?? invite.contextId ?? team.activeContextId ?? null
+    const { resolvedContextId, contextStyleSettings } = await resolveGenerationContextSettings(requestedContextId)
+    const resolvedStyleSettings = resolveGenerationStyleSettings({
+      packageId: finalPackageId,
+      contextStyleSettings,
+      styleSettings: typedStyleSettings,
+    })
+
     const serializedStyleSettings = serializeStyleSettingsForGeneration({
       packageId: finalPackageId,
-      styleSettings: (styleSettings || {}) as Record<string, unknown>,
+      styleSettings: resolvedStyleSettings,
       selfieS3Keys: selfieKeysForJob,
     })
 
@@ -128,38 +165,23 @@ export async function POST(request: NextRequest) {
     // Determine regeneration allowances for invited users - they get the same as their team admin's plan
     let invitedRegenerations: number = getRegenerationCount('individual') // Fallback - use individual as default
 
-    if (invite.person.teamId) {
-      // Fetch team admin's plan to determine regeneration count
-      const team = await prisma.team.findUnique({
-        where: { id: invite.person.teamId },
-        select: {
-          admin: {
-            select: {
-              planPeriod: true,
-              planTier: true
-            }
-          }
-        }
-      })
+    if (team.admin) {
+      const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
+      const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
 
-      if (team?.admin) {
-        const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
-        const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
-
-        // Determine team admin's PricingTier to get regeneration count
-        let adminPricingTier: PricingTier = 'individual' // Default fallback
-        if (adminPlanTier === 'individual' && adminPlanPeriod === 'large') {
-          adminPricingTier = 'vip'
-        } else if (adminPlanTier === 'pro' && adminPlanPeriod === 'seats') {
-          // Seats-based pricing uses individual regeneration count
-          adminPricingTier = 'individual'
-        } else if (adminPlanTier === 'individual' || adminPlanTier === 'pro') {
-          // Individual tier or pro tier default to individual
-          adminPricingTier = 'individual'
-        }
-
-        invitedRegenerations = getRegenerationCount(adminPricingTier)
+      // Determine team admin's PricingTier to get regeneration count
+      let adminPricingTier: PricingTier = 'individual' // Default fallback
+      if (adminPlanTier === 'individual' && adminPlanPeriod === 'large') {
+        adminPricingTier = 'vip'
+      } else if (adminPlanTier === 'pro' && adminPlanPeriod === 'seats') {
+        // Seats-based pricing uses individual regeneration count
+        adminPricingTier = 'individual'
+      } else if (adminPlanTier === 'individual' || adminPlanTier === 'pro') {
+        // Individual tier or pro tier default to individual
+        adminPricingTier = 'individual'
       }
+
+      invitedRegenerations = getRegenerationCount(adminPricingTier)
     }
 
     const { generation } = await createGenerationWithCreditReservation({
@@ -170,12 +192,12 @@ export async function POST(request: NextRequest) {
         creditSource: 'individual', // NEW MODEL: credits always belong to person
         creditsUsed: PRICING_CONFIG.credits.perGeneration,
         status: 'pending',
-        contextId: contextId ?? invite.person.team?.activeContextId ?? undefined,
+        contextId: resolvedContextId ?? undefined,
         provider: 'gemini',
         maxRegenerations: invitedRegenerations,
         remainingRegenerations: invitedRegenerations,
       },
-      reservationUserId: teamUser?.id || invite.person.team?.adminId || '',
+      reservationUserId: teamAdminId,
       reservationPersonId: invite.person.id,
       requiredCredits: PRICING_CONFIG.credits.perGeneration,
       userContext,
@@ -184,7 +206,7 @@ export async function POST(request: NextRequest) {
     const enrichment = await enrichGenerationJobFromSelfies({
       generationId: generation.id,
       personId: invite.person.id,
-      teamId: teamId ?? undefined,
+      teamId: invite.teamId,
       selfieS3Keys: selfieKeysForJob,
     })
 
@@ -192,8 +214,8 @@ export async function POST(request: NextRequest) {
     const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: invite.person.id,
-      userId: teamUser?.id || undefined,
-      teamId: teamId ?? undefined,
+      userId: invite.person.userId || teamAdminId,
+      teamId: invite.teamId,
       selfieS3Keys: selfieKeysForJob,
       selfieAssetIds: enrichment.selfieAssetIds,
       selfieTypeMap: enrichment.selfieTypeMap,

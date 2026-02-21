@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { deriveGenerationType } from '@/domain/generation/utils'
-import { extendInviteExpiry } from '@/lib/invite-utils'
+import { resolveInviteAccess } from '@/lib/invite-access'
+import { getGenerationJobStatus } from '@/domain/generation/job-status'
 
 // Disable caching for this route - invite generations are polled for live progress updates
 export const dynamic = 'force-dynamic'
@@ -13,42 +14,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    // Validate the token, check expiry, and get person data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
-      include: {
-        person: true
-      }
-    })
-
-    if (!invite) {
-      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
-    }
-
-    // Verify person is still a member of the team
-    if (invite.person && invite.person.teamId !== invite.teamId) {
-      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
-    }
-
-    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
-    extendInviteExpiry(invite.id).catch(() => {
-      // Silently fail - expiry extension is best effort
-    })
-
-    if (!invite.person) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Get generations for the person
     // Exclude failed generations (they show temporarily in UI then disappear)
@@ -71,48 +42,21 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Helper function to get job status for processing generations
-    const getJobStatus = async (generationId: string, status: string) => {
-      if (status !== 'pending' && status !== 'processing') {
-        return null
-      }
-      try {
-        const { imageGenerationQueue } = await import('@/queue')
-        const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
-        if (job) {
-          // Handle progress as either number or object { progress: number, message?: string }
-          const progressData = typeof job.progress === 'object' && job.progress !== null
-            ? job.progress as { progress?: number; message?: string }
-            : { progress: job.progress as number }
-          return {
-            id: job.id,
-            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number'
-              ? progressData.progress
-              : (typeof job.progress === 'number' ? job.progress : 0),
-            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string'
-              ? progressData.message
-              : undefined,
-            attemptsMade: job.attemptsMade,
-            processedOn: job.processedOn,
-            finishedOn: job.finishedOn,
-            failedReason: job.failedReason,
-          }
-        }
-      } catch (error) {
-        Logger.warn('Failed to get job status in team member generations', { error: error instanceof Error ? error.message : String(error) })
-      }
-      return null
-    }
-
     // Get job status for processing generations in parallel
     type Generation = typeof generations[number];
     const processingGenerations = generations.filter((g: Generation) => g.status === 'pending' || g.status === 'processing')
-    const jobStatusPromises = processingGenerations.map((g: Generation) => getJobStatus(g.id, g.status))
+    const jobStatusPromises = processingGenerations.map((g: Generation) =>
+      getGenerationJobStatus({
+        generationId: g.id,
+        status: g.status,
+        logContext: 'team-member-generations-list',
+      })
+    )
     const jobStatuses = await Promise.all(jobStatusPromises)
     const jobStatusMap = new Map(processingGenerations.map((g: Generation, i: number) => [g.id, jobStatuses[i]]))
 
     // Transform the data for the frontend
-    const tokenParam = `token=${encodeURIComponent(token)}`
+    const tokenParam = `token=${encodeURIComponent(inviteAccess.access.token)}`
 
     const transformedGenerations = generations.map((generation: Generation) => {
       // Attempt to read input selfie keys from persisted style settings

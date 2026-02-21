@@ -2,23 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
-
-    if (!token) {
-      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    const inviteAccess = await resolveInviteAccess({ token })
+    if (!inviteAccess.ok) {
+      return NextResponse.json({ error: inviteAccess.error.message }, { status: inviteAccess.error.status })
     }
 
-    // Validate the token, check expiry, and get person data
-    const invite = await prisma.teamInvite.findFirst({
-      where: {
-        token,
-        usedAt: { not: null },
-        expiresAt: { gt: new Date() }
-      },
+    const invite = await prisma.teamInvite.findUnique({
+      where: { id: inviteAccess.access.inviteId },
       include: {
         team: {
           include: {
@@ -34,8 +30,7 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-        },
-        person: true
+        }
       }
     })
 
@@ -43,16 +38,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
 
-    // Verify person is still a member of the team
-    if (invite.person && invite.person.teamId !== invite.teamId) {
-      return NextResponse.json({ error: 'Access revoked' }, { status: 403 })
-    }
-
-    if (!invite.person) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
-    }
-
-    const person = invite.person
+    const person = inviteAccess.access.person
 
     // Get stats for the person
     const [photosGenerated, selfiesCount, teamPhotosCount, selfiePreviews] = await Promise.all([
@@ -98,7 +84,7 @@ export async function GET(request: NextRequest) {
     ])
 
     // Calculate remaining credits using the same logic as getPersonCreditBalance
-    const creditsRemaining = await getTeamInviteRemainingCredits(invite.id)
+    const creditsRemaining = await getTeamInviteRemainingCredits(inviteAccess.access.inviteId)
 
     // Get admin name from person if available, otherwise use email
     const adminPerson = invite.team.admin?.person
@@ -110,7 +96,7 @@ export async function GET(request: NextRequest) {
     // Build selfie preview URLs
     const selfiePreviewUrls = selfiePreviews.map(s => {
       const key = s.processedKey || s.key
-      return `/api/files/get?key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`
+      return `/api/files/get?key=${encodeURIComponent(key)}&token=${encodeURIComponent(inviteAccess.access.token)}`
     })
 
     const stats = {
