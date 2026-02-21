@@ -403,6 +403,7 @@ export async function POST(request: NextRequest) {
         locale,
         teamId,
         teamWebsite: teamWebsite ?? null,
+        requestHeaders: request.headers,
       })
     ])
 

@@ -22,6 +22,11 @@ function getReplyToEmail(requestHeaders?: Headers): string {
   return contact.support;
 }
 
+function getAdminNotificationRecipient(requestHeaders?: Headers): string | null {
+  const contact = getBrandContact(requestHeaders);
+  return contact.support || contact.hello || null;
+}
+
 interface SendWaitlistWelcomeEmailParams {
   email: string;
   locale?: 'en' | 'es';
@@ -405,6 +410,7 @@ interface SendAdminSignupNotificationEmailParams {
   locale?: 'en' | 'es';
   teamId?: string | null;
   teamWebsite?: string | null;
+  requestHeaders?: Headers;
 }
 
 interface SendOrderNotificationEmailParams {
@@ -435,8 +441,7 @@ export async function sendOrderNotificationEmail({
   stripeSessionId,
   isNewUser,
 }: SendOrderNotificationEmailParams) {
-  const contact = getBrandContact();
-  const adminRecipient = contact.hello || contact.support;
+  const adminRecipient = getAdminNotificationRecipient();
 
   if (!adminRecipient) {
     Logger.warn('Order notification skipped - no admin recipient configured');
@@ -541,9 +546,9 @@ export async function sendAdminSignupNotificationEmail({
   locale = 'en',
   teamId,
   teamWebsite,
+  requestHeaders,
 }: SendAdminSignupNotificationEmailParams) {
-  const contact = getBrandContact();
-  const adminRecipient = contact.hello || contact.support;
+  const adminRecipient = getAdminNotificationRecipient(requestHeaders);
 
   if (!adminRecipient) {
     Logger.warn('Admin signup notification skipped - no admin recipient configured');
@@ -595,9 +600,9 @@ export async function sendAdminSignupNotificationEmail({
 
   try {
     const { data, error } = await resend.emails.send({
-      from: getFromEmail(),
+      from: getFromEmail(requestHeaders),
       to: adminRecipient,
-      replyTo: getReplyToEmail(),
+      replyTo: getReplyToEmail(requestHeaders),
       subject,
       text: textBody,
       html: htmlBody,
@@ -619,4 +624,3 @@ export async function sendAdminSignupNotificationEmail({
     return { success: false, error };
   }
 }
-

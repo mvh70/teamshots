@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { Toast } from '@/components/ui/Toast'
@@ -350,6 +351,98 @@ export function GenerationRating({
     )
   }
 
+  const closeForm = () => {
+    setShowForm(false)
+    setRating('')
+    setSelectedReasons([])
+    setComment('')
+  }
+
+  const detailedFeedbackForm = (
+    <div
+      className="fixed inset-0 z-[10000] p-4 flex items-center justify-center"
+      onClick={closeForm}
+    >
+      <div className="absolute inset-0 bg-black/20" />
+      <form
+        ref={formRef}
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmitFeedback}
+        className="relative w-full max-w-md bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 max-h-[85vh] overflow-y-auto"
+      >
+        <div>
+          <p className="text-sm font-medium text-gray-900 mb-2">
+            {t('generation.whatsWrong')}
+          </p>
+          <p className="text-xs text-gray-600 mb-3">
+            {t('generation.helpImprove')}
+          </p>
+
+          <div className="space-y-2">
+            {FEEDBACK_REASONS.map((reason) => (
+              <label
+                key={reason}
+                className="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-2 rounded"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedReasons.includes(reason)}
+                  onChange={() => handleReasonToggle(reason)}
+                  className="mr-2"
+                />
+                <span>{t(`generation.reasons.${reason}`)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="generation-comment" className="block text-sm font-medium text-gray-700 mb-1">
+            {t('form.comment')} <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="generation-comment"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none placeholder:text-gray-500"
+            placeholder={t('generation.commentPlaceholder')}
+            required
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={closeForm}
+            className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            {t('form.cancel')}
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 px-3 py-1.5 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? t('submitting') : t('form.submit')}
+          </button>
+        </div>
+
+        {/* Scroll indicators */}
+        {canScrollUp && (
+          <div className="absolute top-2 right-2 pointer-events-none">
+            <ChevronUp className="w-4 h-4 text-gray-400 animate-pulse" />
+          </div>
+        )}
+        {canScrollDown && (
+          <div className="absolute bottom-2 right-2 pointer-events-none">
+            <ChevronDown className="w-4 h-4 text-gray-400 animate-pulse" />
+          </div>
+        )}
+      </form>
+    </div>
+  )
+
   return (
     <>
       <div className="flex items-center gap-1" ref={feedbackControlRef}>
@@ -386,90 +479,12 @@ export function GenerationRating({
               <ThumbsDown className="w-5 h-5" />
             </button>
           </>
-        ) : (
-          <form
-            ref={formRef}
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={handleSubmitFeedback}
-            className="bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 min-w-[280px] max-w-sm max-h-[320px] overflow-y-auto relative"
-          >
-            <div>
-              <p className="text-sm font-medium text-gray-900 mb-2">
-                {t('generation.whatsWrong')}
-              </p>
-              <p className="text-xs text-gray-600 mb-3">
-                {t('generation.helpImprove')}
-              </p>
-
-              <div className="space-y-2">
-                {FEEDBACK_REASONS.map((reason) => (
-                  <label
-                    key={reason}
-                    className="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-2 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedReasons.includes(reason)}
-                      onChange={() => handleReasonToggle(reason)}
-                      className="mr-2"
-                    />
-                    <span>{t(`generation.reasons.${reason}`)}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="generation-comment" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('form.comment')} <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="generation-comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none placeholder:text-gray-500"
-                placeholder={t('generation.commentPlaceholder')}
-                required
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false)
-                  setRating('')
-                  setSelectedReasons([])
-                  setComment('')
-                }}
-                className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                {t('form.cancel')}
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 px-3 py-1.5 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? t('submitting') : t('form.submit')}
-              </button>
-            </div>
-
-            {/* Scroll indicators */}
-            {canScrollUp && (
-              <div className="absolute top-2 right-2 pointer-events-none">
-                <ChevronUp className="w-4 h-4 text-gray-400 animate-pulse" />
-              </div>
-            )}
-            {canScrollDown && (
-              <div className="absolute bottom-2 right-2 pointer-events-none">
-                <ChevronDown className="w-4 h-4 text-gray-400 animate-pulse" />
-              </div>
-            )}
-          </form>
-        )}
+        ) : null}
       </div>
+
+      {showForm
+        ? (typeof document === 'undefined' ? detailedFeedbackForm : createPortal(detailedFeedbackForm, document.body))
+        : null}
 
       {/* Toast Notification */}
       {showToast && toastMessage && toastMessage.trim() ? (
@@ -492,4 +507,3 @@ export function GenerationRating({
     </>
   )
 }
-

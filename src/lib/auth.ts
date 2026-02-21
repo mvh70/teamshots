@@ -290,6 +290,24 @@ const customAdapter = (() => {
         return { user, person, teamId }
       })
 
+      try {
+        const { sendAdminSignupNotificationEmail } = await import('@/lib/email')
+        await sendAdminSignupNotificationEmail({
+          email: result.user.email,
+          firstName,
+          lastName,
+          userType,
+          locale: 'en',
+          teamId: result.teamId,
+        })
+      } catch (error) {
+        console.error('OAuth signup: failed to send admin signup notification', {
+          userId: result.user.id,
+          email: result.user.email,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
       return result.user
       } catch (error) {
         // Bubble up with enough context to diagnose production failures.

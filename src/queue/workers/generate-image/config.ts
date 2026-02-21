@@ -154,8 +154,8 @@ export const STAGE_MODEL = {
   CLOTHING_COLLAGE: 'gemini-2.5-flash-image' as ModelName,
   CLOTHING_OVERLAY: 'gemini-2.5-flash-image' as ModelName,
   BACKGROUND_BRANDING: 'gemini-2.5-flash-image' as ModelName,
-  STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName, // EXPERIMENT: Gemini 3 @ 1K for both steps
-  STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
+  STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName,
+  STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName,
   EVALUATION: 'gemini-2.5-flash' as ModelName,
   GARMENT_ANALYSIS: 'gemini-2.5-flash' as ModelName,
   SELFIE_CLASSIFICATION: 'gemini-2.5-flash' as ModelName,

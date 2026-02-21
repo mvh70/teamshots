@@ -7,7 +7,7 @@ import { PRICING_CONFIG, getPricingConfigKey } from '@/config/pricing';
 import { Logger } from '@/lib/logger';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
-import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail } from '@/lib/email';
+import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail, sendAdminSignupNotificationEmail } from '@/lib/email';
 import { getBaseUrlForUser } from '@/lib/url';
 import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
 import { recordPromoCodeUsage } from '@/domain/pricing/promo-codes';
@@ -149,6 +149,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const purchaseType = session.metadata?.type;
   let isNewGuestUser = false;
   let guestEmail = '';
+  let createdGuestSignup: {
+    email: string;
+    firstName: string;
+    lastName: string | null;
+    userType: 'individual' | 'team';
+  } | null = null;
   
   // In unauthenticated checkout flows, we won't have a userId.
   // Fallback: look up/create a user by email from the session and attach the Stripe customer ID.
@@ -279,6 +285,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       Logger.info('Default package granted', { userId: created.id, packageId: defaultPackageId, domain: signupDomain });
 
       isNewGuestUser = true;
+      createdGuestSignup = {
+        email,
+        firstName,
+        lastName,
+        userType: userRole === 'team_admin' ? 'team' : 'individual',
+      };
       Logger.info('Guest user and person created', { userId: created.id, email, firstName, role: userRole });
     }
   }
@@ -480,7 +492,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         // Get or create team for the user
-        let person = await tx.person.findUnique({
+        const person = await tx.person.findUnique({
           where: { userId: userId || '' },
           include: { team: true }
         });
@@ -670,6 +682,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       Logger.error('Failed to send order notification', {
         error: notifyError instanceof Error ? notifyError.message : String(notifyError),
       });
+    }
+
+    if (createdGuestSignup) {
+      try {
+        await sendAdminSignupNotificationEmail({
+          email: createdGuestSignup.email,
+          firstName: createdGuestSignup.firstName,
+          lastName: createdGuestSignup.lastName,
+          userType: createdGuestSignup.userType,
+          locale: 'en',
+          teamId: null,
+          teamWebsite: null,
+        });
+
+        Logger.info('Admin signup notification sent for guest-created user', {
+          email: createdGuestSignup.email,
+          userType: createdGuestSignup.userType,
+        });
+      } catch (signupNotifyError) {
+        Logger.error('Failed to send admin signup notification for guest-created user', {
+          error: signupNotifyError instanceof Error ? signupNotifyError.message : String(signupNotifyError),
+          email: createdGuestSignup.email,
+        });
+      }
     }
     
     // Send welcome email with password setup link for new guest users

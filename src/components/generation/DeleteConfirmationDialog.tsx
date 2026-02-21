@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import { DangerButton, SecondaryButton } from '@/components/ui'
 
@@ -87,7 +88,7 @@ export function DeleteConfirmationDialog({
 
   if (!isOpen) return null
 
-  return (
+  const dialogMarkup = (
     <>
       {/* Backdrop */}
       <div
@@ -172,5 +173,10 @@ export function DeleteConfirmationDialog({
       </div>
     </>
   )
-}
 
+  if (typeof window === 'object') {
+    return createPortal(dialogMarkup, document.body)
+  }
+
+  return null
+}

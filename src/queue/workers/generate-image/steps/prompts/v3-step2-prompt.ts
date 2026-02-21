@@ -32,6 +32,7 @@ export function getStep2QualityGuidelines(realismAndNegativeGuidelines: string[]
     '- Maintain the photorealistic quality of the original person.',
     '- Ensure the final image looks like a single, naturally-taken photograph.',
     '- Match color temperature and tone between subject and background.',
+    '- Enhance natural skin micro-texture detail (pores and subtle tonal variation) to maximize realism while avoiding smoothing or airbrushed skin.',
     ...realismAndNegativeGuidelines,
   ]
 }

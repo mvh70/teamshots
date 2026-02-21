@@ -191,6 +191,7 @@ describe('v3-step2-final-composition', () => {
     expect(promptText).toContain('Place the person centrally in the background composition.')
     expect(promptText).toContain('Match visible background lighting first')
     expect(promptText).toContain('Person must be DOMINANT in frame (40-60% of image height minimum).')
+    expect(promptText).toContain('Enhance natural skin micro-texture detail')
     expect(promptText).not.toContain('"scene":')
     expect(promptText).not.toContain('Subject Reference (FOR FRAMING CONTEXT ONLY):')
     expect(promptText).not.toContain('Compositing Instructions (Studio Background)')
