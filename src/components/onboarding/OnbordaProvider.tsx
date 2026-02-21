@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { usePathname } from 'next/navigation'
+import { routing } from '@/i18n/routing'
 
 interface OnbordaProviderProps {
   children: ReactNode
@@ -93,13 +94,27 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
   }))
 }
 
+const normalizePathname = (pathname: string) => {
+  const localeMatch = pathname.match(/^\/([^/]+)(\/.*|$)/)
+  if (!localeMatch) return pathname
+
+  const possibleLocale = localeMatch[1]
+  const isLocalePrefix = routing.locales.includes(possibleLocale as (typeof routing.locales)[number])
+  if (!isLocalePrefix) {
+    return pathname
+  }
+
+  const rest = localeMatch[2] || '/'
+  return rest.length > 0 ? rest : '/'
+}
+
 function TourStarter() {
   const { pendingTour, clearPendingTour, context } = useOnbordaTours()
   const onborda = useOnborda()
   const t = useTranslations('app')
   const pathname = usePathname()
+  const normalizedPathname = normalizePathname(pathname || '/')
   const forceCloseRef = useRef<string | null>(null)
-  const lastCheckedTourRef = useRef<string | null>(null)
 
   useEffect(() => {
     // If a tour is visible but it's already completed, force close it (only once per tour)
@@ -121,84 +136,88 @@ function TourStarter() {
     if (!onborda?.isOnbordaVisible || (onborda?.currentTour && forceCloseRef.current !== onborda.currentTour)) {
       forceCloseRef.current = null
     }
-    
-    // Only process pendingTour if it's different from what we last checked
-    if (pendingTour && pendingTour !== lastCheckedTourRef.current && onborda?.startOnborda && !onborda.isOnbordaVisible) {
-      // FIRST: Always check if tour is already completed before doing anything else
-      // This prevents restarting tours that have already been completed
-      const completedTours = context.completedTours || []
-      const hasCompleted = completedTours.includes(pendingTour)
-      
-      if (hasCompleted) {
-        clearPendingTour()
-        lastCheckedTourRef.current = null
+  }, [onborda?.isOnbordaVisible, onborda?.currentTour, onborda, context.completedTours])
+
+  useEffect(() => {
+    if (!pendingTour || !onborda?.startOnborda || onborda.isOnbordaVisible) {
+      return
+    }
+
+    const completedTours = context.completedTours || []
+    if (completedTours.includes(pendingTour)) {
+      clearPendingTour()
+      return
+    }
+
+    const translatedTours = createTranslatedTours(t)
+    const tour = translatedTours[pendingTour] || getTour(pendingTour, t, context)
+    const isGenerationDetailTour = pendingTour === 'generation-detail'
+
+    if (tour?.startingPath) {
+      const matchesStartingPath = normalizedPathname.startsWith(tour.startingPath)
+      const matchesInvitePath = isGenerationDetailTour
+        && normalizedPathname.includes('/invite-dashboard')
+        && normalizedPathname.includes('/generations')
+
+      if (!matchesStartingPath && !matchesInvitePath) {
         return
       }
-      
-      lastCheckedTourRef.current = pendingTour
-      
-      // Get tour - some tours like 'generation-detail' have triggerCondition: false
-      // so getTour may return undefined, but we can still access the tour directly
-      const translatedTours = createTranslatedTours(t)
-      const tour = translatedTours[pendingTour] || getTour(pendingTour, t, context)
-      
-      // Add path check - allow matching if pathname starts with startingPath (for sub-paths)
-      // Special handling for generation-detail tour: also allow invite-dashboard paths
-      const isGenerationDetailTour = pendingTour === 'generation-detail'
-      if (tour?.startingPath) {
-        const matchesStartingPath = pathname.startsWith(tour.startingPath)
-        const matchesInvitePath = isGenerationDetailTour && pathname.includes('/invite-dashboard') && pathname.includes('/generations')
-        
-        if (!matchesStartingPath && !matchesInvitePath) {
-          clearPendingTour()
-          lastCheckedTourRef.current = null
-          return
-        }
-      } else if (isGenerationDetailTour) {
-        // For generation-detail tour, allow invite-dashboard paths even if tour.startingPath is not set
-        // This handles the case where getTour returns undefined due to triggerCondition: false
-        const matchesInvitePath = pathname.includes('/invite-dashboard') && pathname.includes('/generations')
-        const matchesAppPath = pathname.includes('/app/generations')
-        
-        if (!matchesInvitePath && !matchesAppPath) {
-          clearPendingTour()
-          lastCheckedTourRef.current = null
-          return
-        }
+    } else if (isGenerationDetailTour) {
+      const matchesInvitePath = normalizedPathname.includes('/invite-dashboard') && normalizedPathname.includes('/generations')
+      const matchesAppPath = normalizedPathname.includes('/app/generations')
+
+      if (!matchesInvitePath && !matchesAppPath) {
+        return
       }
-      
-      // Close sidebar on mobile when generation-detail tour starts (dispatch early to give sidebar time to close)
-      if (pendingTour === 'generation-detail' && typeof window !== 'undefined' && window.innerWidth < 1024) {
-        window.dispatchEvent(new CustomEvent('close-sidebar-for-tour'))
+    }
+
+    if (isGenerationDetailTour && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      window.dispatchEvent(new CustomEvent('close-sidebar-for-tour'))
+    }
+
+    let cancelled = false
+    let attempts = 0
+    const maxAttempts = 4
+
+    const tryStart = () => {
+      if (cancelled || onborda.isOnbordaVisible) {
+        return
       }
-      
-      // Start the tour immediately using Onborda's API
-      // Check right before starting (race condition protection)
-      const updatedCompletedTours = context.completedTours || []
-      const stillCompleted = updatedCompletedTours.includes(pendingTour)
+
+      const stillCompleted = (context.completedTours || []).includes(pendingTour)
       if (stillCompleted) {
         clearPendingTour()
-        lastCheckedTourRef.current = null
         return
       }
-      // Also check if tour is already visible (might have been started by something else)
-      if (onborda.isOnbordaVisible) {
-        clearPendingTour()
-        lastCheckedTourRef.current = null
-        return
-      }
+
       try {
         onborda.startOnborda(pendingTour)
       } catch (error) {
-        console.error('[TourStarter Debug] Error calling startOnborda:', error)
+        attempts += 1
+        if (attempts < maxAttempts) {
+          window.setTimeout(tryStart, 250)
+          return
+        }
+        console.error('[TourStarter Debug] Unable to start tour after retries:', pendingTour, error)
       }
     }
-    
-    // Reset lastCheckedTourRef when pendingTour is cleared
-    if (!pendingTour) {
-      lastCheckedTourRef.current = null
+
+    tryStart()
+
+    return () => {
+      cancelled = true
     }
-  }, [pendingTour, onborda?.isOnbordaVisible, onborda?.currentTour, onborda?.startOnborda, onborda, clearPendingTour, context.completedTours, t, context, pathname])
+  }, [
+    pendingTour,
+    onborda?.startOnborda,
+    onborda?.isOnbordaVisible,
+    onborda,
+    clearPendingTour,
+    context.completedTours,
+    t,
+    context,
+    normalizedPathname,
+  ])
 
   return null
 }
@@ -288,4 +307,3 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     </OnbordaProviderLib>
   )
 }
-

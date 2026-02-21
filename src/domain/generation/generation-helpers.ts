@@ -8,7 +8,10 @@ import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import { Prisma } from '@/lib/prisma'
-import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
+import { getPackageConfig } from '@/domain/style/packages'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
+import { getDemographicsFromSelfieIds, hasDemographicData, type DemographicProfile } from '@/domain/selfie/selfieDemographics'
+import { AssetService } from '@/domain/services/AssetService'
 
 export interface JobEnqueueOptions {
   generationId: string
@@ -25,6 +28,12 @@ export interface JobEnqueueOptions {
   stopAfterStep?: string | number
   creditSource: 'individual' | 'team'
   priority?: number
+}
+
+export interface SelfieJobEnrichment {
+  selfieAssetIds?: string[]
+  selfieTypeMap?: Record<string, string>
+  demographics?: DemographicProfile
 }
 
 /**
@@ -85,6 +94,155 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
   })
 
   return job
+}
+
+/**
+ * Serialize style settings in a route-agnostic way and persist job selfie keys
+ * for regeneration consistency.
+ */
+export function serializeStyleSettingsForGeneration({
+  packageId,
+  styleSettings,
+  selfieS3Keys,
+}: {
+  packageId: string
+  styleSettings: Record<string, unknown>
+  selfieS3Keys: string[]
+}): Record<string, unknown> {
+  const pkg = getPackageConfig(packageId)
+  let serializedStyleSettings = pkg.persistenceAdapter.serialize(styleSettings)
+
+  // Normalize potential UI variants after serialization
+  try {
+    const clothing = serializedStyleSettings['clothing'] as { colors?: unknown } | undefined
+    const clothingColors = serializedStyleSettings['clothingColors'] as
+      | Record<string, unknown>
+      | null
+      | undefined
+
+    // Some UIs may send colors under clothing.colors; lift to clothingColors if present
+    if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
+      serializedStyleSettings['clothingColors'] = {
+        colors: clothing.colors as Record<string, unknown>,
+      }
+      // Keep clothing.colors for backward compatibility.
+    }
+  } catch {
+    // Best-effort normalization only.
+  }
+
+  return {
+    ...serializedStyleSettings,
+    inputSelfies: { keys: selfieS3Keys },
+  } as Record<string, unknown>
+}
+
+/**
+ * Resolve optional job enrichment data from selfie keys.
+ * Failures are intentionally non-fatal so generation can still proceed.
+ */
+export async function enrichGenerationJobFromSelfies({
+  generationId,
+  personId,
+  selfieS3Keys,
+  teamId,
+}: {
+  generationId: string
+  personId: string
+  selfieS3Keys: string[]
+  teamId?: string
+}): Promise<SelfieJobEnrichment> {
+  if (!Array.isArray(selfieS3Keys) || selfieS3Keys.length === 0) {
+    return {}
+  }
+
+  try {
+    const selfiesForJob = await prisma.selfie.findMany({
+      where: {
+        personId,
+        key: { in: selfieS3Keys },
+      },
+      select: {
+        id: true,
+        key: true,
+        classification: true,
+      },
+    })
+
+    const selfieTypeMap: Record<string, string> = {}
+    for (const selfie of selfiesForJob) {
+      const classification = extractFromClassification(selfie.classification)
+      if (classification.selfieType && classification.selfieType !== 'unknown') {
+        selfieTypeMap[selfie.key] = classification.selfieType
+      }
+    }
+
+    Logger.debug('Selfie classification results', {
+      generationId,
+      totalSelfies: selfiesForJob.length,
+      mappedSelfies: Object.keys(selfieTypeMap).length,
+      types: Object.values(selfieTypeMap),
+    })
+
+    const selfieAssetIds: string[] = []
+    for (const key of selfieS3Keys) {
+      const asset = await AssetService.resolveToAsset(key, {
+        ownerType: teamId ? 'team' : 'person',
+        teamId: teamId ?? undefined,
+        personId,
+        type: 'selfie',
+      })
+      selfieAssetIds.push(asset.id)
+
+      const selfie = selfiesForJob.find((s) => s.key === key)
+      if (selfie) {
+        const selfieRecord = await prisma.selfie.findUnique({
+          where: { id: selfie.id },
+          select: { assetId: true },
+        })
+        if (!selfieRecord?.assetId) {
+          await AssetService.linkSelfieToAsset(selfie.id, asset.id)
+        }
+      }
+    }
+
+    Logger.debug('Resolved selfie assets for generation', {
+      generationId,
+      selfieAssetIds,
+      selfieS3Keys,
+    })
+
+    let demographics: DemographicProfile | undefined
+    try {
+      const selfieIdsForDemographics = selfiesForJob.map((selfie) => selfie.id)
+      const demographicProfile = await getDemographicsFromSelfieIds(selfieIdsForDemographics)
+      if (hasDemographicData(demographicProfile)) {
+        demographics = demographicProfile
+        Logger.debug('Resolved demographics for generation', {
+          generationId,
+          demographics,
+        })
+      }
+    } catch (demographicsError) {
+      Logger.warn('Failed to resolve demographics, continuing without', {
+        generationId,
+        error: demographicsError instanceof Error ? demographicsError.message : String(demographicsError),
+      })
+    }
+
+    return {
+      selfieAssetIds: selfieAssetIds.length > 0 ? selfieAssetIds : undefined,
+      selfieTypeMap: Object.keys(selfieTypeMap).length > 0 ? selfieTypeMap : undefined,
+      demographics,
+    }
+  } catch (error) {
+    Logger.warn('Failed to enrich generation job from selfies, continuing without optional fields', {
+      generationId,
+      personId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return {}
+  }
 }
 
 /**
@@ -202,4 +360,3 @@ export async function createGenerationRecord(data: {
     },
   })
 }
-

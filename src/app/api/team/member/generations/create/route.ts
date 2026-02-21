@@ -7,8 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { PACKAGES_CONFIG } from '@/config/packages'
-import { getPersonCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
-import { getPackageConfig } from '@/domain/style/packages'
+import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
 import { getRegenerationCount } from '@/domain/pricing'
 import { CreditService } from '@/domain/services/CreditService'
@@ -17,6 +16,8 @@ import {
   enqueueGenerationJob,
   determineWorkflowVersion,
   createGenerationRecord,
+  serializeStyleSettingsForGeneration,
+  enrichGenerationJobFromSelfies,
 } from '@/domain/generation/generation-helpers'
 import { extendInviteExpiry } from '@/lib/invite-utils'
 
@@ -97,7 +98,6 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       })
     ])
-    const primarySelfie = resolved.primarySelfie
     // Fallback: if only one resolved but multiple are selected for this person, merge them
     let selfieKeysForJob = resolved.selfieS3Keys
     if (!Array.isArray(selfieKeysForJob) || selfieKeysForJob.length <= 1) {
@@ -119,14 +119,11 @@ export async function POST(request: NextRequest) {
 
     // Prepare style settings (serialize via package adapter if provided)
     const finalPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
-    const pkg = getPackageConfig(finalPackageId)
-    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(
-      (styleSettings || {}) as Record<string, unknown>
-    )
-    const serializedStyleSettings = {
-      ...serializedStyleSettingsBase,
-      inputSelfies: { keys: resolved.selfieS3Keys }
-    } as Record<string, unknown>
+    const serializedStyleSettings = serializeStyleSettingsForGeneration({
+      packageId: finalPackageId,
+      styleSettings: (styleSettings || {}) as Record<string, unknown>,
+      selfieS3Keys: selfieKeysForJob,
+    })
 
     // Create generation
     // Determine regeneration allowances for invited users - they get the same as their team admin's plan
@@ -219,12 +216,23 @@ export async function POST(request: NextRequest) {
       throw creditError
     }
 
+    const enrichment = await enrichGenerationJobFromSelfies({
+      generationId: generation.id,
+      personId: invite.person.id,
+      teamId: teamId ?? undefined,
+      selfieS3Keys: selfieKeysForJob,
+    })
+
     // Enqueue the generation job
     const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: invite.person.id,
       userId: teamUser?.id || undefined,
+      teamId: teamId ?? undefined,
       selfieS3Keys: selfieKeysForJob,
+      selfieAssetIds: enrichment.selfieAssetIds,
+      selfieTypeMap: enrichment.selfieTypeMap,
+      demographics: enrichment.demographics,
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,
@@ -243,5 +251,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to process generation request' }, { status: 500 })
   }
 }
-
-

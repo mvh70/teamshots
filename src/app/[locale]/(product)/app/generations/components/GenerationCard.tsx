@@ -536,18 +536,6 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     setInfoPopoverPlacement(placement)
   }
 
-  // Emit custom event when generated image is loaded (for tour triggering)
-  useEffect(() => {
-    if (loadedGenerated && currentStatus === 'completed' && !isIncomplete) {
-      // Dispatch a custom event that can be listened to by parent components
-      const event = new CustomEvent('generationImageLoaded', {
-        detail: { generationId: item.id },
-        bubbles: true,
-      })
-      window.dispatchEvent(event)
-    }
-  }, [loadedGenerated, currentStatus, isIncomplete, item.id])
-
   const handleRegenerate = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isRegenerating) return

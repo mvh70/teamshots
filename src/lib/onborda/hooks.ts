@@ -248,9 +248,11 @@ export function useOnboardingState() {
       }
     }
 
-    if (session?.user?.id) {
-      // Fetch if not loaded yet, or if pathname changed to a generations page
-      if (!hasLoadedRef.current || (isGenerationsPage && pathnameChanged)) {
+    const isInvitePath = typeof pathname === 'string' && pathname.startsWith('/invite-dashboard/')
+
+    if (session?.user?.id || isInvitePath) {
+      // Fetch if not loaded yet, if pathname changed to generations page, or if we're in invite flow
+      if (!hasLoadedRef.current || (isGenerationsPage && pathnameChanged) || isInvitePath) {
         loadOnboardingContext()
       }
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
@@ -18,6 +18,7 @@ import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useGenerationDetailTourTrigger } from '@/lib/onborda/useGenerationDetailTourTrigger'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
@@ -33,9 +34,6 @@ export default function PersonalGenerationsPage() {
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { context: onboardingContext } = useOnboardingState()
   const { startTour } = useOnbordaTours()
-  const processedCompletedGenIdsRef = useRef<Set<string>>(new Set())
-  const tourTriggerAttemptedRef = useRef(false)
-  const imageLoadedRef = useRef(false)
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -82,91 +80,13 @@ export default function PersonalGenerationsPage() {
     handleGenerationFailed
   )
 
-  // Listen for generation image load events
-  useEffect(() => {
-    const handleImageLoaded = () => {
-      imageLoadedRef.current = true
-    }
-
-    window.addEventListener('generationImageLoaded', handleImageLoaded)
-    return () => {
-      window.removeEventListener('generationImageLoaded', handleImageLoaded)
-    }
-  }, [])
-
-  // Trigger generation-detail tour after first completed generation AND image is loaded
-  useEffect(() => {
-    // Skip if still loading or onboarding context not loaded
-    if (loading || !onboardingContext._loaded) {
-      return
-    }
-
-    // Only check for completed generations (status === 'completed')
-    const completedGenerations = generated.filter(g => g.status === 'completed')
-
-    // If there are no completed generations, nothing to do
-    if (completedGenerations.length === 0) {
-      return
-    }
-
-    // Wait for the image to be loaded before starting the tour
-    if (!imageLoadedRef.current) {
-      return
-    }
-
-    // Check if tour has been completed using database (onboarding context)
-    const completedTours = onboardingContext.completedTours || []
-    const pendingTours = onboardingContext.pendingTours || []
-    const hasSeenTour = completedTours.includes('generation-detail')
-    const isPendingTour = pendingTours.includes('generation-detail')
-
-    // If tour has already been seen, nothing to do (even if it's in pendingTours)
-    if (hasSeenTour) {
-      return
-    }
-
-    // If we've already attempted to trigger the tour, don't do it again
-    if (tourTriggerAttemptedRef.current) {
-      return
-    }
-
-    // Find newly completed generations that we haven't processed yet
-    const newCompletedGenerations = completedGenerations.filter(
-      g => !processedCompletedGenIdsRef.current.has(g.id)
-    )
-
-    // If there are new completed generations, mark them as processed
-    if (newCompletedGenerations.length > 0) {
-      newCompletedGenerations.forEach(g => {
-        processedCompletedGenIdsRef.current.add(g.id)
-      })
-    }
-
-    // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
-    if (isPendingTour && !hasSeenTour) {
-      // Tour is already pending and not completed, start it immediately
-      tourTriggerAttemptedRef.current = true
-      startTour('generation-detail')
-    } else if (completedGenerations.length > 0 && !hasSeenTour) {
-      // Set the tour as pending if there are completed generations and tour hasn't been seen
-      tourTriggerAttemptedRef.current = true
-      if (onboardingContext.personId) {
-        fetch('/api/onboarding/pending-tour', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tourName: 'generation-detail' }),
-        }).then(() => {
-          // Start the tour immediately after setting it as pending
-          startTour('generation-detail')
-        }).catch(error => {
-          console.error('[Tour Debug] Failed to set pending tour:', error)
-        })
-      } else {
-        // If no personId, still try to start the tour immediately
-        startTour('generation-detail')
-      }
-    }
-  }, [loading, generated, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour])
+  useGenerationDetailTourTrigger({
+    loading,
+    generations: generated,
+    onboardingLoaded: !!onboardingContext._loaded,
+    completedTours: onboardingContext.completedTours,
+    startTour,
+  })
 
   useEffect(() => {
     if (!failureToast) return

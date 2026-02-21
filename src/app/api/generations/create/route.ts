@@ -48,8 +48,9 @@ import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 import {
   enqueueGenerationJob,
   determineWorkflowVersion,
+  serializeStyleSettingsForGeneration,
+  enrichGenerationJobFromSelfies,
 } from '@/domain/generation/generation-helpers'
-import { getDemographicsFromSelfieIds, hasDemographicData } from '@/domain/selfie/selfieDemographics'
 
 
 // Request validation schema
@@ -672,25 +673,11 @@ export async function POST(request: NextRequest) {
 
     // Serialize style settings with package info (for new generations)
     // Note: Regenerations are handled early with RegenerationService
-    const pkg = getPackageConfig(resolvedPackageId)
-    let serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettingsObj)
-
-    // Normalize potential UI variants after serialization
-    try {
-      const clothing = (serializedStyleSettings['clothing'] as { colors?: unknown } | undefined)
-      const clothingColors = serializedStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
-      // Some UIs may send colors under clothing.colors; lift to clothingColors if present
-      if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
-        serializedStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
-        // keep clothing.colors as-is for backward compatibility; do not delete
-      }
-    } catch { }
-
-    // Persist style settings and also embed selected selfie keys for future regenerations
-    serializedStyleSettings = {
-      ...serializedStyleSettings,
-      inputSelfies: { keys: selfieS3Keys }
-    } as Record<string, unknown>
+    const serializedStyleSettings = serializeStyleSettingsForGeneration({
+      packageId: resolvedPackageId,
+      styleSettings: finalStyleSettingsObj as Record<string, unknown>,
+      selfieS3Keys,
+    })
 
     // Create generation record
     const generation = await prisma.generation.create({
@@ -760,44 +747,6 @@ export async function POST(request: NextRequest) {
     // Note: Regenerations are handled early with RegenerationService
     const jobSelfieS3Keys = selfieS3Keys
 
-    // Resolve selfie S3 keys to Asset IDs for fingerprinting and cost tracking
-    // This ensures deterministic fingerprints based on Asset IDs, not S3 keys
-    const selfieAssetIds: string[] = []
-    try {
-      for (const key of jobSelfieS3Keys) {
-        const asset = await AssetService.resolveToAsset(key, {
-          ownerType: ownerPerson.teamId ? 'team' : 'person',
-          teamId: ownerPerson.teamId ?? undefined,
-          personId: primarySelfie.personId,
-          type: 'selfie',
-        })
-        selfieAssetIds.push(asset.id)
-
-        // Link selfie to asset if not already linked
-        const selfie = selfies.find((s: SelfieType) => s.key === key)
-        if (selfie) {
-          const selfieRecord = await prisma.selfie.findUnique({
-            where: { id: selfie.id },
-            select: { assetId: true }
-          })
-          if (!selfieRecord?.assetId) {
-            await AssetService.linkSelfieToAsset(selfie.id, asset.id)
-          }
-        }
-      }
-      Logger.debug('Resolved selfie assets for generation', {
-        generationId: generation.id,
-        selfieAssetIds,
-        selfieS3Keys: jobSelfieS3Keys,
-      })
-    } catch (assetError) {
-      // Log error but don't fail the generation - asset resolution is for optimization
-      Logger.warn('Failed to resolve selfie assets, continuing without asset IDs', {
-        generationId: generation.id,
-        error: assetError instanceof Error ? assetError.message : String(assetError),
-      })
-    }
-
     // Resolve background and logo assets for fingerprinting
     let backgroundAssetId: string | undefined
     let logoAssetId: string | undefined
@@ -848,39 +797,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Build selfie type map for split composite building (face vs body)
-    const selfieTypeMap: Record<string, string> = {}
-    for (const s of selfies) {
-      if (s.selfieType && s.selfieType !== 'unknown') {
-        selfieTypeMap[s.key] = s.selfieType
-      }
-    }
-
-    Logger.debug('Selfie classification results', {
-      totalSelfies: selfies.length,
-      mappedSelfies: Object.keys(selfieTypeMap).length,
-      types: Object.values(selfieTypeMap),
-      rawSelfieTypes: selfies.map(s => ({ id: s.id, type: s.selfieType }))
+    const enrichment = await enrichGenerationJobFromSelfies({
+      generationId: generation.id,
+      personId: primarySelfie.personId,
+      teamId: ownerPerson.teamId ?? undefined,
+      selfieS3Keys: jobSelfieS3Keys,
     })
-
-    // Fetch aggregated demographics from selfies
-    const selfieIdsForDemographics = selfies.map((s: SelfieType) => s.id)
-    let demographics
-    try {
-      demographics = await getDemographicsFromSelfieIds(selfieIdsForDemographics)
-      if (hasDemographicData(demographics)) {
-        Logger.debug('Resolved demographics for generation', {
-          generationId: generation.id,
-          demographics,
-        })
-      }
-    } catch (demographicsError) {
-      // Log error but don't fail the generation - demographics are optional
-      Logger.warn('Failed to resolve demographics, continuing without', {
-        generationId: generation.id,
-        error: demographicsError instanceof Error ? demographicsError.message : String(demographicsError),
-      })
-    }
 
     const job = await enqueueGenerationJob({
       generationId: generation.id,
@@ -888,9 +810,9 @@ export async function POST(request: NextRequest) {
       userId: primarySelfie.person.userId || undefined,
       teamId: ownerPerson.teamId ?? undefined,
       selfieS3Keys: jobSelfieS3Keys,
-      selfieAssetIds: selfieAssetIds.length > 0 ? selfieAssetIds : undefined,
-      selfieTypeMap: Object.keys(selfieTypeMap).length > 0 ? selfieTypeMap : undefined,
-      demographics: hasDemographicData(demographics ?? {}) ? demographics : undefined,
+      selfieAssetIds: enrichment.selfieAssetIds,
+      selfieTypeMap: enrichment.selfieTypeMap,
+      demographics: enrichment.demographics,
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,
