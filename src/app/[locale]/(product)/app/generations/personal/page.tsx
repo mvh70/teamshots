@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -10,11 +10,7 @@ import { useSession } from 'next-auth/react'
 import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
-import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
-import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
-import { type PlanPeriod } from '@/domain/subscription/utils'
 import { Toast } from '@/components/ui'
-import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
@@ -29,32 +25,13 @@ export default function PersonalGenerationsPage() {
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
-  const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
-  const [subscriptionPeriod, setSubscriptionPeriod] = useState<PlanPeriod | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { context: onboardingContext } = useOnboardingState()
   const { startTour } = useOnbordaTours()
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const searchParams = useSearchParams()
-  const router = useRouter()
   const isNewGeneration = searchParams.get('new_generation') === 'true'
-  const [isWaitingForNewGeneration, setIsWaitingForNewGeneration] = useState(isNewGeneration)
   const [lightboxImage, setLightboxImage] = useState<{ src: string; personName: string } | null>(null)
-
-  // Fetch subscription tier for display purposes (regeneration count, etc.)
-  useEffect(() => {
-    const fetchTier = async () => {
-      if (!session?.user?.id) return
-      try {
-        const accountMode = await fetchAccountMode()
-        setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
-        setSubscriptionPeriod(accountMode.subscriptionPeriod as PlanPeriod | null)
-      } catch (error) {
-        console.warn('Failed to fetch account mode', error)
-      }
-    }
-    void fetchTier()
-  }, [session?.user?.id])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {
@@ -98,21 +75,7 @@ export default function PersonalGenerationsPage() {
   }, [failureToast])
 
   const filteredGenerated = filterGenerated(generated)
-
-  // Turn off waiting when we have data
-  useEffect(() => {
-    if (isWaitingForNewGeneration && filteredGenerated.length > 0) {
-      setIsWaitingForNewGeneration(false)
-    }
-  }, [filteredGenerated.length, isWaitingForNewGeneration])
-
-  // Safety timeout
-  useEffect(() => {
-    if (isWaitingForNewGeneration) {
-      const timer = setTimeout(() => setIsWaitingForNewGeneration(false), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [isWaitingForNewGeneration])
+  const isAwaitingGenerationResult = isNewGeneration && filteredGenerated.length === 0 && loading
   // Build photo style options dynamically from existing generations
   const styleOptions = Array.from(new Set(
     generated.map(g => g.contextName || 'Freestyle')
@@ -122,7 +85,7 @@ export default function PersonalGenerationsPage() {
   const hasIndividualCredits = userCredits.individual > 0
 
   // Show upsell window only if no individual credits AND no existing generations
-  if (!creditsLoading && !hasIndividualCredits && filteredGenerated.length === 0 && !loading && !isWaitingForNewGeneration) {
+  if (!creditsLoading && !hasIndividualCredits && filteredGenerated.length === 0 && !loading && !isAwaitingGenerationResult) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -254,7 +217,7 @@ export default function PersonalGenerationsPage() {
           )}
         </>
       ) : (
-        (loading || isWaitingForNewGeneration) ? (
+        (loading || isAwaitingGenerationResult) ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
           </div>

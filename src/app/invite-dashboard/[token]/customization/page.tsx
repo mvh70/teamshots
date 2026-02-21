@@ -10,7 +10,7 @@ import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import GenerateButton from '@/components/generation/GenerateButton'
-import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
+import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
@@ -101,7 +101,7 @@ export default function InviteCustomizationPage() {
   const isMobileViewport = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
 
-  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useInviteSelfieEndpoints(token)
+  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useUploadSelfieEndpoints(token, 'invite')
   const {
     clearFlow,
     hydrated,

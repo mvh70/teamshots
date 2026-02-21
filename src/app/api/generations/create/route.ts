@@ -41,13 +41,13 @@ import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
-import { AssetService } from '@/domain/services/AssetService'
 import { RegenerationService } from '@/domain/generation'
 import { deriveGenerationType } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 import {
   enqueueGenerationJob,
   determineWorkflowVersion,
+  createGenerationWithCreditReservation,
   serializeStyleSettingsForGeneration,
   enrichGenerationJobFromSelfies,
 } from '@/domain/generation/generation-helpers'
@@ -679,9 +679,8 @@ export async function POST(request: NextRequest) {
       selfieS3Keys,
     })
 
-    // Create generation record
-    const generation = await prisma.generation.create({
-      data: {
+    const { generation } = await createGenerationWithCreditReservation({
+      generationData: {
         personId: primarySelfie.personId,
         contextId: resolvedContextId,
         generatedPhotoKeys: [], // Will be populated by worker
@@ -696,106 +695,16 @@ export async function POST(request: NextRequest) {
         isOriginal,
         groupIndex,
         styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
-      }
+      },
+      reservationUserId: session.user.id,
+      reservationPersonId: primarySelfie.personId,
+      requiredCredits: PRICING_CONFIG.credits.perGeneration,
+      userContext,
     })
-
-    // Reserve credits using CreditService
-    // Note: Regenerations are handled early with RegenerationService and don't reach this code
-    try {
-      const reservationResult = await CreditService.reserveCreditsForGeneration(
-        session.user.id,
-        primarySelfie.personId,
-        PRICING_CONFIG.credits.perGeneration,
-        userContext
-      )
-
-      if (!reservationResult.success) {
-        Logger.error('Credit reservation failed', { error: reservationResult.error })
-        try {
-          await prisma.generation.delete({ where: { id: generation.id } })
-        } catch (deleteError) {
-          // Ignore if generation was already deleted or doesn't exist
-          Logger.warn('Failed to delete generation after credit reservation failure', {
-            generationId: generation.id,
-            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-          })
-        }
-        throw new Error(reservationResult.error || 'Credit reservation failed')
-      }
-
-      Logger.debug('Credits reserved successfully', {
-        generationId: generation.id,
-        transactionId: reservationResult.transactionId,
-        individualCreditsUsed: reservationResult.individualCreditsUsed,
-        teamCreditsUsed: reservationResult.teamCreditsUsed
-      })
-    } catch (creditError) {
-      // If credit reservation fails, delete the generation record
-      try {
-        await prisma.generation.delete({ where: { id: generation.id } })
-      } catch (deleteError) {
-        // Ignore if generation was already deleted or doesn't exist
-        Logger.warn('Failed to delete generation after credit reservation failure', {
-          generationId: generation.id,
-          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-        })
-      }
-      throw creditError
-    }
 
     // Use the selected selfie keys for the job
     // Note: Regenerations are handled early with RegenerationService
     const jobSelfieS3Keys = selfieS3Keys
-
-    // Resolve background and logo assets for fingerprinting
-    let backgroundAssetId: string | undefined
-    let logoAssetId: string | undefined
-    try {
-      const { getBackgroundIdentifier } = await import('@/domain/style/elements/background/utils')
-      const { getLogoIdentifier } = await import('@/domain/style/elements/branding/deserializer')
-
-      // Resolve background asset if present
-      const bgIdentifier = getBackgroundIdentifier(finalStyleSettingsObj.background)
-      if (bgIdentifier) {
-        const bgAsset = await AssetService.resolveToAsset(bgIdentifier, {
-          ownerType: ownerPerson.teamId ? 'team' : 'person',
-          teamId: ownerPerson.teamId ?? undefined,
-          personId: primarySelfie.personId,
-          type: 'background',
-          mimeType: 'image/png',
-        })
-        backgroundAssetId = bgAsset.id
-        Logger.debug('Resolved background asset', {
-          generationId: generation.id,
-          backgroundAssetId,
-          bgIdentifier,
-        })
-      }
-
-      // Resolve logo asset if present
-      const logoIdentifier = getLogoIdentifier(finalStyleSettingsObj.branding)
-      if (logoIdentifier) {
-        const logoAsset = await AssetService.resolveToAsset(logoIdentifier, {
-          ownerType: ownerPerson.teamId ? 'team' : 'person',
-          teamId: ownerPerson.teamId ?? undefined,
-          personId: primarySelfie.personId,
-          type: 'logo',
-          mimeType: 'image/png',
-        })
-        logoAssetId = logoAsset.id
-        Logger.debug('Resolved logo asset', {
-          generationId: generation.id,
-          logoAssetId,
-          logoIdentifier,
-        })
-      }
-    } catch (assetError) {
-      // Log error but don't fail the generation
-      Logger.warn('Failed to resolve style assets, continuing without asset IDs', {
-        generationId: generation.id,
-        error: assetError instanceof Error ? assetError.message : String(assetError),
-      })
-    }
 
     const enrichment = await enrichGenerationJobFromSelfies({
       generationId: generation.id,

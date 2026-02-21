@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { SelectableGrid } from '@/components/generation/selection'
 import { FlowNavigation, SwipeableContainer, FlowProgressDock } from '@/components/generation/navigation'
 import { StickyFlowPage } from '@/components/generation/layout'
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
-import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
+import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
 import { QRPlaceholder } from '@/components/MobileHandoff'
@@ -23,6 +23,8 @@ import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/Self
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
+import { useRefreshOnClassificationComplete } from '@/hooks/useRefreshOnClassificationComplete'
+import { mapInviteSelfiesToGridItems } from '@/lib/selfieGridItems'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -54,7 +56,7 @@ export default function SelfiesPage() {
   const [stats, setStats] = useState<DashboardStats>({ creditsRemaining: 0 })
   // Header resolves invite info internally; no local invite state needed
 
-  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useInviteSelfieEndpoints(token)
+  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useUploadSelfieEndpoints(token, 'invite')
   const {
     inFlow,
     clearFlow,
@@ -163,6 +165,16 @@ export default function SelfiesPage() {
     handleSelfiesApproved
   } = selfieManager
 
+  const handleClassificationComplete = useCallback(() => {
+    void loadUploads()
+    refreshSelfieTypeStatus()
+  }, [loadUploads, refreshSelfieTypeStatus])
+
+  useRefreshOnClassificationComplete({
+    classificationQueue,
+    onComplete: handleClassificationComplete
+  })
+
   // Handle selection changes from SelectableGrid - must be defined before any conditional throws
   const handleSelectionChange = useCallback(() => {
     // Reload selection state when gallery changes selections
@@ -189,6 +201,7 @@ export default function SelfiesPage() {
     backgroundQuality?: string | null
   }
   const selfies = hookSelfies as Selfie[]
+  const gridItems = useMemo(() => mapInviteSelfiesToGridItems(selfies), [selfies])
 
   // Count all selected selfies, including newly uploaded ones that may not be in hookSelfies yet
   // The filtering was causing newly uploaded selfies to not count toward the continue button
@@ -354,19 +367,7 @@ export default function SelfiesPage() {
             }
             grid={
               <SelectableGrid
-                items={selfies.map(s => ({
-                  id: s.id,
-                  key: s.key,
-                  url: s.url,
-                  uploadedAt: s.uploadedAt,
-                  used: s.used,
-                  selfieType: s.selfieType,
-                  selfieTypeConfidence: s.selfieTypeConfidence,
-                  isProper: s.isProper ?? undefined,
-                  improperReason: s.improperReason,
-                  lightingQuality: s.lightingQuality,
-                  backgroundQuality: s.backgroundQuality
-                }))}
+                items={gridItems}
                 selection={{
                   mode: 'managed',
                   token,
@@ -522,19 +523,7 @@ export default function SelfiesPage() {
                 </div>
                 <div className="px-6 pt-2 pb-6">
                   <SelectableGrid
-                    items={selfies.map(s => ({
-                      id: s.id,
-                      key: s.key,
-                      url: s.url,
-                      uploadedAt: s.uploadedAt,
-                      used: s.used,
-                      selfieType: s.selfieType,
-                      selfieTypeConfidence: s.selfieTypeConfidence,
-                      isProper: s.isProper ?? undefined,
-                      improperReason: s.improperReason,
-                      lightingQuality: s.lightingQuality,
-                      backgroundQuality: s.backgroundQuality
-                    }))}
+                    items={gridItems}
                     selection={{
                       mode: 'managed',
                       token,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
@@ -10,12 +10,11 @@ import { PACKAGES_CONFIG } from '@/config/packages'
 import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
 import { getRegenerationCount } from '@/domain/pricing'
-import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
 import {
   enqueueGenerationJob,
   determineWorkflowVersion,
-  createGenerationRecord,
+  createGenerationWithCreditReservation,
   serializeStyleSettingsForGeneration,
   enrichGenerationJobFromSelfies,
 } from '@/domain/generation/generation-helpers'
@@ -163,58 +162,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const generation = await createGenerationRecord({
-      personId: invite.person.id,
-      styleSettings: serializedStyleSettings,
-      creditSource: 'individual', // NEW MODEL: credits always belong to person
-      creditsUsed: PRICING_CONFIG.credits.perGeneration,
-      contextId: contextId ?? invite.person.team?.activeContextId ?? undefined,
-      provider: 'gemini',
-      maxRegenerations: invitedRegenerations,
-      remainingRegenerations: invitedRegenerations,
+    const { generation } = await createGenerationWithCreditReservation({
+      generationData: {
+        personId: invite.person.id,
+        generatedPhotoKeys: [],
+        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
+        creditSource: 'individual', // NEW MODEL: credits always belong to person
+        creditsUsed: PRICING_CONFIG.credits.perGeneration,
+        status: 'pending',
+        contextId: contextId ?? invite.person.team?.activeContextId ?? undefined,
+        provider: 'gemini',
+        maxRegenerations: invitedRegenerations,
+        remainingRegenerations: invitedRegenerations,
+      },
+      reservationUserId: teamUser?.id || invite.person.team?.adminId || '',
+      reservationPersonId: invite.person.id,
+      requiredCredits: PRICING_CONFIG.credits.perGeneration,
+      userContext,
     })
-
-    // Reserve team credits using CreditService
-    // Credits are tracked per person, not per invite
-    try {
-      const reservationResult = await CreditService.reserveCreditsForGeneration(
-        teamUser?.id || invite.person.team?.adminId || '',
-        invite.person.id,
-        PRICING_CONFIG.credits.perGeneration,
-        userContext
-      )
-
-      if (!reservationResult.success) {
-        Logger.error('Credit reservation failed for team member', { error: reservationResult.error })
-        try {
-          await prisma.generation.delete({ where: { id: generation.id } })
-        } catch (deleteError) {
-          // Ignore if generation was already deleted or doesn't exist
-          Logger.warn('Failed to delete generation after credit reservation failure', {
-            generationId: generation.id,
-            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-          })
-        }
-        throw new Error(reservationResult.error || 'Credit reservation failed')
-      }
-
-      Logger.debug('Team member credits reserved successfully', {
-        generationId: generation.id,
-        transactionId: reservationResult.transactionId,
-        creditsUsed: reservationResult.individualCreditsUsed
-      })
-    } catch (creditError) {
-      try {
-        await prisma.generation.delete({ where: { id: generation.id } })
-      } catch (deleteError) {
-        // Ignore if generation was already deleted or doesn't exist
-        Logger.warn('Failed to delete generation after credit reservation failure', {
-          generationId: generation.id,
-          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-        })
-      }
-      throw creditError
-    }
 
     const enrichment = await enrichGenerationJobFromSelfies({
       generationId: generation.id,

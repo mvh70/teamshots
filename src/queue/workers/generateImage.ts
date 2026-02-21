@@ -49,6 +49,17 @@ const BUCKET_NAME = getS3BucketName()
 
 const VALID_SELFIE_KEY_PATTERN = /^selfies\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/
 
+function inferSelfieCompositeFromReferences(
+  references: Array<{ description?: string; base64: string; mimeType: string }>
+): { base64: string; mimeType: string; description?: string } | undefined {
+  return references.find((reference) => {
+    const description = (reference.description || '').toLowerCase()
+    const isFormatFrame = description.includes('format') && description.includes('empty frame')
+    if (isFormatFrame) return false
+    return description.includes('composite') && (description.includes('selfie') || description.includes('subject'))
+  })
+}
+
 export function destroyGenerateImageResources(): void {
   s3Client.destroy()
 }
@@ -388,7 +399,16 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       v3BodyComposite = generationPayload.bodyComposite
 
       if (!v3SelfieComposite && !v3FaceComposite && !v3BodyComposite) {
-        throw new Error('V3 workflow requires at least one selfie/face/body composite reference.')
+        const inferredSelfieComposite = inferSelfieCompositeFromReferences(referenceImages)
+        if (inferredSelfieComposite) {
+          v3SelfieComposite = inferredSelfieComposite
+          Logger.warn('V3 payload missing explicit composites; inferred selfie composite from reference images', {
+            generationId,
+            description: inferredSelfieComposite.description,
+          })
+        } else {
+          throw new Error('V3 workflow requires at least one selfie/face/body composite reference.')
+        }
       }
 
       try {

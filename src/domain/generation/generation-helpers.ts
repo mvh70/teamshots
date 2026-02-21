@@ -12,6 +12,7 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
 import { getDemographicsFromSelfieIds, hasDemographicData, type DemographicProfile } from '@/domain/selfie/selfieDemographics'
 import { AssetService } from '@/domain/services/AssetService'
+import { CreditService } from '@/domain/services/CreditService'
 
 export interface JobEnqueueOptions {
   generationId: string
@@ -34,6 +35,14 @@ export interface SelfieJobEnrichment {
   selfieAssetIds?: string[]
   selfieTypeMap?: Record<string, string>
   demographics?: DemographicProfile
+}
+
+export interface CreateGenerationWithCreditReservationOptions {
+  generationData: Prisma.GenerationUncheckedCreateInput
+  reservationUserId: string
+  reservationPersonId: string
+  requiredCredits: number
+  userContext?: Parameters<typeof CreditService.reserveCreditsForGeneration>[3]
 }
 
 /**
@@ -94,6 +103,57 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
   })
 
   return job
+}
+
+/**
+ * Create generation and reserve credits as one logical operation.
+ * Rolls back generation record if reservation fails.
+ */
+export async function createGenerationWithCreditReservation(
+  options: CreateGenerationWithCreditReservationOptions
+) {
+  const generation = await prisma.generation.create({
+    data: options.generationData,
+  })
+
+  try {
+    const reservationResult = await CreditService.reserveCreditsForGeneration(
+      options.reservationUserId,
+      options.reservationPersonId,
+      options.requiredCredits,
+      options.userContext
+    )
+
+    if (!reservationResult.success) {
+      Logger.error('Credit reservation failed', {
+        generationId: generation.id,
+        error: reservationResult.error,
+      })
+      throw new Error(reservationResult.error || 'Credit reservation failed')
+    }
+
+    Logger.debug('Credits reserved successfully', {
+      generationId: generation.id,
+      transactionId: reservationResult.transactionId,
+      individualCreditsUsed: reservationResult.individualCreditsUsed,
+      teamCreditsUsed: reservationResult.teamCreditsUsed,
+    })
+
+    return {
+      generation,
+      reservationResult,
+    }
+  } catch (creditError) {
+    try {
+      await prisma.generation.delete({ where: { id: generation.id } })
+    } catch (deleteError) {
+      Logger.warn('Failed to delete generation after credit reservation failure', {
+        generationId: generation.id,
+        error: deleteError instanceof Error ? deleteError.message : String(deleteError),
+      })
+    }
+    throw creditError
+  }
 }
 
 /**

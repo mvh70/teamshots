@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { SelectableGrid } from '@/components/generation/selection'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import React from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
@@ -12,6 +12,8 @@ import { QRPlaceholder } from '@/components/MobileHandoff'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
+import { useRefreshOnClassificationComplete } from '@/hooks/useRefreshOnClassificationComplete'
+import { mapSessionSelfiesToGridItems } from '@/lib/selfieGridItems'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -37,31 +39,15 @@ function SelfiesPageContent() {
     preloadFaceDetectionModel()
   }, [])
 
-  // Track previously active/queued selfies to detect when classification completes
-  const prevQueueRef = useRef<{ active: string[]; queued: string[] }>({ active: [], queued: [] })
-  
-  // Auto-refresh when classification completes
-  useEffect(() => {
-    if (!classificationQueue) return
-    
-    const prevActive = prevQueueRef.current.active
-    const prevQueued = prevQueueRef.current.queued
-    const currentActive = classificationQueue.activeSelfieIds || []
-    const currentQueued = classificationQueue.queuedSelfieIds || []
-    
-    // Check if any selfie that was being processed is now done
-    const completedFromActive = prevActive.filter(id => !currentActive.includes(id) && !currentQueued.includes(id))
-    const completedFromQueued = prevQueued.filter(id => !currentActive.includes(id) && !currentQueued.includes(id))
-    
-    if (completedFromActive.length > 0 || completedFromQueued.length > 0) {
-      // Classification completed for some selfies - refresh the list
-      loadUploads()
-      refreshSelfieTypeStatus()
-    }
-    
-    // Update ref for next comparison
-    prevQueueRef.current = { active: currentActive, queued: currentQueued }
-  }, [classificationQueue, loadUploads, refreshSelfieTypeStatus])
+  const handleClassificationComplete = useCallback(() => {
+    void loadUploads()
+    refreshSelfieTypeStatus()
+  }, [loadUploads, refreshSelfieTypeStatus])
+
+  useRefreshOnClassificationComplete({
+    classificationQueue,
+    onComplete: handleClassificationComplete
+  })
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
   type UploadListItem = {
@@ -80,20 +66,7 @@ function SelfiesPageContent() {
   const uploadListItems = uploads as UploadListItem[]
 
   // Memoize the grid items to prevent unnecessary re-renders
-  const gridItems = React.useMemo(() =>
-    uploadListItems.map(u => ({
-      id: u.id,
-      key: u.uploadedKey,
-      url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
-      uploadedAt: u.createdAt,
-      used: u.hasGenerations,
-      selfieType: u.selfieType,
-      selfieTypeConfidence: u.selfieTypeConfidence,
-      isProper: u.isProper ?? undefined,
-      improperReason: u.improperReason,
-      lightingQuality: u.lightingQuality,
-      backgroundQuality: u.backgroundQuality,
-    })), [uploadListItems])
+  const gridItems = React.useMemo(() => mapSessionSelfiesToGridItems(uploadListItems), [uploadListItems])
 
   // Hook handles initialization internally
 

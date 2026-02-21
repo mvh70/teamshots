@@ -20,6 +20,7 @@ import { QRPlaceholder } from '@/components/MobileHandoff'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
+import { mapSessionSelfiesToGridItems } from '@/lib/selfieGridItems'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -145,20 +146,7 @@ function SelfieSelectionPageContent() {
   }
 
   // Memoize grid items to prevent unnecessary re-renders
-  const gridItems = useMemo(() =>
-    uploadListItems.map(u => ({
-      id: u.id,
-      key: u.uploadedKey,
-      url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
-      uploadedAt: u.createdAt,
-      used: u.hasGenerations,
-      selfieType: u.selfieType,
-      selfieTypeConfidence: u.selfieTypeConfidence,
-      isProper: u.isProper ?? undefined,
-      improperReason: u.improperReason,
-      lightingQuality: u.lightingQuality,
-      backgroundQuality: u.backgroundQuality,
-    })), [uploadListItems])
+  const gridItems = useMemo(() => mapSessionSelfiesToGridItems(uploadListItems), [uploadListItems])
 
   const selectableGridProps = {
     items: gridItems,

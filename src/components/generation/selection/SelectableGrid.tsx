@@ -357,6 +357,19 @@ const GridItem = React.memo<{
     </div>
   )
 }, (prevProps, nextProps) => {
+  const prevNeedsClassification = !prevProps.item.selfieType || prevProps.item.selfieType === ''
+  const nextNeedsClassification = !nextProps.item.selfieType || nextProps.item.selfieType === ''
+
+  const prevIsActivelyAnalyzing = prevNeedsClassification &&
+    !!prevProps.classificationQueue?.activeSelfieIds?.includes(prevProps.item.id)
+  const nextIsActivelyAnalyzing = nextNeedsClassification &&
+    !!nextProps.classificationQueue?.activeSelfieIds?.includes(nextProps.item.id)
+
+  const prevIsQueued = prevNeedsClassification &&
+    !!prevProps.classificationQueue?.queuedSelfieIds?.includes(prevProps.item.id)
+  const nextIsQueued = nextNeedsClassification &&
+    !!nextProps.classificationQueue?.queuedSelfieIds?.includes(nextProps.item.id)
+
   // Custom comparison: only re-render if these specific props changed
   return (
     prevProps.item.id === nextProps.item.id &&
@@ -368,7 +381,9 @@ const GridItem = React.memo<{
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isLoaded === nextProps.isLoaded &&
     prevProps.isImproper === nextProps.isImproper &&
-    prevProps.hoveredDeleteId === nextProps.hoveredDeleteId
+    prevProps.hoveredDeleteId === nextProps.hoveredDeleteId &&
+    prevIsActivelyAnalyzing === nextIsActivelyAnalyzing &&
+    prevIsQueued === nextIsQueued
   )
 })
 

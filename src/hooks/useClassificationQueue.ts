@@ -34,7 +34,7 @@ export function useClassificationQueue({
       if (handoffToken) params.set('handoffToken', handoffToken)
 
       const url = `/api/selfies/classification-queue${params.toString() ? '?' + params.toString() : ''}`
-      const response = await fetch(url, { credentials: 'include' })
+      const response = await fetch(url, { credentials: 'include', cache: 'no-store' })
 
       if (response.ok) {
         const data = await response.json()

@@ -124,37 +124,48 @@ export default function InviteDashboardHeader({
           )}
         </div>
 
-        {/* Desktop: Full header */}
-        <div className="hidden md:flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
+        {/* Desktop: Streamlined hierarchy for invite flow pages */}
+        <div className="hidden md:flex md:items-start md:justify-between gap-6 py-4">
           <div className="flex-1 min-w-0">
-            {showBackToDashboard && (
-              <button
-                onClick={handleBackClick}
-                className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Dashboard
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {showBackToDashboard && (
+                <button
+                  onClick={handleBackClick}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Dashboard
+                </button>
+              )}
 
-            {showMemberInfo && !hideTitle && (
-              <p className="text-sm text-gray-500 mb-1 truncate">
-                {memberName}
-                {memberEmail ? ` (${memberEmail})` : ''}
+              {!hideTitle && (
+                <h1 className="text-2xl font-bold text-gray-900 break-words font-display">
+                  {resolvedTitle}
+                </h1>
+              )}
+            </div>
+
+            {!hideTitle && (
+              <p className="text-sm text-gray-600 mt-2 max-w-3xl">
+                {resolvedSubtitle}
               </p>
             )}
 
-            {/* Team chip intentionally omitted per standard header design */}
-
-            {!hideTitle && (
-              <>
-                <h1 className="text-2xl font-bold text-gray-900 break-words font-display">{resolvedTitle}</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  {resolvedSubtitle}
-                </p>
-              </>
+            {showMemberInfo && !hideTitle && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {memberName && (
+                  <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    {memberName}
+                  </span>
+                )}
+                {memberEmail && (
+                  <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
+                    {memberEmail}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -162,9 +173,11 @@ export default function InviteDashboardHeader({
             <div className="flex flex-col gap-3 md:items-end">
               {right}
               {showCredits && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-500 mb-1">Photos left</p>
-                  <p className="text-2xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-2 text-right min-w-28">
+                  <p className="text-xs font-medium text-indigo-700">Photos left</p>
+                  <p className="text-2xl leading-none font-bold text-brand-primary mt-1">
+                    {calculatePhotosFromCredits(creditsRemaining)}
+                  </p>
                 </div>
               )}
             </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { PhotoIcon } from '@heroicons/react/24/outline'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
@@ -21,6 +21,9 @@ import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 
+const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
 export default function GenerationsPage() {
   const params = useParams()
   const router = useRouter()
@@ -28,6 +31,21 @@ export default function GenerationsPage() {
   const t = useTranslations('inviteDashboard')
   const token = params.token as string
   const { generations, loading, error } = useInvitedGenerations(token)
+  const [creditsRemaining, setCreditsRemaining] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`/api/team/member/stats?token=${token}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (isNonNullObject(data) && isNonNullObject(data.stats)) {
+          setCreditsRemaining((data.stats as { creditsRemaining?: number }).creditsRemaining ?? 0)
+        }
+      } catch { /* non-blocking */ }
+    }
+    fetchStats()
+  }, [token])
   const { startTour } = useOnbordaTours()
   const { context: onboardingContext } = useOnboardingState()
   
@@ -100,7 +118,13 @@ export default function GenerationsPage() {
     <div className="min-h-screen bg-gray-50">
       <OnboardingLauncher />
       {/* Header */}
-      <InviteDashboardHeader showBackToDashboard token={token} title="" />
+      <InviteDashboardHeader
+        showBackToDashboard
+        token={token}
+        hideTitle
+        creditsRemaining={creditsRemaining}
+        photosAffordable={Math.floor(creditsRemaining / PRICING_CONFIG.credits.perGeneration)}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && <ErrorBanner message={error} className="mb-6" />}
@@ -108,10 +132,48 @@ export default function GenerationsPage() {
         <div className="space-y-6">
           {generations.length > 0 && (
             <>
-              {/* Filters and Generate Button Row */}
+              {/* Page title + Filters and Generate Button Row */}
               <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Filters */}
                 <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-lg md:text-2xl font-semibold text-gray-900">Your generations</h2>
+                </div>
+
+                {/* Prominent Generate Button with Cost Info */}
+                <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
+                  <button
+                    onClick={handleStartFlow}
+                    className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
+                    style={{
+                      backgroundColor: BRAND_CONFIG.colors.primary,
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5 md:w-6 md:h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2.5}
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    {t('newGeneration')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3">
                   <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} className="border rounded-md px-2 py-1 text-sm">
                     <option value="all">All time</option>
                     <option value="7d">Last 7 days</option>
@@ -126,50 +188,6 @@ export default function GenerationsPage() {
                     </select>
                   )}
                 </div>
-
-                {/* Prominent Generate Button with Cost Info */}
-                <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
-                  <button 
-                    onClick={handleStartFlow}
-                    className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
-                    style={{
-                      backgroundColor: BRAND_CONFIG.colors.primary,
-                      color: 'white'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
-                    }}
-                  >
-                    <svg 
-                      className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      strokeWidth={2.5} 
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 4.5v15m7.5-7.5h-15"
-                      />
-                    </svg>
-                    {t('newGeneration')}
-                  </button>
-                  
-                  {/* Cost information */}
-                  <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
-                    <div>
-                      <span className="font-medium" style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? 'photo' : 'photos'}
-                      </span>
-                      <span> per generation</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
             {/* Image grid with lightbox support */}
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
