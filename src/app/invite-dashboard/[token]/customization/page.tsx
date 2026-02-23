@@ -167,7 +167,6 @@ export default function InviteCustomizationPage() {
     return mergeSavedUserChoiceStyleSettings({
       settings,
       savedSettings: loadStyleSettings(styleSettingsStorageScope),
-      allowMissingPoseExpression: false,
     })
   }, [styleSettingsStorageScope])
 

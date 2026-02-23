@@ -21,11 +21,9 @@ const CATEGORIES_TO_MERGE = [
 export function mergeSavedUserChoiceStyleSettings({
   settings,
   savedSettings,
-  allowMissingPoseExpression = false,
 }: {
   settings: PhotoStyleSettingsType
   savedSettings: Partial<PhotoStyleSettingsType> | null
-  allowMissingPoseExpression?: boolean
 }): PhotoStyleSettingsType {
   if (!savedSettings) {
     return settings
@@ -34,6 +32,7 @@ export function mergeSavedUserChoiceStyleSettings({
   const merged = { ...settings }
 
   for (const key of CATEGORIES_TO_MERGE) {
+    const settingHasKey = Object.prototype.hasOwnProperty.call(settings, key)
     const currentValue = settings[key] as StyleFieldValue | undefined
     const savedValue = savedSettings[key] as StyleFieldValue | undefined
 
@@ -51,7 +50,15 @@ export function mergeSavedUserChoiceStyleSettings({
       currentValue?.type === 'user-choice' ||
       currentValue?.style === 'user-choice'
 
-    if (savedRestorableValue !== undefined && currentValue && currentIsUserChoice) {
+    if (savedRestorableValue === undefined || !settingHasKey) {
+      continue
+    }
+
+    if (currentValue) {
+      if (!currentIsUserChoice) {
+        continue
+      }
+
       const shouldNormalizeLegacyChoice =
         (key === 'pose' || key === 'expression') && currentValue.mode === undefined
       ; (merged as Record<string, unknown>)[key] = shouldNormalizeLegacyChoice
@@ -60,16 +67,12 @@ export function mergeSavedUserChoiceStyleSettings({
             ...currentValue,
             value: savedRestorableValue,
           }
-    } else if (
-      allowMissingPoseExpression &&
-      savedRestorableValue !== undefined &&
-      !currentValue &&
-      (key === 'pose' || key === 'expression')
-    ) {
-      ; (merged as Record<string, unknown>)[key] = {
-        mode: 'user-choice',
-        value: savedRestorableValue,
-      }
+      continue
+    }
+
+    ; (merged as Record<string, unknown>)[key] = {
+      mode: 'user-choice',
+      value: savedRestorableValue,
     }
   }
 

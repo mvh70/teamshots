@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { constructMetadata } from '@/lib/seo'
+import { constructBlogMetadata } from '@/lib/seo'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getBrand } from '@/config/brand'
@@ -8,6 +8,7 @@ import { BlogPostTemplate, type BlogPostContent } from '@/components/blog'
 import { markdownToHtml } from '@/lib/markdown'
 import {
   getBlogPostBySlug,
+  getBlogPostBySpanishSlug,
   getAllBlogSlugs,
   getRedirectForSlug,
   variantToBrandId,
@@ -22,6 +23,11 @@ type Props = {
 
 function hasPublishedSpanishTranslation(status: string | null | undefined): boolean {
   return status === 'published' || status === 'approved'
+}
+
+/** Build a blog redirect path that avoids the /en/ prefix (which creates a redirect chain with next.config). */
+function blogPath(locale: string, slug: string): string {
+  return locale === 'en' ? `/blog/${slug}` : `/${locale}/blog/${slug}`
 }
 
 function normalizeIsoDate(
@@ -94,6 +100,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const variant = getLandingVariant(domain)
   const brandId = variantToBrandId(variant)
 
+  // Handle CMS redirects (old/consolidated slugs)
   const redirectSlug = getRedirectForSlug(brandId, slug)
   if (redirectSlug && redirectSlug !== slug) {
     if (locale === 'es') {
@@ -102,13 +109,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         permanentRedirect(`/blog/${redirectSlug}`)
       }
     }
-    permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+    permanentRedirect(blogPath(locale, redirectSlug))
   }
 
-  const post = getBlogPostBySlug(brandId, slug, locale)
+  // Look up post by canonical (English) slug
+  let post = getBlogPostBySlug(brandId, slug, locale)
+
+  // Fallback: if not found and requesting Spanish, try looking up by Spanish slug
+  if (!post && locale === 'es') {
+    const spanishMatch = getBlogPostBySpanishSlug(brandId, slug)
+    if (spanishMatch) {
+      // Redirect to the canonical URL using the English slug
+      permanentRedirect(blogPath(locale, spanishMatch.slug))
+    }
+  }
 
   if (!post) {
-    // If redirect exists, metadata won't be used (redirect happens in page component)
     return { title: 'Not Found' }
   }
 
@@ -125,9 +141,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const protocol = headersList.get('x-forwarded-proto') || 'https'
   const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com'
 
-  const baseMetadata = constructMetadata({
+  const baseMetadata = constructBlogMetadata({
     baseUrl,
-    path: `/blog/${slug}`,
+    enSlug: post.slug,
+    esSlug: spanishAvailable ? (post.spanishSlug || post.slug) : undefined,
     locale,
     title,
     description,
@@ -171,7 +188,7 @@ export default async function BlogPostPage({ params }: Props) {
   const variant = getLandingVariant(domain)
   const brandId = variantToBrandId(variant)
 
-  // Get blog post from CMS
+  // Handle CMS redirects (old/consolidated slugs)
   const redirectSlug = getRedirectForSlug(brandId, slug)
   if (redirectSlug && redirectSlug !== slug) {
     if (locale === 'es') {
@@ -180,12 +197,21 @@ export default async function BlogPostPage({ params }: Props) {
         permanentRedirect(`/blog/${redirectSlug}`)
       }
     }
-    permanentRedirect(`/${locale}/blog/${redirectSlug}`)
+    permanentRedirect(blogPath(locale, redirectSlug))
   }
 
-  const post = getBlogPostBySlug(brandId, slug, locale)
+  // Look up post by canonical (English) slug
+  let post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
+    // Fallback: if requesting Spanish, try looking up by Spanish localized slug
+    if (locale === 'es') {
+      const spanishMatch = getBlogPostBySpanishSlug(brandId, slug)
+      if (spanishMatch) {
+        permanentRedirect(blogPath(locale, spanishMatch.slug))
+      }
+    }
+
     // Check if this slug has been consolidated/redirected
     const fallbackRedirectSlug = getRedirectForSlug(brandId, slug)
     if (fallbackRedirectSlug) {
@@ -195,12 +221,12 @@ export default async function BlogPostPage({ params }: Props) {
           permanentRedirect(`/blog/${fallbackRedirectSlug}`)
         }
       }
-      permanentRedirect(`/${locale}/blog/${fallbackRedirectSlug}`)
+      permanentRedirect(blogPath(locale, fallbackRedirectSlug))
     }
     notFound()
   }
 
-  // If requesting Spanish but translation isn't published, show 404
+  // If requesting Spanish but translation isn't published, redirect to English
   const spanishAvailable = hasPublishedSpanishTranslation(post.spanishStatus)
   if (locale === 'es' && !spanishAvailable) {
     permanentRedirect(`/blog/${slug}`)

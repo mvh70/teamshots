@@ -107,7 +107,8 @@ export function constructMetadata({
 }
 
 /**
- * Helper for dynamic blog posts where slugs might differ by language
+ * Helper for dynamic blog posts where slugs might differ by language.
+ * Generates correct canonical and hreflang tags when EN and ES slugs differ.
  */
 export function constructBlogMetadata({
     baseUrl: rawBaseUrl,
@@ -117,6 +118,8 @@ export function constructBlogMetadata({
     title,
     description,
     image,
+    noIndex = false,
+    siteName,
 }: {
     baseUrl: string
     enSlug: string
@@ -125,12 +128,16 @@ export function constructBlogMetadata({
     title: string
     description?: string
     image?: string
+    noIndex?: boolean
+    siteName?: string
 }): Metadata {
     const baseUrl = normalizeBaseUrlForSeo(rawBaseUrl)
-    const currentSlug = locale === 'en' ? enSlug : (esSlug || enSlug)
     const englishUrl = `${baseUrl}/blog/${enSlug}`
     const spanishUrl = `${baseUrl}/es/blog/${esSlug || enSlug}`
-    const currentUrl = locale === 'en' ? englishUrl : `${baseUrl}/${locale}/blog/${currentSlug}`
+    const canonicalUrl = locale === 'en' ? englishUrl : spanishUrl
+
+    const ogImage = image || `${baseUrl}/branding/og-image.jpg`
+    const displaySiteName = deriveSiteName(baseUrl, siteName)
 
     return {
         title,
@@ -138,16 +145,36 @@ export function constructBlogMetadata({
         openGraph: {
             title,
             description,
-            url: currentUrl,
-            images: image ? [{ url: image }] : undefined,
+            url: canonicalUrl,
+            siteName: displaySiteName,
+            type: 'website',
+            locale: locale === 'es' ? 'es_ES' : 'en_US',
+            images: [
+                {
+                    url: ogImage,
+                    width: 1200,
+                    height: 630,
+                    alt: title,
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [ogImage],
         },
         alternates: {
-            canonical: currentUrl,
+            canonical: canonicalUrl,
             languages: {
                 'en': englishUrl,
                 'es': spanishUrl,
                 'x-default': englishUrl,
             },
+        },
+        robots: {
+            index: !noIndex,
+            follow: !noIndex,
         },
     }
 }

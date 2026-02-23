@@ -268,7 +268,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     return mergeSavedUserChoiceStyleSettings({
       settings,
       savedSettings: loadStyleSettings(),
-      allowMissingPoseExpression: true,
     })
   }, [])
 

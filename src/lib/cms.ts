@@ -385,6 +385,55 @@ export function getBlogPostBySlug(brandId: string, slug: string, locale: string)
 }
 
 /**
+ * Look up a blog post by its Spanish localized slug.
+ * Returns the post with its canonical (English) slug if found.
+ * Used as a fallback when the primary canonicalSlug lookup fails for /es/ URLs.
+ */
+export function getBlogPostBySpanishSlug(brandId: string, spanishSlug: string): CMSBlogPostFull | null {
+  try {
+    const db = new Database(DB_PATH, { readonly: true })
+
+    const query = `
+      SELECT
+        cs.canonicalSlug as slug,
+        cv.title,
+        cv.metaDescription,
+        cv.content,
+        cv.heroImagePath,
+        cv.tldrJson,
+        cv.comparisonImagePath,
+        cs.publishedAt,
+        cs.brandId,
+        cv.wordCount,
+        cv.faqsJson,
+        cv.schemaJson,
+        t.localizedSlug as spanishSlug,
+        t.title as spanishTitle,
+        t.metaDescription as spanishDescription,
+        t.content as spanishContent,
+        t.faqsJson as spanishFaqsJson,
+        t.status as spanishStatus
+      FROM ContentSeries cs
+      INNER JOIN ContentVersion cv ON cv.seriesId = cs.id
+      INNER JOIN Translation t ON t.versionId = cv.id AND t.language = 'es'
+      WHERE cs.brandId = ?
+        AND t.localizedSlug = ?
+        AND cs.contentType = 'blog'
+        AND cv.status = 'published'
+        AND cs.status != 'archived'
+    `
+
+    const post = db.prepare(query).get(brandId, spanishSlug) as CMSBlogPostFull | undefined
+    db.close()
+
+    return post || null
+  } catch (error) {
+    console.error('Failed to read blog post by Spanish slug from CMS:', error)
+    return null
+  }
+}
+
+/**
  * Check if a slug has a redirect (e.g. from consolidated/deprecated content)
  * Returns the target slug if a redirect exists, null otherwise.
  */
