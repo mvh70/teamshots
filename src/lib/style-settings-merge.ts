@@ -116,8 +116,12 @@ export function mergeSavedUserChoiceStyleSettings({
     const settingHasKey = Object.prototype.hasOwnProperty.call(settings, key)
     const rawCurrentValue = settings[key]
     const rawSavedValue = savedSettings[key]
-    const currentValue = isSettingLike(rawCurrentValue) ? rawCurrentValue : undefined
-    const savedValue = isSettingLike(rawSavedValue) ? rawSavedValue : undefined
+    const currentValue: StyleFieldValue | undefined = isSettingLike(rawCurrentValue)
+      ? rawCurrentValue
+      : undefined
+    const savedValue: StyleFieldValue | undefined = isSettingLike(rawSavedValue)
+      ? rawSavedValue
+      : undefined
 
     // Skip non-setting fields (e.g. presetId/aspectRatio) and unknown primitives.
     if (!currentValue && !savedValue) {

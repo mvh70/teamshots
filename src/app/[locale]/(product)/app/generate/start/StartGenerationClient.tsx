@@ -178,6 +178,18 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [photoStyleSettings, setPhotoStyleSettingsRaw] = useState<PhotoStyleSettingsType>(initialData.styleData.photoStyleSettings)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(initialData.styleData.originalContextSettings)
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
+  // DEBUG: log initial data from server
+  React.useEffect(() => {
+    const s = initialData.styleData.photoStyleSettings
+    console.log('[DEBUG mount]', {
+      activeContextId: initialData.styleData.activeContext?.id,
+      selectedPackageId: initialData.styleData.selectedPackageId,
+      serverPose: s.pose?.value?.type, serverPoseMode: s.pose?.mode,
+      serverTopLayer: s.clothingColors?.value?.topLayer, serverColorsMode: s.clothingColors?.mode,
+      sessionHasData: typeof window !== 'undefined' && !!sessionStorage.getItem('teamshots_style_settings'),
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [isGenerating, setIsGenerating] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const isGeneratingRef = React.useRef(false)
@@ -290,6 +302,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   // Track if we've loaded saved settings to avoid overwriting user changes
   const hasLoadedSavedSettingsRef = React.useRef(false)
+  const hydratedRef = React.useRef(hydrated)
+  hydratedRef.current = hydrated
   const prevStyleSettingsRef = React.useRef(photoStyleSettings)
   const latestPhotoStyleSettingsRef = React.useRef(photoStyleSettings)
 
@@ -346,8 +360,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }, [])
 
   // Wrapper that persists every state change to sessionStorage (like invite dashboard).
-  // Guards: only save after hydration and initial merge are complete to avoid
-  // overwriting saved settings during mount.
+  // Uses refs for guards so the callback identity is stable — no stale closures
+  // when child components hold an older reference during App Router navigations.
   const setPhotoStyleSettings = useCallback((
     newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)
   ) => {
@@ -357,10 +371,15 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     latestPhotoStyleSettingsRef.current = updated
     setPhotoStyleSettingsRaw(updated)
 
-    if (hydrated && hasLoadedSavedSettingsRef.current) {
+    if (hydratedRef.current && hasLoadedSavedSettingsRef.current) {
       persistStyleSettings(updated)
+      // DEBUG: trace wrapper persist
+      console.log('[DEBUG wrapper-persist]', {
+        pose: updated.pose?.value?.type, poseMode: updated.pose?.mode,
+        topLayer: updated.clothingColors?.value?.topLayer, colorsMode: updated.clothingColors?.mode,
+      })
     }
-  }, [hydrated, persistStyleSettings])
+  }, [persistStyleSettings])
 
   useEffect(() => {
     latestPhotoStyleSettingsRef.current = photoStyleSettings
@@ -378,12 +397,22 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setPhotoStyleSettings(prev => {
       let merged = mergeSavedStyleSettings(prev)
       merged = mergeSavedColors(merged)
+      // DEBUG: trace hydration merge
+      console.log('[DEBUG hydration-merge]', {
+        skipUpload,
+        activeContextId: activeContext?.id,
+        prevPose: prev.pose?.value?.type, prevPoseMode: prev.pose?.mode,
+        mergedPose: merged.pose?.value?.type, mergedPoseMode: merged.pose?.mode,
+        prevTopLayer: prev.clothingColors?.value?.topLayer, prevColorsMode: prev.clothingColors?.mode,
+        mergedTopLayer: merged.clothingColors?.value?.topLayer, mergedColorsMode: merged.clothingColors?.mode,
+        sessionRaw: typeof window !== 'undefined' ? sessionStorage.getItem('teamshots_style_settings')?.substring(0, 300) : null,
+      })
       return merged
     })
 
     // Mark as ready for saving (always, after hydration)
     hasLoadedSavedSettingsRef.current = true
-  }, [hydrated, skipUpload, setPhotoStyleSettings, mergeSavedStyleSettings, mergeSavedColors])
+  }, [hydrated, skipUpload, setPhotoStyleSettings, mergeSavedStyleSettings, mergeSavedColors, activeContext?.id])
 
   // Rehydrate from session whenever this route is (re)entered with skipUpload.
   // This handles App Router cache restores where component state can be stale
@@ -394,6 +423,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setPhotoStyleSettings(prev => {
       let merged = mergeSavedStyleSettings(prev)
       merged = mergeSavedColors(merged)
+      // DEBUG: trace re-entry merge
+      console.log('[DEBUG re-entry-merge]', {
+        prevPose: prev.pose?.value?.type, mergedPose: merged.pose?.value?.type,
+        prevTopLayer: prev.clothingColors?.value?.topLayer, mergedTopLayer: merged.clothingColors?.value?.topLayer,
+      })
       return merged
     })
   }, [hydrated, skipUpload, pathname, searchParamsString, setPhotoStyleSettings, mergeSavedStyleSettings, mergeSavedColors])

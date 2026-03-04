@@ -494,7 +494,7 @@ export default function StyleForm({
             </span>
             {status === 'error' && (
               <button
-                onClick={() => setPhotoStyleSettings({ ...photoStyleSettings })}
+                onClick={() => setPhotoStyleSettings((prev) => ({ ...prev }))}
                 className="ml-auto text-xs font-medium underline hover:no-underline transition-all"
               >
                 {t('retry', { default: 'Retry' })}

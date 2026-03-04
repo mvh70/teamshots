@@ -120,7 +120,7 @@ import { getEffectiveClothingDetail } from '@/domain/style/elements/clothing/con
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
-  onChange: (settings: PhotoStyleSettingsType) => void
+  onChange: (settings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => void
   className?: string
   readonlyPredefined?: boolean // If true, predefined fields are read-only
   originalContextSettings?: PhotoStyleSettingsType // Original context settings to determine what was predefined
@@ -253,7 +253,6 @@ export default function PhotoStyleSettings({
   const desktopProgressiveActivationEnabled = enableDesktopProgressiveActivation && !showToggles && !isMobileViewport
   const [manualActiveFieldKey, setManualActiveFieldKey] = React.useState<string | null>(null)
   const [clickedFieldKey, setClickedFieldKey] = React.useState<string | null>(null)
-
   // Reset manual active state when context/package changes.
   React.useEffect(() => {
     setManualActiveFieldKey(null)
@@ -375,9 +374,10 @@ export default function PhotoStyleSettings({
 
       // When leaving branding, mark it as acknowledged
       if (currentFieldKey === 'branding' && value.branding?.value === undefined) {
-        const newSettings = { ...value }
-        newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
-        onChange(newSettings)
+        onChange((prev) => ({
+          ...prev,
+          branding: { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+        }))
       }
 
       const currentIdx = currentFieldKey ? tabNavigationKeys.indexOf(currentFieldKey) : -1
@@ -533,11 +533,6 @@ export default function PhotoStyleSettings({
 
   // Track last synced outfit colors to avoid infinite loops
   const lastSyncedOutfitColorsRef = React.useRef<string | null>(null)
-  const latestSettingsRef = React.useRef(value)
-
-  React.useEffect(() => {
-    latestSettingsRef.current = value
-  }, [value])
 
   // Auto-sync outfit colors to clothing colors when outfit analysis completes
   React.useEffect(() => {
@@ -566,13 +561,15 @@ export default function PhotoStyleSettings({
       // Mark these colors as synced
       lastSyncedOutfitColorsRef.current = outfitColorSignature
 
-      const newSettings = { ...latestSettingsRef.current }
-      // Preserve the existing mode (predefined/user-choice), only default to user-choice if not set
-      const existingMode = newSettings.clothingColors?.mode || 'user-choice'
-      newSettings.clothingColors = existingMode === 'predefined'
-        ? predefined(newClothingColors)
-        : userChoice(newClothingColors)
-      onChange(newSettings)
+      onChange((prev) => {
+        const newSettings = { ...prev }
+        // Preserve the existing mode (predefined/user-choice), only default to user-choice if not set
+        const existingMode = newSettings.clothingColors?.mode || 'user-choice'
+        newSettings.clothingColors = existingMode === 'predefined'
+          ? predefined(newClothingColors)
+          : userChoice(newClothingColors)
+        return newSettings
+      })
     }
   }, [value.customClothing?.value?.colors, onChange]) // Re-run when outfit colors change
 
@@ -622,127 +619,135 @@ export default function PhotoStyleSettings({
       event.stopPropagation()
     }
 
-    const newSettings = { ...value }
+    onChange((prev) => {
+      const newSettings = { ...prev }
 
-    // Check if category has an element config (some categories like 'aspectRatio' don't)
-    // Valid registry categories that have ElementConfig implementations
-    const registryCategories: readonly string[] = [
-      'background',
-      'branding',
-      'clothing',
-      'clothingColors',
-      'customClothing',
-      'shotType',
-      'style',
-      'expression',
-      'industry',
-      'lighting',
-      'pose',
-      'preset'
-    ] as const
+      // Check if category has an element config (some categories like 'aspectRatio' don't)
+      // Valid registry categories that have ElementConfig implementations
+      const registryCategories: readonly string[] = [
+        'background',
+        'branding',
+        'clothing',
+        'clothingColors',
+        'customClothing',
+        'shotType',
+        'style',
+        'expression',
+        'industry',
+        'lighting',
+        'pose',
+        'preset'
+      ] as const
 
-    // Skip categories that don't have element configs (like aspectRatio)
-    if (!registryCategories.includes(category)) {
-      console.warn(`Category ${category} does not support toggling via element config`)
-      return
-    }
+      // Skip categories that don't have element configs (like aspectRatio)
+      if (!registryCategories.includes(category)) {
+        console.warn(`Category ${category} does not support toggling via element config`)
+        return prev
+      }
 
-    // Get element config from registry (category is now narrowed to RegistryCategoryType)
-    const elementConfig = getElementConfig(category as RegistryCategoryType)
+      // Get element config from registry (category is now narrowed to RegistryCategoryType)
+      const elementConfig = getElementConfig(category as RegistryCategoryType)
 
-    if (!elementConfig) {
-      console.warn(`No element config found for category: ${category}`)
-      return
-    }
+      if (!elementConfig) {
+        console.warn(`No element config found for category: ${category}`)
+        return prev
+      }
 
-    // Initialize if not set
-    if (!(newSettings as Record<string, unknown>)[category]) {
-      const packageDefaultValue = (packageDefaults as Record<string, unknown>)[category]
-      const defaultValue = (DEFAULT_PHOTO_STYLE_SETTINGS as Record<string, unknown>)[category]
+      // Initialize if not set
+      if (!(newSettings as Record<string, unknown>)[category]) {
+        const packageDefaultValue = (packageDefaults as Record<string, unknown>)[category]
+        const defaultValue = (DEFAULT_PHOTO_STYLE_SETTINGS as Record<string, unknown>)[category]
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ; (newSettings as any)[category] =
           packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
-    }
-
-    // Get the current setting to preserve its value when toggling
-    const currentSetting = (newSettings as Record<string, unknown>)[category] as
-      { mode?: string; value?: unknown; type?: string } | undefined
-
-    // Get the new value from the element config as a fallback for default values
-    const packageDefault = (packageDefaults as Record<string, unknown>)[category]
-    const defaultValue = isPredefined
-      ? elementConfig.getDefaultPredefined(packageDefault)
-      : elementConfig.getDefaultUserChoice()
-
-    // Preserve existing value when toggling modes
-    // This ensures user settings aren't lost when switching between predefined and user-choice
-    let newValue = defaultValue
-
-    // All categories now use the ElementSetting pattern (mode + value)
-    // Keep the existing value, just change the mode
-    if (currentSetting && 'mode' in currentSetting && currentSetting.value !== undefined) {
-      newValue = {
-        mode: isPredefined ? 'predefined' : 'user-choice',
-        value: currentSetting.value
       }
-    }
-    // Legacy fallback: some old stored data might use 'type' field directly
-    // In this case, use the default value since there's no inner value to preserve
-    else if (currentSetting && 'type' in currentSetting && !('mode' in currentSetting)) {
-      newValue = defaultValue
-    }
 
-    // Update the setting
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ; (newSettings as any)[category] = newValue
+      // Get the current setting to preserve its value when toggling
+      const currentSetting = (newSettings as Record<string, unknown>)[category] as
+        { mode?: string; value?: unknown; type?: string } | undefined
 
-    // Special post-processing for certain categories
-    if (category === 'shotType') {
-      syncAspectRatioWithShotType(newSettings, newSettings.shotType)
-    }
+      // Get the new value from the element config as a fallback for default values
+      const packageDefault = (packageDefaults as Record<string, unknown>)[category]
+      const defaultValue = isPredefined
+        ? elementConfig.getDefaultPredefined(packageDefault)
+        : elementConfig.getDefaultUserChoice()
 
-    onChange(newSettings)
+      // Preserve existing value when toggling modes
+      // This ensures user settings aren't lost when switching between predefined and user-choice
+      let newValue = defaultValue
+
+      // All categories now use the ElementSetting pattern (mode + value)
+      // Keep the existing value, just change the mode
+      if (currentSetting && 'mode' in currentSetting && currentSetting.value !== undefined) {
+        newValue = {
+          mode: isPredefined ? 'predefined' : 'user-choice',
+          value: currentSetting.value
+        }
+      }
+      // Legacy fallback: some old stored data might use 'type' field directly
+      // In this case, use the default value since there's no inner value to preserve
+      else if (currentSetting && 'type' in currentSetting && !('mode' in currentSetting)) {
+        newValue = defaultValue
+      }
+
+      // Update the setting
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ; (newSettings as any)[category] = newValue
+
+      // Special post-processing for certain categories
+      if (category === 'shotType') {
+        syncAspectRatioWithShotType(newSettings, newSettings.shotType)
+      }
+
+      return newSettings
+    })
   }
 
   const handleCategorySettingsChange = (category: CategoryType, settings: unknown) => {
-    const isLockedPredefinedCategory = !showToggles && readonlyPredefined && isCategoryPredefined(category)
-    if (isLockedPredefinedCategory && category !== 'clothing') {
-      return
-    }
-
-    let nextCategorySettings = settings
-    if (category === 'clothing' && isLockedPredefinedCategory) {
-      const currentClothing = value.clothing
-      const incomingClothing = settings as PhotoStyleSettingsType['clothing'] | undefined
-
-      if (!currentClothing || !hasValue(currentClothing) || !incomingClothing || !hasValue(incomingClothing)) {
-        return
-      }
-
-      const lockedStyle = currentClothing.value.style
-      nextCategorySettings = predefined({
-        ...incomingClothing.value,
-        style: lockedStyle,
-        lockScope: 'style-only' as const,
-      })
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newSettings: any = { ...value }
-    newSettings[category] = nextCategorySettings
-
-    if (category === 'shotType') {
-      syncAspectRatioWithShotType(newSettings, nextCategorySettings as ShotTypeSettings)
-    }
-
     // Treat explicit field changes as a visit so accepted-on-visit steps remain complete
     // even when users switch back to the original/default value.
     onCategoryVisit?.(category)
-    onChange(newSettings)
+
+    onChange((prev) => {
+      const isLockedPredefinedCategory = !showToggles && readonlyPredefined && isCategoryPredefined(category, prev)
+      if (isLockedPredefinedCategory && category !== 'clothing') {
+        return prev
+      }
+
+      let nextCategorySettings = settings
+      if (category === 'clothing' && isLockedPredefinedCategory) {
+        const currentClothing = prev.clothing
+        const incomingClothing = settings as PhotoStyleSettingsType['clothing'] | undefined
+
+        if (!currentClothing || !hasValue(currentClothing) || !incomingClothing || !hasValue(incomingClothing)) {
+          return prev
+        }
+
+        const lockedStyle = currentClothing.value.style
+        nextCategorySettings = predefined({
+          ...incomingClothing.value,
+          style: lockedStyle,
+          lockScope: 'style-only' as const,
+        })
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newSettings: any = { ...prev }
+      newSettings[category] = nextCategorySettings
+
+      if (category === 'shotType') {
+        syncAspectRatioWithShotType(newSettings, nextCategorySettings as ShotTypeSettings)
+      }
+
+      return newSettings
+    })
   }
 
-  const isCategoryPredefined = (category: CategoryType) => {
-    const categorySettings = (value as Record<string, unknown>)[category]
+  const isCategoryPredefined = (
+    category: CategoryType,
+    sourceSettings: PhotoStyleSettingsType = value
+  ) => {
+    const categorySettings = (sourceSettings as Record<string, unknown>)[category]
 
     // If the current value is explicitly user-choice, treat it as not predefined
     if (getSettingMode(category, categorySettings) === 'user-choice') {
@@ -826,9 +831,10 @@ export default function PhotoStyleSettings({
             const nextKey = nextIncompleteEditableKey
             // Auto-acknowledge branding if we're leaving it
             if (category.key === 'branding' && value.branding?.value === undefined) {
-              const newSettings = { ...value }
-              newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
-              onChange(newSettings)
+              onChange((prev) => ({
+                ...prev,
+                branding: { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+              }))
             }
             onCategoryVisit?.(nextKey)
             setClickedFieldKey(nextKey)
@@ -863,9 +869,10 @@ export default function PhotoStyleSettings({
           // When leaving branding by clicking an incomplete card ahead, acknowledge it.
           // Don't auto-acknowledge when clicking back to a completed card (user is revisiting, not skipping).
           if (activeFieldKey === 'branding' && category.key !== 'branding' && value.branding?.value === undefined && uneditedFieldSet.has(category.key)) {
-            const newSettings = { ...value }
-            newSettings.branding = { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
-            onChange(newSettings)
+            onChange((prev) => ({
+              ...prev,
+              branding: { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
+            }))
           }
           setManualActiveFieldKey(category.key)
         } : undefined}

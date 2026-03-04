@@ -6,7 +6,7 @@ interface StyleSettingsSectionProps {
   title?: string
   description?: React.ReactNode
   value: PhotoStyleSettingsType
-  onChange: (next: PhotoStyleSettingsType) => void
+  onChange: (next: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => void
   readonlyPredefined?: boolean
   originalContextSettings?: PhotoStyleSettingsType
   showToggles?: boolean

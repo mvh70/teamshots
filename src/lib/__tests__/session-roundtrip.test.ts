@@ -1,6 +1,6 @@
 // Targeted test: exact save→navigate→load→merge roundtrip for pose and clothingColors
 import { getPackageConfig } from '@/domain/style/packages'
-import { userChoice } from '@/domain/style/elements/base/element-types'
+import { predefined, userChoice } from '@/domain/style/elements/base/element-types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import {
   loadStyleSettings,
@@ -161,7 +161,7 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
 
   it('multiple changes: all persist across roundtrip', () => {
     const pkg = getPackageConfig('headshot1')
-    
+
     const modified = {
       ...pkg.defaultSettings,
       pose: userChoice({ type: 'power_cross' as const }),
@@ -175,19 +175,129 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
         details: 'hoodie',
       }),
     }
-    
+
     saveStyleSettings(modified)
     const loaded = loadStyleSettings()
-    
+
     const merged = mergeSavedUserChoiceStyleSettings({
       settings: { ...pkg.defaultSettings },
       savedSettings: loaded,
       visibleCategories: pkg.visibleCategories,
     })
-    
+
     expect(merged.pose?.value?.type).toBe('power_cross')
     expect(merged.background?.value?.type).toBe('office')
     expect(merged.clothingColors?.value?.topLayer).toBe('#AABB11')
     expect(merged.clothing?.value?.style).toBe('startup')
+  })
+
+  /**
+   * KEY SCENARIO: Server returns PREDEFINED settings (from DB context with admin-set values).
+   * User changes to user-choice. Navigate away and back includes beautification page visit.
+   * This simulates: user sees power_cross (predefined) → changes to classic_corporate (user-choice)
+   * → navigates to selfies → navigates back → beautification page → customization.
+   */
+  it('predefined server settings: user-choice changes survive navigate-back with beautification page in between', () => {
+    const pkg = getPackageConfig('headshot1')
+
+    // Step 1: Server returns PREDEFINED settings (simulating a DB context)
+    const serverSettings: PhotoStyleSettings = {
+      ...pkg.defaultSettings,
+      pose: predefined({ type: 'power_cross' as const }),
+      clothingColors: predefined({ topLayer: 'navy', baseLayer: 'white', bottom: 'gray' }),
+      background: predefined({ type: 'office' }),
+    }
+
+    // Step 2: User changes pose and clothingColors to user-choice
+    const userModified: PhotoStyleSettings = {
+      ...serverSettings,
+      pose: userChoice({ type: 'classic_corporate' as const }),
+      clothingColors: userChoice({ topLayer: '#8B0000', baseLayer: 'white', bottom: 'gray' }),
+    }
+
+    // Step 3: Wrapper persists to sessionStorage
+    saveStyleSettings(userModified)
+
+    // Step 4: Verify save
+    const savedAfterUserEdit = loadStyleSettings()
+    expect(savedAfterUserEdit?.pose?.mode).toBe('user-choice')
+    expect(savedAfterUserEdit?.pose?.value?.type).toBe('classic_corporate')
+    expect(savedAfterUserEdit?.clothingColors?.mode).toBe('user-choice')
+    expect(savedAfterUserEdit?.clothingColors?.value?.topLayer).toBe('#8B0000')
+
+    // Step 5: User navigates away (to selfies) - sessionStorage untouched
+
+    // Step 6: User navigates back → first mount of StartGenerationClient
+    // Hydration merge runs but does NOT persist (guard prevents it)
+    // The merge result is: server predefined + saved user-choice values
+    const firstMountMerge = mergeSavedUserChoiceStyleSettings({
+      settings: { ...serverSettings },
+      savedSettings: savedAfterUserEdit,
+      visibleCategories: pkg.visibleCategories,
+    })
+    // Verify first mount merge produces correct values
+    expect(firstMountMerge.pose?.value?.type).toBe('classic_corporate')
+    expect(firstMountMerge.clothingColors?.value?.topLayer).toBe('#8B0000')
+
+    // Step 7: Redirect to beautification page
+    // Beautification page loads from session, adds beautification, saves
+    const currentSession = loadStyleSettings() || ({} as PhotoStyleSettings)
+    const withBeautification = {
+      ...currentSession,
+      beautification: userChoice({ retouching: 'light' as const }),
+    }
+    saveStyleSettings(withBeautification as PhotoStyleSettings)
+
+    // Step 8: Verify beautification save preserved user settings
+    const afterBeautification = loadStyleSettings()
+    expect(afterBeautification?.pose?.mode).toBe('user-choice')
+    expect(afterBeautification?.pose?.value?.type).toBe('classic_corporate')
+    expect(afterBeautification?.clothingColors?.value?.topLayer).toBe('#8B0000')
+    expect(afterBeautification?.beautification?.mode).toBe('user-choice')
+
+    // Step 9: Second mount of StartGenerationClient with skipUpload=true
+    // Server returns SAME predefined settings again
+    const secondMountMerge = mergeSavedUserChoiceStyleSettings({
+      settings: { ...serverSettings },
+      savedSettings: afterBeautification,
+      visibleCategories: pkg.visibleCategories,
+    })
+
+    // Step 10: Assert user's changes survived the full navigate-back flow
+    expect(secondMountMerge.pose?.value?.type).toBe('classic_corporate')
+    expect(secondMountMerge.clothingColors?.value?.topLayer).toBe('#8B0000')
+  })
+
+  it('predefined server settings: merge into predefined preserves saved type even when mode stays predefined', () => {
+    const pkg = getPackageConfig('headshot1')
+
+    // Server has predefined pose
+    const serverSettings: PhotoStyleSettings = {
+      ...pkg.defaultSettings,
+      pose: predefined({ type: 'power_cross' as const }),
+      clothingColors: predefined({ topLayer: 'navy', baseLayer: 'white', bottom: 'gray' }),
+    }
+
+    // User changed to user-choice, saved to session
+    const userSaved: PhotoStyleSettings = {
+      ...serverSettings,
+      pose: userChoice({ type: 'classic_corporate' as const }),
+      clothingColors: userChoice({ topLayer: '#8B0000', baseLayer: 'white', bottom: 'gray' }),
+    }
+    saveStyleSettings(userSaved)
+    const loaded = loadStyleSettings()
+
+    // Merge: server predefined + saved user-choice
+    const merged = mergeSavedUserChoiceStyleSettings({
+      settings: { ...serverSettings },
+      savedSettings: loaded,
+      visibleCategories: pkg.visibleCategories,
+    })
+
+    // The saved value's TYPE should be used (classic_corporate, not power_cross)
+    // Mode might change to predefined (via mergePredefinedFromSession), that's OK
+    // as long as the value is correct
+    expect(merged.pose?.value?.type).toBe('classic_corporate')
+    expect(merged.clothingColors?.value?.topLayer).toBe('#8B0000')
   })
 })
