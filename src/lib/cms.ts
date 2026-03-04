@@ -316,6 +316,7 @@ export type CMSBlogPostFull = {
   brandId: string
   wordCount: number
   faqsJson: string | null
+  howToJson: string | null
   // Spanish translation
   spanishSlug: string | null
   spanishTitle: string | null
@@ -345,6 +346,7 @@ export function getBlogPostBySlug(brandId: string, slug: string, locale: string)
         cs.brandId,
         cv.wordCount,
         cv.faqsJson,
+        cv.howToJson,
         t.localizedSlug as spanishSlug,
         t.title as spanishTitle,
         t.metaDescription as spanishDescription,
@@ -393,6 +395,7 @@ export function getBlogPostBySpanishSlug(brandId: string, spanishSlug: string): 
         cs.brandId,
         cv.wordCount,
         cv.faqsJson,
+        cv.howToJson,
         t.localizedSlug as spanishSlug,
         t.title as spanishTitle,
         t.metaDescription as spanishDescription,

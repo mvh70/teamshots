@@ -10,6 +10,7 @@ import { markdownToInlineHtml } from '@/lib/markdown';
 import {
   ArticleJsonLd,
   FaqJsonLd,
+  HowToJsonLd,
   BreadcrumbJsonLd,
   AuthorBox,
   TldrSection,
@@ -135,6 +136,13 @@ export interface BlogPostContent {
     src?: string;
   };
 
+  // HowTo structured data (optional, per-post)
+  howTo?: {
+    name: string;
+    description: string;
+    steps: Array<{ name: string; text: string }>;
+  };
+
   // Dates
   datePublished: string;
   dateModified?: string;
@@ -246,6 +254,13 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
         image={`${baseUrl}${heroImage?.src || `/blog/${slug}.png`}`}
       />
       {faqs.length > 0 && <FaqJsonLd items={faqs} />}
+      {content.howTo && (
+        <HowToJsonLd
+          name={content.howTo.name}
+          description={content.howTo.description}
+          steps={content.howTo.steps}
+        />
+      )}
 
       {/* Breadcrumb */}
       <BreadcrumbJsonLd

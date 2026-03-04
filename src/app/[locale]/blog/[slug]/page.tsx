@@ -265,6 +265,16 @@ export default async function BlogPostPage({ params }: Props) {
     }
   }
 
+  // Parse HowTo structured data
+  let howTo: BlogPostContent['howTo']
+  if (post.howToJson) {
+    try {
+      howTo = JSON.parse(post.howToJson)
+    } catch {
+      // Ignore parsing errors
+    }
+  }
+
   // Build BlogPostContent
   const content: BlogPostContent = {
     slug: post.slug,
@@ -276,6 +286,7 @@ export default async function BlogPostPage({ params }: Props) {
     tldr,
     faqs,
     faqTitle: locale === 'es' ? 'Preguntas Frecuentes' : 'Frequently Asked Questions',
+    howTo,
     heroImage: post.heroImagePath
       ? {
         alt: title,
