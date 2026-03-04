@@ -54,19 +54,26 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate paths (basic security check)
+  const allowedPrefixes = [
+    '/blog',
+    '/es/blog',
+    '/solutions',
+    '/es/soluciones',
+    '/pricing',
+    '/es/pricing',
+    '/headshot-cost-calculator',
+    '/es/headshot-cost-calculator',
+  ] as const;
+
   const validPaths = paths.filter((path) => {
     if (typeof path !== 'string') return false;
     if (!path.startsWith('/')) return false;
-    // Only allow blog and solutions paths
-    if (
-      !path.startsWith('/blog') &&
-      !path.startsWith('/es/blog') &&
-      !path.startsWith('/solutions') &&
-      !path.startsWith('/es/soluciones')
-    ) {
+
+    if (!allowedPrefixes.some((prefix) => path.startsWith(prefix))) {
       console.warn(`[Revalidate] Rejected invalid path: ${path}`);
       return false;
     }
+
     return true;
   });
 
