@@ -81,7 +81,7 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
     // Step 2: User selects colors
     const modified = {
       ...initial,
-      clothingColors: userChoice({ primary: '#FF0000', secondary: '#00FF00' }),
+      clothingColors: userChoice({ topLayer: '#FF0000', baseLayer: '#00FF00' }),
     }
     
     // Step 3: Save
@@ -105,8 +105,8 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
     
     // Step 7: Assert colors were restored
     expect(merged.clothingColors?.mode).toBe('user-choice')
-    expect(merged.clothingColors?.value?.primary).toBe('#FF0000')
-    expect(merged.clothingColors?.value?.secondary).toBe('#00FF00')
+    expect(merged.clothingColors?.value?.topLayer).toBe('#FF0000')
+    expect(merged.clothingColors?.value?.baseLayer).toBe('#00FF00')
   })
 
   it('clothing: user changes outfit → save → fresh defaults → merge → restored', () => {
@@ -115,7 +115,7 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
     const modified = {
       ...pkg.defaultSettings,
       clothing: userChoice({
-        style: 'business_casual',
+        style: 'business_casual' as const,
         mode: 'separate' as const,
         topChoice: 'button-down',
         bottomChoice: 'trousers',
@@ -143,7 +143,7 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
     
     const modified = {
       ...pkg.defaultSettings,
-      background: userChoice({ type: 'tropical-beach' }),
+      background: userChoice({ type: 'tropical-beach' as const }),
     }
     
     saveStyleSettings(modified)
@@ -165,10 +165,10 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
     const modified = {
       ...pkg.defaultSettings,
       pose: userChoice({ type: 'power_cross' as const }),
-      background: userChoice({ type: 'office' }),
+      background: userChoice({ type: 'office' as const }),
       clothingColors: userChoice({ topLayer: '#AABB11', bottom: '#CC22DD' }),
       clothing: userChoice({
-        style: 'startup',
+        style: 'startup' as const,
         mode: 'separate' as const,
         topChoice: 'hoodie',
         bottomChoice: 'jeans',
@@ -205,7 +205,7 @@ describe('exact user scenario: save→navigate→load→merge roundtrip', () => 
       ...pkg.defaultSettings,
       pose: predefined({ type: 'power_cross' as const }),
       clothingColors: predefined({ topLayer: 'navy', baseLayer: 'white', bottom: 'gray' }),
-      background: predefined({ type: 'office' }),
+      background: predefined({ type: 'office' as const }),
     }
 
     // Step 2: User changes pose and clothingColors to user-choice

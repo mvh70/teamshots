@@ -306,8 +306,6 @@ export default async function BlogPostPage({ params }: Props) {
       button: ctaButton,
       href: ctaHref,
     },
-    // Use pre-generated schema from CMS if available
-    schemaJson: post.schemaJson || undefined,
   }
 
   return (

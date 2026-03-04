@@ -17,83 +17,6 @@ import {
   BlogHeroImage,
 } from '@/components/blog';
 
-/**
- * Render pre-generated schema from CMS
- */
-function safeParseSchemaJson(schemaJson: string): unknown | null {
-  try {
-    return JSON.parse(schemaJson);
-  } catch {
-    return null;
-  }
-}
-
-function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
-  const parsed = safeParseSchemaJson(schemaJson);
-  if (!parsed) {
-    return null;
-  }
-
-  // Support array or @graph formats by emitting a single JSON-LD block
-  if (Array.isArray(parsed)) {
-    return (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(parsed),
-        }}
-      />
-    );
-  }
-
-  if (typeof parsed !== 'object') return null;
-  const schema = parsed as Record<string, unknown>;
-
-  if (schema['@graph']) {
-    return (
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(schema),
-        }}
-      />
-    );
-  }
-
-  const article = schema.article;
-  const faq = schema.faq;
-
-  // Handle both wrapped format { article: {...}, faq: {...} } and direct format
-  return (
-    <>
-      {article && typeof article === 'object' && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({ '@context': 'https://schema.org', ...(article as Record<string, unknown>) }),
-          }}
-        />
-      )}
-      {faq && typeof faq === 'object' && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({ '@context': 'https://schema.org', ...(faq as Record<string, unknown>) }),
-          }}
-        />
-      )}
-      {/* Handle direct schema format (single type) */}
-      {!article && !faq && schema['@type'] && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({ '@context': 'https://schema.org', ...schema }),
-          }}
-        />
-      )}
-    </>
-  );
-}
 
 const beforeAfterPlaceholderRegex = /<div data-before-src="([^"]+)" data-after-src="([^"]+)" data-before-alt="([^"]*)" data-after-alt="([^"]*)"><\/div>/g;
 
@@ -216,8 +139,6 @@ export interface BlogPostContent {
   datePublished: string;
   dateModified?: string;
 
-  // Pre-generated schema from CMS (optional, falls back to dynamic generation)
-  schemaJson?: string;
 }
 
 interface BlogPostTemplateProps {
@@ -272,7 +193,6 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
     heroImage,
     datePublished,
     dateModified,
-    schemaJson,
   } = content;
 
   const defaultCta = {
@@ -311,27 +231,21 @@ export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
 
   return (
     <>
-      {/* Structured Data - use stored schema if available, otherwise generate dynamically */}
-      {schemaJson ? (
-        <StoredSchemaJsonLd schemaJson={schemaJson} />
-      ) : (
-        <>
-          <ArticleJsonLd
-            headline={title}
-            description={description}
-            authorName={author.name}
-            authorUrl={author.linkedInUrl || 'https://linkedin.com/in/matthieuvanhaperen'}
-            authorJobTitle={author.title}
-            publisherName={brandConfig.name}
-            publisherUrl={baseUrl}
-            datePublished={datePublished}
-            dateModified={dateModified}
-            url={`${baseUrl}${locale === 'en' ? '' : '/' + locale}/blog/${slug}`}
-            image={heroImage ? `${baseUrl}${heroImage.src || `/blog/${slug}.png`}` : undefined}
-          />
-          {faqs.length > 0 && <FaqJsonLd items={faqs} />}
-        </>
-      )}
+      {/* Structured Data */}
+      <ArticleJsonLd
+        headline={title}
+        description={description}
+        authorName={author.name}
+        authorUrl={author.linkedInUrl || 'https://linkedin.com/in/matthieuvanhaperen'}
+        authorJobTitle={author.title}
+        publisherName={brandConfig.name}
+        publisherUrl={baseUrl}
+        datePublished={datePublished}
+        dateModified={dateModified}
+        url={`${baseUrl}${locale === 'en' ? '' : '/' + locale}/blog/${slug}`}
+        image={`${baseUrl}${heroImage?.src || `/blog/${slug}.png`}`}
+      />
+      {faqs.length > 0 && <FaqJsonLd items={faqs} />}
 
       {/* Breadcrumb */}
       <BreadcrumbJsonLd
