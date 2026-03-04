@@ -4,7 +4,7 @@ import type {
   ShotTypeValue
 } from '@/types/photo-style'
 import type { ClothingValue } from './types'
-import type { KnownClothingStyle, WardrobeDetailConfig } from './config'
+import { getEffectiveClothingDetail, getEffectiveClothingMode, type KnownClothingStyle, type WardrobeDetailConfig } from './config'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { getColorDisplay, getColorHex, type ColorValue } from '@/domain/style/elements/clothing-colors/types'
 import { hasValue } from '../base/element-types'
@@ -18,7 +18,8 @@ export const NO_TOP_COVER_DETAILS = new Set(['t-shirt', 'hoodie', 'polo', 'dress
  * Fallback detail for each clothing style when no detail is specified
  */
 export const FALLBACK_DETAIL_BY_STYLE: Record<KnownClothingStyle, string> = {
-  business: 'formal',
+  business_professional: 'suit',
+  business_casual: 'jacket',
   startup: 't-shirt',
   'black-tie': 'suit'
 }
@@ -28,20 +29,13 @@ export const FALLBACK_DETAIL_BY_STYLE: Record<KnownClothingStyle, string> = {
  * Contains AI prompt descriptions, layering info, and UI exclusions
  */
 export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, WardrobeDetailConfig>> = {
-  business: {
-    formal: {
+  business_professional: {
+    'suit': {
       details: 'Tailored business suit ensemble with clean lines.',
       baseLayer: 'crisp dress shirt with subtle sheen',
       outerLayer: 'structured suit jacket fastened with a single button',
       notes: 'Pressed fabrics and polished appearance suitable for boardroom settings.',
       inherentAccessories: ['belt'] // Belt is standard for suit trousers
-    },
-    casual: {
-      details: 'High-end business-casual ensemble with modern styling. Do NOT add a tie, pocket square, or lapel pin unless specifically listed in the accessories section.',
-      baseLayer: 'A deluxe T-Shirt. Substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck',
-      outerLayer: 'A single-breasted jacket with a classic and refined touch',
-      notes: 'Maintain relaxed but refined posture.',
-      inherentAccessories: ['belt'] // Belt is standard for business casual trousers
     },
     blouse: {
       details: 'Polished blouse paired with tailored trousers or skirt',
@@ -65,20 +59,21 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       inherentAccessories: ['belt'] // Belt is standard for pantsuit trousers
     }
   },
-  startup: {
-    't-shirt': {
-      details: 'Modern startup look centered around a fitted crewneck tee',
-      baseLayer: 'well-fitted crewneck t-shirt',
-      notes: 'Keep silhouette clean and wrinkle-free; no outer layer required.',
-      excludeClothingColors: ['baseLayer'],
-      inherentAccessories: ['belt'] // Belt is standard for casual trousers/jeans
+  business_casual: {
+    'jacket': {
+      details: 'High-end business-casual ensemble with modern styling. Do NOT add a tie, pocket square, or lapel pin unless specifically listed in the accessories section.',
+      baseLayer: 'A deluxe T-Shirt. Substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck',
+      outerLayer: 'A single-breasted jacket with a classic and refined touch',
+      notes: 'Maintain relaxed but refined posture.',
+      inherentAccessories: ['belt'] // Belt is standard for business casual trousers
     },
-    hoodie: {
-      details: 'Casual startup hoodie outfit with relaxed confidence',
-      baseLayer: 'premium hoodie',
-      notes: 'Hood down, sleeves neat; keep presentation polished despite casual tone.',
-      excludeClothingColors: ['baseLayer'],
-      inherentAccessories: ['belt'] // Belt is standard for casual trousers/jeans
+    'button-down': {
+      details: 'Business-casual button-down shirt worn open over a clean t-shirt',
+      baseLayer: 'fitted premium t-shirt',
+      outerLayer: 'lightweight button-down shirt worn open to frame the base layer',
+      notes: 'Keep lines clean and sleeves neat for a polished but approachable look.',
+      excludeClothingColors: [],
+      inherentAccessories: ['belt'] // Belt is standard for business casual trousers
     },
     polo: {
       details: 'Smart casual polo ensemble',
@@ -86,14 +81,6 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       notes: 'Buttons neat, collar crisp to balance relaxed and professional cues.',
       excludeClothingColors: ['baseLayer'],
       inherentAccessories: ['belt'] // Belt is standard for smart casual trousers
-    },
-    'button-down': {
-      details: 'Casual button-down shirt worn open over a t-shirt',
-      baseLayer: 'fitted t-shirt',
-      outerLayer: 'lightweight button-down shirt worn open to frame the base layer',
-      notes: 'Button-down sleeves can be crisp or subtly rolled; keep base layer visible.',
-      excludeClothingColors: [],
-      inherentAccessories: ['belt'] // Belt is standard for casual trousers
     },
     blouse: {
       details: 'Relaxed blouse with tailored trousers or midi skirt',
@@ -115,6 +102,30 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       baseLayer: 'knee-length knit dress',
       notes: 'Avoid busy patterns for a clean, professional look.',
       excludeClothingColors: ['baseLayer']
+    },
+  },
+  startup: {
+    't-shirt': {
+      details: 'Modern startup look centered around a fitted crewneck tee',
+      baseLayer: 'well-fitted crewneck t-shirt',
+      notes: 'Keep silhouette clean and wrinkle-free; no outer layer required.',
+      excludeClothingColors: ['baseLayer'],
+      inherentAccessories: ['belt'] // Belt is standard for casual trousers/jeans
+    },
+    hoodie: {
+      details: 'Casual startup hoodie outfit with relaxed confidence',
+      baseLayer: 'premium hoodie',
+      notes: 'Hood down, sleeves neat; keep presentation polished despite casual tone.',
+      excludeClothingColors: ['baseLayer'],
+      inherentAccessories: ['belt'] // Belt is standard for casual trousers/jeans
+    },
+    'button-down': {
+      details: 'Casual button-down shirt worn open over a t-shirt',
+      baseLayer: 'fitted t-shirt',
+      outerLayer: 'lightweight button-down shirt worn open to frame the base layer',
+      notes: 'Button-down sleeves can be crisp or subtly rolled; keep base layer visible.',
+      excludeClothingColors: [],
+      inherentAccessories: ['belt'] // Belt is standard for casual trousers
     },
     jumpsuit: {
       details: 'Modern startup jumpsuit with tailored bodice',
@@ -174,6 +185,9 @@ export interface WardrobePromptResult {
   wardrobe: Record<string, unknown>
 }
 
+const BELT_STYLE_GUIDANCE_NOTE =
+  'If a belt is visible, use a classic leather belt in black or dark brown that is clearly distinct from the pants/trousers color.'
+
 const isFullBodyVisible = (shotType?: ShotTypeValue | null) =>
   shotType === 'full-body' || shotType === 'full-length' || shotType === 'wide-shot'
 
@@ -190,15 +204,30 @@ const mayPartiallyShowBottom = (shotType?: ShotTypeValue | null) =>
 
 const normalizeStyle = (style?: string | null): KnownClothingStyle => {
   const normalized = style?.toLowerCase?.() ?? ''
-  if (normalized === 'business' || normalized === 'startup' || normalized === 'black-tie') {
+  if (
+    normalized === 'business_professional' ||
+    normalized === 'business_casual' ||
+    normalized === 'startup' ||
+    normalized === 'black-tie'
+  ) {
     return normalized
   }
-  return 'startup'
+  if (normalized === 'business') {
+    return 'business_professional'
+  }
+  return 'business_professional'
 }
 
 const normalizeDetail = (detail: string | undefined, styleKey: KnownClothingStyle): string => {
   if (detail && detail.trim().length > 0) {
-    return detail.toLowerCase()
+    const normalized = detail.toLowerCase()
+    if (styleKey === 'business_professional' && (normalized === 'formal' || normalized === 'formal-suit')) {
+      return 'suit'
+    }
+    if (styleKey === 'business_casual' && (normalized === 'casual' || normalized === 'casual-jacket')) {
+      return 'jacket'
+    }
+    return normalized
   }
   return FALLBACK_DETAIL_BY_STYLE[styleKey]
 }
@@ -213,12 +242,20 @@ const resolveWardrobeDescriptor = (
     return descriptor
   }
 
-  if (styleKey === 'business') {
+  if (styleKey === 'business_professional') {
     return {
       details: 'Polished business attire',
       baseLayer: 'crisp dress shirt suitable for subtle branding',
       outerLayer: 'tailored blazer worn neatly',
       notes: 'Maintain corporate-ready finish.'
+    }
+  }
+  if (styleKey === 'business_casual') {
+    return {
+      details: 'Smart business-casual wardrobe',
+      baseLayer: 'clean, logo-ready smart-casual top',
+      outerLayer: 'light blazer or jacket worn naturally',
+      notes: 'Keep the presentation relaxed but polished.'
     }
   }
   if (styleKey === 'startup') {
@@ -239,13 +276,15 @@ const buildColorPalette = (
   colors: ClothingColorValue | undefined,
   detailKey: string,
   descriptor: WardrobeDetailConfig,
-  shotType?: ShotTypeValue | null
+  shotType?: ShotTypeValue | null,
+  clothing?: ClothingValue | null
 ): string[] | undefined => {
   if (!colors) return undefined
   const palette: string[] = []
 
   // Detect if this is a single-layer or multi-layer garment
-  const isSingleLayer = !descriptor.outerLayer
+  const mode = getEffectiveClothingMode(clothing)
+  const isSingleLayer = mode === 'one_piece' || (!clothing?.outerChoice && !descriptor.outerLayer)
 
   // Top layer - the visible outer garment (always present)
   if (colors.topLayer) {
@@ -283,24 +322,51 @@ export function generateWardrobePrompt({
   clothingColors,
   shotType
 }: WardrobePromptInput): WardrobePromptResult {
-  const styleKey = normalizeStyle(clothing?.style ?? clothing?.type ?? undefined)
-  const detailKey = normalizeDetail(clothing?.details, styleKey)
+  const styleKey = normalizeStyle(clothing?.style ?? undefined)
+  const effectiveDetail = getEffectiveClothingDetail(styleKey, clothing)
+  const detailKey = normalizeDetail(effectiveDetail || clothing?.details, styleKey)
   const descriptor = resolveWardrobeDescriptor(styleKey, detailKey)
+  const mode = getEffectiveClothingMode(clothing)
+  const topChoice = clothing?.topChoice?.trim()
+  const bottomChoice = clothing?.bottomChoice?.trim()
+  const outerChoice = clothing?.outerChoice?.trim()
+  const onePieceChoice = clothing?.onePieceChoice?.trim()
+  const humanizeChoice = (value?: string) => value?.replace(/[-_]/g, ' ')
 
   const wardrobe: Record<string, unknown> = {
     style: clothing?.style ?? styleKey,
     style_key: styleKey, // Store normalized style for branding lookup
     detail_key: detailKey, // Store detail key for branding lookup
-    details: descriptor.details
+    details: descriptor.details,
+    mode,
   }
 
-  // For single-layer garments (no outerLayer), the baseLayer is semantically the top layer
-  // For multi-layer garments (has outerLayer), keep both layers
-  if (descriptor.outerLayer) {
-    wardrobe.top_layer = descriptor.outerLayer
-    wardrobe.base_layer = descriptor.baseLayer
+  if (mode === 'one_piece' && onePieceChoice) {
+    wardrobe.one_piece_key = onePieceChoice
+    wardrobe.one_piece_garment = humanizeChoice(onePieceChoice)
+    wardrobe.top_layer = humanizeChoice(onePieceChoice)
   } else {
-    wardrobe.top_layer = descriptor.baseLayer
+    if (outerChoice) {
+      wardrobe.top_layer = humanizeChoice(outerChoice)
+      wardrobe.top_layer_key = outerChoice
+      wardrobe.base_layer = topChoice ? humanizeChoice(topChoice) : descriptor.baseLayer
+      if (topChoice) {
+        wardrobe.base_layer_key = topChoice
+      }
+    } else if (topChoice) {
+      wardrobe.top_layer = humanizeChoice(topChoice)
+      wardrobe.top_layer_key = topChoice
+    } else if (descriptor.outerLayer) {
+      wardrobe.top_layer = descriptor.outerLayer
+      wardrobe.base_layer = descriptor.baseLayer
+    } else {
+      wardrobe.top_layer = descriptor.baseLayer
+    }
+
+    if (bottomChoice) {
+      wardrobe.bottom_garment = humanizeChoice(bottomChoice)
+      wardrobe.bottom_garment_key = bottomChoice
+    }
   }
   if (descriptor.notes) {
     wardrobe.notes = descriptor.notes
@@ -323,10 +389,26 @@ export function generateWardrobePrompt({
     })
     if (visibleAccessories.length > 0) {
       wardrobe.inherent_accessories = visibleAccessories
+
+      if (visibleAccessories.includes('belt')) {
+        const existingNotes = typeof wardrobe.notes === 'string' ? wardrobe.notes.trim() : ''
+        const hasBeltDistinctGuidance = existingNotes.toLowerCase().includes('distinct from the pants')
+        if (!hasBeltDistinctGuidance) {
+          wardrobe.notes = existingNotes
+            ? `${existingNotes} ${BELT_STYLE_GUIDANCE_NOTE}`
+            : BELT_STYLE_GUIDANCE_NOTE
+        }
+      }
     }
   }
 
-  const colorPalette = buildColorPalette(clothingColors && hasValue(clothingColors) ? clothingColors.value : undefined, detailKey, descriptor, shotType)
+  const colorPalette = buildColorPalette(
+    clothingColors && hasValue(clothingColors) ? clothingColors.value : undefined,
+    detailKey,
+    descriptor,
+    shotType,
+    clothing
+  )
   if (colorPalette) {
     wardrobe.color_palette = colorPalette
   }
@@ -413,7 +495,7 @@ type ClothingOverlayColorOverrides = {
 }
 
 const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
-  'business-casual': {
+  'business_casual-jacket': {
     description: 'Business casual with jacket over deluxe t-shirt',
     layers: [
       'Base layer: Deluxe t-shirt (substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck)',
@@ -424,7 +506,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'printed or embroidered',
     isLayered: true,
   },
-  'business-formal': {
+  'business_professional-suit': {
     description: 'Business formal with dress shirt visible',
     layers: ['Base layer: Formal dress shirt', 'Outer layer: Suit jacket, partially open'],
     logoLayer: 'Base layer (dress shirt)',
@@ -432,7 +514,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'embroidered crest',
     isLayered: true,
   },
-  'business-pantsuit': {
+  'business_professional-pantsuit': {
     description: 'Pantsuit with blouse visible',
     layers: ['Base layer: Blouse or dress shirt', 'Outer layer: Suit jacket, partially open'],
     logoLayer: 'Base layer (blouse)',
@@ -440,12 +522,20 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'embroidered crest',
     isLayered: true,
   },
-  'business-blouse': {
+  'business_professional-blouse': {
     description: 'Blouse with blazer',
     layers: ['Base layer: Blouse', 'Outer layer: Blazer, partially open'],
     logoLayer: 'Base layer (blouse)',
     logoPosition: 'Upper right chest',
     logoStyle: 'embroidered',
+    isLayered: true,
+  },
+  'business_casual-button-down': {
+    description: 'Business-casual button-down over t-shirt',
+    layers: ['Base layer: T-shirt', 'Outer layer: Button-down shirt, worn open'],
+    logoLayer: 'Base layer (t-shirt)',
+    logoPosition: 'Center chest',
+    logoStyle: 'screen printed',
     isLayered: true,
   },
   'startup-button-down': {
@@ -456,7 +546,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'screen printed',
     isLayered: true,
   },
-  'startup-cardigan': {
+  'business_casual-cardigan': {
     description: 'Cardigan over t-shirt or dress',
     layers: ['Base layer: T-shirt or dress', 'Outer layer: Cardigan, worn open'],
     logoLayer: 'Base layer',
@@ -480,7 +570,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'screen printed or embroidered',
     isLayered: false,
   },
-  'startup-polo': {
+  'business_casual-polo': {
     description: 'Polo shirt',
     layers: ['Polo shirt'],
     logoLayer: 'Polo shirt',
@@ -488,7 +578,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'embroidered, small to medium sized',
     isLayered: false,
   },
-  'startup-blouse': {
+  'business_casual-blouse': {
     description: 'Blouse',
     layers: ['Blouse'],
     logoLayer: 'Blouse',
@@ -496,7 +586,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'embroidered',
     isLayered: false,
   },
-  'startup-dress': {
+  'business_casual-dress': {
     description: 'Dress',
     layers: ['Dress'],
     logoLayer: 'Dress bodice',
@@ -512,7 +602,7 @@ const CLOTHING_OVERLAY_TEMPLATES: Record<string, ClothingTemplate> = {
     logoStyle: 'embroidered or printed',
     isLayered: false,
   },
-  'business-dress': {
+  'business_professional-dress': {
     description: 'Professional dress',
     layers: ['Dress'],
     logoLayer: 'Dress bodice',
@@ -610,7 +700,11 @@ export function buildClothingOverlayGenerationPrompt(params: {
       ? ` in ${bottomColorDisplay} color`
       : ' in coordinating neutral color'
     layerDescriptions.push(
-      `\nPants: Professional ${styleKey === 'business' ? 'dress pants or trousers' : 'casual pants or chinos'}${colorSuffix}`
+      `\nPants: Professional ${styleKey === 'business_professional'
+        ? 'dress pants or trousers'
+        : styleKey === 'business_casual'
+          ? 'smart casual trousers'
+          : 'casual pants or chinos'}${colorSuffix}`
     )
   }
 
@@ -618,12 +712,16 @@ export function buildClothingOverlayGenerationPrompt(params: {
   const showBelt = showPants && inherentAccessories?.includes('belt')
   if (showBelt) {
     layerDescriptions.push(
-      '\nBelt: Professional leather belt in a coordinating color (black or brown to match shoes/pants)'
+      '\nBelt: Professional leather belt in a fashionable color clearly distinct from the pants/trousers color'
     )
   }
 
   if (showShoes) {
-    const shoesType = styleKey === 'business' ? 'Professional dress shoes' : 'Clean casual shoes'
+    const shoesType = styleKey === 'business_professional'
+      ? 'Professional dress shoes'
+      : styleKey === 'business_casual'
+        ? 'Clean leather shoes'
+        : 'Clean casual shoes'
     const shoesDescription = shoesColorDisplay
       ? `${shoesType} in ${shoesColorDisplay} color`
       : shoesType

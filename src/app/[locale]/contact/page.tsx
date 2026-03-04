@@ -3,7 +3,8 @@ import { constructMetadata } from '@/lib/seo';
 import { headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
-import { getBrand } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import { organizationSchema, inLanguageForLocale } from '@/lib/schema';
 import ContactForm from '@/components/contact/ContactForm';
 
@@ -18,8 +19,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'contact' });
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
@@ -35,8 +37,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ContactPage({ params }: Props) {
   const { locale } = await params;
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;

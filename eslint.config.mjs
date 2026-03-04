@@ -27,11 +27,49 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      ".next*/**",
+      "chrome-extension/dist/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
       "todelete/**",
     ],
+  },
+  {
+    files: [
+      "**/*.cjs",
+      "**/webpack.config.js",
+      "improved_sequence.js",
+      "scripts/**/*.js",
+      "scripts/**/*.cjs",
+    ],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: [
+      "tests/**/*.{ts,tsx,js,jsx}",
+      "scripts/**/*.{ts,tsx,js,cjs}",
+      "messages/scripts/**/*.{ts,tsx,js,cjs}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: [
+      "src/app/**/landings/PortreyaLandingV2.tsx",
+      "src/app/**/landings/RightClickFitLanding.tsx",
+      "src/app/api/styles/save/route.ts",
+      "src/components/generation/selection/SelectableGrid.tsx",
+      "src/domain/style/elements/clothing/overlay-element.ts",
+      "src/domain/style/elements/preset/PresetSelector.tsx",
+      "src/queue/workers/generate-image/gemini-replicate.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
   },
 ];
 

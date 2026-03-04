@@ -53,10 +53,18 @@ function extractSuggestedAdjustments(structuredEvaluation: StructuredEvaluation)
         )
       }
 
+      if (key === 'accessory_action_compliance') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: Enforce explicit keep/remove directives in subject.beautification.accessories. ' +
+          'If action is REMOVE (for example facialHair), the accessory must be absent in output. ' +
+          'If action is KEEP, preserve it as shown in references. Do not treat these directives as optional.'
+        )
+      }
+
       if (key === 'wardrobe_and_colors_match') {
         adjustments.push(
-          '⚠️ CRITICAL FIX: Match the wardrobe structure and clothing colors exactly to subject.wardrobe guidance ' +
-          'and garment-collage reference (if provided). Do not change garment type, layers, or substitute colors.'
+          '⚠️ FIX: Ensure the correct garment type (e.g. suit jacket, dress shirt), layer count, and color family match subject.wardrobe guidance ' +
+          'and garment-collage reference (if provided). Minor styling variations (button fastened/unfastened, collar shape, drape) are acceptable.'
         )
       }
 

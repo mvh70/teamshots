@@ -3,17 +3,13 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { PostHog } from 'posthog-js'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 
 // Cached PostHog instance after initialization
 let posthogInstance: PostHog | null = null
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  // Prevent tracking in non-production environments
-  if (process.env.NODE_ENV !== 'production') {
-    return <>{children}</>
-  }
-
+  const trackingEnabled = process.env.NODE_ENV === 'production'
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const isInitialized = useRef(false)
@@ -22,12 +18,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   // Cache brand info for multi-tenant analytics
   const brand = useMemo(() => {
     if (typeof window === 'undefined') return 'unknown'
-    return getClientBrandInfo().brandName
+    return getClientTenantInfo().brandName
   }, [])
 
   // Lazy load and initialize PostHog
   const loadPostHog = useCallback(async () => {
-    if (isInitialized.current) return
+    if (!trackingEnabled || isInitialized.current) return
 
     try {
       // Dynamically import the module
@@ -53,10 +49,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[PostHog] Failed to load:', error)
     }
-  }, [pathname, searchParams, brand])
+  }, [pathname, searchParams, brand, trackingEnabled])
 
   // Initialize on user interaction (scroll, click, touch, or keyboard)
   useEffect(() => {
+    if (!trackingEnabled) return
     if (hasInteracted.current) return
 
     const handleInteraction = () => {
@@ -98,10 +95,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('keydown', handleInteraction)
       window.removeEventListener('mousemove', handleInteraction)
     }
-  }, [loadPostHog])
+  }, [loadPostHog, trackingEnabled])
 
   // Track subsequent page views
   useEffect(() => {
+    if (!trackingEnabled) return
     if (!isInitialized.current || !posthogInstance) return
 
     if (pathname) {
@@ -114,7 +112,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         brand,
       })
     }
-  }, [pathname, searchParams, brand])
+  }, [pathname, searchParams, brand, trackingEnabled])
 
   return <>{children}</>
 }

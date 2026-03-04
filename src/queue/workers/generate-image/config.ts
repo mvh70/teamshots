@@ -120,9 +120,9 @@ export const MODEL_CONFIG = {
   /** Advanced image model (Gemini 3) */
   'gemini-3-pro-image': {
     providers: {
-      vertex: 'gemini-3-pro-image-preview',
-      rest: 'gemini-3-pro-image-preview',
-      openrouter: 'google/gemini-3-pro-image-preview',
+      vertex: 'gemini-3.1-flash-image-preview',
+      rest: 'gemini-3.1-flash-image-preview',
+      openrouter: 'google/gemini-3.1-flash-image-preview',
       replicate: null // Gemini 3 Pro Image on Replicate
     },
   },

@@ -1,7 +1,7 @@
 import { PRICING_CONFIG, type PricingTier, getRegenerationsForPlan } from '@/config/pricing'
 
-// Type for pricing tiers that have price configurations (excluding free)
-type PricedTier = Exclude<PricingTier, 'free'>
+// Type for pricing tiers that have direct price configurations.
+type PricedTier = Exclude<PricingTier, 'free' | 'seats'>
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 
 // Removed: calculateAnnualSavings - no longer needed for transactional pricing
@@ -47,7 +47,7 @@ export function calculatePricePerPhoto(
 
 export function getPricePerPhoto(tier: PricingTier): number {
   // Free tier has no price, so price per photo is 0
-  if (tier === 'free') {
+  if (tier === 'free' || tier === 'seats') {
     return 0
   }
 
@@ -90,5 +90,4 @@ export function getPricingDisplay() {
     },
   }
 }
-
 

@@ -137,7 +137,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const existingTransaction = await prisma.creditTransaction.findFirst({
     where: {
       stripePaymentId: session.payment_intent as string,
-      type: 'purchase'
+      type: { in: ['purchase', 'seat_purchase'] }
     }
   })
   if (existingTransaction) {
@@ -647,7 +647,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           (orderPeriod as PlanPeriod) || 'small'
         );
         if (configKey) {
-          orderCredits = PRICING_CONFIG[configKey].credits;
+          if (configKey === 'individual' || configKey === 'vip') {
+            orderCredits = PRICING_CONFIG[configKey].credits;
+          } else if (configKey === 'seats') {
+            const seats = parseInt(session.metadata?.seats || '0');
+            orderCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
+          }
         }
       } else if (purchaseType === 'top_up') {
         orderCredits = parseInt(session.metadata?.credits || '0');
@@ -718,7 +723,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
           const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
           if (configKey) {
-            purchasedCredits = PRICING_CONFIG[configKey].credits;
+            if (configKey === 'individual' || configKey === 'vip') {
+              purchasedCredits = PRICING_CONFIG[configKey].credits;
+            } else if (configKey === 'seats') {
+              const seats = parseInt(session.metadata?.seats || '0');
+              purchasedCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
+            }
           }
         } else if (purchaseType === 'top_up') {
           purchasedCredits = parseInt(session.metadata?.credits || '0');

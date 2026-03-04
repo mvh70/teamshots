@@ -84,22 +84,26 @@ export async function GET(
       return addCorsHeaders(notFound('User person not found'), origin)
     }
 
+    const authFilter = userPerson.teamId
+      ? {
+        OR: [
+          { personId: userPerson.id },
+          {
+            person: {
+              teamId: userPerson.teamId,
+              NOT: { teamId: null }
+            }
+          }
+        ]
+      }
+      : { personId: userPerson.id }
+
     // SECURITY: Filter generation by authorization DURING query, not after
     // This prevents fetching unauthorized data from the database
     const generation = await prisma.generation.findFirst({
       where: {
         id: generationId,
-        // Authorization filter: must be either owner OR same team
-        OR: [
-          { personId: userPerson.id }, // Owner
-          {
-            // Same team (both user and generation person must have same teamId)
-            person: {
-              teamId: userPerson.teamId || undefined,
-              NOT: { teamId: null } // Ensure teamId is not null
-            }
-          }
-        ]
+        ...authFilter
       },
       include: {
         person: {
@@ -138,7 +142,7 @@ export async function GET(
         const { imageGenerationQueue } = await import('@/queue')
         const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
         if (job) {
-          console.log('API: Raw job progress data:', {
+          Logger.debug('API: Raw job progress data', {
             generationId,
             jobId: job.id,
             rawProgress: job.progress,
@@ -161,13 +165,13 @@ export async function GET(
             finishedOn: job.finishedOn,
             failedReason: job.failedReason,
           }
-          console.log('API: Processed job status:', {
+          Logger.debug('API: Processed job status', {
             generationId,
             progress: jobStatus.progress,
             message: jobStatus.message?.substring(0, 50)
           })
         } else {
-          console.log('API: No job found for generation', generationId)
+          Logger.debug('API: No job found for generation', { generationId })
         }
       } catch (error) {
         Logger.warn('Failed to get job status', { error: error instanceof Error ? error.message : String(error) })

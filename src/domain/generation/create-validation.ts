@@ -1,15 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
-
-const STYLE_CATEGORY_ALLOWLIST_BASE = new Set([
-  'packageId',
-  'presetId',
-  'aspectRatio',
-  'subjectCount',
-  'usageContext',
-  'style',
-])
+import { buildAllowedStyleRequestKeys } from '@/domain/style/style-setting-allowlists'
 
 export async function resolveGenerationContextSettings(
   contextId: string | null | undefined
@@ -54,10 +46,7 @@ export function findDisallowedStyleCategory(
   }
 
   const packageConfig = getPackageConfig(packageId)
-  const allowedCategories = new Set([
-    ...packageConfig.visibleCategories,
-    ...STYLE_CATEGORY_ALLOWLIST_BASE,
-  ])
+  const allowedCategories = buildAllowedStyleRequestKeys(packageConfig.visibleCategories)
 
   for (const key of Object.keys(styleSettings)) {
     if (!allowedCategories.has(key)) {

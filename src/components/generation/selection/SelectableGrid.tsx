@@ -14,6 +14,52 @@ import SelfieApproval from '@/components/Upload/SelfieApproval'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
+const QualityBadgeSmall = ({
+  quality,
+  icon,
+  label
+}: {
+  quality: string
+  icon: 'sun' | 'layers'
+  label: string
+}) => {
+  const isGood = quality === 'good' || quality === 'acceptable'
+  const iconColor = isGood ? 'text-green-600' : 'text-red-600'
+
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm bg-white/95 text-gray-700 border border-gray-200">
+      {icon === 'sun' ? (
+        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ) : (
+        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M3 15l6-6 4 4 8-8" />
+        </svg>
+      )}
+      {label}
+      {isGood ? (
+        <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
 // Small inline badge component for selfie type classification
 const SelfieTypeBadgeSmall = ({
   type,
@@ -37,46 +83,8 @@ const SelfieTypeBadgeSmall = ({
 
   const label = t(`selfieTypes.${type}`) || type
   const colorClass = colors[type] || 'bg-gray-500/90 text-white'
-
-  // Quality badge helper
-  const QualityBadge = ({ quality, icon }: { quality: string, icon: 'sun' | 'layers' }) => {
-    const isGood = quality === 'good' || quality === 'acceptable'
-    const iconColor = isGood ? 'text-green-600' : 'text-red-600'
-    const qualityLabel = icon === 'sun' ? t('quality.lighting') || 'Lighting' : t('quality.background') || 'Background'
-
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm bg-white/95 text-gray-700 border border-gray-200">
-        {icon === 'sun' ? (
-          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-        ) : (
-          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M3 15l6-6 4 4 8-8" />
-          </svg>
-        )}
-        {qualityLabel}
-        {isGood ? (
-          <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-        ) : (
-          <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        )}
-      </span>
-    )
-  }
+  const lightingLabel = t('quality.lighting') || 'Lighting'
+  const backgroundLabel = t('quality.background') || 'Background'
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -84,10 +92,10 @@ const SelfieTypeBadgeSmall = ({
         {label}
       </span>
       {lightingQuality === 'poor' && (
-        <QualityBadge quality={lightingQuality} icon="sun" />
+        <QualityBadgeSmall quality={lightingQuality} icon="sun" label={lightingLabel} />
       )}
       {backgroundQuality === 'poor' && (
-        <QualityBadge quality={backgroundQuality} icon="layers" />
+        <QualityBadgeSmall quality={backgroundQuality} icon="layers" label={backgroundLabel} />
       )}
     </div>
   )
@@ -180,13 +188,13 @@ const GridItem = React.memo<{
   const hasValidType = item.selfieType && item.selfieType !== 'unknown' && item.selfieType !== ''
   const needsClassification = !item.selfieType || item.selfieType === ''
   
-  // Determine classification status: analyzing (active), queued, or stale
+  // Determine classification status
   const isActivelyAnalyzing = needsClassification && classificationQueue?.activeSelfieIds?.includes(item.id)
   const isQueued = needsClassification && classificationQueue?.queuedSelfieIds?.includes(item.id)
-  // Show "Analyzing" ONLY if actively being processed
-  // Show "Queued" ONLY if explicitly in the queued list
-  // If needs classification but not in any queue, it's stale (classification failed or server restarted)
-  const showAnalyzing = isActivelyAnalyzing
+  // Show "Analyzing" for any selfie that still needs classification - the queue poll
+  // often misses the brief window when classification is active, so treat all
+  // unclassified selfies as analyzing (they'll get a type badge once done)
+  const showAnalyzing = needsClassification
   const showQueued = isQueued && !isActivelyAnalyzing
 
   return (
@@ -203,7 +211,7 @@ const GridItem = React.memo<{
       <button
         type="button"
         disabled={isImproper}
-        className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
+        className={`absolute top-3 left-3 z-20 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
           isImproper
             ? 'bg-red-100 text-red-500 border-red-300 cursor-not-allowed'
             : isSelected
@@ -243,7 +251,7 @@ const GridItem = React.memo<{
       >
         {/* Loading spinner */}
         {!isLoaded && showLoadingState && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-10 pointer-events-none">
             <LoadingSpinner />
           </div>
         )}
@@ -421,6 +429,11 @@ type SelectionMode =
   | { mode: 'managed'; token?: string; onAfterChange?: (selectedIds: string[]) => void }
   | { mode: 'controlled'; selectedIds: Set<string>; onToggle: (id: string, selected: boolean) => void }
 
+interface ManagedSelectionExternalState {
+  selectedSet: Set<string>
+  toggleSelect: (id: string, selected: boolean) => Promise<void>
+}
+
 interface SelectableGridProps {
   /** Items to display in the grid */
   items: SelectableItem[]
@@ -455,6 +468,8 @@ interface SelectableGridProps {
   qrTile?: React.ReactNode
   /** Classification queue status to distinguish "Analyzing" from "Queued" */
   classificationQueue?: ClassificationQueueStatus
+  /** Optional external managed selection state to avoid duplicate useSelfieSelection instances */
+  externalManagedSelection?: ManagedSelectionExternalState
 }
 
 /**
@@ -483,19 +498,23 @@ export default function SelectableGrid({
   showLoadingState = true,
   className = '',
   qrTile,
-  classificationQueue
+  classificationQueue,
+  externalManagedSelection
 }: SelectableGridProps) {
   const t = useTranslations('selfies.gallery')
   const { isMobile } = useDeviceCapabilities()
   
   // Internal selection state for managed mode
   const managedSelection = useSelfieSelection({
-    token: selection.mode === 'managed' ? selection.token : undefined
+    token: selection.mode === 'managed' ? selection.token : undefined,
+    enabled: selection.mode === 'managed' && !externalManagedSelection,
   })
+
+  const effectiveManagedSelection = externalManagedSelection ?? managedSelection
   
   // Determine which selection to use
   const selectedSet = selection.mode === 'managed' 
-    ? managedSelection.selectedSet 
+    ? effectiveManagedSelection.selectedSet 
     : selection.selectedIds
     
   // Loading and delete state
@@ -506,7 +525,7 @@ export default function SelectableGrid({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   
   // Upload flow state
-  const cameraKeyRef = useRef(0)
+  const [cameraKey, setCameraKey] = useState(0)
   const {
     pendingApproval,
     isProcessing,
@@ -524,7 +543,7 @@ export default function SelectableGrid({
 
   const handleToggle = useCallback(async (id: string, next: boolean) => {
     if (selection.mode === 'managed') {
-      await managedSelection.toggleSelect(id, next)
+      await effectiveManagedSelection.toggleSelect(id, next)
       if (selection.onAfterChange) {
         requestAnimationFrame(() => {
           selection.onAfterChange?.([])
@@ -533,7 +552,7 @@ export default function SelectableGrid({
     } else {
       selection.onToggle(id, next)
     }
-  }, [selection, managedSelection])
+  }, [selection, effectiveManagedSelection])
 
   const handleDelete = useCallback(async (selfieId: string, key?: string) => {
     // Optimistically remove from UI
@@ -579,7 +598,7 @@ export default function SelectableGrid({
   const handleRetake = useCallback(() => {
     setPendingFile(null)
     retakePending()
-    cameraKeyRef.current += 1
+    setCameraKey(prev => prev + 1)
   }, [retakePending])
 
   const handleCancelPending = useCallback(() => {
@@ -609,9 +628,7 @@ export default function SelectableGrid({
       {visibleItems.map((item) => {
         const isSelected = selectedSet.has(item.id)
         const isLoaded = !showLoadingState || loadedSet.has(item.id)
-        // TODO: Re-enable when classification is reliable
-        // const isImproper = item.isProper === false
-        const isImproper = false
+        const isImproper = item.isProper === false
 
         return (
           <GridItem
@@ -645,12 +662,12 @@ export default function SelectableGrid({
         <div className="md:aspect-square">
           {upload ? (
             <PhotoUpload
-              key={`camera-${cameraKeyRef.current}`}
+              key={`camera-${cameraKey}`}
               multiple
               onUpload={handleUploadFile}
               onUploaded={handleUploaded}
               testId="gallery-upload-input"
-              autoOpenCamera={cameraKeyRef.current > 0}
+              autoOpenCamera={cameraKey > 0}
               isProcessing={isProcessing}
               onCameraError={upload.onError}
             />

@@ -8,6 +8,7 @@ import { isUserChoice, hasValue } from '@/domain/style/elements/base/element-typ
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { getWardrobeExclusions } from '@/domain/style/elements/clothing/prompt'
 import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
+import { getEffectiveClothingDetail } from '@/domain/style/elements/clothing/config'
 import { ClothingColorsSummary } from '@/domain/style/elements/clothing-colors/Summary'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
@@ -24,22 +25,41 @@ const USER_STYLE_ELEMENTS = [
   'lighting'
 ] as const
 
-export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
-  if (!settings) return null
+function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+      <span className="text-[13px] text-gray-500">{label}</span>
+      <div className="text-[13px] text-right">{children}</div>
+    </div>
+  )
+}
 
+function UserChoiceIndicator() {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-amber-600">
+      <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>User choice</span>
+    </span>
+  )
+}
+
+export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   // Extract clothing value from wrapper (if present and has value)
-  const clothingWrapper = settings.clothing
+  const clothingWrapper = settings?.clothing
   const clothingHasValue = clothingWrapper && hasValue(clothingWrapper)
   const clothingStyle = clothingHasValue ? clothingWrapper.value.style : undefined
-  const clothingDetails = clothingHasValue ? clothingWrapper.value.details : undefined
+  const clothingDetails = clothingHasValue
+    ? getEffectiveClothingDetail(clothingWrapper.value.style, clothingWrapper.value)
+    : undefined
   const clothingAccessories = clothingHasValue ? clothingWrapper.value.accessories : undefined
   const clothingIsUserChoice = clothingWrapper ? isUserChoice(clothingWrapper) : false
-  const lightingType = settings.lighting?.value?.type
-  const hasClothingSettings = settings.clothing !== undefined
-  const hasLighting = settings.lighting !== undefined
+  const lightingType = settings?.lighting?.value?.type
+  const hasClothingSettings = settings?.clothing !== undefined
+  const hasLighting = settings?.lighting !== undefined
 
   // Compute excluded clothing colors based on shot type and clothing style
-  const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
+  const excludedClothingColors: ClothingColorKey[] = (() => {
+    if (!settings) return []
     const exclusions = new Set<ClothingColorKey>()
 
     const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
@@ -58,7 +78,9 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
     }
 
     return Array.from(exclusions)
-  }, [settings.shotType, clothingStyle, clothingDetails])
+  })()
+
+  if (!settings) return null
 
   const getClothingPhrase = (style?: string, details?: string): string | undefined => {
     if (!style && !details) return undefined
@@ -69,30 +91,23 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
     if (d === 'buttondown' || d === 'button-down' || d === 'button down shirt') d = 'button down'
     if (d === 'tshirt' || d === 't-shirt') d = 't-shirt'
     if (d === 'suit jacket') d = 'suit'
+    if (d === 'formal-suit') d = 'suit'
+    if (d === 'casual-jacket') d = 'jacket'
 
-    const styleLabel = s === 'black-tie' ? 'Black tie' : s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
+    const styleLabelMap: Record<string, string> = {
+      business_professional: 'Formal',
+      business_casual: 'Casual',
+      startup: 'Startup',
+      'black-tie': 'Black tie',
+      business: 'Formal',
+    }
+    const styleLabel = styleLabelMap[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
     const detailLabel = d ? d.charAt(0).toUpperCase() + d.slice(1) : ''
 
     if (!styleLabel) return detailLabel || undefined
     if (!detailLabel) return styleLabel
     return `${styleLabel} — ${detailLabel}`
   }
-
-  // Setting row component for consistent styling
-  const SettingRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
-      <span className="text-[13px] text-gray-500">{label}</span>
-      <div className="text-[13px] text-right">{children}</div>
-    </div>
-  )
-
-  // User choice indicator
-  const UserChoiceIndicator = () => (
-    <span className="inline-flex items-center gap-1.5 text-amber-600">
-      <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
-      <span>User choice</span>
-    </span>
-  )
 
   return (
     <div className="relative bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 h-full flex flex-col">

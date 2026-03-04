@@ -3,7 +3,8 @@ import { Link } from '@/i18n/routing';
 import { InlineCTA } from '@/components/blog/InlineCTA';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import { headers } from 'next/headers';
-import { getBrand } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import { getBaseUrl } from '@/lib/url';
 import { markdownToInlineHtml } from '@/lib/markdown';
 import {
@@ -19,56 +20,79 @@ import {
 /**
  * Render pre-generated schema from CMS
  */
-function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
+function safeParseSchemaJson(schemaJson: string): unknown | null {
   try {
-    const schema = JSON.parse(schemaJson);
+    return JSON.parse(schemaJson);
+  } catch {
+    return null;
+  }
+}
 
-    // Support array or @graph formats by emitting a single JSON-LD block
-    if (Array.isArray(schema) || schema['@graph']) {
-      return (
+function StoredSchemaJsonLd({ schemaJson }: { schemaJson: string }) {
+  const parsed = safeParseSchemaJson(schemaJson);
+  if (!parsed) {
+    return null;
+  }
+
+  // Support array or @graph formats by emitting a single JSON-LD block
+  if (Array.isArray(parsed)) {
+    return (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(parsed),
+        }}
+      />
+    );
+  }
+
+  if (typeof parsed !== 'object') return null;
+  const schema = parsed as Record<string, unknown>;
+
+  if (schema['@graph']) {
+    return (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(schema),
+        }}
+      />
+    );
+  }
+
+  const article = schema.article;
+  const faq = schema.faq;
+
+  // Handle both wrapped format { article: {...}, faq: {...} } and direct format
+  return (
+    <>
+      {article && typeof article === 'object' && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(schema),
+            __html: JSON.stringify({ '@context': 'https://schema.org', ...(article as Record<string, unknown>) }),
           }}
         />
-      );
-    }
-
-    // Handle both wrapped format { article: {...}, faq: {...} } and direct format
-    return (
-      <>
-        {schema.article && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.article }),
-            }}
-          />
-        )}
-        {schema.faq && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema.faq }),
-            }}
-          />
-        )}
-        {/* Handle direct schema format (single type) */}
-        {!schema.article && !schema.faq && schema['@type'] && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({ '@context': 'https://schema.org', ...schema }),
-            }}
-          />
-        )}
-      </>
-    );
-  } catch {
-    // Invalid JSON, don't render anything
-    return null;
-  }
+      )}
+      {faq && typeof faq === 'object' && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({ '@context': 'https://schema.org', ...(faq as Record<string, unknown>) }),
+          }}
+        />
+      )}
+      {/* Handle direct schema format (single type) */}
+      {!article && !faq && schema['@type'] && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({ '@context': 'https://schema.org', ...schema }),
+          }}
+        />
+      )}
+    </>
+  );
 }
 
 const beforeAfterPlaceholderRegex = /<div data-before-src="([^"]+)" data-after-src="([^"]+)" data-before-alt="([^"]*)" data-after-alt="([^"]*)"><\/div>/g;
@@ -219,8 +243,9 @@ interface BlogPostTemplateProps {
  * ```
  */
 export async function BlogPostTemplate({ content }: BlogPostTemplateProps) {
+  const tenant = await getTenant();
   const headerList = await headers();
-  const brandConfig = getBrand(headerList);
+  const brandConfig = getBrandByDomain(tenant.domain);
   const baseUrl = getBaseUrl(headerList);
   const brandCta = brandConfig.cta;
 

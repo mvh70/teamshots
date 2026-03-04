@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { transferCreditsFromTeamToPerson, getPersonCreditBalance } from '@/domain/credits/credits'
+import { transferCreditsFromTeamToPerson } from '@/domain/credits/credits'
 import { isSeatsBasedTeam, canAddTeamMember } from '@/domain/pricing/seats'
 import { Logger } from '@/lib/logger'
 import { enforceInviteRateLimitWithBlocking } from '@/lib/rate-limit'
+import { withSerializableRetry } from '@/lib/prisma-retry'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +51,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if person already exists (from previous acceptance before token reset, or orphaned person)
-    let person
+    let person: {
+      id: string
+      firstName: string | null
+      lastName: string | null
+      email: string | null
+      teamId: string | null
+      inviteToken: string | null
+    }
     if (invite.personId && invite.person) {
       // Person already exists linked to invite - reuse it
       person = invite.person
@@ -90,42 +98,55 @@ export async function POST(request: NextRequest) {
         // Reuse existing person - this handles the case where person was created
         // but invite wasn't updated (partial failure recovery)
         person = existingPerson
+        const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
         Logger.info('Reusing existing person', {
           personId: person.id,
           inviteId: invite.id,
           foundBy: person.inviteToken === token ? 'inviteToken' : 'email'
         })
 
-        // Update the person's inviteToken to the current token
-        if (person.inviteToken !== token) {
-          await prisma.person.update({
-            where: { id: person.id },
-            data: { inviteToken: token }
-          })
-        }
+        await withSerializableRetry(async () => {
+          await prisma.$transaction(async (tx) => {
+            // Keep the latest invite token for backward compatibility with legacy flows.
+            if (person.inviteToken !== token) {
+              await tx.person.update({
+                where: { id: person.id },
+                data: { inviteToken: token }
+              })
+            }
 
-        // Check if credits were already transferred (person has credit balance)
-        const existingBalance = await getPersonCreditBalance(person.id)
-
-        if (existingBalance === 0) {
-          // Credits weren't transferred yet - do it now
-          const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
-
-          if (useSeatsModel) {
-            await transferCreditsFromTeamToPerson(
-              invite.teamId,
-              person.id,
-              invite.creditsAllocated,
-              invite.id,
-              `Seat credits for ${invite.email} (recovery)`
-            )
-            Logger.info('Credits transferred on orphaned person recovery', {
-              teamId: invite.teamId,
-              personId: person.id,
-              creditsTransferred: invite.creditsAllocated
+            const balanceResult = await tx.creditTransaction.aggregate({
+              where: { personId: person.id },
+              _sum: { credits: true }
             })
-          } else {
-            await prisma.creditTransaction.create({
+            const existingBalance = balanceResult._sum.credits || 0
+
+            if (existingBalance > 0) {
+              Logger.info('Person already has credits, skipping transfer', {
+                personId: person.id,
+                existingBalance
+              })
+              return
+            }
+
+            if (useSeatsModel) {
+              await transferCreditsFromTeamToPerson(
+                invite.teamId,
+                person.id,
+                invite.creditsAllocated,
+                invite.id,
+                `Seat credits for ${invite.email} (recovery)`,
+                tx
+              )
+              Logger.info('Credits transferred on orphaned person recovery', {
+                teamId: invite.teamId,
+                personId: person.id,
+                creditsTransferred: invite.creditsAllocated
+              })
+              return
+            }
+
+            await tx.creditTransaction.create({
               data: {
                 credits: invite.creditsAllocated,
                 type: 'invite_allocated',
@@ -134,13 +155,11 @@ export async function POST(request: NextRequest) {
                 teamInviteId: invite.id
               }
             })
-          }
-        } else {
-          Logger.info('Person already has credits, skipping transfer', {
-            personId: person.id,
-            existingBalance
+          }, {
+            isolationLevel: 'Serializable',
+            timeout: 10000
           })
-        }
+        })
       } else {
         // Before creating new person, check seat availability for seats-based teams
         const useSeatsModel = await isSeatsBasedTeam(invite.teamId)

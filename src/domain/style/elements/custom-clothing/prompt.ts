@@ -65,6 +65,11 @@ The JSON must follow this exact structure:
 }
 
 Be precise and objective. Only describe items that are clearly visible in the collage.`
+const GARMENT_DESCRIPTION_ANALYSIS_RULES = `Taxonomy and naming rules:
+- Use canonical garment types (e.g., "dress", "robe", "gown", "blazer", "shirt", "pants").
+- Never use positional names in type values (forbidden: "top dress", "bottom dress", "upper dress", "lower dress").
+- One-piece garments ("dress", "gown", "jumpsuit") must NOT use category "bottom". Use category "top".
+- If there are two dress-like layers and one is an outer covering layer, classify that outer layer as category "outerwear" with type "robe".`
 
 const GARMENT_COLLAGE_PROMPT_BASE = `Create a high-quality flat-lay garment collage from the attached outfit image.
 
@@ -82,6 +87,8 @@ LAYOUT INSTRUCTIONS:
 - Each item must be clearly separated.
 - Add a subtle drop shadow to give depth.
 - Label each item with a clean, sans-serif text label next to it (e.g., "Jacket", "Shirt", "Pants").
+- Use canonical labels only (e.g., "Dress", "Robe", "Gown", "Blazer", "Pants"). Never use labels like "Top Dress", "Bottom Dress", or "Long Dress".
+- If a dress has an outer covering layer, label the inner piece as "Dress" and the covering layer as "Robe".
 
 CRITICAL RULES (ANTI-HALLUCINATION):
 1. STRICT COUNT: Count the distinct clothing items in the source image. The output MUST contain EXACTLY that number of items - no more, no fewer.
@@ -189,7 +196,7 @@ export function getCustomClothingGarmentAnalysisInstruction(): string {
 }
 
 export function buildGarmentDescriptionAnalysisPrompt(): string {
-  return GARMENT_DESCRIPTION_ANALYSIS_PROMPT
+  return `${GARMENT_DESCRIPTION_ANALYSIS_PROMPT}\n\n${GARMENT_DESCRIPTION_ANALYSIS_RULES}`
 }
 
 export function buildGarmentCollagePrompt(hasLogo: boolean): string {

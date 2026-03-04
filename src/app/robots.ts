@@ -20,16 +20,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   return {
     rules: {
       userAgent: '*',
-      allow: [
-        '/',                      // English (default locale, no prefix)
-        '/es/',                   // Spanish locale
-        '/pricing',               // Pricing page
-        '/blog',                  // Blog index
-        '/blog/',                 // Blog posts
-        '/solutions/',            // Solutions pages
-        '/headshot-cost-calculator', // Calculator tool
-        '/legal/',                // Legal pages
-      ],
+      allow: ['/'],
       disallow: [
         '/app/',                  // App routes (authenticated)
         '/api/',                  // API routes

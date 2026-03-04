@@ -2,6 +2,17 @@ export type PlanTier = 'individual' | 'pro'
 export type PlanPeriod = 'free' | 'small' | 'large' | 'seats'
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'unpaid' | null
 
+interface FormatSubscriptionLabelOptions {
+  freeLabel?: string
+  individualLabel?: string
+  proLabel?: string
+  teamLabel?: string
+  proSmallLabel?: string
+  proLargeLabel?: string
+  vipLabel?: string
+  isIndividualDomain?: boolean
+}
+
 /**
  * Simplified tier type for UI purposes (routing, styling)
  * Computed from tier+period combination
@@ -109,6 +120,60 @@ export function formatTierName(tier: PlanTier, period?: PlanPeriod | null): stri
 }
 
 /**
+ * Formats a human-readable subscription label for the UI.
+ */
+export function formatSubscriptionLabel(
+  tier: PlanTier | string | null,
+  period: PlanPeriod | string | null | undefined,
+  options: FormatSubscriptionLabelOptions = {}
+): string {
+  const {
+    freeLabel = 'Free package',
+    individualLabel = 'Individual',
+    proLabel = 'Pro',
+    teamLabel = 'Team',
+    proSmallLabel,
+    proLargeLabel,
+    vipLabel,
+    isIndividualDomain = false,
+  } = options
+
+  if (isFreePlan(period)) {
+    return freeLabel
+  }
+
+  if (tier === 'individual' && period === 'small') {
+    return individualLabel
+  }
+
+  if (tier === 'individual' && period === 'large' && vipLabel) {
+    return vipLabel
+  }
+
+  if (tier === 'pro' && period === 'small' && proSmallLabel) {
+    return proSmallLabel
+  }
+
+  if (tier === 'pro' && period === 'large' && proLargeLabel) {
+    return proLargeLabel
+  }
+
+  if (tier === 'pro' && period === 'seats') {
+    return isIndividualDomain ? individualLabel : teamLabel
+  }
+
+  if (tier === 'individual') {
+    return individualLabel
+  }
+
+  if (tier === 'pro') {
+    return isIndividualDomain ? individualLabel : proLabel
+  }
+
+  return freeLabel
+}
+
+/**
  * Get tier features (credits and regenerations) for a tier+period combination
  * @param tier - Plan tier
  * @param period - Plan period
@@ -165,5 +230,4 @@ export async function getTierFeatures(tier: PlanTier, period: PlanPeriod | null 
 export function hasActiveSubscription(status: SubscriptionStatus | null): boolean {
   return status === 'active'
 }
-
 

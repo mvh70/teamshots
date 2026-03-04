@@ -17,6 +17,7 @@ export interface CanonicalPromptDebugMetadata {
 export interface CanonicalPromptBuildInput {
   basePrompt: string
   styleSettings: PhotoStyleSettings
+  packageId?: string
   demographics?: unknown
   hasFaceComposite: boolean
   hasBodyComposite: boolean
@@ -88,6 +89,7 @@ export async function buildCanonicalPromptV3(
   const {
     basePrompt,
     styleSettings,
+    packageId,
     demographics,
     hasFaceComposite,
     hasBodyComposite,
@@ -106,6 +108,7 @@ export async function buildCanonicalPromptV3(
     generationId,
     personId,
     teamId,
+    packageId,
     demographics,
     hasFaceComposite,
     hasBodyComposite,

@@ -5,7 +5,7 @@
  * This is just for reference - you can delete this file or adapt it to your needs
  */
 
-import { trackEvent, trackSignup, trackConversion } from '@/lib/analytics'
+import { trackEvent, trackSignup } from '@/lib/analytics'
 import { useState } from 'react'
 
 export default function AnalyticsExample() {
@@ -30,7 +30,11 @@ export default function AnalyticsExample() {
 
   const handlePurchase = () => {
     // Track a conversion/purchase
-    trackConversion('test_transaction_123', 29.99, 'USD')
+    trackEvent('purchase', {
+      transaction_id: 'test_transaction_123',
+      value: 29.99,
+      currency: 'USD',
+    })
     setStatus('✅ Purchase tracked!')
     setTimeout(() => setStatus(''), 3000)
   }

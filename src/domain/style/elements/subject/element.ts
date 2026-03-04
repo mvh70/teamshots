@@ -7,9 +7,12 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../base/StyleElement'
+import { hasValue } from '../base/element-types'
 import { autoRegisterElement } from '../composition/registry'
 import { generateSubjectCompositionPrompt, generateSubjectPersonPrompt } from './prompt'
 import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
+
+const SOFT_SMILE_PREFERRED_PACKAGE_IDS = new Set(['headshot1', 'freepackage'])
 
 export class SubjectElement extends StyleElement {
   readonly id = 'subject'
@@ -31,11 +34,13 @@ export class SubjectElement extends StyleElement {
   }
 
   private contributeToPersonGeneration(context: ElementContext): ElementContribution {
-    const { generationContext } = context
+    const { generationContext, settings, packageContext } = context
     const selfieCount = generationContext.selfieS3Keys?.length || 0
     const hasFaceComposite = !!generationContext.hasFaceComposite
     const hasBodyComposite = !!generationContext.hasBodyComposite
     const demographics = this.extractDemographicProfile(generationContext.demographics)
+    const hasBeautification = Boolean(settings.beautification && hasValue(settings.beautification))
+    const preferSoftSmileSelfie = SOFT_SMILE_PREFERRED_PACKAGE_IDS.has(packageContext?.packageId ?? '')
 
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
@@ -45,6 +50,8 @@ export class SubjectElement extends StyleElement {
       hasBodyComposite,
       hasCombinedOnly: !hasFaceComposite && !hasBodyComposite,
       hasDemographics: !!demographics,
+      hasBeautification,
+      preferSoftSmileSelfie,
     }
 
     if (selfieCount === 0) return { metadata }
@@ -54,6 +61,8 @@ export class SubjectElement extends StyleElement {
       hasFaceComposite,
       hasBodyComposite,
       demographics,
+      hasBeautification,
+      preferSoftSmileSelfie,
     })
     mustFollow.push(...subjectPrompt.mustFollow)
 
@@ -72,16 +81,26 @@ export class SubjectElement extends StyleElement {
   }
 
   private contributeToComposition(context: ElementContext): ElementContribution {
-    const { generationContext } = context
+    const { generationContext, settings, packageContext } = context
     const hasFaceComposite = !!generationContext.hasFaceComposite
     const hasBodyComposite = !!generationContext.hasBodyComposite
+    const hasBeautification = Boolean(settings.beautification && hasValue(settings.beautification))
+    const preferSoftSmileSelfie = SOFT_SMILE_PREFERRED_PACKAGE_IDS.has(packageContext?.packageId ?? '')
 
     const mustFollow: string[] = []
-    const metadata: Record<string, unknown> = { phase: 'composition', hasFaceComposite, hasBodyComposite }
+    const metadata: Record<string, unknown> = {
+      phase: 'composition',
+      hasFaceComposite,
+      hasBodyComposite,
+      hasBeautification,
+      preferSoftSmileSelfie,
+    }
 
     const subjectPrompt = generateSubjectCompositionPrompt({
       hasFaceComposite,
       hasBodyComposite,
+      hasBeautification,
+      preferSoftSmileSelfie,
     })
     mustFollow.push(...subjectPrompt.mustFollow)
 

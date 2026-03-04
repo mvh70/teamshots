@@ -97,7 +97,7 @@ describe('getRequiredStep0AssetErrors', () => {
       },
       clothing: {
         mode: 'predefined',
-        value: { style: 'business', details: 'blazer' },
+        value: { style: 'business_professional', details: 'suit' },
       },
       branding: {
         mode: 'predefined',

@@ -78,7 +78,7 @@ function makeCanonicalPrompt(): Record<string, unknown> {
       pose: { description: 'direct headshot' },
       expression: { type: 'soft_smile' },
       wardrobe: {
-        style: 'business',
+        style: 'business_professional',
         details: 'navy blazer',
       },
     },
@@ -103,7 +103,7 @@ describe('v3-step2-final-composition', () => {
           base_layer: 'shirt',
           notes: 'no tie',
           color_palette: ['navy', 'white'],
-          style_key: 'business',
+          style_key: 'business_professional',
           detail_key: 'clean',
           inherent_accessories: ['glasses'],
         },
@@ -191,7 +191,7 @@ describe('v3-step2-final-composition', () => {
     expect(promptText).toContain('Place the person centrally in the background composition.')
     expect(promptText).toContain('Match visible background lighting first')
     expect(promptText).toContain('Person must be DOMINANT in frame (40-60% of image height minimum).')
-    expect(promptText).toContain('Enhance natural skin micro-texture detail')
+    expect(promptText).toContain('Preserve existing skin micro-details from BASE IMAGE exactly')
     expect(promptText).not.toContain('"scene":')
     expect(promptText).not.toContain('Subject Reference (FOR FRAMING CONTEXT ONLY):')
     expect(promptText).not.toContain('Compositing Instructions (Studio Background)')
@@ -200,6 +200,62 @@ describe('v3-step2-final-composition', () => {
 
     expect(referenceImages.some((ref) => ref.description?.startsWith('BACKGROUND REFERENCE'))).toBe(true)
     expect(referenceImages.some((ref) => ref.description?.startsWith('LOGO REFERENCE'))).toBe(false)
+  })
+
+  it('treats retouching level none as strict no-retouch guidance in BASE and FACE references', async () => {
+    const personBuffer = await makeImageBuffer(1024, 1024)
+    const faceReferenceBuffer = await makeImageBuffer(512, 512)
+
+    generateWithGeminiMock.mockResolvedValue({
+      images: [await makeImageBuffer(1024, 1024)],
+      usage: {
+        durationMs: 100,
+        inputTokens: 100,
+        outputTokens: 100,
+        imagesGenerated: 1,
+      },
+      providerUsed: 'vertex',
+    })
+
+    await executeV3Step2({
+      personBuffer,
+      faceCompositeReference: {
+        name: 'face-reference.jpg',
+        description: 'FACE REFERENCE',
+        base64: faceReferenceBuffer.toString('base64'),
+        mimeType: 'image/jpeg',
+      },
+      styleSettings: makeStyleSettings({ backgroundType: 'office' }),
+      aspectRatio: '1:1',
+      canonicalPrompt: makeCanonicalPrompt(),
+      step2Artifacts: {
+        mustFollowRules: [],
+        freedomRules: [],
+        payloadOverlay: {
+          subject: {
+            beautification: {
+              retouching: {
+                level: 'none',
+                fixes: [],
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const [, referenceImages] = generateWithGeminiMock.mock.calls[0] as [
+      string,
+      Array<{ description?: string }>
+    ]
+
+    const baseReference = referenceImages.find((ref) => ref.description?.startsWith('BASE IMAGE'))
+    expect(baseReference?.description).toContain('with no retouching or skin grooming')
+    expect(baseReference?.description).not.toContain('apply retouching as specified')
+
+    const faceReference = referenceImages.find((ref) => ref.description?.startsWith('FACE REFERENCE'))
+    expect(faceReference?.description).toContain('Identity verification only (macro features)')
+    expect(faceReference?.description).toContain('Do NOT transfer skin texture or skin marks')
   })
 
   it('builds studio prompt and passes Step 2 element rules through without step-level filtering', async () => {
@@ -351,6 +407,37 @@ describe('v3-step2-final-composition', () => {
     expect(promptText).toContain('Preserve subtle natural micro-contrast')
     expect(promptText).toContain('Maintain natural-looking highlight rolloff on skin')
     expect(promptText).toContain('Apply nuanced color balancing for skin and wardrobe')
+  })
+
+  it('normalizes output to expected dimensions when provider returns lower resolution', async () => {
+    const personBuffer = await makeImageBuffer(1024, 1024)
+
+    generateWithGeminiMock.mockResolvedValue({
+      images: [await makeImageBuffer(1024, 1024)],
+      usage: {
+        durationMs: 100,
+        inputTokens: 100,
+        outputTokens: 100,
+        imagesGenerated: 1,
+      },
+      providerUsed: 'openrouter',
+    })
+
+    const output = await executeV3Step2({
+      personBuffer,
+      styleSettings: makeStyleSettings({ backgroundType: 'office' }),
+      aspectRatio: '1:1',
+      resolution: '2K',
+      canonicalPrompt: makeCanonicalPrompt(),
+      step2Artifacts: {
+        mustFollowRules: [],
+        freedomRules: [],
+      },
+    })
+
+    const metadata = await sharp(output.refinedBuffer).metadata()
+    expect(metadata.width).toBe(2048)
+    expect(metadata.height).toBe(2048)
   })
 
   it('throws for custom background without Step 0 background buffer', async () => {

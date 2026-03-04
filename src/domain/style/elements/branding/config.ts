@@ -41,5 +41,6 @@ export const brandingElementConfig: ElementConfig<BrandingSettings> = {
     return predefined({ type: 'include', position: 'clothing' })
   },
   getDefaultUserChoice: () => userChoice(),
-  deserialize
+  deserialize,
+  mergePredefinedFromSession: () => undefined,
 }

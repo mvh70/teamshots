@@ -32,6 +32,8 @@ interface StyleSettingsSectionProps {
   onCategoryVisit?: Parameters<typeof PhotoStyleSettings>[0]['onCategoryVisit']
   acceptedOnVisitKeys?: Parameters<typeof PhotoStyleSettings>[0]['acceptedOnVisitKeys']
   visitedStepKeys?: Parameters<typeof PhotoStyleSettings>[0]['visitedStepKeys']
+  detectedGender?: Parameters<typeof PhotoStyleSettings>[0]['detectedGender']
+  uneditedFields?: Parameters<typeof PhotoStyleSettings>[0]['uneditedFields']
 }
 
 export default function StyleSettingsSection({
@@ -59,7 +61,9 @@ export default function StyleSettingsSection({
   enableDesktopProgressiveActivation = false,
   onCategoryVisit,
   acceptedOnVisitKeys,
-  visitedStepKeys
+  visitedStepKeys,
+  detectedGender,
+  uneditedFields
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -89,6 +93,8 @@ export default function StyleSettingsSection({
         onCategoryVisit={onCategoryVisit}
         acceptedOnVisitKeys={acceptedOnVisitKeys}
         visitedStepKeys={visitedStepKeys}
+        detectedGender={detectedGender}
+        uneditedFields={uneditedFields}
       />
     </>
   )

@@ -7,6 +7,7 @@
  */
 
 import type { IndustryType } from './types'
+import type { ClothingStyle } from '@/domain/style/elements/clothing/types'
 
 export interface IndustryStyleConfig {
   background: {
@@ -14,7 +15,7 @@ export interface IndustryStyleConfig {
     prompt: string
   }
   clothing: {
-    style: 'business' | 'startup'
+    style: ClothingStyle
     details: string
     colors: {
       topLayer: string
@@ -37,7 +38,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Traditional law library with mahogany bookshelves, leather-bound books, warm ambient lighting, brass desk lamp, dignified professional atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'tailored charcoal suit jacket over crisp white blouse, professional and authoritative',
       colors: { topLayer: 'charcoal', baseLayer: 'white' },
     },
@@ -52,7 +53,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Modern medical clinic with clean white walls, subtle medical equipment blurred in background, warm welcoming healthcare atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'pristine white lab coat over light blue dress shirt with stethoscope around neck',
       colors: { topLayer: 'white', baseLayer: 'light blue' },
     },
@@ -67,7 +68,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Modern real estate office with city skyline visible through floor-to-ceiling windows, golden hour lighting, professional yet approachable atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'elegant navy blazer over cream silk blouse, polished professional look',
       colors: { topLayer: 'navy', baseLayer: 'cream' },
     },
@@ -82,7 +83,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Executive corner office with dark wood furniture, subtle financial displays, cityscape view, sophisticated corporate atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'navy pinstripe suit with burgundy tie and crisp white dress shirt, executive presence',
       colors: { topLayer: 'navy', baseLayer: 'white' },
     },
@@ -112,7 +113,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Strategy consulting workshop room with whiteboard covered in frameworks, sticky notes on walls, conference table, dynamic collaborative atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'sharp charcoal blazer over light blue oxford shirt, no tie, smart professional',
       colors: { topLayer: 'charcoal', baseLayer: 'light blue' },
     },
@@ -127,7 +128,7 @@ export const INDUSTRY_STYLE_CONFIGS: Record<IndustryType, IndustryStyleConfig> =
         'Organized accounting office with neat stacks of documents, natural light through windows, potted plant, professional warm organized atmosphere. No studio lighting equipment, softboxes, or photography gear visible.',
     },
     clothing: {
-      style: 'business',
+      style: 'business_professional',
       details: 'professional navy blazer over cream blouse with subtle pearl earrings, competent trustworthy',
       colors: { topLayer: 'navy', baseLayer: 'cream' },
     },

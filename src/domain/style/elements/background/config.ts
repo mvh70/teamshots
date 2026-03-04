@@ -58,5 +58,6 @@ export function getBackgroundEnvironment(backgroundType?: string): BackgroundEnv
 export const backgroundElementConfig: ElementConfig<BackgroundSettings> = {
   getDefaultPredefined: () => predefined({ type: 'office' }),
   getDefaultUserChoice: () => userChoice(),
-  deserialize
+  deserialize,
+  mergePredefinedFromSession: () => undefined,
 }

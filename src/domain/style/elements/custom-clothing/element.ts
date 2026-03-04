@@ -63,6 +63,50 @@ export interface GarmentDescription {
   logoDescription?: string | null
 }
 
+const DRESS_LIKE_TYPE_REGEX = /\b(dress|gown)\b/i
+const DRESS_POSITION_PREFIX_REGEX = /\b(top|bottom|upper|lower)\s+(layer\s+)?/gi
+const ROBE_LIKE_TYPE_REGEX = /\b(robe|kimono|cover[- ]?up)\b/i
+
+function normalizeGarmentType(type: string): string {
+  return type
+    .trim()
+    .toLowerCase()
+    .replace(DRESS_POSITION_PREFIX_REGEX, '')
+    .replace(/\s+/g, ' ')
+}
+
+function normalizeGarmentDescription(description: GarmentDescription): GarmentDescription {
+  const hasPrimaryDressLikeItem = description.items.some(
+    (item) => item.category !== 'outerwear' && DRESS_LIKE_TYPE_REGEX.test(item.type)
+  )
+
+  const normalizedItems = description.items.map((item) => {
+    let category = item.category
+    let type = normalizeGarmentType(item.type)
+
+    // Dress-like garments are one-piece, so they should not be modeled as "bottom" items.
+    if (category === 'bottom' && DRESS_LIKE_TYPE_REGEX.test(type)) {
+      category = 'top'
+    }
+
+    // If a dress-like outer layer exists alongside a primary dress, treat the outer layer as a robe.
+    if (category === 'outerwear' && hasPrimaryDressLikeItem && DRESS_LIKE_TYPE_REGEX.test(type)) {
+      type = 'robe'
+    }
+
+    if (category !== 'outerwear' && ROBE_LIKE_TYPE_REGEX.test(type)) {
+      category = 'outerwear'
+    }
+
+    return { ...item, category, type }
+  })
+
+  return {
+    ...description,
+    items: normalizedItems,
+  }
+}
+
 export class CustomClothingElement extends StyleElement {
   readonly id = 'custom-clothing'
   readonly name = 'Custom Clothing'
@@ -573,7 +617,7 @@ export class CustomClothingElement extends StyleElement {
           .replace(/\s*```$/i, '')
           .trim()
 
-        description = JSON.parse(cleanedText)
+        description = normalizeGarmentDescription(JSON.parse(cleanedText) as GarmentDescription)
       } catch (parseError) {
         Logger.warn('[CustomClothingElement] Failed to parse garment description JSON', {
           generationId,

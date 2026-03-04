@@ -4,20 +4,21 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import CustomizationIntroContent from '@/components/generation/CustomizationIntroContent'
 import { StickyFlowPage } from '@/components/generation/layout'
-import { SwipeableContainer, FlowNavigation, FlowProgressDock } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowNavigation, FlowProgressDock, CustomizationMobileFooter } from '@/components/generation/navigation'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
-import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
-import { useEffect, useRef, useState } from 'react'
+import { buildNormalStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
+import { useEffect, useRef } from 'react'
 import Header from '@/app/[locale]/(product)/app/components/Header'
 import { useOnboardingState } from '@/lib/onborda/hooks'
+import { useHideScreen } from '@/hooks/useHideScreen'
 
 /**
  * Customization intro page for logged-in users.
  * 
- * Flow: /app/generate/selfie → /app/generate/customization-intro → /app/generate/start
+ * Flow: /app/generate/selfie → /app/generate/beautification → /app/generate/customization-intro → /app/generate/start
  * 
  * This page explains the customization options before users see them.
  * On mobile: Full-screen with swipe left to continue
@@ -31,14 +32,15 @@ export default function CustomizationIntroPage() {
   const isSwipeEnabled = useSwipeEnabled()
   const {
     markSeenCustomizationIntro,
+    setPendingGeneration,
     hasSeenCustomizationIntro,
+    hasCompletedBeautification,
     hydrated,
     flags,
     customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
     visitedSteps
-  } = useGenerationFlowState()
+  } = useGenerationFlowState({ syncBeautificationFromSession: true })
   const { context, updateContext } = useOnboardingState()
-  const [isSavingPreference, setIsSavingPreference] = useState(false)
   const hasAutoSkippedRef = useRef(false)
 
   // Get selfie count for the progress dock
@@ -50,21 +52,14 @@ export default function CustomizationIntroPage() {
   const skipCustomizationIntro = !forceShow && context.hiddenScreens?.includes('customization-intro')
 
   // Build step indicator for customization intro (after selfie selection, so selfie is complete)
-  const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
+  const { stepperTotalDots, navCurrentIndex, navigationStepColors } = buildNormalStepIndicator(customizationStepsMeta, {
     selfieComplete: true,
+    beautificationComplete: hasCompletedBeautification,
     isDesktop: !isMobile,
-    visitedCustomizationSteps: visitedSteps
+    visitedCustomizationSteps: visitedSteps,
+    currentStep: 'customization',
+    hideCurrentStep: true,
   })
-  const stepperTotalDots = selfieStepIndicator.totalWithLocked ?? selfieStepIndicator.total
-  // Info pages are not part of the steps, so use -1 to not highlight any step as current
-  // But show selfie step as visited (green) since it's complete
-  const navCurrentIndex = -1
-  const navigationStepColors = selfieStepIndicator.lockedSteps || selfieStepIndicator.visitedEditableSteps
-    ? {
-        lockedSteps: selfieStepIndicator.lockedSteps,
-        visitedEditableSteps: selfieStepIndicator.visitedEditableSteps
-      }
-    : undefined
 
   // Only redirect if already seen AND not coming from selfie selection (pendingGeneration flag)
   // If coming from selfie selection or force=1, always show the intro page
@@ -83,6 +78,7 @@ export default function CustomizationIntroPage() {
       if (skipCustomizationIntro && !hasSeenCustomizationIntro) {
         markSeenCustomizationIntro()
       }
+      setPendingGeneration(false)
       router.replace('/app/generate/start?skipUpload=1')
     }
   }, [
@@ -93,35 +89,22 @@ export default function CustomizationIntroPage() {
     flags.pendingGeneration,
     router,
     markSeenCustomizationIntro,
+    setPendingGeneration,
     searchParams
   ])
 
   const handleContinue = () => {
     markSeenCustomizationIntro()
+    setPendingGeneration(false)
     router.push('/app/generate/start?skipUpload=1')
   }
 
-  const handleDontShow = async () => {
-    if (isSavingPreference) return
-    setIsSavingPreference(true)
-    try {
-      const response = await fetch('/api/onboarding/hide-screen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ screenName: 'customization-intro' })
-      })
-      const data = await response.json().catch(() => ({}))
-      const updatedHiddenScreens = Array.from(
-        new Set([...(context.hiddenScreens || []), ...(data.hiddenScreens || ['customization-intro'])])
-      )
-      updateContext({ hiddenScreens: updatedHiddenScreens })
-    } catch (error) {
-      console.error('[CustomizationIntroPage] Failed to persist skip preference', error)
-    } finally {
-      setIsSavingPreference(false)
-      handleContinue()
-    }
-  }
+  const { handleHideScreen: handleDontShow, isSaving: isSavingPreference } = useHideScreen('customization-intro', {
+    context,
+    updateContext,
+    onComplete: handleContinue,
+    onErrorLogPrefix: '[CustomizationIntroPage] Failed to persist skip preference',
+  })
 
   // Don't render while checking or if redirecting (but allow rendering if force=1 or coming from selfie selection)
   const shouldRedirect =
@@ -132,27 +115,26 @@ export default function CustomizationIntroPage() {
   }
 
   const handleBack = () => {
-    router.push('/app/generate/selfie')
+    router.push('/app/generate/beautification')
   }
 
   return (
     <>
       {/* Progress Dock - Bottom Center (Desktop) */}
-      <FlowProgressDock
-        selfieCount={selfieCount}
-        uneditedFields={[]}
-        hasUneditedFields={true} // All fields are unedited at this point
-        canGenerate={false}
-        hasEnoughCredits={true}
-        currentStep="intro"
-        onNavigateToSelfies={() => router.push('/app/generate/selfie')}
-        onNavigateToCustomize={handleContinue}
-        onGenerate={() => {}} // Not available on this page
-        onNavigateToDashboard={() => router.push('/app/dashboard')}
-        customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={visitedSteps}
-        onDontShowAgain={handleDontShow}
-      />
+      {!isMobile && (
+        <FlowProgressDock
+          selfieCount={selfieCount}
+          hasUneditedFields={true} // All fields are unedited at this point
+          hasEnoughCredits={true}
+          currentStep="intro"
+          onNavigateToPreviousStep={() => router.push('/app/generate/beautification')}
+          onNavigateToCustomize={handleContinue}
+          onNavigateToDashboard={() => router.push('/app/dashboard')}
+          customizationStepsMeta={customizationStepsMeta}
+          visitedEditableSteps={visitedSteps}
+          onDontShowAgain={handleDontShow}
+        />
+      )}
 
       <SwipeableContainer
         onSwipeLeft={isSwipeEnabled ? handleContinue : undefined}
@@ -187,48 +169,23 @@ export default function CustomizationIntroPage() {
         <div className="md:hidden h-40" />
       </StickyFlowPage>
 
-      {/* Mobile: Sticky footer with compact navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <div className="px-4 py-4">
-          {/* Single-line navigation: ← | Don't show again | Customize → */}
-          <div className="flex items-center justify-between">
-            {/* Back (to selfies) */}
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="text-sm font-medium">{tIntro('prevLabel', { default: 'Selfies' })}</span>
-            </button>
-
-            {/* Don't show again (centered) */}
-            <button
-              type="button"
-              onClick={handleDontShow}
-              disabled={isSavingPreference}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors py-2"
-            >
-              {tIntro('skip', { default: "Don't show again" })}
-            </button>
-
-            {/* Forward (to Customize) */}
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full bg-brand-primary text-white shadow-sm hover:brightness-110 transition"
-            >
-              <span className="text-sm font-medium">{tIntro('nextLabel', { default: 'Customize' })}</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Progress dots */}
-        <div className="px-4 pb-4">
+      <CustomizationMobileFooter
+        leftAction={{
+          label: tIntro('prevLabel', { default: 'Beautification' }),
+          onClick: handleBack,
+        }}
+        centerAction={{
+          label: tIntro('skip', { default: "Don't show again" }),
+          onClick: handleDontShow,
+          disabled: isSavingPreference,
+        }}
+        rightAction={{
+          label: tIntro('nextLabel', { default: 'Customize' }),
+          onClick: handleContinue,
+          tone: 'primary',
+          icon: 'chevron-right',
+        }}
+        progressContent={
           <FlowNavigation
             variant="dots-only"
             size="md"
@@ -238,10 +195,11 @@ export default function CustomizationIntroPage() {
             onNext={handleContinue}
             stepColors={navigationStepColors}
           />
-        </div>
-      </div>
+        }
+      >
+        {null}
+      </CustomizationMobileFooter>
     </SwipeableContainer>
     </>
   )
 }
-

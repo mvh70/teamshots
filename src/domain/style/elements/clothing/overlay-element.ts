@@ -41,6 +41,7 @@ import {
   getClothingOverlayContributionMustFollowRules,
   getClothingTemplateReferenceDescription,
 } from './prompt'
+import { getEffectiveClothingDetail } from './config'
 import { AssetService } from '@/domain/services/AssetService'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { Asset } from '@prisma/client'
@@ -144,7 +145,7 @@ export class ClothingOverlayElement extends StyleElement {
     Logger.info('[ClothingOverlayElement] Starting clothing overlay preparation', {
       generationId,
       style: clothingValue.style,
-      details: clothingValue.details,
+      details: getEffectiveClothingDetail(clothingValue.style, clothingValue),
       brandingPosition: branding.position,
     })
 
@@ -298,7 +299,7 @@ export class ClothingOverlayElement extends StyleElement {
         mimeType: 'image/png',
         s3Key: s3Key!,
         metadata: {
-          clothingStyle: `${clothingValue.style}-${clothingValue.details}`,
+          clothingStyle: `${clothingValue.style}-${getEffectiveClothingDetail(clothingValue.style, clothingValue) || 'default'}`,
           brandingPosition: branding.position,
           fingerprint,
           fromCache,
@@ -390,7 +391,7 @@ export class ClothingOverlayElement extends StyleElement {
       Logger.info('[ClothingOverlayElement] Generated overlay prompt', {
         generationId,
         style: clothing.style,
-        details: clothing.details,
+        details: getEffectiveClothingDetail(clothing.style, clothing),
         clothingColors,
         promptPreview: prompt.substring(0, 5000) + '...'
       })
@@ -497,7 +498,12 @@ export class ClothingOverlayElement extends StyleElement {
 
     const styleParams = {
       clothingStyle: clothing.style,
-      clothingDetails: clothing.details || 'default',
+      clothingDetails: getEffectiveClothingDetail(clothing.style, clothing) || 'default',
+      mode: clothing.mode || 'separate',
+      topChoice: clothing.topChoice || '',
+      bottomChoice: clothing.bottomChoice || '',
+      outerChoice: clothing.outerChoice || '',
+      onePieceChoice: clothing.onePieceChoice || '',
       brandingPosition: branding.position,
       baseLayerColor: baseColor,
       topLayerColor: topColor,
@@ -629,7 +635,12 @@ export class ClothingOverlayElement extends StyleElement {
     const colors = clothingColors || {}
     const styleContext = {
       clothingStyle: clothing.style,
-      clothingDetails: clothing.details || 'default',
+      clothingDetails: getEffectiveClothingDetail(clothing.style, clothing) || 'default',
+      mode: clothing.mode || 'separate',
+      topChoice: clothing.topChoice || '',
+      bottomChoice: clothing.bottomChoice || '',
+      outerChoice: clothing.outerChoice || '',
+      onePieceChoice: clothing.onePieceChoice || '',
       brandingPosition: branding.position,
       baseLayerColor: getColorHex(colors.baseLayer) || '#FFFFFF',
       topLayerColor: getColorHex(colors.topLayer) || '#000000',

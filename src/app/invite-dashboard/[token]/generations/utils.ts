@@ -29,6 +29,7 @@ export function transformInvitedGeneration(
       url: string
       style: string
     }>
+    acceptedPhotoKey?: string
     status: 'pending' | 'processing' | 'completed' | 'failed'
     createdAt: string
     generationType: 'personal' | 'team'
@@ -52,6 +53,7 @@ export function transformInvitedGeneration(
   const generatedKey = generation.generatedPhotos.length > 0
     ? extractKeyFromUrl(generation.generatedPhotos[0].url)
     : null
+  const acceptedKey = generation.acceptedPhotoKey || null
 
   // Use first input selfie URL's key if available, otherwise use main selfie key
   const uploadedKey = generation.inputSelfieUrls && generation.inputSelfieUrls.length > 0
@@ -61,6 +63,7 @@ export function transformInvitedGeneration(
   return {
     id: generation.id,
     uploadedKey: uploadedKey || '',
+    acceptedKey: acceptedKey || undefined,
     generatedKey: generatedKey || undefined,
     status: generation.status,
     createdAt: generation.createdAt,
@@ -75,4 +78,3 @@ export function transformInvitedGeneration(
     inputSelfieUrls: generation.inputSelfieUrls, // Preserve for potential future use
   }
 }
-

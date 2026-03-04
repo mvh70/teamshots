@@ -2,7 +2,14 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getUserCreditBalance } from '@/domain/credits/credits'
-import type { PlanTier, PlanPeriod, SubscriptionStatus } from '@/domain/subscription/utils'
+import {
+  isFreePlan,
+  hasActiveSubscription,
+  formatTierName,
+  type PlanTier,
+  type PlanPeriod,
+  type SubscriptionStatus,
+} from '@/domain/subscription/utils'
 
 export interface SubscriptionInfo {
   tier: PlanTier
@@ -24,6 +31,8 @@ export interface SubscriptionInfo {
 const subscriptionCache = new Map<string, { data: SubscriptionInfo | null; timestamp: number }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
 const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
+
+export { hasActiveSubscription, formatTierName }
 
 /**
  * Clean up old cache entries to prevent memory leaks
@@ -128,7 +137,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
 
   // Compute next renewal date when applicable
   // Note: For one-time purchases and seats-based pricing, there's no recurring billing, so nextRenewal is null
-  let nextRenewal: Date | null = null
+  const nextRenewal: Date | null = null
 
   const result = {
     tier: storedTier,
@@ -165,11 +174,6 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
  * @returns Number of credits
  */
 export function getCreditsForTier(tier: PlanTier, period: PlanPeriod | null | undefined): number {
-  // Import isFreePlan from utils
-  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
-    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
-  }
-
   // Handle free plans
   if (isFreePlan(period)) {
     if (tier === 'pro') {
@@ -194,13 +198,6 @@ export function getCreditsForTier(tier: PlanTier, period: PlanPeriod | null | un
   }
 
   return 0
-}
-
-/**
- * Check if user has an active subscription
- */
-export function hasActiveSubscription(status: SubscriptionStatus | null): boolean {
-  return status === 'active'
 }
 
 /**
@@ -239,41 +236,12 @@ export function isSubscriptionPastDue(status: SubscriptionStatus | null): boolea
 }
 
 /**
- * Get formatted subscription tier name
- * @param tier - Plan tier
- * @param period - Plan period (optional)
- * @returns Formatted tier name
- */
-export function formatTierName(tier: PlanTier, period?: PlanPeriod | null): string {
-  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
-    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
-  }
-
-  if (isFreePlan(period)) {
-    return 'plan.free'
-  }
-
-  if (tier === 'individual' && period === 'small') return 'Individual'
-  if (tier === 'individual' && period === 'large') return 'VIP'
-  if (tier === 'pro' && period === 'seats') return 'Pro'
-
-  // Backward compatibility
-  if (tier === 'individual') return 'Individual'
-  if (tier === 'pro') return 'Pro'
-  return 'Free'
-}
-
-/**
  * Get subscription features for a tier+period combination
  * @param tier - Plan tier
  * @param period - Plan period
  * @returns Object with credits, regenerations, and topUpPrice
  */
 export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | undefined) {
-  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
-    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
-  }
-
   // Handle free plans
   if (isFreePlan(period)) {
     if (tier === 'pro') {
@@ -347,5 +315,4 @@ export async function canCreateGeneration(
 
   return false
 }
-
 

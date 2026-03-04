@@ -569,7 +569,7 @@ export async function generateWithGeminiRest(
       Logger.error('Gemini REST API generation failed', {
         modelName,
         error: errorMessage,
-        note: 'If using gemini-3-pro-image-preview, ensure it\'s available via REST API.'
+        note: 'If using gemini-3.1-flash-image-preview, ensure it\'s available via AI Studio (Gemini REST API).'
       })
     }
     throw error

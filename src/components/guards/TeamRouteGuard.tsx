@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react'
 import { useRouter } from '@/i18n/routing'
-import { useDomain } from '@/contexts/DomainContext'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function TeamRouteGuard({ children }: { children: React.ReactNode }) {
-  const { isIndividualDomain } = useDomain()
+  const { isIndividualDomain } = useTenant()
   const router = useRouter()
 
   useEffect(() => {

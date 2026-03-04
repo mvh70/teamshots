@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { BRAND_CONFIG } from '@/config/brand'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 
 interface ButtonProps {
   children: React.ReactNode
@@ -51,7 +51,8 @@ export function Button({
     lg: 'px-8 py-4 text-lg'
   }
 
-  const { isIndividual } = getClientBrandInfo()
+  const { isIndividualDomain } = getClientTenantInfo()
+  const isIndividual = isIndividualDomain
 
   const getVariantClasses = () => {
     switch (variant) {

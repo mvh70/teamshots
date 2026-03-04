@@ -121,6 +121,44 @@ export const ETHNICITY_OPTIONS = [
 ] as const
 export type Ethnicity = (typeof ETHNICITY_OPTIONS)[number]
 
+export const GLASSES_TYPES = ['prescription', 'sunglasses', 'reading', 'none'] as const
+export type GlassesType = (typeof GLASSES_TYPES)[number]
+
+export const FACIAL_HAIR_TYPES = ['beard', 'mustache', 'stubble', 'goatee', 'none'] as const
+export type FacialHairType = (typeof FACIAL_HAIR_TYPES)[number]
+
+export const JEWELRY_TYPES = ['earrings', 'necklace', 'nose_ring', 'lip_ring'] as const
+export type JewelryType = (typeof JEWELRY_TYPES)[number]
+
+export const PIERCING_TYPES = ['nose', 'lip', 'eyebrow', 'septum'] as const
+export type PiercingType = (typeof PIERCING_TYPES)[number]
+
+export const TATTOO_AREAS = ['face', 'neck', 'behind_ear'] as const
+export type TattooArea = (typeof TATTOO_AREAS)[number]
+
+export interface AccessoryDetections {
+  glasses?: { detected: boolean; type: GlassesType; confidence: number }
+  facial_hair?: { detected: boolean; type: FacialHairType; confidence: number }
+  jewelry?: { detected: boolean; types: JewelryType[]; confidence: number }
+  piercings?: { detected: boolean; types: PiercingType[]; confidence: number }
+  tattoos?: { detected: boolean; areas: TattooArea[]; confidence: number }
+}
+
+export const SELFIE_CLASSIFICATION_ANALYSIS_VERSION = 2
+export const SELFIE_CLASSIFICATION_ANALYSIS_KEYS = [
+  'lighting',
+  'background',
+  'demographics',
+  'accessories',
+] as const
+
+export type SelfieClassificationAnalysisKey = (typeof SELFIE_CLASSIFICATION_ANALYSIS_KEYS)[number]
+
+export interface SelfieClassificationAnalysis {
+  version: number
+  keys: Record<SelfieClassificationAnalysisKey, boolean>
+}
+
 /**
  * Result from the AI classification service.
  * @deprecated Use SelfieClassification for new code
@@ -155,6 +193,8 @@ export interface ClassificationResult {
   ethnicity?: Ethnicity
   /** Confidence for ethnicity detection (0.0-1.0) */
   ethnicityConfidence?: number
+  /** Optional accessory detection payload */
+  accessories?: AccessoryDetections
 }
 
 /**
@@ -164,6 +204,12 @@ export interface ClassificationResult {
 export interface SelfieClassification {
   /** Schema version for backward compatibility */
   version: 1
+
+  /**
+   * Classification analysis metadata used to identify stale payloads that need re-analysis.
+   * Optional for backward compatibility with older payloads.
+   */
+  analysis?: SelfieClassificationAnalysis
 
   /** Selfie type classification */
   type: {
@@ -212,12 +258,31 @@ export interface SelfieClassification {
   }
 }
 
+export interface SelfieClassificationV2 extends Omit<SelfieClassification, 'version'> {
+  version: 2
+  accessories?: AccessoryDetections
+}
+
+export type SelfieClassificationAny = SelfieClassification | SelfieClassificationV2
+
 /**
  * Convert ClassificationResult to SelfieClassification JSON format
  */
-export function toSelfieClassification(result: ClassificationResult): SelfieClassification {
-  return {
-    version: 1,
+function hasAccessories(result: ClassificationResult): boolean {
+  return Boolean(result.accessories && Object.keys(result.accessories).length > 0)
+}
+
+export function toSelfieClassification(result: ClassificationResult): SelfieClassificationAny {
+  const base = {
+    analysis: {
+      version: SELFIE_CLASSIFICATION_ANALYSIS_VERSION,
+      keys: {
+        lighting: true,
+        background: true,
+        demographics: true,
+        accessories: true,
+      },
+    },
     type: {
       value: result.selfieType,
       confidence: result.confidence,
@@ -256,6 +321,19 @@ export function toSelfieClassification(result: ClassificationResult): SelfieClas
         },
       }),
     },
+  }
+
+  if (hasAccessories(result)) {
+    return {
+      ...base,
+      version: 2,
+      accessories: result.accessories,
+    }
+  }
+
+  return {
+    ...base,
+    version: 1,
   }
 }
 
@@ -307,7 +385,7 @@ export function extractFromClassification(
     return defaults
   }
 
-  const c = classification as SelfieClassification
+  const c = classification as SelfieClassificationAny
 
   return {
     selfieType: c.type?.value ?? null,
@@ -323,6 +401,96 @@ export function extractFromClassification(
     ageCategory: c.demographics?.ageCategory?.value ?? null,
     ethnicity: c.demographics?.ethnicity?.value ?? null,
   }
+}
+
+const LEGACY_CLASSIFICATION_KEYS = new Set([
+  'selfieType',
+  'selfie_type',
+  'confidence',
+  'person_count',
+  'isProper',
+  'improperReason',
+])
+
+const REQUIRED_CLASSIFICATION_KEYS = [
+  'version',
+  'type',
+  'personCount',
+  'proper',
+  'lighting',
+  'background',
+  'demographics',
+] as const
+
+function hasLegacyClassificationShape(classification: Record<string, unknown>): boolean {
+  return Object.keys(classification).some((key) => LEGACY_CLASSIFICATION_KEYS.has(key))
+}
+
+function hasRequiredClassificationKeys(classification: Record<string, unknown>): boolean {
+  return REQUIRED_CLASSIFICATION_KEYS.every((key) => key in classification)
+}
+
+function hasCurrentAnalysisMetadata(classification: Record<string, unknown>): boolean {
+  const analysis = classification.analysis
+  if (!analysis || typeof analysis !== 'object') {
+    return false
+  }
+
+  const analysisRecord = analysis as Record<string, unknown>
+  const version = analysisRecord.version
+  if (typeof version !== 'number' || version < SELFIE_CLASSIFICATION_ANALYSIS_VERSION) {
+    return false
+  }
+
+  const keys = analysisRecord.keys
+  if (!keys || typeof keys !== 'object') {
+    return false
+  }
+
+  const keyRecord = keys as Record<string, unknown>
+  return SELFIE_CLASSIFICATION_ANALYSIS_KEYS.every((key) => keyRecord[key] === true)
+}
+
+/**
+ * Returns true when the stored classification payload should be re-analyzed.
+ *
+ * Cases:
+ * - Missing/invalid classification object
+ * - Legacy payload shapes
+ * - Missing required classification structure keys
+ * - Missing or outdated analysis metadata
+ */
+export function needsClassificationReanalysis(classification: unknown): boolean {
+  if (!classification || typeof classification !== 'object') {
+    return true
+  }
+
+  const classificationRecord = classification as Record<string, unknown>
+  if (hasLegacyClassificationShape(classificationRecord)) {
+    return true
+  }
+
+  if (!hasRequiredClassificationKeys(classificationRecord)) {
+    return true
+  }
+
+  return !hasCurrentAnalysisMetadata(classificationRecord)
+}
+
+export function isSelfieClassificationV1(classification: unknown): classification is SelfieClassification {
+  return (
+    typeof classification === 'object' &&
+    classification !== null &&
+    (classification as { version?: unknown }).version === 1
+  )
+}
+
+export function isSelfieClassificationV2(classification: unknown): classification is SelfieClassificationV2 {
+  return (
+    typeof classification === 'object' &&
+    classification !== null &&
+    (classification as { version?: unknown }).version === 2
+  )
 }
 
 /**

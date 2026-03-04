@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface UseSelfieSelectionOptions {
   token?: string
+  enabled?: boolean
   /**
    * Optional error callback invoked when selection operations fail.
    * If not provided, errors are stored in the returned error state.
@@ -9,9 +10,10 @@ interface UseSelfieSelectionOptions {
   onError?: (error: string) => void
 }
 
-export function useSelfieSelection({ token, onError }: UseSelfieSelectionOptions) {
+export function useSelfieSelection({ token, enabled = true, onError }: UseSelfieSelectionOptions) {
   const [selectedSet, setSelectedSet] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState<boolean>(false)
+  const [hasLoaded, setHasLoaded] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
   const selectedIds = useMemo(() => Array.from(selectedSet), [selectedSet])
@@ -36,6 +38,7 @@ export function useSelfieSelection({ token, onError }: UseSelfieSelectionOptions
       onError?.(errorMessage)
     } finally {
       setLoading(false)
+      setHasLoaded(true)
     }
   }, [token, onError])
 
@@ -58,8 +61,8 @@ export function useSelfieSelection({ token, onError }: UseSelfieSelectionOptions
       if (!response.ok) {
         throw new Error('Failed to toggle selection')
       }
-      // Parent's onAfterChange callback will handle re-sync if needed
-      // Removed redundant loadSelected() call here to avoid duplicate API requests
+      // Re-sync after each mutation to prevent stale selected-set races when users tap quickly.
+      await loadSelected()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle selection'
       onError?.(errorMessage)
@@ -70,16 +73,18 @@ export function useSelfieSelection({ token, onError }: UseSelfieSelectionOptions
         return n
       })
     }
-  }, [token, onError])
+  }, [token, onError, loadSelected])
 
   // Load selected selfies on mount
   useEffect(() => {
+    if (!enabled) {
+      setHasLoaded(true)
+      return
+    }
     void loadSelected()
-  }, [loadSelected])
+  }, [enabled, loadSelected])
 
-  return { selectedSet, selectedIds, loading, error, loadSelected, toggleSelect, setSelectedSet }
+  return { selectedSet, selectedIds, loading, hasLoaded, error, loadSelected, toggleSelect, setSelectedSet }
 }
 
 export default useSelfieSelection
-
-

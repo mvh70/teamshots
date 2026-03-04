@@ -25,9 +25,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null =
-    variant === 'individualshots' ? 'individual' :
-    variant === 'teamshotspro' ? 'team' :
-    null;
+    variant === 'teamshotspro' ? 'team' : 'individual';
 
   // Seats-based pricing for TeamShotsPro
   if (variant === 'teamshotspro') {

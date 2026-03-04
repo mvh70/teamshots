@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if team admin is on free plan
-    const rawAdminPlanPeriod = (team?.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+    const rawAdminPlanPeriod = team.admin?.planPeriod ?? null
     // Normalize period: 'month' -> 'monthly', 'year' -> 'annual', otherwise as-is
     const adminPlanPeriod = rawAdminPlanPeriod === 'month' ? 'monthly' : rawAdminPlanPeriod === 'year' ? 'annual' : rawAdminPlanPeriod
     const isAdminOnFreePlan = adminPlanPeriod === 'free' || !adminPlanPeriod

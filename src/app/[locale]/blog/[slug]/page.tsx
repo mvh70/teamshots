@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { constructBlogMetadata } from '@/lib/seo'
+import { normalizeBaseUrlForSeo } from '@/lib/url'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { getBrand } from '@/config/brand'
-import { getLandingVariant } from '@/config/landing-content'
+import { getBrandByDomain } from '@/config/brand'
+import { getTenant } from '@/config/tenant-server'
 import { BlogPostTemplate, type BlogPostContent } from '@/components/blog'
 import { markdownToHtml } from '@/lib/markdown'
 import {
@@ -11,7 +12,6 @@ import {
   getBlogPostBySpanishSlug,
   getAllBlogSlugs,
   getRedirectForSlug,
-  variantToBrandId,
 } from '@/lib/cms'
 
 // Force dynamic rendering since we use headers() and read from CMS database
@@ -92,13 +92,9 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params
+  const tenant = await getTenant()
   const headersList = await headers()
-
-  // Get brand ID from domain
-  const host = headersList.get('x-forwarded-host') || headersList.get('host')
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
-  const variant = getLandingVariant(domain)
-  const brandId = variantToBrandId(variant)
+  const brandId = tenant.cmsBrandId
 
   // Handle CMS redirects (old/consolidated slugs)
   const redirectSlug = getRedirectForSlug(brandId, slug)
@@ -113,7 +109,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // Look up post by canonical (English) slug
-  let post = getBlogPostBySlug(brandId, slug, locale)
+  const post = getBlogPostBySlug(brandId, slug, locale)
 
   // Fallback: if not found and requesting Spanish, try looking up by Spanish slug
   if (!post && locale === 'es') {
@@ -139,7 +135,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = locale === 'es' && post.spanishDescription ? post.spanishDescription : post.metaDescription
 
   const protocol = headersList.get('x-forwarded-proto') || 'https'
-  const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com'
+  const host = headersList.get('x-forwarded-host') || headersList.get('host')
+  const baseUrl = host ? `${protocol}://${host}` : `https://${tenant.domain}`
+
+  const heroImageUrl = post.heroImagePath
+    ? `${normalizeBaseUrlForSeo(baseUrl)}/images${post.heroImagePath}`
+    : undefined
 
   const baseMetadata = constructBlogMetadata({
     baseUrl,
@@ -148,6 +149,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     locale,
     title,
     description,
+    image: heroImageUrl,
   })
 
   return {
@@ -178,15 +180,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function BlogPostPage({ params }: Props) {
   const { locale, slug } = await params
-  const headersList = await headers()
-  const brandConfig = getBrand(headersList)
+  const tenant = await getTenant()
+  const brandConfig = getBrandByDomain(tenant.domain)
   const brandCta = brandConfig.cta
 
-  // Get brand ID from domain
-  const host = headersList.get('x-forwarded-host') || headersList.get('host')
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
-  const variant = getLandingVariant(domain)
-  const brandId = variantToBrandId(variant)
+  const brandId = tenant.cmsBrandId
 
   // Handle CMS redirects (old/consolidated slugs)
   const redirectSlug = getRedirectForSlug(brandId, slug)
@@ -201,7 +199,7 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   // Look up post by canonical (English) slug
-  let post = getBlogPostBySlug(brandId, slug, locale)
+  const post = getBlogPostBySlug(brandId, slug, locale)
 
   if (!post) {
     // Fallback: if requesting Spanish, try looking up by Spanish localized slug

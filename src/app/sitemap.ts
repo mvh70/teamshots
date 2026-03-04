@@ -1,10 +1,10 @@
 import { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 import { getBaseUrl, normalizeBaseUrlForSeo } from '@/lib/url'
-import { getLandingVariant } from '@/config/landing-content'
 import { SOLUTIONS } from '@/config/solutions'
+import { DEFAULT_TENANT_ID, getTenantById, resolveTenantId } from '@/config/tenant'
 import { routing } from '@/i18n/routing'
-import { getAllPublishedSlugs, variantToBrandId } from '@/lib/cms'
+import { getAllPublishedSlugs } from '@/lib/cms'
 
 // Use the start of the current month as a reasonable "last modified" for static pages.
 // This avoids hardcoding a date that goes stale and signals freshness to search engines.
@@ -51,17 +51,17 @@ function getPublishedLastModified(publishedAt: string | number | null | undefine
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl: string
-  let variant: ReturnType<typeof getLandingVariant>
+  let tenant = getTenantById(DEFAULT_TENANT_ID)
 
   try {
     const headersList = await headers()
     baseUrl = normalizeBaseUrlForSeo(getBaseUrl(headersList))
-    const host = headersList.get('x-forwarded-host') || headersList.get('host')
-    const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
-    variant = getLandingVariant(domain)
+    const hostLikeValue = headersList.get('x-forwarded-host') || headersList.get('host')
+    const tenantId = resolveTenantId(hostLikeValue) ?? DEFAULT_TENANT_ID
+    tenant = getTenantById(tenantId)
   } catch {
     baseUrl = normalizeBaseUrlForSeo(process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com')
-    variant = 'teamshotspro'
+    tenant = getTenantById(DEFAULT_TENANT_ID)
   }
 
   const entries: MetadataRoute.Sitemap = []
@@ -70,6 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const sharedRoutes = [
     '', // Landing page
     '/pricing',
+    '/contact',
     '/legal/privacy',
     '/legal/terms',
   ]
@@ -80,7 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   // Add TeamShotsPro-specific routes
-  if (variant === 'teamshotspro') {
+  if (tenant.id === 'teamshotspro') {
     for (const route of teamshotsproRoutes) {
       for (const locale of routing.locales) {
         const path = locale === 'en' ? route : `/${locale}${route}`
@@ -108,18 +109,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Get published content from CMS database
-  const brandId = variantToBrandId(variant)
+  const brandId = tenant.cmsBrandId
   const { blogSlugs, solutionSlugs } = getAllPublishedSlugs(brandId)
 
   // Add blog routes
-  if (blogSlugs.length > 0 || variant === 'teamshotspro' || variant === 'individualshots') {
-    // Blog index page
+  if (tenant.features.blog) {
+    // Blog index page — use most recent post date
+    const latestBlogDate = blogSlugs.length > 0
+      ? blogSlugs.reduce((latest, s) => {
+          const d = parsePublishedDate(s.publishedAt)
+          return d && (!latest || d > latest) ? d : latest
+        }, null as Date | null) ?? STATIC_LAST_MODIFIED
+      : STATIC_LAST_MODIFIED
+
     for (const locale of routing.locales) {
       const path = locale === 'en' ? '/blog' : `/${locale}/blog`
       entries.push({
         url: `${baseUrl}${path}`,
-        lastModified: new Date(),
-        changeFrequency: 'daily',
+        lastModified: latestBlogDate,
+        changeFrequency: 'weekly',
         priority: 0.9,
       })
     }
@@ -147,7 +155,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Add solution routes (TeamShotsPro only)
-  if (variant === 'teamshotspro') {
+  if (tenant.features.solutions) {
     // From CMS database
     for (const { en, es, publishedAt } of solutionSlugs) {
       entries.push({

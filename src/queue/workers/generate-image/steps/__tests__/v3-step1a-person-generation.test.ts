@@ -12,6 +12,11 @@ describe('projectForStep1a', () => {
           color_palette: ['black', 'white', 'navy'],
           style: 'business-formal',
         },
+        pose: {
+          description: 'High-level pose summary',
+          detailed_instructions: 'Precise pose details',
+          body_angle: 'Angled 45 degrees away from camera',
+        },
       },
       framing: {
         shot_type: 'medium-shot',
@@ -45,6 +50,11 @@ describe('projectForStep1a', () => {
     expect((projected.subject as Record<string, unknown>)?.wardrobe).toEqual({
       color_palette: ['black', 'white', 'navy'],
       style: 'business-formal',
+    })
+
+    expect((projected.subject as Record<string, unknown>)?.pose).toEqual({
+      detailed_instructions: 'Precise pose details',
+      body_angle: 'Angled 45 degrees away from camera',
     })
 
     expect(projected.scene).toEqual({
@@ -120,5 +130,135 @@ describe('executeV3Step1a prompt artifact pass-through', () => {
     expect(prompt).toContain('Keep natural skin texture')
     expect(prompt).toContain('Use soft shadows under the jawline')
     expect(prompt).toContain('**Wardrobe colors:** Follow the wardrobe color guidance in the prompt JSON exactly')
+  })
+
+  it('adds explicit precedence when accessory removal is configured', async () => {
+    await executeV3Step1a({
+      selfieReferences: [
+        {
+          base64: Buffer.from('selfie').toString('base64'),
+          mimeType: 'image/jpeg',
+          description: 'Reference selfie 1',
+        },
+      ],
+      styleSettings: {} as PhotoStyleSettings,
+      downloadAsset: jest.fn(),
+      aspectRatio: '1:1',
+      aspectRatioConfig: { id: '1:1', width: 1024, height: 1024 },
+      expectedWidth: 1024,
+      expectedHeight: 1024,
+      canonicalPrompt: {
+        subject: {
+          beautification: {
+            accessories: {
+              facialHair: { action: 'remove' },
+            },
+          },
+        },
+        framing: { shot_type: 'medium-shot' },
+      },
+      step1aArtifacts: {
+        mustFollowRules: ['Preserve face identity'],
+        freedomRules: [],
+      },
+      generationId: 'gen-test-accessory-remove',
+      personId: 'person-test',
+      debugMode: false,
+    })
+
+    const prompt = (generateWithGemini as jest.Mock).mock.calls[0][0] as string
+
+    expect(prompt).toContain('Directive precedence: Explicit accessory REMOVE actions')
+    expect(prompt).toContain('Mandatory removals for this generation: facial hair')
+    expect(prompt).toContain('must be absent in the output even if visible in selfie references')
+  })
+
+  it('deduplicates repeated instructions and removes preserve facial-hair conflicts when removal is required', async () => {
+    await executeV3Step1a({
+      selfieReferences: [
+        {
+          base64: Buffer.from('selfie').toString('base64'),
+          mimeType: 'image/jpeg',
+          description: 'Reference selfie 1',
+        },
+      ],
+      styleSettings: {} as PhotoStyleSettings,
+      downloadAsset: jest.fn(),
+      aspectRatio: '1:1',
+      aspectRatioConfig: { id: '1:1', width: 1024, height: 1024 },
+      expectedWidth: 1024,
+      expectedHeight: 1024,
+      canonicalPrompt: {
+        subject: {
+          beautification: {
+            accessories: {
+              facialHair: { action: 'remove' },
+            },
+          },
+        },
+        framing: { shot_type: 'medium-shot' },
+      },
+      step1aArtifacts: {
+        mustFollowRules: [
+          'Preserve facial hair exactly as shown in the selfie references.',
+          'Preserve facial hair exactly as shown in the selfie references.',
+          'Keep lighting neutral and even on the subject. Do not apply scene-specific dramatic or directional lighting in this step.',
+        ],
+        freedomRules: [
+          'Subtle color grading to enhance professional appearance',
+          'Subtle color grading to enhance professional appearance',
+        ],
+      },
+      generationId: 'gen-test-dedupe-conflict',
+      personId: 'person-test',
+      debugMode: false,
+    })
+
+    const prompt = (generateWithGemini as jest.Mock).mock.calls[0][0] as string
+
+    expect(prompt).not.toContain('Preserve facial hair exactly as shown in the selfie references.')
+    expect(prompt).toContain('Mandatory removals for this generation: facial hair')
+    expect(
+      prompt.split('Keep lighting neutral and even on the subject. Do not apply scene-specific dramatic or directional lighting in this step.').length - 1
+    ).toBe(1)
+    expect(prompt.split('Subtle color grading to enhance professional appearance').length - 1).toBe(1)
+  })
+
+  it('requires visible belt guidance when belt is an inherent accessory in waist-revealing shots', async () => {
+    await executeV3Step1a({
+      selfieReferences: [
+        {
+          base64: Buffer.from('selfie').toString('base64'),
+          mimeType: 'image/jpeg',
+          description: 'Reference selfie 1',
+        },
+      ],
+      styleSettings: {} as PhotoStyleSettings,
+      downloadAsset: jest.fn(),
+      aspectRatio: '1:1',
+      aspectRatioConfig: { id: '1:1', width: 1024, height: 1024 },
+      expectedWidth: 1024,
+      expectedHeight: 1024,
+      canonicalPrompt: {
+        subject: {
+          wardrobe: {
+            inherent_accessories: ['belt'],
+          },
+        },
+        framing: { shot_type: 'medium-shot' },
+      },
+      step1aArtifacts: {
+        mustFollowRules: [],
+        freedomRules: [],
+      },
+      generationId: 'gen-test-belt-guidance',
+      personId: 'person-test',
+      debugMode: false,
+    })
+
+    const prompt = (generateWithGemini as jest.Mock).mock.calls[0][0] as string
+    expect(prompt).toContain('Belt visibility requirement')
+    expect(prompt).toContain('Belt styling requirement')
+    expect(prompt).toContain('distinct from the trousers color')
   })
 })

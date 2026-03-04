@@ -37,7 +37,6 @@ import type { AIModelId, AIProvider } from '@/config/ai-costs'
 import { type ReferenceImage } from './utils/reference-builder'
 import {
   executeWithRateLimitRetry,
-  formatProgressWithAttempt,
   updateJobProgress,
   createProgressRetryCallback,
 } from './utils/retry-handler'
@@ -51,7 +50,7 @@ import {
 import { logStepStart } from './utils/logging'
 import { EvaluationFailedError } from './errors'
 import type { ImageEvaluationResult } from './evaluator'
-import { getProgressMessage } from '@/lib/generation-progress-messages'
+import { getProgressMessage, formatProgressWithAttempt } from '@/lib/generation-progress-messages'
 
 import { RETRY_CONFIG, PROGRESS_STEPS, STAGE_MODEL, STAGE_RESOLUTION } from './config'
 
@@ -93,6 +92,7 @@ export interface V3WorkflowInput {
   generationId: string
   personId: string
   teamId?: string
+  packageId?: string
   selfieReferences: { label?: string; base64: string; mimeType: string }[]
   selfieAssetIds?: string[]
   demographics?: import('@/domain/selfie/selfieDemographics').DemographicProfile
@@ -128,6 +128,7 @@ export async function executeV3Workflow({
   generationId,
   personId,
   teamId,
+  packageId,
   selfieReferences,
   selfieAssetIds,
   demographics,
@@ -260,6 +261,7 @@ export async function executeV3Workflow({
       const built = await buildCanonicalPromptV3({
         basePrompt,
         styleSettings,
+        packageId,
         demographics,
         hasFaceComposite: Boolean(faceComposite),
         hasBodyComposite: Boolean(bodyComposite),
@@ -281,6 +283,7 @@ export async function executeV3Workflow({
       const built = await buildCanonicalPromptV3({
         basePrompt,
         styleSettings,
+        packageId,
         demographics,
         hasFaceComposite: Boolean(faceComposite),
         hasBodyComposite: Boolean(bodyComposite),
@@ -646,6 +649,7 @@ export async function executeV3Workflow({
               aspectRatioConfig,
               generationPrompt: JSON.stringify(projectForStep1a(canonicalPrompt)),
               garmentCollageReference,
+              mustFollowRules: step1aArtifacts.mustFollowRules,
               generationId,
               personId,
               teamId,
@@ -834,6 +838,7 @@ export async function executeV3Workflow({
                 backgroundFormatForStep2?.mimeType ??
                 (preparedCustomBackgroundBuffer ? preparedCustomBackgroundMimeType : undefined),
               styleSettings,
+              selfieCompositeReference: selfieComposite,
               faceCompositeReference,
               bodyCompositeReference,
               evaluatorComments: compositionComments.length > 0 ? compositionComments : undefined,
@@ -953,7 +958,6 @@ export async function executeV3Workflow({
             actualHeight: metadata.height ?? null,
             dimensionMismatch: isDimensionFailure,
             aspectMismatch: isDimensionFailure,
-            selfieDuplicate: false,
             matchingReferenceLabel: null,
             uncertainCount: undefined,
             autoReject: true,
@@ -1006,7 +1010,6 @@ export async function executeV3Workflow({
             Math.abs(actualHeight - scaledExpectedHeight) > 50,
           aspectMismatch:
             actualRatio === null ? true : Math.abs(actualRatio - expectedRatio) > 0.05,
-          selfieDuplicate: false,
           matchingReferenceLabel: null,
           uncertainCount: undefined,
           autoReject: false,

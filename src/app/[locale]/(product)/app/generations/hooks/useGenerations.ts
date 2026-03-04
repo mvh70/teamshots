@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import type { GenerationListItem } from '../components/GenerationCard'
+import { useGenerationFilters } from '@/hooks/useGenerationFilters'
 import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
 const noStoreRequestInit = {
@@ -66,6 +67,7 @@ export function useGenerations(
 ) {
   const [page, setPage] = useState(1)
   const previousGenerationsRef = useRef<GenerationListItem[]>([])
+  const previousKeyRef = useRef<string | null>(null)
   const notifiedFailuresRef = useRef<Set<string>>(new Set())
 
   const effectiveTeamView = teamView || 'mine'
@@ -115,48 +117,6 @@ export function useGenerations(
         // Poll every 2s when active, 30s otherwise
         return hasActiveGenerations ? 2000 : 30000
       },
-      onSuccess: async (data) => {
-        const rawItems = data?.generations || data?.items || []
-        const currentGenerations = rawItems.map(mapGeneration)
-
-        // Handle failure notifications
-        if (onGenerationFailed && previousGenerationsRef.current.length > 0) {
-          const previousProcessingIds = previousGenerationsRef.current
-            .filter(g => g.status === 'processing' || g.status === 'pending')
-            .map(g => g.id)
-          const currentIds = new Set(currentGenerations.map(g => g.id))
-          const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
-
-          if (removedProcessingIds.length > 0) {
-            await Promise.all(
-              removedProcessingIds
-                .filter(id => !notifiedFailuresRef.current.has(id))
-                .map(async (id) => {
-                  try {
-                    const detail = await swrFetcher<{ status: string; errorMessage?: string }>(
-                      `/api/generations/${id}`,
-                      {
-                        cache: 'no-store',
-                        headers: {
-                          'Cache-Control': 'no-cache',
-                          Pragma: 'no-cache'
-                        }
-                      }
-                    )
-                    if (detail.status === 'failed') {
-                      notifiedFailuresRef.current.add(id)
-                      onGenerationFailed({ id, errorMessage: detail.errorMessage })
-                    }
-                  } catch {
-                    // Ignore fetch errors for removed generations
-                  }
-                })
-            )
-          }
-        }
-
-        previousGenerationsRef.current = currentGenerations
-      },
     }
   )
 
@@ -165,9 +125,75 @@ export function useGenerations(
   const generated = useMemo(() => rawItems.map(mapGeneration), [rawItems])
   const pagination = generationsData?.pagination || null
 
+  useEffect(() => {
+    // Reset baseline whenever the list key changes (page, scope, team view, user filter)
+    // so removals from a previous view are not treated as failures in the new view.
+    if (previousKeyRef.current !== generationsKey) {
+      previousGenerationsRef.current = generated
+      previousKeyRef.current = generationsKey
+      return
+    }
+
+    if (!onGenerationFailed || previousGenerationsRef.current.length === 0) {
+      previousGenerationsRef.current = generated
+      return
+    }
+
+    const previousProcessingIds = previousGenerationsRef.current
+      .filter(g => g.status === 'processing' || g.status === 'pending')
+      .map(g => g.id)
+    const currentIds = new Set(generated.map(g => g.id))
+    const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
+
+    if (removedProcessingIds.length === 0) {
+      previousGenerationsRef.current = generated
+      return
+    }
+
+    let cancelled = false
+
+    const notifyRemovedFailures = async () => {
+      await Promise.all(
+        removedProcessingIds
+          .filter(id => !notifiedFailuresRef.current.has(id))
+          .map(async (id) => {
+            try {
+              const detail = await swrFetcher<{ status: string; errorMessage?: string }>(
+                `/api/generations/${id}`,
+                {
+                  cache: 'no-store',
+                  headers: {
+                    'Cache-Control': 'no-cache',
+                    Pragma: 'no-cache'
+                  }
+                }
+              )
+              if (!cancelled && detail.status === 'failed') {
+                notifiedFailuresRef.current.add(id)
+                onGenerationFailed({ id, errorMessage: detail.errorMessage })
+              }
+            } catch {
+              // Ignore fetch errors for removed generations
+            }
+          })
+      )
+      if (!cancelled) {
+        previousGenerationsRef.current = generated
+      }
+    }
+
+    void notifyRemovedFailures()
+
+    return () => {
+      cancelled = true
+    }
+  }, [generated, onGenerationFailed, generationsKey])
+
   // Reset to page 1 when filters change
   useEffect(() => {
-    setPage(1)
+    queueMicrotask(() => {
+      setPage(1)
+    })
   }, [scope, effectiveTeamView, selectedUserId])
 
   const loadMore = useCallback(() => {
@@ -183,42 +209,4 @@ export function useGenerations(
   return { generated, teamUsers, pagination, loading: isLoading, loadMore, loadGenerations }
 }
 
-export function useGenerationFilters(initialUserFilter: string = 'me') {
-  const [timeframe, setTimeframe] = useState<'all' | '7d' | '30d'>('all')
-  const [context, setContext] = useState<string>('all')
-  const [userFilter, setUserFilter] = useState<string>(initialUserFilter)
-  const [selectedUserId, setSelectedUserId] = useState<string>('all')
-
-  const filterGenerated = useCallback((items: GenerationListItem[]) => {
-    const now = Date.now()
-    const inTimeframe = (date: string) => {
-      if (timeframe === 'all') return true
-      const diff = now - new Date(date).getTime()
-      return timeframe === '7d' ? diff <= 7 * 86400000 : diff <= 30 * 86400000
-    }
-    
-    // Normalize context name for comparison (handle null, undefined, empty string)
-    const normalizeContextName = (name: string | undefined | null): string => {
-      if (!name || name.trim() === '') return 'Freestyle'
-      return name.trim()
-    }
-    
-    return items.filter(
-      i =>
-        inTimeframe(i.createdAt) &&
-        (context === 'all' || normalizeContextName(i.contextName) === context)
-    )
-  }, [timeframe, context])
-
-  return {
-    timeframe,
-    context,
-    userFilter,
-    selectedUserId,
-    setTimeframe,
-    setContext,
-    setUserFilter,
-    setSelectedUserId,
-    filterGenerated,
-  }
-}
+export { useGenerationFilters }

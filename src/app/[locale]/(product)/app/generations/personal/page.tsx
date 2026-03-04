@@ -186,6 +186,7 @@ export default function PersonalGenerationsPage() {
               <GenerationCard
                 key={item.id}
                 item={item}
+                disableIndividualPolling
                 onImageClick={(src) => setLightboxImage({ src, personName: tg('generatedBy.you') })}
               />
             ))}

@@ -6,7 +6,14 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import type { Gender, AgeCategory, Ethnicity, SelfieClassification } from './selfie-types'
+import {
+  type Gender,
+  type AgeCategory,
+  type Ethnicity,
+  type SelfieClassificationAny,
+  isSelfieClassificationV1,
+  isSelfieClassificationV2,
+} from './selfie-types'
 
 /** Minimum confidence threshold for using demographic data */
 const CONFIDENCE_THRESHOLD = 0.7
@@ -46,7 +53,11 @@ function extractDemographics(selfie: SelfieWithClassification): ExtractedDemogra
     return {}
   }
 
-  const classification = selfie.classification as SelfieClassification
+  const classification = selfie.classification as SelfieClassificationAny
+  if (!isSelfieClassificationV1(classification) && !isSelfieClassificationV2(classification)) {
+    return {}
+  }
+
   return classification.demographics || {}
 }
 

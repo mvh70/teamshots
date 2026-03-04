@@ -3,15 +3,17 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 import { GoogleTagManager } from '@next/third-parties/google'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
-import { getBrand } from '@/config/brand'
+import { getBrandByDomain } from '@/config/brand'
+import { getTenant } from '@/config/tenant-server'
 import { getBaseUrl } from '@/lib/url'
 import { headers } from 'next/headers'
 import { getLocale } from 'next-intl/server'
 import './globals.css'
 
 export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getTenant()
+  const brandConfig = getBrandByDomain(tenant.domain)
   const headersList = await headers()
-  const brandConfig = getBrand(headersList)
   const baseUrl = getBaseUrl(headersList)
 
   return {

@@ -1,12 +1,11 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useParams } from 'next/navigation'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import GenerateButton from '@/components/generation/GenerateButton'
@@ -14,86 +13,35 @@ import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
-import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
-import { SwipeableContainer, FlowProgressDock, FlowNavigation, CustomizationMobileFooter } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowProgressDock, CustomizationMobileFooter, StandardThreeStepIndicator } from '@/components/generation/navigation'
 import { trackInvitedMemberGenerationStarted } from '@/lib/track'
-import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
-import { DEFAULT_CUSTOMIZATION_STEPS_META, buildSelfieStepIndicator } from '@/lib/customizationSteps'
+import { DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
 import { loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
 import { mergeSavedUserChoiceStyleSettings } from '@/lib/style-settings-merge'
+import { getChangedDesktopStepIndices, mergeVisitedStepIndices } from '@/lib/desktop-progress'
 import { usePersistedStringSet } from '@/hooks/usePersistedStringSet'
-
-const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+import { buildAllowedStyleRequestKeys } from '@/domain/style/style-setting-allowlists'
+import { useInviteFlowNavigation } from '@/hooks/useInviteFlowNavigation'
+import { useInviteStats } from '@/hooks/useInviteStats'
+import { isRecord } from '@/lib/type-guards'
+import { Toast } from '@/components/ui'
+import FlowPageSkeleton from '@/components/generation/loading/FlowPageSkeleton'
+import { parseInviteSelfiesResponse } from '@/lib/inviteSelfies'
+import { getAcceptedOnVisitKeysForPackage } from '@/domain/style/userChoice'
+import type { InviteDashboardStats } from '@/types/invite'
+import { useDemographicsLoader } from '@/hooks/useDemographicsLoader'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
-
-interface InviteData {
-  email: string
-  teamName: string
-  creditsAllocated: number
-  expiresAt: string
-  hasActiveContext: boolean
-  personId: string
-  firstName: string
-  lastName?: string
-  contextId?: string
-}
-
-interface DashboardStats {
-  photosGenerated: number
-  creditsRemaining: number
-  selfiesUploaded: number
-  teamPhotosGenerated: number
-  adminName?: string | null
-  adminEmail?: string | null
-}
 
 interface Selfie {
   id: string
   key: string
   used?: boolean
-}
-
-function parseInviteSelfiesResponse(data: unknown): Selfie[] {
-  if (!isNonNullObject(data)) {
-    return []
-  }
-
-  if (Array.isArray((data as { items?: unknown }).items)) {
-    return ((data as { items: unknown[] }).items)
-      .filter((item): item is { id: string; uploadedKey: string; hasGenerations?: boolean } =>
-        isNonNullObject(item) &&
-        typeof item.id === 'string' &&
-        typeof item.uploadedKey === 'string'
-      )
-      .map((item) => ({
-        id: item.id,
-        key: item.uploadedKey,
-        used: Boolean(item.hasGenerations),
-      }))
-  }
-
-  if (Array.isArray((data as { selfies?: unknown }).selfies)) {
-    return ((data as { selfies: unknown[] }).selfies)
-      .filter((item): item is { id: string; key: string; used?: boolean } =>
-        isNonNullObject(item) &&
-        typeof item.id === 'string' &&
-        typeof item.key === 'string'
-      )
-      .map((item) => ({
-        id: item.id,
-        key: item.key,
-        used: Boolean(item.used),
-      }))
-  }
-
-  return []
 }
 
 /**
@@ -107,21 +55,23 @@ function parseInviteSelfiesResponse(data: unknown): Selfie[] {
  */
 export default function InviteCustomizationPage() {
   const params = useParams()
-  const router = useRouter()
   const t = useTranslations('inviteDashboard')
   const token = params.token as string
+  const navigation = useInviteFlowNavigation(token)
 
-  const [inviteData, setInviteData] = useState<InviteData | null>(null)
-  const [stats, setStats] = useState<DashboardStats>({
-    photosGenerated: 0,
-    creditsRemaining: 0,
-    selfiesUploaded: 0,
-    teamPhotosGenerated: 0
+  const { stats, refreshStats: refreshInviteStats } = useInviteStats<InviteDashboardStats>(token, {
+    initialStats: {
+      photosGenerated: 0,
+      creditsRemaining: 0,
+      selfiesUploaded: 0,
+      teamPhotosGenerated: 0,
+    },
   })
-
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resolvedContextId, setResolvedContextId] = useState<string | undefined>(undefined)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const [availableSelfies, setAvailableSelfies] = useState<Selfie[]>([])
   const [activeMobileStepInfo, setActiveMobileStepInfo] = useState<{ type: MobileStep['type'] | null, id: string | null, index: number }>({
@@ -129,7 +79,6 @@ export default function InviteCustomizationPage() {
     id: null,
     index: 0
   })
-  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
   // Navigation methods exposed by PhotoStyleSettings
   const [navMethods, setNavMethods] = useState<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
   // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
@@ -138,19 +87,28 @@ export default function InviteCustomizationPage() {
   const isSwipeEnabled = useSwipeEnabled()
 
   const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useUploadSelfieEndpoints(token, 'invite')
+  // Intentionally keep direct `useGenerationFlowState` usage here.
+  // This page receives authoritative step metadata from `StyleSettingsSection`
+  // and avoids the extra invite-meta synchronization side effects.
   const {
     clearFlow,
     hydrated,
     setCustomizationStepsMeta,
     customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
-    visitedSteps: persistedVisitedIndices
-  } = useGenerationFlowState()
+    visitedSteps: persistedVisitedIndices,
+    setVisitedSteps: setPersistedVisitedSteps
+  } = useGenerationFlowState({
+    syncBeautificationFromSession: true,
+    beautificationScope: `invite_${token}`,
+    flowScope: token,
+  })
 
   // Multi-select: load and manage selected selfies for invited flow
-  const { selectedSet, selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
+  const { selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
 
   // Photo style settings
   const [photoStyleSettings, setPhotoStyleSettingsRaw] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
+  const latestPhotoStyleSettingsRef = useRef(photoStyleSettings)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [packageId, setPackageId] = useState<string>('headshot1')
   const acceptedVisitStorageKey = useMemo(
@@ -164,62 +122,54 @@ export default function InviteCustomizationPage() {
   } = usePersistedStringSet(acceptedVisitStorageKey)
 
   const mergeSavedStyleSettings = useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
+    const pkg = getPackageConfig(packageId || 'headshot1')
     return mergeSavedUserChoiceStyleSettings({
       settings,
       savedSettings: loadStyleSettings(styleSettingsStorageScope),
+      visibleCategories: pkg.visibleCategories,
     })
-  }, [styleSettingsStorageScope])
+  }, [styleSettingsStorageScope, packageId])
+
+  useEffect(() => {
+    latestPhotoStyleSettingsRef.current = photoStyleSettings
+  }, [photoStyleSettings])
 
   // Wrapper for setPhotoStyleSettings that also marks steps as visited on desktop
+  // and persists immediately to avoid losing quick changes on navigation.
   const setPhotoStyleSettings = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
-    // Get current settings to detect changes
-    setPhotoStyleSettingsRaw(prev => {
-      const updated = typeof newSettings === 'function' ? newSettings(prev) : newSettings
+    const current = latestPhotoStyleSettingsRef.current
+    const updated = typeof newSettings === 'function' ? newSettings(current) : newSettings
 
-      // On desktop, detect which fields changed and mark them as visited
-      // Use setTimeout to avoid setting state inside state setter
-      if (!isMobileViewport && customizationStepsMeta.stepKeys) {
-        const changedKeys: string[] = []
-        for (const key of customizationStepsMeta.stepKeys) {
-          const prevValue = (prev as Record<string, unknown>)[key]
-          const newValue = (updated as Record<string, unknown>)[key]
-          if (JSON.stringify(prevValue) !== JSON.stringify(newValue)) {
-            changedKeys.push(key)
-          }
-        }
+    latestPhotoStyleSettingsRef.current = updated
+    setPhotoStyleSettingsRaw(updated)
 
-        if (changedKeys.length > 0) {
-          // Schedule state update outside of the setter callback
-          setTimeout(() => {
-            setVisitedSteps(prevVisited => {
-              const newSet = new Set(prevVisited)
-              for (const key of changedKeys) {
-                newSet.add(key)
-              }
-              return newSet
-            })
-          }, 0)
-        }
+    if (!isMobileViewport && customizationStepsMeta.stepKeys) {
+      const changedIndices = getChangedDesktopStepIndices(
+        current as Record<string, unknown>,
+        updated as Record<string, unknown>,
+        customizationStepsMeta.stepKeys
+      )
+
+      if (changedIndices.length > 0) {
+        setTimeout(() => {
+          setPersistedVisitedSteps((prevVisited) =>
+            mergeVisitedStepIndices(prevVisited, changedIndices)
+          )
+        }, 0)
       }
-
-      return updated
-    })
-  }, [isMobileViewport, customizationStepsMeta.stepKeys])
-
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const statsResponse = await fetch(`/api/team/member/stats?token=${token}`)
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        if (!isNonNullObject(statsData) || !isNonNullObject(statsData.stats)) {
-          throw new Error('Invalid stats response')
-        }
-        setStats(statsData.stats as unknown as DashboardStats)
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
     }
-  }, [token])
+
+    if (hydrated && originalContextSettings) {
+      saveStyleSettings(updated, styleSettingsStorageScope)
+    }
+  }, [
+    customizationStepsMeta.stepKeys,
+    hydrated,
+    isMobileViewport,
+    originalContextSettings,
+    setPersistedVisitedSteps,
+    styleSettingsStorageScope,
+  ])
 
   const loadContextSettings = useCallback(async () => {
     try {
@@ -231,8 +181,8 @@ export default function InviteCustomizationPage() {
 
       const data = await response.json()
       if (
-        !isNonNullObject(data) ||
-        (data.context && !isNonNullObject(data.context))
+        !isRecord(data) ||
+        (data.context && !isRecord(data.context))
       ) {
         throw new Error('Invalid context payload')
       }
@@ -242,6 +192,7 @@ export default function InviteCustomizationPage() {
       }
 
       const contextData = data.context as { id: string; settings?: Record<string, unknown> }
+      setResolvedContextId(contextData.id)
 
       const { extractPackageId } = await import('@/domain/style/settings-resolver')
       const extractedPackageId = (data.packageId as string | undefined) || extractPackageId(contextData.settings ?? {}) || 'headshot1'
@@ -256,48 +207,14 @@ export default function InviteCustomizationPage() {
       setPackageId(pkg.id)
     } catch (error) {
       console.error('Error loading context settings:', error)
+      setResolvedContextId(undefined)
       const headshot1Pkg = getPackageConfig('headshot1')
       const fallbackSettings = headshot1Pkg.defaultSettings
       setPhotoStyleSettings(mergeSavedStyleSettings(fallbackSettings))
       setOriginalContextSettings(fallbackSettings)
       setPackageId('headshot1')
     }
-  }, [token, mergeSavedStyleSettings])
-
-  const validateInvite = useCallback(async () => {
-    try {
-      const response = await fetch('/api/team/invites/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      })
-
-      const data = await response.json()
-      if (!isNonNullObject(data)) {
-        throw new Error('Invalid invite response')
-      }
-
-      if (response.ok) {
-        if (!isNonNullObject(data.invite)) {
-          throw new Error('Invalid invite payload')
-        }
-        setInviteData(data.invite as unknown as InviteData)
-
-        await loadContextSettings()
-
-        if ((data.invite as unknown as InviteData).personId) {
-          await fetchDashboardData()
-        }
-      } else {
-        const errorText = (data as { error?: string }).error
-        setError(errorText || 'Failed to validate invite')
-      }
-    } catch {
-      setError('Failed to validate invite')
-    } finally {
-      setLoading(false)
-    }
-  }, [token, fetchDashboardData, loadContextSettings])
+  }, [token, mergeSavedStyleSettings, setPhotoStyleSettings])
 
   const fetchAvailableSelfies = useCallback(async () => {
     try {
@@ -319,9 +236,9 @@ export default function InviteCustomizationPage() {
       if (selfieId) {
         await toggleSelect(selfieId, true)
       } else {
-        await fetchAvailableSelfies()
-        const updatedResponse = await fetch(`/api/team/member/selfies?token=${token}`, {
-          credentials: 'include'
+        const updatedResponse = await fetch(`/api/team/member/selfies?token=${token}&t=${Date.now()}`, {
+          credentials: 'include',
+          cache: 'no-store' as RequestCache,
         })
         if (!updatedResponse.ok) {
           throw new Error('Failed to refresh selfies')
@@ -333,64 +250,76 @@ export default function InviteCustomizationPage() {
           await toggleSelect(newSelfie.id, true)
         }
       }
-      await loadSelected()
-      await fetchAvailableSelfies()
     } catch (error) {
       console.error('Error selecting newly uploaded selfie:', error)
     }
-  }, [toggleSelect, fetchAvailableSelfies, loadSelected, token])
+  }, [toggleSelect, token])
 
   const handleMobileUploadApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
-    for (const { key, selfieId } of results) {
-      await selectUploadedSelfie(key, selfieId)
-    }
-  }, [selectUploadedSelfie])
+    await Promise.all(results.map(({ key, selfieId }) => selectUploadedSelfie(key, selfieId)))
+    await Promise.all([loadSelected(), fetchAvailableSelfies()])
+  }, [selectUploadedSelfie, loadSelected, fetchAvailableSelfies])
 
   useEffect(() => {
-    if (token) {
-      validateInvite()
+    if (!token) return
+
+    let cancelled = false
+    const initialize = async () => {
+      setLoading(true)
+      await Promise.all([
+        loadContextSettings(),
+        refreshInviteStats(),
+      ])
+
+      if (!cancelled) {
+        setLoading(false)
+      }
     }
-  }, [token, validateInvite])
+
+    void initialize()
+
+    return () => {
+      cancelled = true
+    }
+  }, [token, loadContextSettings, refreshInviteStats])
 
   // Fetch selfies and selections on mount
   useEffect(() => {
     fetchAvailableSelfies()
-    loadSelected()
-  }, [fetchAvailableSelfies, loadSelected])
-
-  // Initialize local visitedSteps from persisted session storage
-  // Convert persisted indices to step keys using customizationStepsMeta.stepKeys
-  useEffect(() => {
-    if (persistedVisitedIndices.length > 0 && customizationStepsMeta.stepKeys) {
-      const stepKeys = customizationStepsMeta.stepKeys
-      const visitedKeys = persistedVisitedIndices
-        .map(idx => stepKeys[idx])
-        .filter((key): key is string => !!key)
-      if (visitedKeys.length > 0) {
-        setVisitedSteps(prev => {
-          // Only update if we have new keys to add
-          const newSet = new Set(prev)
-          let hasNew = false
-          for (const key of visitedKeys) {
-            if (!newSet.has(key)) {
-              newSet.add(key)
-              hasNew = true
-            }
-          }
-          return hasNew ? newSet : prev
-        })
-      }
-    }
-  }, [persistedVisitedIndices, customizationStepsMeta.stepKeys])
+  }, [fetchAvailableSelfies])
 
   // Filter selectedIds to only include selfies that actually exist
   const validSelectedIds = useMemo(() =>
     selectedIds.filter(id => availableSelfies.some(s => s.id === id)),
     [selectedIds, availableSelfies]
   )
-  const acceptedOnVisitKeys = useMemo(() => ['clothing', 'clothingColors', 'pose', 'expression', 'branding'], [])
+  const selectedSelfieIdsCsv = useMemo(
+    () => validSelectedIds.join(','),
+    [validSelectedIds]
+  )
+  const demographicsEndpoint = useMemo(() => {
+    const base = `/api/team/member/demographics?token=${encodeURIComponent(token)}`
+    if (!selectedSelfieIdsCsv) return base
+    return `${base}&selfieIds=${encodeURIComponent(selectedSelfieIdsCsv)}`
+  }, [token, selectedSelfieIdsCsv])
+  const { detectedGender } = useDemographicsLoader({
+    endpoint: demographicsEndpoint,
+    enabled: Boolean(token),
+  })
+  const visitedStepKeys = useMemo(() => {
+    const visited = new Set<string>(acceptedVisitedStepKeys)
+    const mappedKeys = (customizationStepsMeta.stepKeys ?? [])
+      .flatMap((stepKey, index) => (persistedVisitedIndices.includes(index) ? [stepKey] : []))
+    mappedKeys.forEach((key) => visited.add(key))
+    return visited
+  }, [acceptedVisitedStepKeys, customizationStepsMeta.stepKeys, persistedVisitedIndices])
+  const acceptedOnVisitKeys = useMemo(
+    () => getAcceptedOnVisitKeysForPackage(packageId || 'headshot1'),
+    [packageId]
+  )
 
   const {
+    uneditedFields,
     isCustomizationComplete,
     isClothingColorsEditable,
     hasVisitedClothingColorsIfEditable: hasVisitedClothingColors
@@ -400,8 +329,8 @@ export default function InviteCustomizationPage() {
     packageId: packageId || 'headshot1',
     stepKeys: customizationStepsMeta.stepKeys,
     editableSteps: customizationStepsMeta.editableSteps,
-    visitedStepKeys: visitedSteps,
-    visitedMobileStepKeys: visitedSteps,
+    visitedStepKeys,
+    visitedMobileStepKeys: visitedStepKeys,
     isMobileViewport,
     completionMode: 'values-or-visited',
     includeDefaultValues: false,
@@ -409,12 +338,6 @@ export default function InviteCustomizationPage() {
     acceptedOnVisitKeys: acceptedOnVisitKeys,
     acceptedOnVisitVisitedKeys: acceptedVisitedStepKeys
   })
-
-  // Persist invite customization settings by token scope across reloads.
-  useEffect(() => {
-    if (!hydrated || !originalContextSettings) return
-    saveStyleSettings(photoStyleSettings, styleSettingsStorageScope)
-  }, [photoStyleSettings, hydrated, originalContextSettings, styleSettingsStorageScope])
 
   const canGenerate = validSelectedIds.length >= 2 &&
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
@@ -442,7 +365,7 @@ export default function InviteCustomizationPage() {
     }
 
     if (!isCustomizationComplete) {
-      const stepsVisited = visitedSteps.size
+      const stepsVisited = visitedStepKeys.size
       const stepsRequired = customizationStepsMeta.editableSteps
       reasons.push(t('styleSelection.disabledReasons.needCustomization', {
         visited: stepsVisited,
@@ -455,7 +378,13 @@ export default function InviteCustomizationPage() {
     }
 
     return reasons.length > 0 ? reasons.join('. ') : undefined
-  }, [canGenerate, validSelectedIds.length, stats.creditsRemaining, isCustomizationComplete, hasVisitedClothingColors, isMobileViewport, isClothingColorsEditable, visitedSteps.size, customizationStepsMeta.editableSteps, t])
+  }, [canGenerate, validSelectedIds.length, stats.creditsRemaining, isCustomizationComplete, hasVisitedClothingColors, isMobileViewport, isClothingColorsEditable, visitedStepKeys.size, customizationStepsMeta.editableSteps, t])
+
+  const markStepVisitedByKey = useCallback((stepKey: string) => {
+    const stepIndex = customizationStepsMeta.stepKeys?.indexOf(stepKey) ?? -1
+    if (stepIndex < 0) return
+    setPersistedVisitedSteps((prev) => (prev.includes(stepIndex) ? prev : [...prev, stepIndex]))
+  }, [customizationStepsMeta.stepKeys, setPersistedVisitedSteps])
 
   const handleMobileStepChange = useCallback((step: MobileStep | null, stepIndex?: number) => {
     const stepId = step?.custom?.id ?? step?.category?.key ?? null
@@ -465,11 +394,7 @@ export default function InviteCustomizationPage() {
       index: stepIndex ?? 0
     })
     if (stepId) {
-      setVisitedSteps(prev => {
-        const newSet = new Set(prev)
-        newSet.add(stepId)
-        return newSet
-      })
+      markStepVisitedByKey(stepId)
       setAcceptedVisitedStepKeys(prev => {
         if (prev.has(stepId)) return prev
         const next = new Set(prev)
@@ -477,7 +402,7 @@ export default function InviteCustomizationPage() {
         return next
       })
     }
-  }, [])
+  }, [markStepVisitedByKey, setAcceptedVisitedStepKeys])
 
   const handleCategoryVisit = useCallback((categoryKey: string) => {
     setAcceptedVisitedStepKeys(prev => {
@@ -486,52 +411,35 @@ export default function InviteCustomizationPage() {
       next.add(categoryKey)
       return next
     })
-    setVisitedSteps(prev => {
-      if (prev.has(categoryKey)) return prev
-      const next = new Set(prev)
-      next.add(categoryKey)
-      return next
-    })
-  }, [])
+    markStepVisitedByKey(categoryKey)
+  }, [markStepVisitedByKey, setAcceptedVisitedStepKeys])
 
   // Navigation helper: go back to customization intro
   const handleBack = useCallback(() => {
-    router.push(`/invite-dashboard/${token}/customization-intro`)
-  }, [router, token])
+    navigation.toCustomizationIntro()
+  }, [navigation])
 
   // Navigation helper: go back to dashboard
   const goBackToDashboard = useCallback(() => {
     clearFlow()
-    router.replace(`/invite-dashboard/${token}`)
-  }, [clearFlow, router, token])
+    navigation.replaceDashboard()
+  }, [clearFlow, navigation])
 
   // Navigation handlers for FlowProgressDock
-  const handleNavigateToSelfies = useCallback(() => {
-    router.push(`/invite-dashboard/${token}/selfies`)
-  }, [router, token])
-
-  const handleNavigateToCustomize = useCallback(() => {
-    // Already here
-  }, [])
-
-  const handleNavigateToSelfieTips = useCallback(() => {
-    router.push(`/invite-dashboard/${token}/selfie-tips`)
-  }, [router, token])
-
-  const handleNavigateToCustomizationIntro = useCallback(() => {
-    router.push(`/invite-dashboard/${token}/customization-intro`)
-  }, [router, token])
+  const handleNavigateToBeautification = useCallback(() => {
+    navigation.toBeautification()
+  }, [navigation])
 
   const onProceed = async () => {
     // Require at least 2 selfies for generation
     if (validSelectedIds.length < 2) {
-      alert(t('alerts.selectAtLeastTwoSelfies'))
+      setToastMessage(t('alerts.selectAtLeastTwoSelfies'))
       return
     }
 
     // Validate all customizable sections are customized
     if (!isCustomizationComplete) {
-      alert(t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }))
+      setToastMessage(t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }))
       return
     }
 
@@ -545,7 +453,7 @@ export default function InviteCustomizationPage() {
         : stats.adminEmail
         ? t('alerts.insufficientCreditsWithEmail', { adminEmail: stats.adminEmail })
         : t('alerts.insufficientCreditsGeneric')
-      alert(creditMessage)
+      setToastMessage(creditMessage)
       return
     }
 
@@ -555,12 +463,18 @@ export default function InviteCustomizationPage() {
     try {
       setIsGenerating(true)
 
+      const effectivePackageId = packageId || 'headshot1'
+      const packageConfig = getPackageConfig(effectivePackageId)
+      const allowedKeys = buildAllowedStyleRequestKeys(packageConfig.visibleCategories)
+      const filteredStyleSettings = Object.fromEntries(
+        Object.entries({ ...photoStyleSettings, packageId: effectivePackageId })
+          .filter(([key]) => allowedKeys.has(key))
+      )
+
       const requestBody: Record<string, unknown> = {
-        generationType: 'team',
-        creditSource: 'team',
-        contextId: inviteData?.contextId,
-        styleSettings: { ...photoStyleSettings, packageId },
-        prompt: generatePromptFromSettings(photoStyleSettings),
+        contextId: resolvedContextId,
+        styleSettings: filteredStyleSettings,
+        prompt: 'Professional headshot',
         selfieIds: validSelectedIds,
         debugMode: process.env.NODE_ENV !== 'production'
       }
@@ -577,68 +491,24 @@ export default function InviteCustomizationPage() {
 
       if (response.ok) {
         trackInvitedMemberGenerationStarted({
-          team_name: inviteData?.teamName,
+          team_name: stats.teamName,
           selfie_count: validSelectedIds.length
         })
 
-        if (typeof window !== 'undefined') {
-          const wasFirstGeneration = stats.photosGenerated === 0
-
-          if (wasFirstGeneration) {
-            fetch('/api/onboarding/pending-tour', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tourName: 'generation-detail' }),
-            }).catch(error => {
-              console.error('Failed to set pending tour:', error)
-            })
-          }
-        }
-
         setIsGenerating(false)
         clearFlow()
-        router.push(`/invite-dashboard/${token}/generations`)
+        navigation.toGenerations()
       } else {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Generation failed:', error)
-        alert(error.message || error.error || t('alerts.generationFailed'))
+        setToastMessage(error.message || error.error || t('alerts.generationFailed'))
         setIsGenerating(false)
       }
     } catch (error) {
       console.error('Error starting generation:', error)
-      alert(t('alerts.generationFailed'))
+      setToastMessage(t('alerts.generationFailed'))
       setIsGenerating(false)
     }
-  }
-
-  const generatePromptFromSettings = (settings: PhotoStyleSettingsType) => {
-    const promptParts = []
-
-    if (settings.style?.preset) {
-      promptParts.push(`${settings.style.preset} style`)
-    }
-
-    if (settings.background?.value?.type) {
-      promptParts.push(`${settings.background.value.type} background`)
-    }
-
-    if (settings.clothing?.value?.style) {
-      promptParts.push(`${settings.clothing.value.style} clothing`)
-    }
-
-    if (settings.expression?.value?.type) {
-      promptParts.push(`${settings.expression.value.type} expression`)
-    }
-
-    if (settings.lighting?.value?.type) {
-      promptParts.push(`${settings.lighting.value.type} lighting`)
-    }
-
-    if (promptParts.length === 0) {
-      return 'Professional headshot with corporate style'
-    }
-
-    return `Professional headshot with ${promptParts.join(', ')}`
   }
 
   // Show skeleton while hydrating
@@ -665,14 +535,7 @@ export default function InviteCustomizationPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">{t('loading')}</p>
-        </div>
-      </div>
-    )
+    return <FlowPageSkeleton variant="centered-spinner" loadingLabel={t('loading')} />
   }
 
   if (error) {
@@ -688,7 +551,7 @@ export default function InviteCustomizationPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
             <p className="text-sm text-gray-600 mb-4">{error}</p>
             <button
-              onClick={() => router.push(`/invite-dashboard/${token}`)}
+              onClick={navigation.toDashboard}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
             >
               {t('error.goToHomepage')}
@@ -699,15 +562,13 @@ export default function InviteCustomizationPage() {
     )
   }
 
-  if (!inviteData) return null
-
-  const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
+  const photosAffordable = calculatePhotosFromCredits(stats.creditsRemaining)
 
   // Create the header component for reuse
   const inviteHeader = (
     <InviteDashboardHeader
       token={token}
-      teamName={inviteData.teamName}
+      teamName={stats.teamName || 'Team'}
       creditsRemaining={stats.creditsRemaining}
       photosAffordable={photosAffordable}
       showBackToDashboard
@@ -730,17 +591,37 @@ export default function InviteCustomizationPage() {
     enableDesktopProgressiveActivation: true,
     onCategoryVisit: handleCategoryVisit,
     acceptedOnVisitKeys: acceptedOnVisitKeys,
-    visitedStepKeys: acceptedVisitedStepKeys
+    visitedStepKeys: acceptedVisitedStepKeys,
+    detectedGender,
+    uneditedFields,
   }
+
+  const currentDockStepIndex = stepIndicatorProps?.currentAllStepsIndex ?? 0
+  const totalDockSteps = stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1
+  const isLastDockStep = stepIndicatorProps
+    ? currentDockStepIndex >= totalDockSteps - 1
+    : false
+  const isInlineHintStep =
+    activeMobileStepInfo.type === 'selfie-tips' || activeMobileStepInfo.type === 'intro'
+  const isSelfieUploadStep = activeMobileStepInfo.type === 'custom' && activeMobileStepInfo.id === 'selfie-step'
+  const showGenerateInBody = !isInlineHintStep && !isSelfieUploadStep && isLastDockStep
+  const canGoNextStep = Boolean(navMethods) && !isLastDockStep
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {toastMessage ? (
+        <Toast
+          message={toastMessage}
+          type="error"
+          onDismiss={() => setToastMessage(null)}
+        />
+      ) : null}
       {/* Header - hidden on mobile (handled by StyleSettingsSection) */}
       <div className="hidden md:block">
         {inviteHeader}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-8 py-0">
+      <div className="max-w-7xl mx-auto px-4 py-0 sm:px-6 lg:px-8 md:py-8">
         <SwipeableContainer
           onSwipeRight={isSwipeEnabled && activeMobileStepInfo.index === 0 ? handleBack : undefined}
           onSwipeLeft={undefined}
@@ -767,53 +648,34 @@ export default function InviteCustomizationPage() {
 
             <CustomizationMobileFooter
               leftAction={{
-                label: stepIndicatorProps?.currentAllStepsIndex === 0
-                  ? t('selfieSelection.mobile.navigation.selfies', { default: 'Selfies' })
+                label: currentDockStepIndex <= 2
+                  ? t('selfieSelection.mobile.navigation.back', { default: 'Back' })
                   : t('selfieSelection.mobile.navigation.back', { default: 'Back' }),
                 onClick: () => {
-                  if (stepIndicatorProps?.currentAllStepsIndex === 0) {
-                    router.push(`/invite-dashboard/${token}/selfies`)
+                  if (currentDockStepIndex <= 2) {
+                    handleBack()
                     return
                   }
                   navMethods?.goPrev()
                 }
               }}
-              rightAction={canGenerate
-                ? {
-                    label: t('selfieSelection.mobile.navigation.generate', { default: 'Generate' }),
-                    onClick: onProceed,
-                    disabled: isGenerating,
-                    tone: 'gradient',
-                    icon: 'play'
-                  }
+              rightAction={showGenerateInBody
+                ? undefined
                 : {
                     label: t('selfieSelection.mobile.navigation.next', { default: 'Next' }),
                     onClick: () => navMethods?.goNext(),
-                    disabled: (stepIndicatorProps?.currentAllStepsIndex ?? 0) >= ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1),
+                    disabled: !canGoNextStep,
                     tone: 'primary',
                     icon: 'chevron-right'
                   }}
               progressContent={
-                <div className="pb-3">
-                  <FlowNavigation
-                    variant="dots-only"
-                    size="md"
-                    current={stepIndicatorProps?.currentAllStepsIndex ?? 0}
-                    total={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
-                    onPrev={() => {
-                      if (stepIndicatorProps?.currentAllStepsIndex === 0) {
-                        handleBack()
-                      } else {
-                        navMethods?.goPrev()
-                      }
-                    }}
-                    onNext={() => navMethods?.goNext()}
-                    stepColors={stepIndicatorProps ? {
-                      lockedSteps: stepIndicatorProps.lockedSteps,
-                      visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
-                    } : undefined}
-                  />
-                </div>
+                <StandardThreeStepIndicator
+                  className="pb-3"
+                  currentIndex={stepIndicatorProps?.currentAllStepsIndex ?? 0}
+                  totalSteps={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
+                  visitedSteps={stepIndicatorProps?.visitedEditableSteps}
+                  lockedSteps={stepIndicatorProps?.lockedSteps}
+                />
               }
             >
               {activeMobileStepInfo.type === 'selfie-tips' ? (
@@ -864,10 +726,12 @@ export default function InviteCustomizationPage() {
                     saveEndpoint={inviteSaveEndpoint}
                     onSelfiesApproved={handleMobileUploadApproved}
                     onCancel={() => undefined}
-                    onError={(message) => console.error('Upload error:', message)}
+                    onError={(message) => {
+                      setToastMessage(message || t('alerts.uploadFailed'))
+                    }}
                   />
                 </div>
-              ) : (
+              ) : showGenerateInBody ? (
                 <GenerateButton
                   onClick={onProceed}
                   disabled={!canGenerate}
@@ -877,7 +741,7 @@ export default function InviteCustomizationPage() {
                 >
                   {t('styleSelection.generateButton')}
                 </GenerateButton>
-              )}
+              ) : null}
             </CustomizationMobileFooter>
 
           </div>
@@ -885,30 +749,26 @@ export default function InviteCustomizationPage() {
       </div>
 
       {/* Desktop: FlowProgressDock */}
-      <FlowProgressDock
-        selfieCount={validSelectedIds.length}
-        uneditedFields={!isCustomizationComplete ? ['customization'] : []}
-        hasUneditedFields={!isCustomizationComplete}
-        canGenerate={canGenerate}
-        hasEnoughCredits={stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration}
-        currentStep="customize"
-        onNavigateToSelfies={handleNavigateToSelfies}
-        onNavigateToCustomize={handleNavigateToCustomize}
-        onGenerate={onProceed}
-        isGenerating={isGenerating}
-        onNavigateToDashboard={() => router.push(`/invite-dashboard/${token}`)}
-        customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={
-          // When customization is complete (all values changed), mark all steps as visited
-          isCustomizationComplete && customizationStepsMeta.editableSteps > 0
-            ? Array.from({ length: customizationStepsMeta.editableSteps }, (_, i) => i)
-            : customizationStepsMeta.stepKeys
-              ? Array.from(visitedSteps)
-                  .map(stepKey => customizationStepsMeta.stepKeys!.indexOf(stepKey))
-                  .filter(idx => idx >= 0)
-              : []
-        }
-      />
+      {!isMobileViewport && (
+        <FlowProgressDock
+          selfieCount={validSelectedIds.length}
+          hasUneditedFields={!isCustomizationComplete}
+          hasEnoughCredits={stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration}
+          currentStep="customize"
+          onNavigateToPreviousStep={handleNavigateToBeautification}
+          onNavigateToCustomize={() => undefined}
+          onGenerate={onProceed}
+          isGenerating={isGenerating}
+          onNavigateToDashboard={navigation.toDashboard}
+          customizationStepsMeta={customizationStepsMeta}
+          visitedEditableSteps={
+            // When customization is complete (all values changed), mark all steps as visited
+            isCustomizationComplete && customizationStepsMeta.editableSteps > 0
+              ? Array.from({ length: customizationStepsMeta.editableSteps }, (_, i) => i)
+              : persistedVisitedIndices.filter((idx) => idx >= 0)
+          }
+        />
+      )}
     </div>
   )
 }

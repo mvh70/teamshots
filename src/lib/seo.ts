@@ -147,7 +147,7 @@ export function constructBlogMetadata({
             description,
             url: canonicalUrl,
             siteName: displaySiteName,
-            type: 'website',
+            type: 'article',
             locale: locale === 'es' ? 'es_ES' : 'en_US',
             images: [
                 {

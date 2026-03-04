@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "Professional Team Photos in 60 Seconds",
-    "description": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination. Professional AI headshots for your entire team."
+    "title": "Professional Team Headshots in 60 Seconds",
+    "description": "Professional AI team headshots from any selfie in 60 seconds. Consistent, on-brand photos for your entire team. No photographer needed."
   },
   "common": {
     "processingImage": "Processing image...",
@@ -35,7 +35,7 @@
     "getStarted": "Get Started Free"
   },
   "blog": {
-    "title": "Blog",
+    "title": "AI Headshots Blog",
     "description": "Tips, guides, and insights about AI headshots, professional branding, and team photos.",
     "cta": {
       "heading": "Ready to get your professional headshots?",
@@ -433,6 +433,11 @@
       "bookDemo": "Book a Demo for Custom Pricing",
       "freeTrialPrompt": "Not ready to commit? Try 3 free photos first.",
       "tryFreeLink": "Start free trial — no credit card required",
+      "researchLink": {
+        "title": "Need market benchmarks before deciding?",
+        "description": "Review our full benchmark for corporate headshot pricing, including on-site vs studio tradeoffs, volume pricing patterns, and hidden team-level costs.",
+        "linkText": "Read the corporate headshot pricing benchmark"
+      },
       "pricingBreakdown": {
         "title": "How pricing works",
         "description": "Pay less per person as your team grows. First seats cost more, additional seats get progressively cheaper.",
@@ -560,7 +565,10 @@
       "otpHelp": "Code expires in 10 min",
       "newCodeSent": "Invalid or expired code. A new verification code was sent.",
       "invalidOtp": "Invalid or expired verification code. Please try again.",
-      "errorOccurred": "An error occurred. Please try again."
+      "accountExists": "An account with this email already exists. Please sign in.",
+      "errorOccurred": "An error occurred. Please try again.",
+      "emailRequired": "Email is required to verify your account.",
+      "restartSignup": "This verification flow is no longer supported. Please return to sign up and request a new code."
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -819,6 +827,7 @@
         "teamMembers": "Team members",
         "photosGenerated": "Photos generated",
         "activeTemplates": "Active photo styles",
+        "freePackage": "Free Package",
         "unlockPhotoStyles": "Unlock photo styles",
         "photosUsed": "Photos used",
         "photos": "Photocredits",
@@ -1694,6 +1703,7 @@
         "back": "Back",
         "dashboard": "Dashboard",
         "selfies": "Selfies",
+        "beautification": "Beautification",
         "customize": "Customize",
         "generate": "Generate",
         "dontShowAgain": "Don't show again",
@@ -1844,11 +1854,52 @@
       "footer": "Didn't make this purchase? That's weird. Contact us and we'll sort it out."
     }
   },
+  "beautification": {
+    "title": "Beautification",
+    "subtitle": "Set your preferred retouching level and choose whether to keep or remove detected accessories.",
+    "retouching": {
+      "title": "Retouching level",
+      "levels": {
+        "none": {
+          "label": "None",
+          "description": "No edits. Keep texture, blemishes, under-eye details, and flyaways as-is."
+        },
+        "light": {
+          "label": "Light",
+          "description": "Temporary blemish cleanup + very slight under-eye softening. Keep pores and texture."
+        },
+        "medium": {
+          "label": "Medium",
+          "description": "Adds balanced skin-tone evening, moderate dark-circle reduction, and minor flyaway cleanup."
+        },
+        "high": {
+          "label": "High",
+          "description": "Strong polish with deeper skin cleanup/smoothing and under-eye correction while preserving identity."
+        }
+      }
+    },
+    "accessories": {
+      "title": "Accessories",
+      "empty": "No accessories detected in selected selfies.",
+      "labels": {
+        "glasses": "Glasses",
+        "facialHair": "Facial hair",
+        "jewelry": "Jewelry",
+        "piercings": "Piercings",
+        "tattoos": "Tattoos"
+      },
+      "actions": {
+        "keep": "Keep",
+        "remove": "Remove"
+      }
+    }
+  },
   "customization": {
     "photoStyle": {
       "legend": {
         "editableChip": "Editable",
         "lockedChip": "Pre-set by team admin",
+        "styleLockedChip": "Style set by admin",
         "presetChip": "Preset active",
         "needsSelection": "Choose one"
       },
@@ -1900,8 +1951,12 @@
           "locked": "This icon means your team admin fixed these, and they can not be changed.",
           "skip": "Don't show again",
           "continueButton": "Continue to customize",
-          "prevLabel": "Selfies",
+          "prevLabel": "Beautification",
           "nextLabel": "Customize"
+        },
+        "beautification": {
+          "title": "Beautification",
+          "subtitle": "Retouching and accessory preferences"
         },
         "selfieTips": {
           "kicker": "Get the best results",
@@ -2057,18 +2112,42 @@
       },
       "clothing": {
         "title": "Clothing style",
-        "subtitle": "Choose clothing style and accessories",
+        "subtitle": "Choose clothing style, substyle and accessories",
         "predefined": "Predefined",
+        "stylesLabel": "Style",
+        "styleLockedByAdmin": "Style is set by admin. You can choose a substyle.",
+        "mode": {
+          "label": "Outfit structure",
+          "separate": "Top + Bottom",
+          "onePiece": "One-piece"
+        },
+        "top": {
+          "label": "Base layer"
+        },
+        "bottom": {
+          "label": "Bottom layer"
+        },
+        "outer": {
+          "label": "Top layer (optional)",
+          "none": "No top layer"
+        },
+        "onePiece": {
+          "label": "One-piece garment"
+        },
         "details": {
-          "label": "Details"
+          "label": "Substyle"
         },
         "accessories": {
           "label": "Accessories"
         },
         "styles": {
-          "business": {
-            "label": "Business",
-            "description": "Professional attire"
+          "business_professional": {
+            "label": "Formal",
+            "description": "Business professional"
+          },
+          "business_casual": {
+            "label": "Casual",
+            "description": "Business casual"
           },
           "startup": {
             "label": "Startup",
@@ -2082,13 +2161,31 @@
         "details_options": {
           "formal": "Formal",
           "casual": "Casual",
+          "suit": "Suit",
+          "jacket": "Jacket",
+          "pantsuit": "Pantsuit",
+          "blouse": "Blouse",
+          "cardigan": "Cardigan",
           "t-shirt": "T-Shirt",
           "hoodie": "Hoodie",
           "polo": "Polo",
           "button-down": "Button Down",
+          "jumpsuit": "Jumpsuit",
           "tuxedo": "Tuxedo",
-          "suit": "Suit",
-          "dress": "Dress"
+          "dress": "Dress",
+          "gown": "Gown",
+          "dress-shirt": "Dress shirt",
+          "silk-blouse": "Silk blouse",
+          "trousers": "Trousers",
+          "chinos": "Chinos",
+          "jeans": "Jeans",
+          "pencil-skirt": "Pencil skirt",
+          "formal-skirt": "Formal skirt",
+          "dress-pants": "Dress pants",
+          "suit-jacket": "Suit jacket",
+          "tuxedo-jacket": "Tuxedo jacket",
+          "robe": "Robe",
+          "skirt": "Skirt"
         }
       },
       "clothingColors": {
@@ -2098,7 +2195,7 @@
         "outerLayer": "Top layer",
         "outerLayerDesc": "Blazer, jacket, cardigan, button down shirt, hoodie, polo",
         "topLayer": "Top layer",
-        "topLayerDesc": "The visible outer garment: jacket, blazer, hoodie, polo, t-shirt, dress",
+        "topLayerDesc": "The visible outer garment: jacket, hoodie, polo, t-shirt, dress",
         "baseLayer": "Base layer",
         "baseLayerDesc": "Shirt or t-shirt underneath the top layer",
         "shirtBlouse": "Base layer",
@@ -2231,6 +2328,7 @@
         "subtitle": "Choose a body pose and positioning",
         "predefined": "Predefined",
         "selectPlaceholder": "Choose your pose",
+        "noPreview": "No preview image available for this pose",
         "poses": {
           "classic_corporate": {
             "label": "Classic Corporate",
@@ -2879,7 +2977,17 @@
   },
   "inviteDashboard": {
     "loading": "Loading dashboard...",
+    "loadingGenerations": "Loading generations...",
     "newGeneration": "New generation",
+    "yourGenerations": "Your generations",
+    "allTime": "All time",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "allPhotoStyles": "All photo styles",
+    "noMatchingGenerations": "No generations match your filters.",
+    "noGenerationsYet": "No generations yet",
+    "noGenerationsYetDescription": "Upload a selfie and generate your first team photos.",
+    "generatePhotos": "Generate Photos",
     "insufficientCredits": {
       "title": "Insufficient credits",
       "messageWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
@@ -2905,7 +3013,8 @@
       "customizePhoto": "Please customize your photo settings before generating",
       "insufficientCreditsWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
       "insufficientCreditsGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
-      "generationFailed": "Failed to start generation. Please try again."
+      "generationFailed": "Failed to start generation. Please try again.",
+      "uploadFailed": "Upload failed. Please try again."
     },
     "common": {
       "continue": "Continue",
@@ -2935,19 +3044,20 @@
       },
       "mobile": {
         "bannerTitle": "Select your selfies",
-        "bannerMessage": "Choose at least 2 selfies, then swipe right when you're ready to customize.",
-        "cta": "Swipe right when done",
+        "bannerMessage": "Choose at least 2 selfies, then continue to beautification.",
+        "cta": "Continue when done",
         "badgeSelecting": "Need {remaining} more",
-        "badgeReady": "Ready to customize",
-        "hint": "Need to tweak selfies again? Adjust them here, then swipe right to keep going.",
+        "badgeReady": "Ready for beautification",
+        "hint": "Need to tweak selfies again? Adjust them here, then continue.",
         "prevLabel": "Dashboard",
-        "nextLabel": "Customization",
+        "nextLabel": "Beautification",
         "actions": {
           "camera": "Use camera",
           "upload": "Upload photo"
         },
         "navigation": {
           "selfies": "Selfies",
+          "beautification": "Beautification",
           "back": "Back",
           "previous": "Previous",
           "next": "Next",

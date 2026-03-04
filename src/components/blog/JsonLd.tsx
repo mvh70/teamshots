@@ -36,10 +36,15 @@ export function ArticleJsonLd({
 }: ArticleJsonLdProps) {
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
     headline,
     description,
-    ...(image && { image }),
+    ...(image && {
+      image: {
+        '@type': 'ImageObject',
+        url: image,
+      },
+    }),
     author: {
       '@type': 'Person',
       name: authorName,

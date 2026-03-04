@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { PRICING_CONFIG } from '@/config/pricing';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 
@@ -266,7 +267,7 @@ export default function CostCalculator() {
 
             {/* CTA */}
             <div className="mt-auto pt-5 flex flex-col gap-2">
-              <a
+              <Link
                 href="/auth/signup"
                 className="inline-flex items-center justify-center gap-3 px-6 py-3.5 bg-brand-cta text-white font-bold rounded-2xl hover:bg-brand-cta-hover transition-all shadow-depth-lg text-sm group"
               >
@@ -274,7 +275,7 @@ export default function CostCalculator() {
                 <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
-              </a>
+              </Link>
               <p className="text-center text-[10px] text-bg-white/60">{t('cta.noCreditCard')}</p>
             </div>
           </section>
@@ -468,6 +469,24 @@ export default function CostCalculator() {
         <p className="text-center text-xs text-text-muted mt-10">
           {t('disclaimer')}
         </p>
+
+        <section className="mt-8 rounded-2xl border border-gray-200 bg-bg-gray-50 p-5 sm:p-6 text-center">
+          <h2 className="text-lg sm:text-xl font-display font-bold text-text-dark">
+            {t('methodology.title')}
+          </h2>
+          <p className="mt-2 text-sm text-text-body max-w-3xl mx-auto">
+            {t('methodology.description')}
+          </p>
+          <Link
+            href="/blog/professional-headshots-cost"
+            className="mt-3 inline-flex items-center gap-2 text-brand-primary hover:text-brand-primary-hover font-semibold transition-colors"
+          >
+            {t('methodology.linkText')}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </section>
       </div>
 
       {/* Sticky mobile CTA */}
@@ -477,12 +496,12 @@ export default function CostCalculator() {
             <div className="text-lg font-bold text-brand-primary">{formatCurrency(savingsAmount)}</div>
             <div className="text-xs text-text-muted">{t('cta.potentialSavings')}</div>
           </div>
-          <a
+          <Link
             href="/auth/signup"
             className="flex-shrink-0 px-6 py-3 bg-brand-cta text-white font-bold rounded-xl hover:bg-brand-cta-hover transition-all text-sm shadow-lg"
           >
             {t('cta.secondary')}
-          </a>
+          </Link>
         </div>
       </div>
     </div>
@@ -580,5 +599,4 @@ function NumberField({ label, value, onChange, min, max, step = 1, prefix, suffi
     </label>
   );
 }
-
 

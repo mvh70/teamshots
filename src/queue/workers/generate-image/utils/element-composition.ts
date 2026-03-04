@@ -1,5 +1,6 @@
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
+import { CLIENT_PACKAGES } from '@/domain/style/packages'
 import {
   compositionRegistry,
   type ElementContext,
@@ -11,6 +12,7 @@ export interface GenerationContextForComposition {
   generationId?: string
   personId?: string
   teamId?: string
+  packageId?: string
   demographics?: unknown
   preparedAssets?: Map<string, PreparedAsset>
   hasFaceComposite?: boolean
@@ -30,9 +32,19 @@ export async function composeElementContributions(
   styleSettings: PhotoStyleSettings,
   generationContext: GenerationContextForComposition
 ): Promise<ElementContributionResult> {
+  const pkg = generationContext.packageId
+    ? CLIENT_PACKAGES[generationContext.packageId]
+    : undefined
+
   const elementContext: ElementContext = {
     phase,
     settings: styleSettings,
+    packageContext: generationContext.packageId
+      ? {
+          packageId: generationContext.packageId,
+          ...(pkg?.requiredElements ? { activeElements: pkg.requiredElements } : {}),
+        }
+      : undefined,
     generationContext: {
       selfieS3Keys: generationContext.selfieS3Keys,
       personId: generationContext.personId,

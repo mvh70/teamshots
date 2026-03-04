@@ -81,5 +81,6 @@ export function resolveExpression(value: string): ExpressionConfig | undefined {
 export const expressionElementConfig: ElementConfig<ExpressionSettings> = {
   getDefaultPredefined: () => predefined({ type: 'neutral_serious' }),
   getDefaultUserChoice: () => userChoice(),
-  deserialize
+  deserialize,
+  mergePredefinedFromSession: () => undefined,
 }

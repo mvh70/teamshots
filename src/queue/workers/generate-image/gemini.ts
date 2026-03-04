@@ -7,6 +7,7 @@ import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetti
 
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
+import { extensionFromMimeType } from '@/lib/image-format'
 import { generateWithGeminiRest } from './gemini-rest'
 import { isRateLimitError, isTransientServiceError } from '@/lib/rate-limit-retry'
 import {
@@ -112,7 +113,7 @@ export async function getVertexGenerativeModel(modelName: string): Promise<Gener
         modelName: normalizedModelName,
         location,
         error: error instanceof Error ? error.message : String(error),
-        note: 'If using gemini-3-pro-image-preview, verify it is available in Vertex AI. It may only be available via REST API (ai.google.dev) currently.'
+        note: 'If using gemini-3.1-flash-image-preview, verify it is available in Vertex AI and AI Studio for your project.'
       })
       throw error
     }
@@ -150,6 +151,21 @@ interface GeminiGenerationResultInternal {
  */
 function normalizeProvider(provider: ModelProvider): 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter' {
   return provider === 'rest' ? 'gemini-rest' : provider
+}
+
+function isProviderModelUnavailableError(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const normalized = errorMessage.toLowerCase()
+
+  return (
+    // Vertex/GCP not found or no access for specific publisher model.
+    (normalized.includes('publisher model') &&
+      (normalized.includes('not found') || normalized.includes('does not have access'))) ||
+    normalized.includes('status":"not_found"') ||
+    // Provider/model capability mismatch patterns.
+    normalized.includes('model_not_found') ||
+    normalized.includes('model not found')
+  )
 }
 
 const GEMINI3_THINKING_CONFIG = {
@@ -224,15 +240,6 @@ async function selectLargestImage(result: GeminiGenerationResult): Promise<Gemin
   return { ...result, images: withMeta.map(m => m.buf) }
 }
 
-function extensionFromMimeType(mimeType?: string): string {
-  const normalized = (mimeType || '').toLowerCase()
-  if (normalized.includes('png')) return 'png'
-  if (normalized.includes('webp')) return 'webp'
-  if (normalized.includes('gif')) return 'gif'
-  if (normalized.includes('bmp')) return 'bmp'
-  return 'jpg'
-}
-
 function slugifyAttachmentName(value: string): string {
   return value
     .trim()
@@ -244,7 +251,7 @@ function slugifyAttachmentName(value: string): string {
 }
 
 function inferAttachmentName(image: GeminiReferenceImage, index: number): string {
-  const extension = extensionFromMimeType(image.mimeType)
+  const extension = extensionFromMimeType(image.mimeType, 'jpg')
   const explicit = typeof image.name === 'string' ? image.name.trim() : ''
 
   if (explicit) {
@@ -419,6 +426,7 @@ export async function generateWithGemini(
         errorMessage.includes('not available in your region') ||
         errorMessage.includes('geo-restricted')
       )
+      const modelUnavailableError = isProviderModelUnavailableError(error)
 
       Logger.info('Provider failed - checking fallback eligibility', {
         provider,
@@ -430,23 +438,41 @@ export async function generateWithGemini(
         isImageOtherError,
         isSafetyError,
         isGeoRestrictionError,
+        modelUnavailableError,
         isLastProvider,
         errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
-        willFallback: (rateLimited || serviceError || isImageOtherError || isSafetyError || isGeoRestrictionError) && !isLastProvider
+        willFallback:
+          (rateLimited ||
+            serviceError ||
+            isImageOtherError ||
+            isSafetyError ||
+            isGeoRestrictionError ||
+            modelUnavailableError) &&
+          !isLastProvider
       })
 
       // Fall back to next provider if rate limited OR service error OR transient image generation failure OR safety filter OR geo-restriction
       // (different providers have different thresholds and regional availability)
-      if ((rateLimited || serviceError || isImageOtherError || isSafetyError || isGeoRestrictionError) && !isLastProvider) {
+      if (
+        (rateLimited ||
+          serviceError ||
+          isImageOtherError ||
+          isSafetyError ||
+          isGeoRestrictionError ||
+          modelUnavailableError) &&
+        !isLastProvider
+      ) {
         const reason = rateLimited
           ? 'rate limited'
           : serviceError
             ? 'service unavailable (503)'
+            : modelUnavailableError
+              ? 'model unavailable or not accessible on this provider'
             : isGeoRestrictionError
               ? 'geo-restricted or not available in region'
               : isSafetyError
-              ? 'content safety filter triggered'
-              : 'returned no images (IMAGE_OTHER)'
+                ? 'content safety filter triggered'
+                : 'returned no images (IMAGE_OTHER)'
         Logger.warn(`Provider ${reason}, falling back to next provider`, {
           provider,
           providerUsed,
@@ -468,7 +494,8 @@ export async function generateWithGemini(
         isLastProvider,
         rateLimited,
         serviceError,
-        isImageOtherError
+        isImageOtherError,
+        modelUnavailableError,
       })
       throw error
     }
@@ -554,18 +581,25 @@ export async function generateTextWithGemini(
       lastError = error
       const rateLimited = isRateLimitError(error)
       const serviceError = isTransientServiceError(error)
+      const modelUnavailableError = isProviderModelUnavailableError(error)
 
       Logger.info('Text gen provider failed - checking fallback', {
         provider,
         model,
         rateLimited,
         serviceError,
+        modelUnavailableError,
         isLastProvider,
         errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
       })
 
-      if ((rateLimited || serviceError) && !isLastProvider) {
-        Logger.warn(`Text gen provider ${rateLimited ? 'rate limited' : 'service error'}, falling back`, {
+      if ((rateLimited || serviceError || modelUnavailableError) && !isLastProvider) {
+        const reason = rateLimited
+          ? 'rate limited'
+          : serviceError
+            ? 'service error'
+            : 'model unavailable'
+        Logger.warn(`Text gen provider ${reason}, falling back`, {
           provider,
           nextProvider: providers[i + 1],
         })
@@ -876,11 +910,11 @@ async function generateWithGeminiVertex(
   ]
 
   // Build generation config with imageConfig if aspectRatio or resolution is provided
-  // Note: Resolution is primarily supported by Gemini 3 Pro Image Preview models
+  // Note: Resolution is primarily supported by Gemini 3 image preview models.
   // Vertex AI API uses camelCase (imageSize) to match aspectRatio pattern
   const normalizedModelName = modelName.toLowerCase()
-  const supportsResolution = normalizedModelName.includes('gemini-3-pro-image') || 
-                             normalizedModelName.includes('gemini-3-pro-image-preview')
+  const supportsResolution = normalizedModelName.includes('gemini-3') &&
+                             normalizedModelName.includes('image')
   
   const generationConfig: {
     temperature?: number

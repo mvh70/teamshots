@@ -8,13 +8,30 @@ import { Env } from '@/lib/env';
 import { getBaseUrl } from '@/lib/url';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 import { validatePromoCode, type PurchaseType } from '@/domain/pricing/promo-codes';
-import { getBrand } from '@/config/brand';
+import { getTenantFromRequest } from '@/config/tenant-server';
 
 
 export const runtime = 'nodejs'
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
 });
+
+function isAbortLikeError(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code ?? '')
+    : ''
+  const message = error instanceof Error
+    ? error.message.toLowerCase()
+    : String(error).toLowerCase()
+
+  return (
+    code === 'ECONNRESET' ||
+    message.includes('aborted') ||
+    message.includes('socket hang up') ||
+    message.includes('unexpected end of json input') ||
+    message.includes('operation was aborted')
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -178,8 +195,8 @@ export async function POST(request: NextRequest) {
       originalAmount?: number
     } | null = null
     if (promoCode) {
-      const brand = getBrand(request.headers)
-      const domain = brand.domain
+      const tenant = getTenantFromRequest(request)
+      const domain = tenant.domain
 
       // Calculate the amount for validation
       let validationAmount = 0
@@ -498,6 +515,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    if (isAbortLikeError(error)) {
+      Logger.warn('Stripe checkout request aborted by client', { error: message });
+      return NextResponse.json({ error: 'Request aborted' }, { status: 400 });
+    }
     Logger.error('Failed to create checkout session', { error: message });
     return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }

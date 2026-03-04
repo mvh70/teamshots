@@ -3,6 +3,7 @@ import sharp from 'sharp'
 import type { Step8Output } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { asObject } from '../utils/type-helpers'
 import { hasValue } from '@/domain/style/elements/base/element-types'
 import { detectImageFormat } from '@/lib/image-format'
 import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
@@ -19,6 +20,37 @@ import {
   buildStep3FinalEvalPrompt,
   generateStep3AdjustmentSuggestions,
 } from './prompts/v3-step3-eval-prompt'
+
+function toPromptAccessoryLabel(accessoryKey: string): string {
+  const map: Record<string, string> = {
+    facialHair: 'facialHair',
+    glasses: 'glasses',
+    jewelry: 'jewelry',
+    piercings: 'piercings',
+    tattoos: 'tattoos',
+  }
+  return map[accessoryKey] || accessoryKey
+}
+
+function extractConfiguredAccessoryActions(
+  styleSettings?: PhotoStyleSettings
+): Array<{ accessory: string; action: 'keep' | 'remove' }> {
+  const beautification = styleSettings?.beautification
+  if (!beautification || !hasValue(beautification)) return []
+
+  const accessories = asObject(beautification.value?.accessories)
+  if (!accessories) return []
+
+  return Object.entries(accessories)
+    .map(([accessory, value]) => ({
+      accessory: toPromptAccessoryLabel(accessory),
+      action: asObject(value)?.action as 'keep' | 'remove' | undefined,
+    }))
+    .filter(
+      (item): item is { accessory: string; action: 'keep' | 'remove' } =>
+        item.action === 'keep' || item.action === 'remove'
+    )
+}
 
 function toEvaluationReference(
   reference: Pick<BaseReferenceImage, 'base64' | 'mimeType'>
@@ -50,11 +82,6 @@ export interface V3Step3FinalInput {
   generationId?: string
   intermediateS3Key?: string
   onCostTracking?: CostTrackingHandler
-}
-
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
 }
 
 function normalizeRule(rule: string): string {
@@ -104,6 +131,14 @@ export async function executeV3Step3(input: V3Step3FinalInput): Promise<Step8Out
     (styleBranding.position === 'background' || styleBranding.position === 'elements')
   const shouldEvaluateBrandingPlacement =
     evaluateBrandingPlacement ?? defaultShouldEvaluateBrandingPlacement
+
+  const includeBeautificationGuidance = Boolean(
+    styleSettings &&
+      Object.prototype.hasOwnProperty.call(styleSettings, 'beautification') &&
+      styleSettings.beautification &&
+      hasValue(styleSettings.beautification)
+  )
+  const configuredAccessoryActions = extractConfiguredAccessoryActions(styleSettings)
 
   if (shouldEvaluateBrandingPlacement && logoReference) {
     brandingInfo = {
@@ -160,6 +195,8 @@ export async function executeV3Step3(input: V3Step3FinalInput): Promise<Step8Out
     freedomRules: shouldEvaluateBrandingPlacement
       ? step3EvalArtifacts.freedomRules
       : step3EvalArtifacts.freedomRules.filter((rule) => !isBrandingSpecificRule(rule)),
+    includeBeautificationGuidance,
+    configuredAccessoryActions,
   })
   logPrompt('V3 Step 3 Eval', evalPromptText, input.generationId)
 
@@ -365,7 +402,9 @@ export async function executeV3Step3(input: V3Step3FinalInput): Promise<Step8Out
       failedCriteria: failedCriteria.length > 0 ? failedCriteria : undefined,
       suggestedAdjustments:
         finalStatus === 'Not Approved'
-          ? generateStep3AdjustmentSuggestions(failedCriteria, PROMINENCE.evalLabel)
+          ? generateStep3AdjustmentSuggestions(failedCriteria, PROMINENCE.evalLabel, {
+              includeBeautificationGuidance,
+            })
           : undefined,
     },
   }

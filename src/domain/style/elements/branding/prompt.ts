@@ -104,7 +104,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
   },
 
   // Business style configurations
-  'business-dress': {
+  'business_professional-dress': {
     placement: 'upper-left chest of the dress as a subtle embroidered crest',
     rules: [
       'Integrate the logo as a tasteful embroidered mark on the dress bodice.',
@@ -112,7 +112,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       'Keep surrounding fabric smooth so the crest remains crisp.'
     ]
   },
-  'business-formal': {
+  'business_professional-suit': {
     placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
     rules: [
       'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
@@ -120,7 +120,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       'Keep the jacket partially open so the logo remains visible.'
     ]
   },
-  'business-pantsuit': {
+  'business_professional-pantsuit': {
     placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
     rules: [
       'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
@@ -128,7 +128,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       'Keep the jacket partially open so the logo remains visible.'
     ]
   },
-  'business-blouse': {
+  'business_professional-blouse': {
     placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
     rules: [
       'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
@@ -136,7 +136,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       'Keep the jacket partially open so the logo remains visible.'
     ]
   },
-  'business-casual': {
+  'business_casual-jacket': {
     placement: 'Place the logo on the center chest area of the base shirt layer ONLY, positioning it as if the outer jacket were not there. The logo must be rendered as part of the base shirt fabric itself. Let the outer jacket naturally obscure portions of the logo for realistic partial visibility. CRITICAL: The logo must NOT spill over or extend onto the jacket fabric - it should exist exclusively on the base shirt layer beneath.',
     rules: [
       'Render the logo as an integral part of the base shirt fabric, not as a separate overlay.',
@@ -165,13 +165,24 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
-  'startup-polo': {
+  'business_casual-polo': {
     placement: 'left chest area of the polo shirt, positioned where a traditional polo logo would be',
     rules: [
       'Place the provided brand logo exactly once on the left chest area of the polo shirt.',
       'Position the logo on the upper left chest, similar to where a traditional polo emblem would be placed.',
       'The logo should be small to medium sized, proportional to a typical polo shirt logo.',
       'Keep the logo above the horizontal midline of the chest and to the left of the placket buttons.',
+      ...CLOTHING_BRANDING_RULES_BASE
+    ]
+  },
+  'business_casual-button-down': {
+    placement: 'center chest area of the t-shirt underneath the button-down shirt',
+    rules: [
+      'Place the provided brand logo exactly once on the center chest area of the t-shirt that is worn under the button-down shirt.',
+      'The logo should NOT be placed on the button-down shirt itself.',
+      'Ensure the logo does not spill over onto the button-down shirt.',
+      'It is perfectly acceptable for the logo to be only partially visible, with part of it hidden behind the button-down shirt for a more realistic look.',
+      'Position the logo on the t-shirt as if the button-down shirt were not there, then let the button-down naturally cover part of it.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
@@ -186,7 +197,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
-  'startup-blouse': {
+  'business_casual-blouse': {
     placement: 'center chest area of the blouse',
     rules: [
       'Place the provided brand logo exactly once on the center chest area of the blouse.',
@@ -194,7 +205,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
-  'startup-cardigan': {
+  'business_casual-cardigan': {
     placement: 'center chest area of the base garment underneath the cardigan',
     rules: [
       'Place the provided brand logo exactly once on the center chest area of the t-shirt or dress worn under the cardigan.',
@@ -204,7 +215,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
-  'startup-dress': {
+  'business_casual-dress': {
     placement: 'center chest area of the dress bodice',
     rules: [
       'Place the provided brand logo exactly once on the center chest area of the dress bodice.',

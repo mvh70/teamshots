@@ -74,6 +74,9 @@ export interface PackageCapabilities {
 
   /** Supports expression customization */
   supportsExpression?: boolean
+
+  /** Supports beautification controls */
+  supportsBeautification?: boolean
 }
 
 /**

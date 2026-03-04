@@ -1,12 +1,11 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import LocaleChrome from '@/components/LocaleChrome';
 import { Work_Sans, Inter } from 'next/font/google';
-import { getLandingVariant } from '@/config/landing-content';
-import { getBrand } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import '../globals.css';
 
 const displayFont = Work_Sans({
@@ -40,12 +39,9 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
-  // Server-side brand detection - all brand decisions happen here
-  const headersList = await headers();
-  const brand = getBrand(headersList);
-  const host = headersList.get('x-forwarded-host') || headersList.get('host');
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
-  const variant = getLandingVariant(domain);
+  const tenant = await getTenant();
+  const brand = getBrandByDomain(tenant.domain);
+  const variant = tenant.landingVariant;
 
   // Providing all messages to the client
   // side is the easiest way to get started
@@ -53,6 +49,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
+      <meta name="x-tenant-id" content={tenant.id} />
       <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
         <LocaleChrome
           brandName={brand.name}

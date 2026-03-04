@@ -1,9 +1,11 @@
 import type { ClothingColorValue } from '@/domain/style/elements/clothing-colors/types'
+import { beautificationValueSchema, normalizeBeautificationValue } from '@/domain/style/elements/beautification/schema'
+import type { BeautificationValue } from '@/domain/style/elements/beautification/types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 
 const STORAGE_KEY = 'teamshots_clothing_colors'
 const STYLE_SETTINGS_KEY = 'teamshots_style_settings'
-const STYLE_SETTINGS_CHANGED_EVENT = 'styleSettingsChanged'
+export const STYLE_SETTINGS_CHANGED_EVENT = 'styleSettingsChanged'
 
 // ============================================
 // Full PhotoStyleSettings persistence
@@ -16,9 +18,20 @@ export function saveStyleSettings(
   if (typeof window === 'undefined') return
 
   try {
+    const existing = loadStyleSettings(contextId)
+    const nextSettings: PhotoStyleSettings =
+      existing &&
+      existing.beautification !== undefined &&
+      settings.beautification === undefined
+        ? ({
+            ...settings,
+            beautification: existing.beautification,
+          } as PhotoStyleSettings)
+        : settings
+
     // Save with context ID to allow different settings per context
     const key = contextId ? `${STYLE_SETTINGS_KEY}_${contextId}` : STYLE_SETTINGS_KEY
-    sessionStorage.setItem(key, JSON.stringify(settings))
+    sessionStorage.setItem(key, JSON.stringify(nextSettings))
     // Dispatch event to notify other components
     window.dispatchEvent(new CustomEvent(STYLE_SETTINGS_CHANGED_EVENT, { detail: { contextId } }))
   } catch (error) {
@@ -57,6 +70,27 @@ export function clearStyleSettings(contextId?: string | null): void {
   } catch (error) {
     console.warn('Failed to clear style settings from session:', error)
   }
+}
+
+export function hasSavedBeautificationSettings(contextId?: string | null): boolean {
+  const settings = loadStyleSettings(contextId)
+  if (!settings || typeof settings !== 'object') return false
+
+  const beautification = (settings as Record<string, unknown>).beautification
+  if (!beautification || typeof beautification !== 'object') return false
+
+  const candidate = (beautification as { value?: unknown }).value ?? beautification
+  return beautificationValueSchema.safeParse(candidate).success
+}
+
+export function readSavedBeautification(scope?: string | null): BeautificationValue | null {
+  const saved = loadStyleSettings(scope)
+  if (!saved) return null
+  const candidate = (saved as Record<string, unknown>).beautification
+  if (!candidate || typeof candidate !== 'object') return null
+  const value = (candidate as { value?: unknown }).value
+  if (value === undefined) return null
+  return normalizeBeautificationValue(value)
 }
 
 // ============================================

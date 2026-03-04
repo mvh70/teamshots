@@ -4,7 +4,7 @@
  * Exports for the element-level prompt composition system
  *
  * To use the element composition system:
- * 1. Import and call initializeElementComposition() (done automatically on import)
+ * 1. Import this module (elements auto-register on import)
  * 2. Use compositionRegistry.composeContributions() in workflow steps
  */
 
@@ -18,7 +18,6 @@ export {
   type ElementContext,
   type PreparedAsset,
 } from '../base/StyleElement'
-export { initializeElementComposition } from './init'
 
 // Auto-initialize elements on module load
 import './init'

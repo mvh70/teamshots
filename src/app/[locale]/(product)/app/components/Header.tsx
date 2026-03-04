@@ -5,7 +5,7 @@ import {useTranslations} from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { useRouter } from '@/i18n/routing'
 import { useSession } from 'next-auth/react'
-import { useDomain } from '@/contexts/DomainContext'
+import { useTenant } from '@/contexts/TenantContext'
 
 interface HeaderProps {
   /** Click handler for hamburger menu. Required unless standalone is true. */
@@ -21,7 +21,7 @@ export default function Header({ onMenuClick, standalone = false, showBackToDash
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
-  const { isIndividualDomain } = useDomain()
+  const { isIndividualDomain, tenantId } = useTenant()
 
   // Only show the dashboard header on the actual dashboard page
   // pathname includes locale prefix (e.g., /en/app/dashboard or /es/app/dashboard)
@@ -42,7 +42,24 @@ export default function Header({ onMenuClick, standalone = false, showBackToDash
     router.push('/app/dashboard')
   }
 
-  const borderClass = isIndividualDomain ? 'border-[#0F172A]/8' : 'border-gray-200'
+  const borderClass =
+    tenantId === 'portreya'
+      ? 'border-[#0F172A]/8'
+      : tenantId === 'rightclickfit'
+        ? 'border-[#7C3AED]/20'
+        : 'border-gray-200'
+  const hoverBgClass =
+    tenantId === 'portreya'
+      ? 'hover:bg-[#0F172A]/5'
+      : tenantId === 'rightclickfit'
+        ? 'hover:bg-[#7C3AED]/10'
+        : 'hover:bg-gray-100'
+  const iconColorClass =
+    tenantId === 'portreya'
+      ? 'text-[#0F172A]/60'
+      : tenantId === 'rightclickfit'
+        ? 'text-[#7C3AED]'
+        : 'text-gray-500'
   const headerClassName = standalone
     ? `bg-[var(--bg-white)] border-b ${borderClass} px-6 py-4`
     : `bg-[var(--bg-white)] border-b ${borderClass} px-6 py-4 ${isGenerationFlow ? 'hidden md:block' : ''}`
@@ -54,18 +71,18 @@ export default function Header({ onMenuClick, standalone = false, showBackToDash
           {showBackToDashboard && (
             <button
               onClick={handleBackToDashboard}
-              className={`p-2 rounded-md transition-colors ${isIndividualDomain ? 'hover:bg-[#0F172A]/5' : 'hover:bg-gray-100'}`}
+              className={`p-2 rounded-md transition-colors ${hoverBgClass}`}
               aria-label="Back to dashboard"
             >
-              <ChevronLeftIcon className={`h-5 w-5 ${isIndividualDomain ? 'text-[#0F172A]/60' : 'text-gray-500'}`} />
+              <ChevronLeftIcon className={`h-5 w-5 ${iconColorClass}`} />
             </button>
           )}
           <button
             onClick={handleMenuClick}
-            className={`p-2 rounded-md transition-colors lg:hidden ${isIndividualDomain ? 'hover:bg-[#0F172A]/5' : 'hover:bg-gray-100'}`}
+            className={`p-2 rounded-md transition-colors md:hidden ${hoverBgClass}`}
             aria-label="Open menu"
           >
-            <Bars3Icon className={`h-5 w-5 ${isIndividualDomain ? 'text-[#0F172A]/60' : 'text-gray-500'}`} />
+            <Bars3Icon className={`h-5 w-5 ${iconColorClass}`} />
           </button>
           {isDashboard && (
             <div>

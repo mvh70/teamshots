@@ -330,9 +330,9 @@ export default function BrandingSelector({
               {/* Show preview image for selected position */}
               {position && (() => {
                 const imageMap: Record<string, string> = {
-                  'background': 'branding-background.png',
-                  'clothing': 'branding-clothing.png',
-                  'elements': 'branding-other.png'
+                  'background': 'branding-background.webp',
+                  'clothing': 'branding-clothing.webp',
+                  'elements': 'branding-other.webp'
                 }
                 const imageSrc = `/images/branding/${imageMap[position]}`
 
@@ -363,4 +363,3 @@ export default function BrandingSelector({
     </div>
   )
 }
-

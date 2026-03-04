@@ -26,6 +26,7 @@ export function useClassificationQueue({
 }: UseClassificationQueueOptions = {}): ClassificationQueueStatus | undefined {
   const [status, setStatus] = useState<ClassificationQueueStatus | undefined>(undefined)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const emptyPollCountRef = useRef(0)
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -38,10 +39,23 @@ export function useClassificationQueue({
 
       if (response.ok) {
         const data = await response.json()
+        const activeSelfieIds = Array.isArray(data.activeSelfieIds) ? data.activeSelfieIds : []
+        const queuedSelfieIds = Array.isArray(data.queuedSelfieIds) ? data.queuedSelfieIds : []
+
         setStatus({
-          activeSelfieIds: data.activeSelfieIds || [],
-          queuedSelfieIds: data.queuedSelfieIds || [],
+          activeSelfieIds,
+          queuedSelfieIds,
         })
+
+        if (activeSelfieIds.length === 0 && queuedSelfieIds.length === 0) {
+          emptyPollCountRef.current += 1
+          if (emptyPollCountRef.current >= 2 && intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
+        } else {
+          emptyPollCountRef.current = 0
+        }
       }
     } catch (error) {
       console.error('[useClassificationQueue] Error fetching status:', error)
@@ -54,14 +68,20 @@ export function useClassificationQueue({
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
+      emptyPollCountRef.current = 0
       return
     }
 
     // Fetch immediately
-    fetchStatus()
+    queueMicrotask(() => {
+      void fetchStatus()
+    })
 
-    // Then poll
-    intervalRef.current = setInterval(fetchStatus, pollingInterval)
+    // Then poll (skip when page is hidden to avoid unnecessary network/battery usage)
+    intervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
+      void fetchStatus()
+    }, pollingInterval)
 
     return () => {
       if (intervalRef.current) {

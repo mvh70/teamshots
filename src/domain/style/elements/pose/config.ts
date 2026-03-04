@@ -57,17 +57,17 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
     id: 'classic_corporate',
     icon: '🏢',
     pose: {
-      body_angle: 'Square to camera',
-      head_position: 'Straight forward',
+      body_angle: 'Slight angle (10-15 degrees) toward camera',
+      head_position: 'Facing camera directly',
       chin_technique:
         'Chin forward and down: push the forehead slightly toward the lens to tighten the jawline.',
-      shoulders: 'Even and relaxed',
+      shoulders: 'Even, relaxed, and lowered away from ears',
       weight_distribution: 'Even on both feet',
       arms: 'Relaxed at sides',
       description: 'Trustworthy and direct standard professional headshot'
     },
     prompt_instructions:
-      'Classic corporate headshot: subject stands square to camera with even, relaxed shoulders and a direct, trustworthy gaze.'
+      'Classic corporate headshot: subject stands with a subtle 10-15° body angle, head facing camera, shoulders relaxed and level, and a direct trustworthy gaze.'
   },
   power_cross: {
     id: 'power_cross',
@@ -75,58 +75,58 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
     pose: {
       body_angle: 'Slight angle (10-20 degrees)',
       head_position: 'Straight to camera',
-      chin_technique: 'Chin neutral or slightly lifted for confidence',
+      chin_technique: 'Chin neutral for a confident and composed look',
       shoulders: 'Broad and pulled back',
       weight_distribution: 'Back foot',
-      arms: 'Arms crossed confidently high on the chest',
+      arms: 'Arms crossed at mid-chest level with relaxed hands tucked naturally',
       description: 'Assertive professional stance conveying authority'
     },
     prompt_instructions:
-      'Assertive professional pose with a slight angle to camera, shoulders broad and pulled back, and arms crossed confidently high on the chest.'
+      'Assertive professional pose with a slight angle to camera, shoulders broad and pulled back, and arms crossed at mid-chest level (not high on the neck).'
   },
   casual_confident: {
     id: 'casual_confident',
     icon: '😎',
     pose: {
-      body_angle: 'Angled',
-      head_position: 'Tilted slightly',
-      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
-      shoulders: 'One dropped',
+      body_angle: 'Angled 15-20 degrees toward camera',
+      head_position: 'Slight 10-degree tilt toward the front shoulder',
+      chin_technique: 'Chin forward and down to define the jawline clearly.',
+      shoulders: 'Front shoulder dropped slightly lower than the back shoulder',
       weight_distribution: 'Relaxed',
       arms: 'One hand in pocket',
       description: 'Relaxed, modern professional look'
     },
-    prompt_instructions: 'Casual business pose, one hand in pocket, relaxed posture.'
+    prompt_instructions: 'Casual business pose: body angled 15-20° toward camera, slight head tilt toward the front shoulder, and one hand in pocket.'
   },
   approachable_cross: {
     id: 'approachable_cross',
     icon: '🤝',
     pose: {
-      body_angle: 'Open',
-      head_position: 'Friendly tilt',
-      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
+      body_angle: 'Open 10-15 degrees toward camera',
+      head_position: 'Friendly 8-degree head tilt',
+      chin_technique: 'Chin forward and down with gentle neck extension.',
       shoulders: 'Relaxed',
       weight_distribution: 'Forward lean',
-      arms: 'Loosely crossed or open',
+      arms: 'Arms loosely crossed at low chest level with hands visible',
       description: 'Friendly and open stance'
     },
-    prompt_instructions: 'Warm, approachable pose, leaning slightly forward.'
+    prompt_instructions: 'Warm approachable pose with a slight forward lean, relaxed shoulders, and arms loosely crossed at low chest level.'
   },
   approachable_lean: {
     id: 'approachable_lean',
     icon: '🙂',
     pose: {
-      body_angle: 'Leaning slightly forward from the waist',
-      head_position: 'Engaged, eyes slightly wider',
+      body_angle: 'Leaning forward from the waist by about 10 degrees',
+      head_position: 'Engaged with neutral head alignment',
       chin_technique: 'Chin level, neck elongated',
-      shoulders: 'Rolled slightly forward to create a connection',
+      shoulders: 'Rolled gently forward to create connection',
       weight_distribution: 'Front foot (leaning in)',
-      arms: 'Relaxed at sides or loosely clasped together at waist level',
+      arms: 'Hands loosely clasped together at waist level',
       description:
         'Engaging and friendly posture, ideal for creative or client-facing professional roles'
     },
     prompt_instructions:
-      'Approachable professional lean with a slight forward lean from the waist while standing, engaged eyes, and hands relaxed at sides or loosely clasped together at waist level. The person is STANDING, not sitting.'
+      'Approachable professional lean while standing: hinge forward from the waist about 10°, keep neck elongated, and place hands loosely clasped at waist level.'
   },
   walking_confident: {
     id: 'walking_confident',
@@ -140,7 +140,7 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       arms: 'Natural swing',
       description: 'Captured in motion'
     },
-    prompt_instructions: 'Subject walking towards camera or slightly angled, dynamic movement.'
+    prompt_instructions: 'Subject walking in mid-stride at a 15° angle toward camera with natural arm swing and dynamic movement.'
   },
   slimming_three_quarter: {
     id: 'slimming_three_quarter',
@@ -151,11 +151,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       chin_technique: 'Chin slightly up and over the front shoulder',
       shoulders: 'Front shoulder dipped slightly lower than the back',
       weight_distribution: 'Back foot',
-      arms: 'Relaxed at sides or one hand in pocket',
+      arms: 'Front arm relaxed with forearm lightly bent near waistline; back arm relaxed at side',
       description: 'Dynamic and slimming three-quarter turn favored for LinkedIn profiles'
     },
     prompt_instructions:
-      'Three-quarter slimming turn: body angled 45° away from camera, head turned back toward camera with chin slightly up and over the front shoulder for a dynamic, slimming profile-ready look.'
+      'Three-quarter slimming turn: body angled 45° away from camera, head turned back toward camera, chin slightly up over the front shoulder, front forearm lightly bent near the waistline, and back arm relaxed.'
   },
   executive_seated: {
     id: 'executive_seated',
@@ -166,7 +166,7 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Open',
       weight_distribution: 'Seated',
-      arms: 'On armrests or lap',
+      arms: 'Hands resting naturally on lap',
       description: 'Comfortable executive seating',
       sitting_position: 'Seated back comfortably, weight resting against chair back'
     },
@@ -181,70 +181,70 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed',
       weight_distribution: 'Leaning',
-      arms: 'Hand to chin/face',
+      arms: 'Dominant hand resting lightly under the chin, non-dominant arm relaxed',
       description: 'Thoughtful pose with hand near face'
     },
-    prompt_instructions: 'Subject with hand near chin or face, thoughtful expression.'
+    prompt_instructions: 'Subject in a thoughtful pose with dominant hand lightly under the chin and relaxed shoulders.'
   },
   candid_over_shoulder: {
     id: 'candid_over_shoulder',
     icon: '🧍‍♂️',
     pose: {
-      body_angle: 'Turned 90 degrees away from camera',
-      head_position: 'Turned completely back over the shoulder',
-      chin_technique: 'Tucked slightly toward the shoulder',
-      shoulders: 'Raised slightly to meet the chin line',
+      body_angle: 'Turned 60-75 degrees away from camera',
+      head_position: 'Turned back toward camera over the front shoulder',
+      chin_technique: 'Chin neutral with a slight forward extension',
+      shoulders: 'Back shoulder slightly higher, front shoulder relaxed down',
       weight_distribution: 'Even',
-      arms: 'Relaxed/Invisible',
+      arms: 'Arms relaxed at sides with natural bend at elbows',
       description: 'Modern, relaxed candid pose looking back over the shoulder'
     },
     prompt_instructions:
-      'Candid over-shoulder pose: subject turned away from camera with head turned fully back over the shoulder, creating a modern, relaxed, less rigid professional portrait.'
+      'Candid over-shoulder pose: subject turned 60-75° away from camera with head turned back over the front shoulder, neutral chin, relaxed shoulders, and arms resting naturally at the sides.'
   },
   seated_engagement: {
     id: 'seated_engagement',
     icon: '🪑',
     pose: {
-      body_angle: 'Hinged forward from hips (approx. 15 degrees)',
-      head_position: 'Level and engaged, slightly pushed forward (turtle technique) to avoid neck bunching',
-      chin_technique: 'Chin neutral or slightly down, eyes alert',
-      shoulders: 'Relaxed down, but leaning forward to create a smaller gap between subject and lens',
-      weight_distribution: 'Centered on chair, upper body weight leaning on forearms/thighs',
-      arms: 'Forearms resting on thighs, hands loosely clasped',
+      body_angle: 'Seated and hinged forward from hips about 12 degrees',
+      head_position: 'Level and engaged, slightly forward to avoid neck bunching',
+      chin_technique: 'Chin slightly down with alert eyes',
+      shoulders: 'Relaxed down while maintaining a slight forward engagement',
+      weight_distribution: 'Centered on chair with subtle forward engagement',
+      arms: 'Elbows close to torso with forearms angled toward lap and hands loosely clasped',
       description: 'Warm and attentive seated pose, implying active listening across a desk',
       sitting_position:
-        'Seated upright, hinged forward from hips approximately 15 degrees, weight on forearms/thighs'
+        'Seated upright, hinged forward from hips about 12 degrees, feet grounded'
     },
     prompt_instructions:
-      'Seated engagement pose: subject seated, hinged forward from hips approximately 15 degrees, with forearms resting on thighs or a table surface and hands loosely clasped. Head level and engaged, slightly pushed forward (turtle technique) to avoid neck bunching. Ensure arms do not cross high enough to block any logo if branding is present. This creates a warm, attentive pose that implies active listening across a desk.'
+      'Seated engagement pose: subject seated upright and hinged forward from the hips about 10-15°, head level and engaged, elbows near torso, forearms angled toward lap, and hands loosely clasped. Keep the chest area clear so logos remain visible when branding is present.'
   },
   jacket_reveal: {
     id: 'jacket_reveal',
     icon: '👔',
     pose: {
       body_angle: 'Slightly angled to camera (15-20 degrees)',
-      head_position: 'Turned towards camera, chin slightly down',
+      head_position: 'Turned toward camera with chin slightly down',
       chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed, back straight',
       weight_distribution: 'Balanced on both feet',
-      arms: 'if the subject is male, opening the jacket widely with both hands. If the subject is female, elegantly opening the jacket with both hands',
+      arms: 'Both hands opening the jacket evenly to reveal the base layer logo',
       description: 'Professional pose highlighting attire'
     },
-    prompt_instructions: 'Subject is elegantly opening their jacket with both hands, opening it partially to reveal the logo on the shirt underneath. Keep the jacket partially open so the logo remains clearly visible. This creates a natural and professional look that showcases the outfit and prominently displays the branding.'
+    prompt_instructions: 'Subject opens the jacket evenly with both hands to reveal the logo on the shirt underneath; keep jacket opening consistent so the logo stays clearly visible.'
   },
   thumbs_up: {
     id: 'thumbs_up',
     icon: '👍',
     pose: {
       body_angle: 'Slight angle (15-20 degrees)',
-      head_position: 'Turned towards camera with genuine smile',
+      head_position: 'Turned toward camera with genuine smile',
       chin_technique: 'Chin slightly up for an open, positive expression',
       shoulders: 'Relaxed and open',
-      weight_distribution: 'Even or slightly back',
-      arms: 'One arm raised with thumb up gesture, other arm relaxed at side or hand in pocket',
+      weight_distribution: 'Even',
+      arms: 'One arm raised with thumb up gesture, other arm relaxed at side',
       description: 'Enthusiastic and approachable pose with thumbs up gesture'
     },
-    prompt_instructions: 'Subject giving a confident thumbs up gesture with one hand raised at chest or shoulder level, thumb clearly visible and pointing upward. The other arm is relaxed at their side or hand casually in pocket. Expression is warm and genuine with a friendly smile. This creates an approachable, positive, and energetic professional portrait.'
+    prompt_instructions: 'Subject gives a confident thumbs-up with one hand raised at chest level, thumb clearly visible and pointing upward; the other arm stays relaxed at the side with a warm genuine smile.'
   }
 }
 
@@ -271,11 +271,21 @@ export function generatePoseInstructions(template: PoseTemplate): string {
 
 import { deserialize } from './deserializer'
 
+function isPoseType(value: unknown): value is PoseType {
+  return typeof value === 'string' && (ALL_POSE_IDS as string[]).includes(value)
+}
+
 /**
  * Element registry config for pose
  */
 export const poseElementConfig: ElementConfig<PoseSettings> = {
   getDefaultPredefined: () => predefined({ type: 'classic_corporate' }),
   getDefaultUserChoice: () => userChoice(),
-  deserialize
+  deserialize,
+  mergePredefinedFromSession: ({ savedValue }) => {
+    if (typeof savedValue !== 'object' || savedValue === null) return undefined
+    const savedType = (savedValue as { type?: unknown }).type
+    if (!isPoseType(savedType)) return undefined
+    return predefined<PoseValue>({ type: savedType })
+  },
 }

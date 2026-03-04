@@ -2,11 +2,9 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
-import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
-import { PlusIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
@@ -18,7 +16,6 @@ import { PACKAGES_CONFIG } from '@/config/packages'
 import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyleByContextId, setActiveStyle, clearActiveStyle } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
-import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import GenerateButton from '@/components/generation/GenerateButton'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
@@ -26,19 +23,28 @@ import { calculatePhotosFromCredits } from '@/domain/pricing'
 import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
-import { FlowProgressDock, CustomizationMobileFooter } from '@/components/generation/navigation'
+import { FlowProgressDock, CustomizationMobileFooter, StandardThreeStepIndicator } from '@/components/generation/navigation'
 import type { CustomizationStepsMeta } from '@/lib/customizationSteps'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import Header from '@/app/[locale]/(product)/app/components/Header'
-import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
+import {
+  hasSavedBeautificationSettings,
+  loadClothingColors,
+  loadStyleSettings,
+  saveClothingColors,
+  saveStyleSettings,
+} from '@/lib/clothing-colors-storage'
 import { isUserChoice, hasValue, userChoice } from '@/domain/style/elements/base/element-types'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { useCustomizationCompletion } from '@/hooks/useCustomizationCompletion'
 import { mergeSavedUserChoiceStyleSettings } from '@/lib/style-settings-merge'
 import { usePersistedStringSet } from '@/hooks/usePersistedStringSet'
-
-const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
+import { buildAllowedStyleRequestKeys } from '@/domain/style/style-setting-allowlists'
+import { getAcceptedOnVisitKeysForPackage } from '@/domain/style/userChoice'
+import { getChangedDesktopStepIndices, mergeVisitedStepIndices } from '@/lib/desktop-progress'
+import { Toast } from '@/components/ui'
+import { useDemographicsLoader } from '@/hooks/useDemographicsLoader'
 
 interface StartGenerationClientProps {
   initialData: GenerationPageData
@@ -55,17 +61,31 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const tNav = useTranslations('inviteDashboard.selfieSelection.mobile.navigation')
   const tProgressDock = useTranslations('generation.progressDock')
   const tStyleCategories = useTranslations('customization.photoStyle.categories')
-  const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
+  const skipUpload = useMemo(
+    () => searchParams.get('skipUpload') === '1' || Boolean(keyFromQuery),
+    [searchParams, keyFromQuery]
+  )
   const searchParamsString = useMemo(() => searchParams.toString(), [searchParams])
 
   // Check for success state after checkout
   const isSuccess = searchParams.get('success') === 'true'
   const successType = searchParams.get('type')
 
-  // Initialize state from server data - no useEffect needed!
-  const selectedSelfies = initialData.selectedSelfies
+  // Keep selected selfies in state so we can refresh stale prefetched server payloads.
+  const [selectedSelfies, setSelectedSelfies] = useState(initialData.selectedSelfies)
+  const selectedSelfieIdsCsv = useMemo(
+    () => selectedSelfies.map((selfie) => selfie.id).join(','),
+    [selectedSelfies]
+  )
+  const demographicsEndpoint = useMemo(() => {
+    if (!selectedSelfieIdsCsv) return '/api/person/demographics'
+    return `/api/person/demographics?selfieIds=${encodeURIComponent(selectedSelfieIdsCsv)}`
+  }, [selectedSelfieIdsCsv])
+  const { detectedGender } = useDemographicsLoader({
+    endpoint: demographicsEndpoint,
+    enabled: Boolean(skipUpload),
+  })
   const ownedPackages = initialData.ownedPackages || []
-  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const { href: buyCreditsHref } = useBuyCreditsLink()
 
@@ -80,6 +100,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     flags: flowFlags,
     markInFlow,
     clearFlow,
+    hasCompletedBeautification,
     hasSeenCustomizationIntro,
     hydrated,
     setCustomizationStepsMeta,
@@ -87,14 +108,59 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     visitedSteps,
     setVisitedSteps,
     completedSteps,
-    setCompletedSteps
-  } = useGenerationFlowState()
+    setCompletedSteps,
+    setCompletedBeautification
+  } = useGenerationFlowState({ syncBeautificationFromSession: true })
   const isMobile = useMobileViewport()
   const { context: onboardingContext } = useOnboardingState()
 
+  useEffect(() => {
+    if (!hydrated || !skipUpload) return
+
+    let cancelled = false
+
+    const refreshSelectedSelfies = async () => {
+      try {
+        const response = await fetch(`/api/selfies/selected?t=${Date.now()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        if (!response.ok) return
+
+        const data = (await response.json()) as { selfies?: Array<{ id?: string; key?: string }> }
+        if (cancelled || !Array.isArray(data.selfies)) return
+
+        const nextSelectedSelfies = data.selfies
+          .filter((selfie): selfie is { id: string; key: string } =>
+            typeof selfie.id === 'string' && selfie.id.length > 0 &&
+            typeof selfie.key === 'string' && selfie.key.length > 0
+          )
+
+        setSelectedSelfies((prev) => {
+          if (prev.length === nextSelectedSelfies.length) {
+            const prevIds = prev.map((selfie) => selfie.id).join(',')
+            const nextIds = nextSelectedSelfies.map((selfie) => selfie.id).join(',')
+            if (prevIds === nextIds) {
+              return prev
+            }
+          }
+          return nextSelectedSelfies
+        })
+      } catch {
+        // Keep server-provided selection as fallback when refresh fails.
+      }
+    }
+
+    void refreshSelectedSelfies()
+    return () => {
+      cancelled = true
+    }
+  }, [hydrated, skipUpload])
+
   const markGenerationFlow = useCallback(() => {
+    setCompletedBeautification(false)
     markInFlow({ pending: true })
-  }, [markInFlow])
+  }, [markInFlow, setCompletedBeautification])
 
   const clearGenerationFlow = useCallback(() => {
     clearFlow()
@@ -109,10 +175,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // Style state from server data
   const [activeContext, setActiveContext] = useState<ContextOption | null>(initialData.styleData.activeContext)
   const [availableContexts] = useState<ContextOption[]>(initialData.styleData.availableContexts)
-  const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(initialData.styleData.photoStyleSettings)
+  const [photoStyleSettings, setPhotoStyleSettingsRaw] = useState<PhotoStyleSettingsType>(initialData.styleData.photoStyleSettings)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(initialData.styleData.originalContextSettings)
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const isGeneratingRef = React.useRef(false)
   const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
   // Navigation methods exposed by PhotoStyleSettings for mobile sticky footer (use ref to avoid re-render loops)
   const navMethodsRef = React.useRef<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
@@ -172,11 +240,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const subscriptionTier = initialData.planInfo.tier
   const fallbackPackageId = PACKAGES_CONFIG.defaultPlanPackage
 
-  const headerThumbs = useMemo(() => {
-    const items = selectedSelfies.length > 0 ? selectedSelfies : (keyFromQuery ? [{ id: 'legacy', key: keyFromQuery }] : [])
-    return items
-  }, [selectedSelfies, keyFromQuery])
-
   // Derived state: session is available from server
   const session = useMemo(() => initialData.session ? {
     user: {
@@ -192,7 +255,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // Preload face detection model early in the generation flow
   // This ensures the model is ready when users reach the selfie capture page
   useEffect(() => {
-    console.log('[StartGenerationClient] Preloading face detection model...')
     preloadFaceDetectionModel()
   }, [])
 
@@ -204,8 +266,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       startTransition(() => {
         // Check if user has enough selfies to skip selfie upload flow
         if (hasEnoughSelfies(selectedSelfies.length)) {
-          // User has enough selfies, skip directly to customization-intro
-          router.push('/app/generate/customization-intro')
+          // User has enough selfies, continue with beautification step first
+          router.push('/app/generate/beautification')
         } else {
           // Not enough selfies, go through selfie tips page first
           router.push('/app/generate/selfie-tips')
@@ -228,8 +290,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   // Track if we've loaded saved settings to avoid overwriting user changes
   const hasLoadedSavedSettingsRef = React.useRef(false)
-  // Track if user has explicitly made changes (to prevent auto-save on initial load)
-  const hasUserMadeChangesRef = React.useRef(false)
+  const prevStyleSettingsRef = React.useRef(photoStyleSettings)
+  const latestPhotoStyleSettingsRef = React.useRef(photoStyleSettings)
 
   // Helper function to merge saved colors into settings
   // IMPORTANT: Only merges saved colors when clothingColors mode is 'user-choice'
@@ -265,11 +327,44 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const mergeSavedStyleSettings = React.useCallback((
     settings: PhotoStyleSettingsType
   ): PhotoStyleSettingsType => {
+    const pkg = getPackageConfig(selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
+    const saved = loadStyleSettings()
     return mergeSavedUserChoiceStyleSettings({
       settings,
-      savedSettings: loadStyleSettings(),
+      savedSettings: saved,
+      visibleCategories: pkg.visibleCategories,
     })
+  }, [selectedPackageId])
+
+  const persistStyleSettings = useCallback((settings: PhotoStyleSettingsType) => {
+    saveStyleSettings(settings)
+
+    const clothingColors = settings.clothingColors
+    if (clothingColors && isUserChoice(clothingColors) && hasValue(clothingColors)) {
+      saveClothingColors(clothingColors.value)
+    }
   }, [])
+
+  // Wrapper that persists every state change to sessionStorage (like invite dashboard).
+  // Guards: only save after hydration and initial merge are complete to avoid
+  // overwriting saved settings during mount.
+  const setPhotoStyleSettings = useCallback((
+    newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)
+  ) => {
+    const current = latestPhotoStyleSettingsRef.current
+    const updated = typeof newSettings === 'function' ? newSettings(current) : newSettings
+
+    latestPhotoStyleSettingsRef.current = updated
+    setPhotoStyleSettingsRaw(updated)
+
+    if (hydrated && hasLoadedSavedSettingsRef.current) {
+      persistStyleSettings(updated)
+    }
+  }, [hydrated, persistStyleSettings])
+
+  useEffect(() => {
+    latestPhotoStyleSettingsRef.current = photoStyleSettings
+  }, [photoStyleSettings])
 
   // Mark as ready for saving after hydration (regardless of skipUpload)
   // This ensures saves work in all flows
@@ -281,16 +376,14 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     // Always merge saved settings once on hydration. This keeps behavior consistent
     // across entry paths (refresh, sidebar navigation, direct URL, onboarding redirects).
     setPhotoStyleSettings(prev => {
-      // First merge saved style settings (all categories) - uses global key
       let merged = mergeSavedStyleSettings(prev)
-      // Then merge saved clothing colors (for backward compatibility)
       merged = mergeSavedColors(merged)
       return merged
     })
 
     // Mark as ready for saving (always, after hydration)
     hasLoadedSavedSettingsRef.current = true
-  }, [hydrated, skipUpload, mergeSavedStyleSettings, mergeSavedColors])
+  }, [hydrated, skipUpload, setPhotoStyleSettings, mergeSavedStyleSettings, mergeSavedColors])
 
   // Rehydrate from session whenever this route is (re)entered with skipUpload.
   // This handles App Router cache restores where component state can be stale
@@ -303,62 +396,32 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       merged = mergeSavedColors(merged)
       return merged
     })
-  }, [hydrated, skipUpload, pathname, searchParamsString, mergeSavedStyleSettings, mergeSavedColors])
+  }, [hydrated, skipUpload, pathname, searchParamsString, setPhotoStyleSettings, mergeSavedStyleSettings, mergeSavedColors])
 
-  // Save all style settings to session storage whenever they change
-  // IMPORTANT: Only saves when user has explicitly made changes (not on initial load)
-  // This prevents overwriting saved settings when page loads with a different package
+  const handleSettingsChange = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
+    setPhotoStyleSettings(newSettings)
+  }, [setPhotoStyleSettings])
+
   useEffect(() => {
-    // Skip saving during initial load, if not hydrated, or if user hasn't made changes
-    if (!hasLoadedSavedSettingsRef.current || !hydrated || !hasUserMadeChangesRef.current) {
+    if (!customizationStepsMeta?.stepKeys) {
+      prevStyleSettingsRef.current = photoStyleSettings
       return
     }
 
-    // Save all style settings with global key (no context-specific key)
-    // This ensures settings persist regardless of which context/package is active
-    saveStyleSettings(photoStyleSettings)
+    if (!isMobile) {
+      const changedIndices = getChangedDesktopStepIndices(
+        prevStyleSettingsRef.current as Record<string, unknown>,
+        photoStyleSettings as Record<string, unknown>,
+        customizationStepsMeta.stepKeys
+      )
 
-    // Also save clothing colors separately for backward compatibility
-    const clothingColors = photoStyleSettings.clothingColors
-    if (clothingColors && isUserChoice(clothingColors) && hasValue(clothingColors)) {
-      saveClothingColors(clothingColors.value)
-    }
-  }, [photoStyleSettings, hydrated])
-
-  // Wrapper for settings onChange that marks user as having made changes
-  // Also tracks visited steps on desktop for FlowProgressDock progress display
-  const handleSettingsChange = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
-    hasUserMadeChangesRef.current = true
-
-    setPhotoStyleSettings(prev => {
-      const updated = typeof newSettings === 'function' ? newSettings(prev) : newSettings
-
-      // On desktop, detect which fields changed and mark them as visited
-      // Use setTimeout to avoid setting state inside state setter
-      if (!isMobile && customizationStepsMeta?.stepKeys) {
-        const changedIndices: number[] = []
-        customizationStepsMeta.stepKeys.forEach((key, idx) => {
-          const prevValue = (prev as Record<string, unknown>)[key]
-          const newValue = (updated as Record<string, unknown>)[key]
-          if (JSON.stringify(prevValue) !== JSON.stringify(newValue)) {
-            changedIndices.push(idx)
-          }
-        })
-
-        if (changedIndices.length > 0) {
-          // Schedule state update outside of the setter callback
-          // Capture current visitedSteps in closure for merging
-          const currentVisited = [...visitedSteps]
-          setTimeout(() => {
-            const newVisited = [...new Set([...currentVisited, ...changedIndices])]
-            setVisitedSteps(newVisited)
-          }, 0)
-        }
+      if (changedIndices.length > 0) {
+        setVisitedSteps((prevVisited) => mergeVisitedStepIndices(prevVisited, changedIndices))
       }
+    }
 
-      return updated
-    })
-  }, [isMobile, customizationStepsMeta?.stepKeys, visitedSteps, setVisitedSteps])
+    prevStyleSettingsRef.current = photoStyleSettings
+  }, [photoStyleSettings, isMobile, customizationStepsMeta?.stepKeys, setVisitedSteps])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -379,9 +442,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // IMPORTANT: Free plan users always use personal credits (even team admins)
   // Their free trial credits are stored as personal (teamId: null)
   const effectiveGenerationType: 'personal' | 'team' = useMemo(() => {
-    // If user explicitly selected a type, use that
-    if (generationType) return generationType
-
     // Free plan users always use personal credits
     if (isFreePlan) return 'personal'
 
@@ -390,15 +450,25 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
     // Fallback logic for other users
     return hasIndividualAccess ? 'personal' : (hasTeamAccess && hasTeamCredits ? 'team' : 'personal')
-  }, [generationType, isFreePlan, isTeamAdmin, isTeamMember, isProUser, hasIndividualAccess, hasTeamAccess, hasTeamCredits])
-
-  const onTypeSelected = (type: 'personal' | 'team') => {
-    setGenerationType(type)
-  }
+  }, [isFreePlan, isTeamAdmin, isTeamMember, isProUser, hasIndividualAccess, hasTeamAccess, hasTeamCredits])
 
   const handleMobileStepChange = useCallback((step: MobileStep | null) => {
     const stepId = step?.custom?.id ?? step?.category?.key ?? null
     if (!stepId) return
+
+    if (stepId === 'branding') {
+      handleSettingsChange((prev) => {
+        const currentBranding = prev.branding
+        if (!currentBranding || currentBranding.mode !== 'user-choice' || hasValue(currentBranding)) {
+          return prev
+        }
+        return {
+          ...prev,
+          branding: userChoice({ type: 'exclude' }),
+        }
+      })
+    }
+
     setVisitedMobileSteps(prev => {
       if (prev.has(stepId)) return prev
       const next = new Set(prev)
@@ -411,9 +481,22 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       next.add(stepId)
       return next
     })
-  }, [])
+  }, [handleSettingsChange])
 
   const handleCategoryVisit = useCallback((categoryKey: string) => {
+    if (categoryKey === 'branding') {
+      handleSettingsChange((prev) => {
+        const currentBranding = prev.branding
+        if (!currentBranding || currentBranding.mode !== 'user-choice' || hasValue(currentBranding)) {
+          return prev
+        }
+        return {
+          ...prev,
+          branding: userChoice({ type: 'exclude' }),
+        }
+      })
+    }
+
     setAcceptedVisitedStepKeys(prev => {
       if (prev.has(categoryKey)) return prev
       const next = new Set(prev)
@@ -423,10 +506,15 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     if (!customizationStepsMeta?.stepKeys) return
     const index = customizationStepsMeta.stepKeys.indexOf(categoryKey)
     if (index < 0) return
-    if (visitedSteps.includes(index)) return
-    setVisitedSteps(Array.from(new Set([...visitedSteps, index])))
-  }, [customizationStepsMeta?.stepKeys, visitedSteps, setVisitedSteps])
-  const acceptedOnVisitKeys = React.useMemo(() => ['clothing', 'clothingColors', 'pose', 'expression', 'branding'], [])
+    setVisitedSteps((prev) => (prev.includes(index) ? prev : [...prev, index]))
+  }, [customizationStepsMeta?.stepKeys, handleSettingsChange, setVisitedSteps])
+  const acceptedOnVisitKeys = React.useMemo(
+    () =>
+      getAcceptedOnVisitKeysForPackage(
+        isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
+      ),
+    [isFreePlan, selectedPackageId]
+  )
 
   // Track whether we've received fresh step meta from PhotoStyleSettings this session
   // This prevents auto-proceed from using stale cached sessionStorage values
@@ -438,8 +526,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }, [setCustomizationStepsMeta])
 
   const handleBackToSelfies = useCallback(() => {
-    // Navigate to the selfie selection page
-    router.push('/app/generate/selfie')
+    // Navigate to the beautification step before selfie selection
+    router.push('/app/generate/beautification')
   }, [router])
 
   const onProceed = useCallback(async () => {
@@ -448,7 +536,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       return
     }
 
-    if (isGenerating) return
+    if (isGeneratingRef.current) return
+    isGeneratingRef.current = true
 
     try {
       setIsGenerating(true)
@@ -472,15 +561,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       const packageConfig = getPackageConfig(packageId)
 
       // Filter styleSettings to only include visible categories (defense-in-depth)
-      const allowedKeys = new Set([
-        ...packageConfig.visibleCategories,
-        'packageId',
-        'presetId',
-        'aspectRatio',
-        'subjectCount',
-        'usageContext',
-        'style'
-      ])
+      const allowedKeys = buildAllowedStyleRequestKeys(packageConfig.visibleCategories)
       const filteredStyleSettings = Object.fromEntries(
         Object.entries({ ...photoStyleSettings, packageId })
           .filter(([key]) => allowedKeys.has(key as keyof typeof photoStyleSettings))
@@ -525,18 +606,18 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         redirectUrl += '?new_generation=true'
       }
 
-      clearGenerationFlow()
       router.push(redirectUrl)
 
     } catch (error) {
       console.error('Failed to start generation:', error)
-      alert(`Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setToastMessage(`Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      isGeneratingRef.current = false
       setIsGenerating(false)
     }
   }, [
     selectedSelfies,
     effectiveGenerationType,
-    isGenerating,
     session,
     track,
     activeContext,
@@ -545,11 +626,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     subscriptionTier,
     photoStyleSettings,
     refetchCredits,
-    clearGenerationFlow,
     router
   ])
-
-  const teamName = session?.user?.person ? 'Team' : undefined
 
   useEffect(() => {
     // Keep per-step acceptance persisted across route hops.
@@ -589,8 +667,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     acceptedOnVisitVisitedKeys: acceptedVisitedStepKeys
   })
   const uneditedFields = completionState.uneditedFields
-  const hasUneditedFields = originalContextSettings ? completionState.hasUneditedFields : true
-  const isCustomizationComplete = originalContextSettings ? completionState.isCustomizationComplete : false
+  // Completion should always derive from value comparison logic.
+  // The hook already falls back to package defaults when originalContextSettings is missing.
+  const hasUneditedFields = completionState.hasUneditedFields
+  const isCustomizationComplete = completionState.isCustomizationComplete
   const valueBasedVisitedSteps = completionState.valueBasedVisitedStepIndices
   const hasVisitedClothingColorsIfEditable = completionState.hasVisitedClothingColorsIfEditable
 
@@ -678,42 +758,143 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setCompletedSteps(valueBasedVisitedSteps)
   }, [completedSteps, valueBasedVisitedSteps, setCompletedSteps])
 
-  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && isCustomizationComplete && hasVisitedClothingColorsIfEditable
+  const canGenerate =
+    hasEnoughCredits &&
+    hasRequiredSelfies &&
+    isCustomizationComplete &&
+    hasVisitedClothingColorsIfEditable
 
   // NEW CREDIT MODEL: All usable credits are on person
   const hasAnyCredits = userCredits.person > 0
-  const selectedPackage = getPackageConfig(effectivePackageId)
-  const selectedPhotoStyleLabel = activeContext?.name || selectedPackage.label
-  const remainingCreditsForType = userCredits.person  // Always use person credits
-  const photoCreditsPerGeneration = calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)
-
-  const shouldShowGenerationTypeSelector = false
   const pagePaddingClasses = skipUpload ? 'px-0 md:px-6 lg:px-8' : 'px-4 sm:px-6 lg:px-8'
+  const styleSourceValue =
+    activeContext?.id || (ownedPackages.length > 1 ? `package_${selectedPackageId}` : 'freestyle')
+
+  const handleStyleSourceChange = useCallback(async (value: string) => {
+    if (value === 'freestyle') {
+      if (activeContext?.id) {
+        clearActiveStyle({ styleId: activeContext.id }).catch(() => { })
+      }
+      setActiveContext(null)
+      const fallbackPackage = getPackageConfig(fallbackPackageId)
+      setSelectedPackageId(fallbackPackageId)
+      try { localStorage.setItem(SELECTED_PACKAGE_KEY, fallbackPackageId) } catch { }
+      let newSettings = mergeSavedStyleSettings(fallbackPackage.defaultSettings)
+      newSettings = mergeSavedColors(newSettings)
+      setPhotoStyleSettings(newSettings)
+      setOriginalContextSettings(fallbackPackage.defaultSettings)
+      return
+    }
+
+    if (value.startsWith('package_')) {
+      const pkgId = value.replace('package_', '')
+      if (activeContext?.id) {
+        clearActiveStyle({ styleId: activeContext.id }).catch(() => { })
+      }
+      setActiveContext(null)
+      setSelectedPackageId(pkgId)
+      try { localStorage.setItem(SELECTED_PACKAGE_KEY, pkgId) } catch { }
+      const pkg = getPackageConfig(pkgId)
+      let newSettings = mergeSavedStyleSettings(pkg.defaultSettings)
+      newSettings = mergeSavedColors(newSettings)
+      setPhotoStyleSettings(newSettings)
+      setOriginalContextSettings(pkg.defaultSettings)
+      return
+    }
+
+    const selectedContext = availableContexts.find(ctx => ctx.id === value)
+    if (!selectedContext) return
+
+    try { localStorage.removeItem(SELECTED_PACKAGE_KEY) } catch { }
+    setActiveStyle({ styleId: selectedContext.id }).catch(() => {
+      // Silently ignore persistence errors for session-only usage.
+    })
+    const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
+    const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
+    const updatedName = normalizeContextName(
+      context?.name ?? selectedContext.name,
+      contextIndex === -1 ? availableContexts.length : contextIndex,
+      availableContexts.length || 1,
+      effectiveGenerationType
+    )
+    const enrichedContext = {
+      id: selectedContext.id,
+      name: updatedName,
+      customPrompt: (context?.settings as Record<string, unknown> | undefined)?.['customPrompt'] as string | null | undefined ?? null,
+      settings: context?.settings ?? selectedContext.settings,
+      backgroundPrompt: (context?.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
+      stylePreset: (context?.settings as Record<string, unknown> | undefined)?.['stylePreset'] as string | undefined
+    }
+    setActiveContext(enrichedContext)
+    const newSettings = ui.clothingColors && isUserChoice(ui.clothingColors)
+      ? mergeSavedColors(ui)
+      : ui
+    setPhotoStyleSettings(newSettings)
+    setSelectedPackageId(pkg.id)
+    setOriginalContextSettings(ui)
+  }, [
+    activeContext?.id,
+    setPhotoStyleSettings,
+    availableContexts,
+    clearActiveStyle,
+    effectiveGenerationType,
+    fallbackPackageId,
+    loadStyleByContextId,
+    mergeSavedColors,
+    mergeSavedStyleSettings,
+    normalizeContextName,
+    SELECTED_PACKAGE_KEY,
+    setActiveStyle,
+  ])
+
+  const renderStyleSourceOptions = () => (
+    <>
+      {availableContexts.map((context) => (
+        <option key={context.id} value={context.id}>
+          {context.name}
+        </option>
+      ))}
+      {ownedPackages.length > 1 ? (
+        ownedPackages.map(pkg => (
+          <option key={pkg.packageId} value={`package_${pkg.packageId}`}>
+            {pkg.name} (all settings customizable)
+          </option>
+        ))
+      ) : (
+        <option value="freestyle">{t('freestyle')}</option>
+      )}
+    </>
+  )
 
   // Redirect to intro page if not seen yet (route-based intros)
   useEffect(() => {
-    if (hydrated && skipUpload && !hasSeenCustomizationIntro) {
+    if (!hydrated || !skipUpload) {
+      return
+    }
+
+    if (!hasCompletedBeautification) {
+      // Avoid redirect loops when the completed flag hasn't synced yet but
+      // beautification is already persisted in session style settings.
+      if (hasSavedBeautificationSettings()) {
+        setCompletedBeautification(true)
+        return
+      }
+
+      router.replace('/app/generate/beautification')
+      return
+    }
+
+    if (!hasSeenCustomizationIntro) {
       router.replace('/app/generate/customization-intro')
     }
-  }, [hydrated, skipUpload, hasSeenCustomizationIntro, router])
-
-  // Auto-proceed to generation when ALL settings are predefined (no editable fields)
-  // DISABLED: This feature was causing premature generation starts. Generation should only
-  // happen when the user explicitly clicks the generate button.
-  // TODO: Re-enable with proper fix if auto-proceed is needed for admin photostyles
-  // const hasAttemptedAutoProceed = React.useRef(false)
-  // useEffect(() => {
-  //   if (hasAttemptedAutoProceed.current) return
-  //   if (!hydrated || !skipUpload || !hasSeenCustomizationIntro) return
-  //   if (isGenerating || isPending) return
-  //   if (!hasReceivedFreshMeta.current) return
-  //   if (!customizationStepsMeta || customizationStepsMeta.editableSteps === undefined) return
-  //   if (customizationStepsMeta.editableSteps > 0) return
-  //   if (!canGenerate) return
-  //   hasAttemptedAutoProceed.current = true
-  //   console.log('[StartGenerationClient] All settings predefined, auto-proceeding to generation')
-  //   onProceed()
-  // }, [hydrated, skipUpload, hasSeenCustomizationIntro, customizationStepsMeta, canGenerate, isGenerating, isPending, onProceed])
+  }, [
+    hydrated,
+    skipUpload,
+    hasCompletedBeautification,
+    hasSeenCustomizationIntro,
+    router,
+    setCompletedBeautification,
+  ])
 
   if (isSuccess && (successType === 'individual_success' || successType === 'vip_success' || successType === 'seats_success')) {
     return <PurchaseSuccess />
@@ -722,7 +903,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   if (!creditsLoading && !hasAnyCredits) {
     return (
       <div className={`${pagePaddingClasses} space-y-6`}>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div data-testid="no-credits-card" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
               <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -734,14 +915,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href={buyCreditsHrefWithReturn}
-                className="px-6 py-3 rounded-md text-white font-medium transition-colors"
+                className="px-6 py-3 rounded-md text-white font-medium transition-colors hover:brightness-110 active:brightness-95"
                 style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
-                }}
               >
                 {t('buyCredits')}
               </Link>
@@ -772,7 +947,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }
 
   // Don't render while redirecting to intro
-  if (!hydrated || (skipUpload && !hasSeenCustomizationIntro)) {
+  if (!hydrated || (skipUpload && (!hasCompletedBeautification || !hasSeenCustomizationIntro))) {
     return (
       <div className={`${pagePaddingClasses} space-y-6`}>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -798,34 +973,43 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     onStepMetaChange: handleStepMetaChange,
     onCategoryVisit: handleCategoryVisit,
     acceptedOnVisitKeys,
-    visitedStepKeys: acceptedVisitedStepKeys
+    visitedStepKeys: acceptedVisitedStepKeys,
+    detectedGender,
+    uneditedFields,
   }
 
   return (
     <>
+      {toastMessage ? (
+        <Toast
+          message={toastMessage}
+          type="error"
+          onDismiss={() => setToastMessage(null)}
+        />
+      ) : null}
       {/* Progress Dock - Bottom Center (Desktop Only) */}
-      <FlowProgressDock
-        selfieCount={selectedSelfies.length}
-        uneditedFields={uneditedFields}
-        hasUneditedFields={!isCustomizationComplete}
-        canGenerate={canGenerate}
-        hasEnoughCredits={hasEnoughCredits}
-        currentStep="customize"
-        onNavigateToSelfies={handleBackToSelfies}
-        onNavigateToCustomize={() => { }} // Already on customize page
-        onGenerate={onProceed}
-        onNavigateToDashboard={() => router.push('/app/dashboard')}
-        onBuyCredits={() => router.push(buyCreditsHrefWithReturn)}
-        isGenerating={isGenerating || isPending}
-        customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={
-          // Use value-based visited steps: a step is "done" if it has a value, not just visited
-          // This aligns the dock progress dots with the card badges
-          valueBasedVisitedSteps
-        }
-        onAttemptDisabledGenerate={scrollToFirstIncompleteCard}
-        disabledGenerateReason={disabledGenerateReasonDesktop}
-      />
+      {!isMobile && (
+        <FlowProgressDock
+          selfieCount={selectedSelfies.length}
+          hasUneditedFields={!isCustomizationComplete}
+          hasEnoughCredits={hasEnoughCredits}
+          currentStep="customize"
+          onNavigateToPreviousStep={handleBackToSelfies}
+          onNavigateToCustomize={() => { }} // Already on customize page
+          onGenerate={onProceed}
+          onNavigateToDashboard={() => router.push('/app/dashboard')}
+          onBuyCredits={() => router.push(buyCreditsHrefWithReturn)}
+          isGenerating={isGenerating || isPending}
+          customizationStepsMeta={customizationStepsMeta}
+          visitedEditableSteps={
+            // Use value-based visited steps: a step is "done" if it has a value, not just visited
+            // This aligns the dock progress dots with the card badges
+            valueBasedVisitedSteps
+          }
+          onAttemptDisabledGenerate={scrollToFirstIncompleteCard}
+          disabledGenerateReason={disabledGenerateReasonDesktop}
+        />
+      )}
 
       <div className={`${pagePaddingClasses} space-y-8 pb-44 md:pb-52 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
         {!skipUpload && (creditsLoading || !session) ? (
@@ -848,19 +1032,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </Link>
             </div>
           </div>
-        ) : skipUpload && shouldShowGenerationTypeSelector && !generationType ? (
-          <GenerationTypeSelector
-            photoKey={keyFromQuery || ''}
-            onTypeSelected={onTypeSelected}
-            userCredits={userCredits}
-            hasTeamAccess={hasTeamAccess}
-            teamName={teamName}
-          />
         ) : skipUpload ? (
           <>
             {/* Alert for insufficient credits - shown inline if needed */}
             {!hasEnoughCredits && (
-              <div className="hidden md:block mb-6">
+              <div data-testid="desktop-insufficient-credits-alert" className="hidden md:block mb-6">
                 <div className="p-4 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-lg shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
@@ -884,83 +1060,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </div>
             )}
 
-            {/* Header card with selfie thumbnails and summary - hidden completely */}
-            <div className="hidden bg-white rounded-xl shadow-md border border-gray-200/60 p-4 sm:p-6">
-              <h1 className="hidden text-xl sm:text-2xl font-bold text-gray-900 mb-3 tracking-tight">{t('readyToGenerate')}</h1>
-
-              {/* Alternative Layout: More balanced card-based approach */}
-              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-                {/* Left Section: Thumbnails and Summary */}
-                <div className="flex gap-5 lg:flex-1 min-w-0">
-                  {/* Selected Selfie Thumbnails */}
-                  <div className="flex-none">
-                    <div className={`grid ${headerThumbs.length <= 2 ? 'grid-flow-col auto-cols-max grid-rows-1' : 'grid-rows-2 grid-flow-col'} gap-2.5`}>
-                      {headerThumbs.map((s) => (
-                        <div key={s.id} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border-2 border-gray-200 shadow-md ring-2 ring-white">
-                          <Image
-                            src={`/api/files/get?key=${encodeURIComponent(s.key)}`}
-                            alt="Selected selfie"
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <GenerationSummaryTeam
-                      type={effectiveGenerationType}
-                      styleLabel={selectedPhotoStyleLabel}
-                      remainingCredits={remainingCreditsForType}
-                      perGenCredits={PRICING_CONFIG.credits.perGeneration}
-                      showGenerateButton={false}
-                      showCustomizeHint={false}
-                      teamName={teamName || undefined}
-                      showTitle={false}
-                      plain
-                      inlineHint
-                    />
-                  </div>
-                </div>
-
-                {/* Right Section: Credits and Generate Action */}
-                <div className="hidden lg:flex-none lg:w-64 xl:w-72">
-                  <div className="space-y-4">
-                    {!hasEnoughCredits && (
-                      <div className="p-3 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-lg shadow-sm">
-                        <div className="flex items-start gap-2.5">
-                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="h-3.5 w-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-amber-900 mb-1">
-                              {t('insufficientCredits')}
-                            </p>
-                            <p className="text-xs text-amber-800 leading-snug">
-                              {t('insufficientCreditsMessage', {
-                                required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
-                                current: calculatePhotosFromCredits(userCredits.person)
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="hidden text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cost per generation</div>
-                    <div className="hidden mb-4">
-                      <div className="text-xl lg:text-2xl font-bold text-gray-900 leading-none">{photoCreditsPerGeneration}</div>
-                      <div className="text-xs lg:text-sm text-gray-600">photo credits</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Desktop Page Header - matches intro pages typography */}
             <div className="hidden md:block pt-8 md:pt-10 space-y-3">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
@@ -970,6 +1069,31 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 {tCustomize('subtitle')}
               </p>
             </div>
+
+            {/* Mobile: explicit style-source selector parity with desktop */}
+            {!isFreePlan && (effectiveGenerationType === 'personal' || effectiveGenerationType === 'team') && (
+              <div className="md:hidden rounded-2xl border border-indigo-100/80 bg-gradient-to-br from-white via-indigo-50/40 to-white p-4 shadow-sm">
+                <label className="mb-2 block text-sm font-semibold text-gray-900">
+                  {effectiveGenerationType === 'personal' ? t('selectPhotoStyle') : 'Photo Style'}
+                </label>
+                <div className="relative">
+                  <select
+                    value={styleSourceValue}
+                    onChange={(e) => {
+                      void handleStyleSourceChange(e.target.value)
+                    }}
+                    className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-3 pr-10 text-sm font-medium text-gray-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  >
+                    {renderStyleSourceOptions()}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Context Selection for Personal and Team Generations - Hide for free plan users */}
             {!isFreePlan && (effectiveGenerationType === 'personal' || effectiveGenerationType === 'team') && (
@@ -993,100 +1117,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
                   <div className="relative">
                     <select
-                      value={activeContext?.id || (ownedPackages.length > 1 ? `package_${selectedPackageId}` : 'freestyle')}
-                      onChange={async (e) => {
-                        const value = e.target.value
-                        if (value === 'freestyle') {
-                          // Clear server-side active context if one exists
-                          if (activeContext?.id) {
-                            clearActiveStyle({ styleId: activeContext.id }).catch(() => { })
-                          }
-                          setActiveContext(null)
-                          const fallbackPackage = getPackageConfig(fallbackPackageId)
-                          setSelectedPackageId(fallbackPackageId)
-                          // Persist package selection to localStorage
-                          try { localStorage.setItem(SELECTED_PACKAGE_KEY, fallbackPackageId) } catch { }
-                          // Freestyle packages are always user-choice, so merge saved settings and colors
-                          let newSettings = mergeSavedStyleSettings(fallbackPackage.defaultSettings)
-                          newSettings = mergeSavedColors(newSettings)
-                          setPhotoStyleSettings(newSettings)
-                          setOriginalContextSettings(fallbackPackage.defaultSettings)
-                          // Mark that user has made changes - enables saving
-                          hasUserMadeChangesRef.current = true
-                        } else if (value.startsWith('package_')) {
-                          const pkgId = value.replace('package_', '')
-                          // Clear server-side active context if one exists
-                          if (activeContext?.id) {
-                            clearActiveStyle({ styleId: activeContext.id }).catch(() => { })
-                          }
-                          setActiveContext(null)
-                          setSelectedPackageId(pkgId)
-                          // Persist package selection to localStorage
-                          try { localStorage.setItem(SELECTED_PACKAGE_KEY, pkgId) } catch { }
-                          const pkg = getPackageConfig(pkgId)
-                          // Packages are always user-choice, so merge saved settings and colors
-                          let newSettings = mergeSavedStyleSettings(pkg.defaultSettings)
-                          newSettings = mergeSavedColors(newSettings)
-                          setPhotoStyleSettings(newSettings)
-                          setOriginalContextSettings(pkg.defaultSettings)
-                          // Mark that user has made changes - enables saving
-                          hasUserMadeChangesRef.current = true
-                        } else {
-                          const selectedContext = availableContexts.find(ctx => ctx.id === value)
-                          if (selectedContext) {
-                            // Clear package selection from localStorage (context takes precedence)
-                            try { localStorage.removeItem(SELECTED_PACKAGE_KEY) } catch { }
-                            // Persist the selected style so it's restored on page reload
-                            setActiveStyle({ styleId: selectedContext.id }).catch(() => {
-                              // Silently ignore errors - the style will work for this session
-                            })
-                            const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
-                            const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
-                            const effectiveType = isProUser ? (generationType ?? 'personal') : 'personal'
-                            const updatedName = normalizeContextName(
-                              context?.name ?? selectedContext.name,
-                              contextIndex === -1 ? availableContexts.length : contextIndex,
-                              availableContexts.length || 1,
-                              effectiveType
-                            )
-                            const enrichedContext = {
-                              id: selectedContext.id,
-                              name: updatedName,
-                              customPrompt: (context?.settings as Record<string, unknown> | undefined)?.['customPrompt'] as string | null | undefined ?? null,
-                              settings: context?.settings ?? selectedContext.settings,
-                              backgroundPrompt: (context?.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
-                              stylePreset: (context?.settings as Record<string, unknown> | undefined)?.['stylePreset'] as string | undefined
-                            }
-                            setActiveContext(enrichedContext)
-                            // CRITICAL: Only merge saved colors if context allows user-choice
-                            // If mode is 'predefined', use ui as-is (preserve preset values)
-                            const newSettings = ui.clothingColors && isUserChoice(ui.clothingColors)
-                              ? mergeSavedColors(ui)
-                              : ui // Predefined contexts: use preset values, never override with saved colors
-                            setPhotoStyleSettings(newSettings)
-                            setSelectedPackageId(pkg.id)
-                            setOriginalContextSettings(ui)
-                            // Mark that user has made changes - enables saving
-                            hasUserMadeChangesRef.current = true
-                          }
-                        }
+                      value={styleSourceValue}
+                      onChange={(e) => {
+                        void handleStyleSourceChange(e.target.value)
                       }}
                       className="w-full appearance-none px-5 py-3.5 pr-12 text-sm font-medium text-gray-800 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all cursor-pointer"
                     >
-                      {availableContexts.map((context) => (
-                        <option key={context.id} value={context.id}>
-                          {context.name}
-                        </option>
-                      ))}
-                      {ownedPackages.length > 1 ? (
-                        ownedPackages.map(pkg => (
-                          <option key={pkg.packageId} value={`package_${pkg.packageId}`}>
-                            {pkg.name} (all settings customizable)
-                          </option>
-                        ))
-                      ) : (
-                        <option value="freestyle">{t('freestyle')}</option>
-                      )}
+                      {renderStyleSourceOptions()}
                     </select>
                     {/* Custom dropdown chevron */}
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
@@ -1139,12 +1176,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
             <CustomizationMobileFooter
               leftAction={{
-                label: (stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1
-                  ? tNav('selfies', { default: 'Selfies' })
+                label: (stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 2
+                  ? tNav('beautification', { default: 'Beautification' })
                   : tNav('previous', { default: 'Previous' }),
                 onClick: () => {
-                  if ((stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 1) {
-                    router.push('/app/generate/selfie')
+                  if ((stepIndicatorProps?.currentAllStepsIndex ?? 0) <= 2) {
+                    router.push('/app/generate/beautification')
                     return
                   }
                   navMethodsRef.current?.goPrev()
@@ -1159,59 +1196,35 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                   }
                 : undefined}
               progressContent={
-                <div className="pb-3 flex items-center justify-center gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-500 font-medium">{t('selfies', { default: 'Selfies' })}</span>
-                    <span className="h-2.5 w-2.5 rounded-full bg-brand-secondary" />
-                  </div>
-
-                  <div className="h-4 w-px bg-gray-200" />
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-500 font-medium">{t('customize', { default: 'Customize' })}</span>
-                    <div className="flex items-center gap-1">
-                      {customizationStepsMeta?.stepKeys?.map((key, idx) => {
-                        const hasValue = !uneditedFields.includes(key)
-                        const isLocked = customizationStepsMeta.lockedSteps?.includes(idx + 1)
-                        const isCurrent = stepIndicatorProps?.currentAllStepsIndex === idx + 1
-
-                        if (isLocked) {
-                          return (
-                            <LockClosedIcon
-                              key={`progress-lock-${key}`}
-                              className={`h-3 w-3 ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}
-                            />
-                          )
-                        }
-
-                        return (
-                          <span
-                            key={`progress-dot-${key}`}
-                            className={`
-                              rounded-full transition-all duration-300
-                              ${isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'}
-                              ${hasValue ? 'bg-brand-secondary' : 'bg-brand-primary'}
-                            `}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
+                <StandardThreeStepIndicator
+                  className="pb-3"
+                  currentIndex={stepIndicatorProps?.currentAllStepsIndex ?? 2}
+                  totalSteps={
+                    stepIndicatorProps?.totalWithLocked ??
+                    stepIndicatorProps?.total ??
+                    Math.max(customizationStepsMeta.allSteps + 2, 3)
+                  }
+                  visitedSteps={
+                    stepIndicatorProps?.visitedEditableSteps ??
+                    [
+                      ...(hasRequiredSelfies ? [0] : []),
+                      ...(hasCompletedBeautification ? [1] : []),
+                      ...visitedSteps.map((idx) => idx + 2),
+                    ]
+                  }
+                  lockedSteps={
+                    stepIndicatorProps?.lockedSteps ??
+                    customizationStepsMeta.lockedSteps.map((idx) => idx + 2)
+                  }
+                />
               }
             >
               {!hasEnoughCredits ? (
                 <Link
                   href={buyCreditsHrefWithReturn}
-                  className="w-full inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 hover:brightness-110 active:brightness-95"
                   style={{
                     background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                   }}
                 >
                   <PlusIcon className="h-5 w-5 mr-2" />

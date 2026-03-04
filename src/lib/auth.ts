@@ -133,7 +133,7 @@ const customAdapter = (() => {
       const firstName = nameParts[0] || 'User'
       const lastName = nameParts.slice(1).join(' ') || null
 
-      // Capture domain from request headers using same logic as getRequestDomain
+      // Capture domain from request headers.
       let domain: string | null = null
       try {
         const { headers } = await import('next/headers')
@@ -161,12 +161,13 @@ const customAdapter = (() => {
         // Headers not available in this context
       }
 
-      // Use existing domain logic to determine signup type
-      const { getSignupTypeFromDomain } = await import('@/lib/domain')
+      const { resolveTenantId, getTenantById } = await import('@/config/tenant')
       const { PRICING_CONFIG } = await import('@/config/pricing')
       const { getDefaultPackage } = await import('@/config/landing-content')
 
-      const userType = getSignupTypeFromDomain(domain) || 'individual'
+      const resolvedTenantId = resolveTenantId(domain)
+      const resolvedTenant = resolvedTenantId ? getTenantById(resolvedTenantId) : null
+      const userType = resolvedTenant?.signupType || 'individual'
 
       // Determine role and planTier based on signup type (same as registration route)
       const role = userType === 'team' ? 'team_admin' : 'user'
@@ -174,10 +175,10 @@ const customAdapter = (() => {
       const freeCredits = userType === 'team'
         ? PRICING_CONFIG.freeTrial.pro
         : PRICING_CONFIG.freeTrial.individual
-      const packageId = getDefaultPackage(domain || undefined)
+      const packageId = getDefaultPackage((resolvedTenant?.domain || domain || undefined) ?? undefined)
 
-      // Don't store localhost as signupDomain
-      const signupDomain = domain && domain !== 'localhost' ? domain : null
+      // Persist only recognized tenant domains for cross-domain consistency.
+      const signupDomain = resolvedTenant?.domain ?? null
 
       // Create User, Person, and Team (if applicable) in a single transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -663,8 +664,8 @@ export const authOptions = {
       if (!user && token.jti) {
         const isRevoked = await isTokenRevoked(token.jti as string)
         if (isRevoked) {
-          // Token has been revoked - throw error to reject authentication
-          throw new Error('Token has been revoked')
+          // Return null so Auth.js clears the session cookie without emitting JWTSessionError logs.
+          return null
         }
       }
       
@@ -722,7 +723,7 @@ export const authOptions = {
           
           // If user doesn't exist in DB, reject the token
           if (!dbUser) {
-            throw new Error('User not found - session invalidated')
+            return null
           }
           
           const currentTokenVersion = dbUser.tokenVersion ?? 0
@@ -730,14 +731,10 @@ export const authOptions = {
           const tokenTokenVersion = (token.tokenVersion as number | undefined) ?? 0
           
           if (currentTokenVersion !== tokenTokenVersion) {
-            // Token version mismatch - user's role/permissions changed, invalidate this token
-            throw new Error('Token version mismatch - session invalidated due to role/permission change')
+            // User's role/permissions changed, invalidate this token.
+            return null
           }
         } catch (error) {
-          // If it's already an Error we threw, re-throw it
-          if (error instanceof Error && error.message.includes('session invalidated')) {
-            throw error
-          }
           // For database errors, log but don't fail - allow session to continue
           // This prevents database issues from locking users out
           console.error('Error checking token version:', error)
@@ -767,8 +764,8 @@ export const authOptions = {
         // Even with extensions, session cannot exceed this limit from initial creation
         const sessionAge = now - (token.iat as number || now)
         if (sessionAge >= ABSOLUTE_MAX_SESSION_AGE_SECONDS) {
-          // Session has exceeded absolute maximum age - force re-authentication
-          throw new Error('Session exceeded absolute maximum age - please sign in again')
+          // Force re-authentication by clearing the session token.
+          return null
         }
 
         // If the token is close to expiring, extend it by the full session window
@@ -828,8 +825,8 @@ export const authOptions = {
      * (e.g., portreya.com user logging out should stay on portreya.com)
      */
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // Import allowed domains for cross-domain redirect validation
-      const { ALLOWED_DOMAINS } = await import('@/lib/url')
+      // Import tenant allow-list for cross-domain redirect validation.
+      const { TENANT_ALLOWED_DOMAINS } = await import('@/config/tenant')
 
       const isLocalHost = (u: string): boolean => {
         try {
@@ -895,7 +892,7 @@ export const authOptions = {
         // This enables logout on portreya.com to stay on portreya.com
         // instead of redirecting to teamshotspro.com (NEXTAUTH_URL)
         const urlHostname = new URL(cleanedUrl).hostname.replace(/^www\./, '')
-        if ((ALLOWED_DOMAINS as readonly string[]).includes(urlHostname)) {
+        if ((TENANT_ALLOWED_DOMAINS as readonly string[]).includes(urlHostname)) {
           return cleanedUrl
         }
       } catch {

@@ -10,6 +10,8 @@
 import type { ClientStylePackage } from '../types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import { getPresetSettings, PRESET_SETTINGS } from '../../elements/preset/presets'
+import { userChoice } from '../../elements/base/element-types'
+import { DEFAULT_BEAUTIFICATION_VALUE } from '../../elements/beautification/types'
 
 // Import elements for registration
 import '../../elements/subject/element'
@@ -27,6 +29,7 @@ export const standardShots: ClientStylePackage = {
   defaultSettings: {
     presetId: 'LINKEDIN_NEUTRAL_STUDIO',
     subjectCount: '1',
+    beautification: userChoice(DEFAULT_BEAUTIFICATION_VALUE),
     ...getPresetSettings('LINKEDIN_NEUTRAL_STUDIO'),
   } as PhotoStyleSettings,
 
@@ -54,6 +57,7 @@ export const standardShots: ClientStylePackage = {
     'background',        // Background from preset settings
     'clothing',          // Clothing from preset settings
     'filmType',          // Film type from preset settings
+    'beautification',    // Retouching and accessory handling
     'global-quality',    // Quality rules
   ],
   providedElements: [standardShotPresetElement],
@@ -63,19 +67,26 @@ export const standardShots: ClientStylePackage = {
     // Also check the top-level presetId field as fallback
     const presetWrapper = raw.preset as { value?: { presetId?: string } } | undefined
     const presetId = presetWrapper?.value?.presetId || (raw.presetId as string)
-    return { presetId }
+    return {
+      presetId,
+      beautification: raw.beautification as PhotoStyleSettings['beautification'],
+    }
   },
 
   persistenceAdapter: {
     serialize: (ui: PhotoStyleSettings) => ({
       package: 'standard-shots',
-      settings: { presetId: ui.presetId }
+      settings: {
+        presetId: ui.presetId,
+        ...(ui.beautification !== undefined && { beautification: ui.beautification }),
+      }
     }),
     deserialize: (raw: unknown) => {
       const r = raw as Record<string, unknown>
       const settings = (r.settings || r) as Record<string, unknown>
       return {
-        presetId: (settings.presetId as string) || 'LINKEDIN_NEUTRAL_STUDIO'
+        presetId: (settings.presetId as string) || 'LINKEDIN_NEUTRAL_STUDIO',
+        ...('beautification' in settings && { beautification: settings.beautification as PhotoStyleSettings['beautification'] }),
       }
     }
   },
@@ -100,6 +111,7 @@ export const standardShots: ClientStylePackage = {
       supportsAspectRatio: true,
       supportsPose: true,
       supportsExpression: true,
+      supportsBeautification: true,
     }
   },
 

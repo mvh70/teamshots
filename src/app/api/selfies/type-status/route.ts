@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import type { SelfieTypeStatus, SelfieType } from '@/domain/selfie/selfie-types'
-import { SELFIE_TYPE_REQUIREMENTS, extractFromClassification } from '@/domain/selfie/selfie-types'
+import {
+  SELFIE_TYPE_REQUIREMENTS,
+  extractFromClassification,
+  needsClassificationReanalysis,
+} from '@/domain/selfie/selfie-types'
 import { Logger } from '@/lib/logger'
+import { classificationQueue } from '@/lib/classification-queue'
+import { resolveInviteAccess } from '@/lib/invite-access'
+import { validateMobileHandoffToken } from '@/lib/mobile-handoff'
 
 export const runtime = 'nodejs'
 
@@ -27,29 +34,32 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token') || undefined
+    const handoffToken = searchParams.get('handoffToken') || undefined
 
     // Resolve person: prioritize invite token when present
     let personId: string | null = null
 
-    if (token) {
-      // Check for team invite token
-      const invite = await prisma.teamInvite.findFirst({
-        where: { token, usedAt: { not: null } },
-        select: { personId: true },
-      })
-      personId = invite?.personId || null
-
-      // If not found, check for mobile handoff token
-      if (!personId) {
-        const handoffToken = await prisma.mobileHandoffToken.findFirst({
-          where: {
-            token,
-            expiresAt: { gt: new Date() },
-            absoluteExpiry: { gt: new Date() },
-          },
-          select: { personId: true },
-        })
-        personId = handoffToken?.personId || null
+    if (handoffToken) {
+      const handoff = await validateMobileHandoffToken(handoffToken)
+      if (!handoff.success) {
+        return NextResponse.json({ error: handoff.error, code: handoff.code }, { status: 401 })
+      }
+      personId = handoff.context.personId || null
+    } else if (token) {
+      const inviteAccess = await resolveInviteAccess({ token, extendExpiry: false })
+      if (inviteAccess.ok) {
+        personId = inviteAccess.access.person.id
+      } else {
+        // Backward compatibility: some clients still send handoff token as `token`.
+        const handoff = await validateMobileHandoffToken(token)
+        if (handoff.success) {
+          personId = handoff.context.personId || null
+        } else {
+          return NextResponse.json(
+            { error: inviteAccess.error.message, code: inviteAccess.error.code },
+            { status: inviteAccess.error.status }
+          )
+        }
       }
     }
 
@@ -85,13 +95,23 @@ export async function GET(request: NextRequest) {
       key: s.key,
       selected: s.selected,
       ...extractFromClassification(s.classification),
+      needsReanalysis: needsClassificationReanalysis(s.classification),
     }))
 
-    // Queue classification for ALL unclassified selfies (fire-and-forget with lazy imports)
-    const unclassifiedSelfies = selfiesWithClassification.filter((s) => !s.selfieType)
-    if (unclassifiedSelfies.length > 0) {
-      Logger.info('[type-status] Queueing unclassified selfies', {
-        count: unclassifiedSelfies.length,
+    // Queue classification for selfies that are unclassified OR have stale payloads.
+    const selfiesNeedingClassification = selfiesWithClassification.filter(
+      (s) => !s.selfieType || s.needsReanalysis
+    )
+    const queueableSelfies = selfiesNeedingClassification.filter(
+      (s) => !classificationQueue.isAnalyzing(s.id) && !classificationQueue.isQueued(s.id)
+    )
+    if (queueableSelfies.length > 0) {
+      const unclassifiedCount = queueableSelfies.filter((s) => !s.selfieType).length
+      const stalePayloadCount = queueableSelfies.length - unclassifiedCount
+      Logger.info('[type-status] Queueing selfies for classification', {
+        total: queueableSelfies.length,
+        unclassifiedCount,
+        stalePayloadCount,
       })
 
       // Fire-and-forget async block with lazy imports to avoid cold start delays
@@ -102,7 +122,7 @@ export async function GET(request: NextRequest) {
           const bucketName = getS3BucketName()
 
           // Queue each selfie for classification
-          for (const selfie of unclassifiedSelfies) {
+          for (const selfie of queueableSelfies) {
             queueClassificationFromS3({
               selfieId: selfie.id,
               selfieKey: selfie.key,

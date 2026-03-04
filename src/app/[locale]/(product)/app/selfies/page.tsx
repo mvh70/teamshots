@@ -31,7 +31,7 @@ function SelfiesPageContent() {
     throw new Error('Selfies page requires individual selfie management mode')
   }
 
-  const { uploads, loading, loadUploads, handleSelfiesApproved } = selfieManager
+  const { uploads, selectedSet, toggleSelect, loading, loadUploads, handleSelfiesApproved } = selfieManager
 
   // Preload face detection model immediately when page loads
   useEffect(() => {
@@ -131,6 +131,7 @@ function SelfiesPageContent() {
           <SelectableGrid
             items={gridItems}
             selection={{ mode: 'managed' }}
+            externalManagedSelection={{ selectedSet, toggleSelect }}
             allowDelete
             showUploadTile={!isMobile}
             onDeleted={loadUploads}

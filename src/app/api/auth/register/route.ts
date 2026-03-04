@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { internal, badRequest } from '@/lib/api-response'
 import { Logger } from '@/lib/logger'
-import { getRequestDomain, getSignupTypeFromDomain } from '@/lib/domain'
+import { getSignupTypeFromTenant, getTenantFromRequest } from '@/config/tenant-server'
 import { prisma } from '@/lib/prisma'
 
 // Type for Prisma transaction client - inferred from prisma instance
@@ -92,11 +92,11 @@ export async function POST(request: NextRequest) {
     // Stripe webhook stores emails as lowercase, so we must match
     const email = rawEmail.toLowerCase()
 
-    // Domain-based signup type: server is authoritative
-    // userType is always determined from domain, never from client
+    // Domain-based signup type: server is authoritative.
     Logger.info('9. Determining user type from domain...')
-    const domain = getRequestDomain(request)
-    const userType = getSignupTypeFromDomain(domain) || 'individual'
+    const tenant = getTenantFromRequest(request)
+    const domain = tenant.domain
+    const userType = getSignupTypeFromTenant(tenant)
     Logger.info('User type determined from domain', { domain, userType })
 
     // Verify OTP
@@ -187,8 +187,15 @@ export async function POST(request: NextRequest) {
 
     // Extract and normalize the signup domain for email links later
     // Don't store localhost as signupDomain - use null instead (for development/testing)
-    const normalizedDomain = domain ? domain.replace(/^www\./, '').toLowerCase() : null
-    const signupDomain = normalizedDomain && normalizedDomain !== 'localhost' ? normalizedDomain : null
+    const hostLikeValue =
+      request.headers.get('x-forwarded-host') ||
+      request.headers.get('host') ||
+      request.nextUrl.hostname
+    const normalizedHost = hostLikeValue
+      ? hostLikeValue.split(',')[0].trim().split(':')[0].replace(/^www\./, '').toLowerCase()
+      : null
+    const isLocalHost = normalizedHost === 'localhost' || normalizedHost === '127.0.0.1'
+    const signupDomain = isLocalHost ? null : domain
 
     // Transaction ensures atomicity: check existence + create/update happens atomically
     const { user, existingPerson } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {

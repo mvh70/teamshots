@@ -1,4 +1,5 @@
 import { Logger } from '@/lib/logger'
+import { detectImageFormat, extensionFromMimeType } from '@/lib/image-format'
 import { generateTextWithGemini, type GeminiReferenceImage } from '../gemini'
 import { AI_CONFIG, EVALUATION_CONFIG, STAGE_MODEL } from '../config'
 import sharp from 'sharp'
@@ -6,9 +7,9 @@ import { z } from 'zod'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
 import type { ReferenceImage } from '../utils/reference-builder'
+import { asObject } from '../utils/type-helpers'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { logPrompt } from '../utils/logging'
-import { detectImageFormat } from '@/lib/image-format'
 import {
   parseLastJsonObject,
   normalizeYesNoUncertain,
@@ -27,21 +28,33 @@ function toEvaluationReference(
   }
 }
 
-function extensionFromMimeType(mimeType?: string): string {
-  const normalized = (mimeType || '').toLowerCase()
-  if (normalized.includes('png')) return 'png'
-  if (normalized.includes('webp')) return 'webp'
-  return 'jpg'
-}
-
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
-
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
+interface ConfiguredAccessoryAction {
+  accessory: string
+  action: 'keep' | 'remove'
+}
+
+function extractConfiguredAccessoryActions(
+  promptContext: Record<string, unknown>
+): ConfiguredAccessoryAction[] {
+  const subject = asObject(promptContext.subject)
+  const beautification = asObject(subject?.beautification)
+  const accessories = asObject(beautification?.accessories)
+  if (!accessories) return []
+
+  const configured: ConfiguredAccessoryAction[] = []
+  for (const [accessory, value] of Object.entries(accessories)) {
+    const action = asObject(value)?.action
+    if (action === 'keep' || action === 'remove') {
+      configured.push({ accessory, action })
+    }
+  }
+
+  return configured
 }
 
 export interface V3Step1aEvalInput {
@@ -55,6 +68,7 @@ export interface V3Step1aEvalInput {
   aspectRatioConfig: { id: string; width: number; height: number }
   generationPrompt: string
   garmentCollageReference?: BaseReferenceImage
+  mustFollowRules?: string[]
   generationId?: string
   personId?: string
   teamId?: string
@@ -72,6 +86,7 @@ const structuredSchema = z.object({
   proportions_realistic: z.unknown().optional(),
   no_unauthorized_add_ons: z.unknown().optional(),
   no_unauthorized_accessories: z.unknown().optional(),
+  accessory_action_compliance: z.unknown().optional(),
   no_visible_reference_labels: z.unknown().optional(),
   wardrobe_and_colors_match: z.unknown().optional(),
   explanations: z.record(z.string(), z.string().max(500)).optional(),
@@ -133,6 +148,8 @@ export async function executeV3Step1aEval(
       .toLowerCase()
   const hasFaceReference = Boolean(faceComposite || selfieComposite)
   const hasBodyReference = Boolean(bodyComposite || selfieComposite)
+  const configuredAccessoryActions = extractConfiguredAccessoryActions(step1aPromptContext)
+  const requiresAccessoryActionCompliance = configuredAccessoryActions.length > 0
 
   const metadata = await sharp(imageBuffer).metadata()
   const actualWidth = metadata.width ?? null
@@ -158,22 +175,21 @@ export async function executeV3Step1aEval(
       ? true
       : Math.abs(actualRatio - expectedRatio) > EVALUATION_CONFIG.ASPECT_RATIO_TOLERANCE
 
-  // Removed unreliable PNG-vs-JPEG base64 equality check.
-  const selfieDuplicate = false
-
   const fullPrompt = buildStep1aEvalPrompt({
     authorizedAccessories,
+    configuredAccessoryActions,
     promptContext: step1aPromptContext,
     hasFaceReference,
     hasBodyReference,
     hasGarmentReference: Boolean(garmentCollageReference),
     subjectGender,
+    mustFollowRules: input.mustFollowRules,
   })
   logPrompt('V3 Step 1a Eval', fullPrompt, input.generationId)
 
   const evalImages: GeminiReferenceImage[] = [
     {
-      name: `step1a-candidate.${extensionFromMimeType(candidateForEvaluation.mimeType)}`,
+      name: `step1a-candidate.${extensionFromMimeType(candidateForEvaluation.mimeType, 'jpg')}`,
       mimeType: candidateForEvaluation.mimeType,
       base64: candidateForEvaluation.base64,
       description: 'Candidate image to evaluate',
@@ -185,7 +201,7 @@ export async function executeV3Step1aEval(
     evalImages.push({
       name:
         selfieComposite.name ||
-        `selfie-composite.${extensionFromMimeType(evalSelfieComposite.mimeType)}`,
+        `selfie-composite.${extensionFromMimeType(evalSelfieComposite.mimeType, 'jpg')}`,
       mimeType: evalSelfieComposite.mimeType,
       base64: evalSelfieComposite.base64,
       description:
@@ -198,7 +214,7 @@ export async function executeV3Step1aEval(
       evalImages.push({
         name:
           faceComposite.name ||
-          `face-reference.${extensionFromMimeType(evalFaceComposite.mimeType)}`,
+          `face-reference.${extensionFromMimeType(evalFaceComposite.mimeType, 'jpg')}`,
         mimeType: evalFaceComposite.mimeType,
         base64: evalFaceComposite.base64,
         description:
@@ -210,7 +226,7 @@ export async function executeV3Step1aEval(
       evalImages.push({
         name:
           bodyComposite.name ||
-          `body-reference.${extensionFromMimeType(evalBodyComposite.mimeType)}`,
+          `body-reference.${extensionFromMimeType(evalBodyComposite.mimeType, 'jpg')}`,
         mimeType: evalBodyComposite.mimeType,
         base64: evalBodyComposite.base64,
         description:
@@ -228,7 +244,7 @@ export async function executeV3Step1aEval(
         name:
           selfie.label && selfie.label.trim().length > 0
             ? selfie.label
-            : `reference-selfie-${i + 1}.${extensionFromMimeType(selfie.mimeType)}`,
+            : `reference-selfie-${i + 1}.${extensionFromMimeType(selfie.mimeType, 'jpg')}`,
         mimeType: selfie.mimeType,
         base64: selfie.base64,
         description: `Reference selfie ${i + 1}`,
@@ -241,7 +257,7 @@ export async function executeV3Step1aEval(
     evalImages.push({
       name:
         garmentCollageReference.name ||
-        `garment-collage.${extensionFromMimeType(evalGarmentCollage.mimeType)}`,
+        `garment-collage.${extensionFromMimeType(evalGarmentCollage.mimeType, 'jpg')}`,
       mimeType: evalGarmentCollage.mimeType,
       base64: evalGarmentCollage.base64,
       description:
@@ -348,7 +364,6 @@ export async function executeV3Step1aEval(
           actualHeight,
           dimensionMismatch,
           aspectMismatch,
-          selfieDuplicate,
           matchingReferenceLabel: null,
           uncertainCount: undefined,
           autoReject: undefined,
@@ -360,6 +375,11 @@ export async function executeV3Step1aEval(
   structuredEvaluation.dimensions_and_aspect_correct = 'YES'
   structuredEvaluation.explanations.dimensions_and_aspect_correct =
     'Dimensions/aspect are checked programmatically in Step 1a.'
+  if (!requiresAccessoryActionCompliance) {
+    structuredEvaluation.accessory_action_compliance = 'YES'
+    structuredEvaluation.explanations.accessory_action_compliance =
+      'No explicit keep/remove accessory actions configured for this generation.'
+  }
 
   const autoReject = [
     structuredEvaluation.is_fully_generated === 'NO',
@@ -370,10 +390,11 @@ export async function executeV3Step1aEval(
     structuredEvaluation.no_unauthorized_add_ons === 'UNCERTAIN',
     structuredEvaluation.no_unauthorized_accessories === 'NO',
     structuredEvaluation.no_unauthorized_accessories === 'UNCERTAIN',
+    requiresAccessoryActionCompliance && structuredEvaluation.accessory_action_compliance === 'NO',
+    requiresAccessoryActionCompliance && structuredEvaluation.accessory_action_compliance === 'UNCERTAIN',
     structuredEvaluation.no_visible_reference_labels === 'NO',
     structuredEvaluation.no_visible_reference_labels === 'UNCERTAIN',
     structuredEvaluation.wardrobe_and_colors_match === 'NO',
-    structuredEvaluation.wardrobe_and_colors_match === 'UNCERTAIN',
   ].some(Boolean)
 
   const uncertainCount = Object.entries(structuredEvaluation)
@@ -386,6 +407,7 @@ export async function executeV3Step1aEval(
     structuredEvaluation.proportions_realistic === 'YES' &&
     structuredEvaluation.no_unauthorized_add_ons === 'YES' &&
     structuredEvaluation.no_unauthorized_accessories === 'YES' &&
+    (!requiresAccessoryActionCompliance || structuredEvaluation.accessory_action_compliance === 'YES') &&
     structuredEvaluation.no_visible_reference_labels === 'YES' &&
     structuredEvaluation.wardrobe_and_colors_match === 'YES' &&
     uncertainCount === 0
@@ -441,7 +463,6 @@ export async function executeV3Step1aEval(
         actualHeight,
         dimensionMismatch,
         aspectMismatch,
-        selfieDuplicate,
         matchingReferenceLabel: null,
         uncertainCount,
         autoReject,
@@ -470,6 +491,7 @@ function parseStructuredEvaluation(text: string): StructuredEvaluation | null {
       proportions_realistic: normalizeYesNoUncertain(parsed.proportions_realistic),
       no_unauthorized_add_ons: normalizeYesNoUncertain(parsed.no_unauthorized_add_ons),
       no_unauthorized_accessories: normalizeYesNoUncertain(parsed.no_unauthorized_accessories),
+      accessory_action_compliance: normalizeYesNoUncertain(parsed.accessory_action_compliance),
       no_visible_reference_labels: normalizeYesNoUncertain(parsed.no_visible_reference_labels),
       wardrobe_and_colors_match: normalizeYesNoUncertain(parsed.wardrobe_and_colors_match),
       explanations: parsed.explanations || {},

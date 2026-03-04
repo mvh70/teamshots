@@ -1,60 +1,48 @@
 import { getRequestConfig } from 'next-intl/server';
-import { routing } from './routing';
+import { DEFAULT_LOCALE, isAppLocale } from './routing';
 import { headers } from 'next/headers';
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
+import {
+  DEFAULT_TENANT_ID,
+  TENANTS,
+  getTenantById,
+  resolveTenantId,
+  type TenantId,
+} from '@/config/tenant';
 import { SOLUTIONS } from '@/config/solutions';
 
 /**
- * Detect domain from request headers and normalize to variant name
- * Returns 'teamshotspro' | 'portreya' | 'coupleshotspro' | 'familyshotspro' | 'rightclickfit' | null
+ * Parse tenant ID from the middleware header, if recognized.
  */
-async function getRequestDomain(): Promise<string | null> {
+function parseTrustedTenantId(rawTenantId: string | null): TenantId | null {
+  if (!rawTenantId) return null;
+  const normalized = rawTenantId.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized in TENANTS) {
+    return normalized as TenantId;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve tenant ID from request context.
+ * Host remains authoritative when host/header disagree.
+ */
+async function getRequestTenantId(): Promise<TenantId> {
   try {
     const headersList = await headers();
-    const host = headersList.get('x-forwarded-host') || headersList.get('host');
+    const hostLikeValue = headersList.get('x-forwarded-host') || headersList.get('host');
+    const hostTenantId = resolveTenantId(hostLikeValue);
+    const headerTenantId = parseTrustedTenantId(headersList.get('x-tenant-id'));
 
-    if (!host) return null;
+    if (hostTenantId) return hostTenantId;
+    if (headerTenantId) return headerTenantId;
 
-    // Handle comma-separated values from multiple proxies (take first)
-    const hostname = host.split(',')[0].trim().split(':')[0].toLowerCase();
-    const domain = hostname.replace(/^www\./, '');
-
-    // Handle localhost with forced domain for testing
-    if (domain === 'localhost') {
-      const forced = process.env.NEXT_PUBLIC_FORCE_DOMAIN;
-      if (!forced) return null;
-
-      // Normalize forced domain and map to message file name
-      const normalizedForced = forced.replace(/^www\./, '').toLowerCase();
-
-      // Apply same mapping as production domains
-      if (normalizedForced === TEAM_DOMAIN) return 'teamshotspro';
-      if (normalizedForced === INDIVIDUAL_DOMAIN) return 'individualshots';
-      if (normalizedForced === INDIVIDUAL_DOMAIN_2) return 'individualshots';
-      if (normalizedForced === PORTREYA_DOMAIN) return 'individualshots';
-      if (normalizedForced === COUPLES_DOMAIN) return 'coupleshotspro';
-      if (normalizedForced === FAMILY_DOMAIN) return 'familyshotspro';
-      if (normalizedForced === EXTENSION_DOMAIN) return 'rightclickfit';
-
-      return null;
-    }
-
-    // Helper to match domain with or without .com (for local dev)
-    const matches = (d: string) => domain === d || domain === d.replace(/\.com$/, '');
-
-    // Normalize domain to message file name (must match files in messages/{locale}/)
-    if (matches(TEAM_DOMAIN)) return 'teamshotspro';
-    if (matches(INDIVIDUAL_DOMAIN)) return 'individualshots';
-    if (matches(INDIVIDUAL_DOMAIN_2)) return 'individualshots';
-    if (matches(PORTREYA_DOMAIN)) return 'individualshots';
-    if (matches(COUPLES_DOMAIN)) return 'coupleshotspro';
-    if (matches(FAMILY_DOMAIN)) return 'familyshotspro';
-    if (matches(EXTENSION_DOMAIN)) return 'rightclickfit';
-
-    return null;
+    return DEFAULT_TENANT_ID;
   } catch {
     // Headers not available (e.g., build time)
-    return null;
+    return DEFAULT_TENANT_ID;
   }
 }
 
@@ -63,23 +51,23 @@ export default getRequestConfig(async ({ requestLocale }) => {
   let locale = await requestLocale;
 
   // Ensure that a valid locale is used
-  if (!locale || !routing.locales.includes(locale as 'en' | 'es')) {
-    locale = routing.defaultLocale;
+  if (!isAppLocale(locale)) {
+    locale = DEFAULT_LOCALE;
   }
 
   // Load shared messages (always loaded for all routes)
   const sharedMessages = (await import(`../../messages/${locale}/shared.json`)).default;
 
-  // Load domain-specific messages based on detected domain.
-  // At build time, domain detection fails (no headers) - fall back to 'teamshotspro'.
+  // Load tenant-specific messages based on detected tenant.
+  // At build time, tenant detection fails (no headers) - fall back to default tenant.
   // This is fine because pages are domain-gated at layout level and render dynamically at runtime.
-  const detectedDomain = await getRequestDomain();
-  const domain = detectedDomain ?? 'teamshotspro';
+  const tenantId = await getRequestTenantId();
+  const messageFile = getTenantById(tenantId).messageFile;
   let domainMessages: Record<string, unknown> = {};
   let solutionMessages: Record<string, unknown> = {};
 
   try {
-    domainMessages = (await import(`../../messages/${locale}/${domain}.json`)).default;
+    domainMessages = (await import(`../../messages/${locale}/${messageFile}.json`)).default;
   } catch {
     // Domain file doesn't exist, use shared only
   }

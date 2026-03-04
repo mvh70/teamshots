@@ -11,8 +11,9 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 import { trackLoginCompleted, track } from '@/lib/track'
+import { buildCrossDomainRedirectUrl } from '@/lib/auth-redirect'
 
 export default function SignInPage() {
   const t = useTranslations('auth.signin')
@@ -56,23 +57,10 @@ export default function SignInPage() {
     const checkAndRedirect = async () => {
       const session = await getSession()
       if (session?.user?.signupDomain) {
-        const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
-        const normalizedSignupDomain = session.user.signupDomain.replace(/^www\./, '').toLowerCase()
-        
-        // Skip redirect for localhost signupDomain (legacy development users)
-        // These users can access from any domain
-        if (normalizedSignupDomain !== 'localhost') {
-          // Redirect if on different domain and signup domain is valid
-          const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-            ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
-            (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-          
-          if (shouldRedirect) {
-            const protocol = window.location.protocol
-            const currentPath = window.location.pathname + window.location.search
-            const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
-            window.location.href = redirectUrl
-          }
+        const currentPath = window.location.pathname + window.location.search
+        const redirectUrl = buildCrossDomainRedirectUrl(session.user.signupDomain, currentPath)
+        if (redirectUrl) {
+          window.location.href = redirectUrl
         }
       }
     }
@@ -190,25 +178,11 @@ export default function SignInPage() {
             // Check if user should be redirected to their signup domain
             const signupDomain = session.user.signupDomain
             if (signupDomain) {
-              const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
-              const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
-              
-              // Skip redirect for localhost signupDomain (legacy development users)
-              // These users can access from any domain
-              if (normalizedSignupDomain !== 'localhost') {
-                // Redirect if on different domain and signup domain is valid
-                // Only redirect in production or if explicitly enabled for testing
-                const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-                  ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
-                  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-                
-                if (shouldRedirect) {
-                  const protocol = window.location.protocol
-                  const currentPath = window.location.pathname + window.location.search
-                  const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
-                  window.location.href = redirectUrl
-                  return
-                }
+              const currentPath = window.location.pathname + window.location.search
+              const redirectUrl = buildCrossDomainRedirectUrl(signupDomain, currentPath)
+              if (redirectUrl) {
+                window.location.href = redirectUrl
+                return
               }
             }
             
@@ -259,7 +233,8 @@ export default function SignInPage() {
     }
   }
 
-  const { isIndividual } = getClientBrandInfo()
+  const { isIndividualDomain } = getClientTenantInfo()
+  const isIndividual = isIndividualDomain
 
   // Portreya left panel - Precision Studio design
   const photoShotsProLeft = (

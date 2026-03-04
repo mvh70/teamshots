@@ -83,21 +83,6 @@ export async function executeWithRateLimitRetry<T>(
 }
 
 /**
- * Helper to format progress messages with attempt info
- * Consolidates duplicate formatting logic
- */
-export function formatProgressWithAttempt(
-  progressMessage: { message: string; emoji?: string },
-  progress: number,
-  currentAttempt: number
-): string {
-  const formatted = progressMessage.emoji 
-    ? `${progressMessage.emoji} ${progressMessage.message}`
-    : progressMessage.message
-  return `Generation #${currentAttempt}\n${progress}% - ${formatted}`
-}
-
-/**
  * Safe progress update with error handling
  * Ensures progress number never goes backwards, but always updates the message.
  *

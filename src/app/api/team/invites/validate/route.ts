@@ -7,6 +7,20 @@ import { randomBytes } from 'crypto'
 import { getBaseUrl } from '@/lib/url'
 import { extendInviteExpiry } from '@/lib/invite-utils'
 
+function isAbortLikeError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '').toUpperCase()
+      : ''
+  return (
+    code === 'ECONNRESET' ||
+    message.includes('aborted') ||
+    message.includes('operation was aborted') ||
+    message.includes('unexpected end of json input')
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limit + temporary IP block for public invite validation
@@ -36,6 +50,8 @@ export async function POST(request: NextRequest) {
               id: true,
               email: true,
               locale: true,
+              planPeriod: true,
+              planTier: true,
               person: {
                 select: {
                   firstName: true
@@ -69,7 +85,7 @@ export async function POST(request: NextRequest) {
                                'Team Admin'
 
       // Use admin's locale for the email, default to English
-      const adminLocale = (invite.team.admin as unknown as { locale?: string | null })?.locale || 'en'
+      const adminLocale = invite.team.admin.locale || 'en'
       const emailLocale = (adminLocale === 'es' ? 'es' : 'en') as 'en' | 'es'
 
       return await sendTeamInviteEmail({
@@ -144,7 +160,7 @@ export async function POST(request: NextRequest) {
         // Accepted and not expired: extend expiry (sliding expiration) and redirect to invite-dashboard
         await extendInviteExpiry(invite.id)
         
-        const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+        const adminPlanPeriod = invite.team.admin.planPeriod ?? null
         const isAdminOnFreePlan = adminPlanPeriod === 'free'
 
         // Fetch updated invite to get new expiry
@@ -220,7 +236,7 @@ export async function POST(request: NextRequest) {
     await extendInviteExpiry(invite.id)
     
     // Check if team admin is on free plan
-    const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+    const adminPlanPeriod = invite.team.admin.planPeriod ?? null
     const isAdminOnFreePlan = adminPlanPeriod === 'free'
 
     // Fetch updated invite to get new expiry
@@ -245,7 +261,11 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    Logger.error('Error validating invite', { error: error instanceof Error ? error.message : String(error) })
+    if (isAbortLikeError(error)) {
+      Logger.warn('Invite validation aborted by client', { error: error instanceof Error ? error.message : String(error) })
+    } else {
+      Logger.error('Error validating invite', { error: error instanceof Error ? error.message : String(error) })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

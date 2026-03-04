@@ -1,17 +1,13 @@
 import { Env } from '@/lib/env'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, INDIVIDUAL_DOMAIN_2, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN } from '@/config/domain'
+import { TENANT_ALLOWED_DOMAINS } from '@/config/tenant'
 
 /**
  * All allowed production domains for this application.
  * Used for validation and dynamic URL construction.
  */
 export const ALLOWED_DOMAINS = [
-  TEAM_DOMAIN,        // teamshotspro.com
-  INDIVIDUAL_DOMAIN,  // individualshots.com
-  INDIVIDUAL_DOMAIN_2, // portreya.com
-  COUPLES_DOMAIN,     // coupleshots.com
-  FAMILY_DOMAIN,      // familyshots.com
-  EXTENSION_DOMAIN,   // rightclickfit.com
+  ...TENANT_ALLOWED_DOMAINS,
 ] as const
 
 function toCanonicalHost(normalizedHost: string): string {

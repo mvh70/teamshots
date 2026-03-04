@@ -10,6 +10,7 @@ import { isUserChoice, hasValue, type ElementSetting } from '../base/element-typ
 import { generateWardrobePrompt } from './prompt'
 import type { ShotTypeValue } from '@/types/photo-style'
 import { autoRegisterElement } from '../composition/registry'
+import { getEffectiveClothingDetail } from './config'
 
 export class ClothingElement extends StyleElement {
   readonly id = 'clothing'
@@ -59,7 +60,12 @@ export class ClothingElement extends StyleElement {
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
       style: clothingValue.style,
-      details: clothingValue.details,
+      details: getEffectiveClothingDetail(clothingValue.style, clothingValue),
+      mode: clothingValue.mode,
+      topChoice: clothingValue.topChoice,
+      bottomChoice: clothingValue.bottomChoice,
+      outerChoice: clothingValue.outerChoice,
+      onePieceChoice: clothingValue.onePieceChoice,
     }
 
     // CRITICAL: Check if ClothingOverlayElement is handling clothing
@@ -103,7 +109,7 @@ export class ClothingElement extends StyleElement {
     // Only add critical quality rules that aren't obvious from the JSON structure
 
     // Normalize style for metadata
-    const style = clothingValue.style?.toLowerCase() || 'startup'
+    const style = clothingValue.style?.toLowerCase() || 'business_professional'
     metadata.style = style
 
     return {
@@ -130,9 +136,36 @@ export class ClothingElement extends StyleElement {
     const clothingValue = clothing.value
 
     // Validate style is one of the known types
-    const validStyles = ['business', 'startup', 'black-tie']
+    const validStyles = [
+      'business_professional',
+      'business_casual',
+      'startup',
+      'black-tie',
+      // Legacy values accepted during migration.
+      'business',
+    ]
     if (clothingValue.style && !validStyles.includes(clothingValue.style)) {
       errors.push(`Unknown clothing style: ${clothingValue.style}`)
+    }
+
+    // Style-only presets intentionally leave detailed garment choices for end users.
+    if (clothingValue.lockScope !== 'style-only') {
+      const mode = clothingValue.mode || 'separate'
+      if (mode === 'one_piece') {
+        if (!clothingValue.onePieceChoice) {
+          errors.push('One-piece clothing mode requires onePieceChoice')
+        }
+        if (clothingValue.bottomChoice) {
+          errors.push('One-piece clothing mode cannot define bottomChoice')
+        }
+      } else {
+        if (!clothingValue.topChoice) {
+          errors.push('Separate clothing mode requires topChoice')
+        }
+        if (!clothingValue.bottomChoice) {
+          errors.push('Separate clothing mode requires bottomChoice')
+        }
+      }
     }
 
     return errors

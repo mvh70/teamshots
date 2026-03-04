@@ -21,6 +21,7 @@ export interface InviteAccess {
   email: string
   person: {
     id: string
+    firstName: string | null
     email: string | null
     userId: string | null
     teamId: string | null
@@ -63,9 +64,11 @@ export async function resolveInviteAccess({
       teamId: true,
       contextId: true,
       email: true,
+      expiresAt: true,
       person: {
         select: {
           id: true,
+          firstName: true,
           email: true,
           userId: true,
           teamId: true,
@@ -108,9 +111,15 @@ export async function resolveInviteAccess({
   }
 
   if (extendExpiry) {
-    extendInviteExpiry(invite.id).catch(() => {
-      // Sliding expiry is best-effort only.
-    })
+    const expiryTime = invite.expiresAt instanceof Date ? invite.expiresAt.getTime() : null
+    if (expiryTime !== null) {
+      const hoursUntilExpiry = (expiryTime - Date.now()) / (1000 * 60 * 60)
+      if (hoursUntilExpiry < 12) {
+        extendInviteExpiry(invite.id).catch(() => {
+          // Sliding expiry is best-effort only.
+        })
+      }
+    }
   }
 
   return {
@@ -123,6 +132,7 @@ export async function resolveInviteAccess({
       email: invite.email,
       person: {
         id: invite.person.id,
+        firstName: invite.person.firstName,
         email: invite.person.email,
         userId: invite.person.userId,
         teamId: invite.person.teamId,

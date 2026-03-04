@@ -58,5 +58,6 @@ export function deserializeLighting(raw: Record<string, unknown>): LightingSetti
 export const lightingElementConfig: ElementConfig<LightingSettings> = {
   getDefaultPredefined: () => ({ mode: 'predefined', value: { type: 'natural' } }),
   getDefaultUserChoice: () => ({ mode: 'user-choice', value: undefined }),
-  deserialize: deserializeLighting
+  deserialize: deserializeLighting,
+  mergePredefinedFromSession: () => undefined,
 }

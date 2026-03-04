@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
           url: `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`,
           style: generation.context?.name || 'Freestyle'
         })),
+        acceptedPhotoKey: generation.acceptedPhotoKey || undefined,
         status: generation.status,
         createdAt: generation.createdAt.toISOString(),
         generationType: deriveGenerationType(generation.person.teamId), // Derived from person.teamId, not stored field

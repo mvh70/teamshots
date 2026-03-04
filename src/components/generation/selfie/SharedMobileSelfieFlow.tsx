@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { MOBILE_STICKY_FOOTER_SURFACE } from '@/components/generation/navigation/mobileFooterStyles'
 
 interface StatusBadgeContent {
   readyContent: React.ReactNode
@@ -48,6 +49,8 @@ export default function SharedMobileSelfieFlow({
   className = ''
 }: SharedMobileSelfieFlowProps) {
   const [scrollY, setScrollY] = useState(0)
+  const [footerHeight, setFooterHeight] = useState(224)
+  const footerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,6 +62,26 @@ export default function SharedMobileSelfieFlow({
   }, [])
 
   const hasFooter = Boolean(navigation || navButtons || uploadSection)
+
+  useEffect(() => {
+    if (!hasFooter || !footerRef.current) return
+
+    const footerElement = footerRef.current
+    const updateFooterHeight = () => {
+      setFooterHeight(footerElement.offsetHeight || 224)
+    }
+
+    updateFooterHeight()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateFooterHeight)
+      observer.observe(footerElement)
+      return () => observer.disconnect()
+    }
+
+    window.addEventListener('resize', updateFooterHeight)
+    return () => window.removeEventListener('resize', updateFooterHeight)
+  }, [hasFooter, navigation, navButtons, uploadSection])
 
   return (
     <div className={`md:hidden bg-white ${className}`}>
@@ -91,12 +114,16 @@ export default function SharedMobileSelfieFlow({
       </div>
 
       {/* Space for sticky footer */}
-      {hasFooter && <div className="h-56" />}
+      {hasFooter && <div style={{ height: `${footerHeight}px` }} />}
 
       {/* Status badge - floats above sticky footer */}
       {statusBadge && (
-        <div className="fixed bottom-[220px] left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div
+          className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none"
+          style={{ bottom: `calc(${footerHeight}px + env(safe-area-inset-bottom, 0px) + 0.5rem)` }}
+        >
           <span
+            data-testid={canContinue ? 'mobile-ready-to-customize-badge' : 'mobile-select-more-selfies-badge'}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold shadow-xl backdrop-blur-sm ${
               canContinue
                 ? 'bg-brand-primary text-white'
@@ -110,7 +137,11 @@ export default function SharedMobileSelfieFlow({
 
       {/* Sticky footer with navigation and upload controls */}
       {hasFooter && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div
+          ref={footerRef}
+          className={`fixed bottom-0 left-0 right-0 z-50 ${MOBILE_STICKY_FOOTER_SURFACE}`}
+          style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        >
           {/* Labeled navigation buttons row */}
           {navButtons && (
             <div className="px-4 pt-4 pb-2">
@@ -125,7 +156,7 @@ export default function SharedMobileSelfieFlow({
           )}
           {/* Upload buttons */}
           {uploadSection && (
-            <div className="px-4 pb-6">
+            <div className="px-4">
               {uploadSection}
             </div>
           )}
@@ -134,7 +165,3 @@ export default function SharedMobileSelfieFlow({
     </div>
   )
 }
-
-
-
-

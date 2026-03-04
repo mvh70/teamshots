@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 
 export const runtime = 'nodejs'
@@ -12,10 +13,15 @@ export async function GET(request: NextRequest) {
 
     // Resolve person: prioritize invite token when present (invite dashboard use-case)
     let personId: string | null = null
+    let inviteTokenRejected = false
     if (token) {
-      // Check for team invite token
-      const invite = await prisma.teamInvite.findFirst({ where: { token, usedAt: { not: null } }, select: { personId: true } })
-      personId = invite?.personId || null
+      // Check for team invite token via canonical access validation
+      const inviteAccess = await resolveInviteAccess({ token })
+      if (inviteAccess.ok) {
+        personId = inviteAccess.access.person.id
+      } else {
+        inviteTokenRejected = true
+      }
 
       // If not found, check for mobile handoff token
       if (!personId) {
@@ -34,6 +40,10 @@ export async function GET(request: NextRequest) {
     if (!personId && session?.user?.id) {
       const person = await prisma.person.findUnique({ where: { userId: session.user.id }, select: { id: true } })
       personId = person?.id || null
+    }
+
+    if (!personId && token && inviteTokenRejected) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (!personId) {

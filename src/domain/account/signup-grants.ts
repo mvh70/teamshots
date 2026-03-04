@@ -1,11 +1,20 @@
 import { prisma } from '@/lib/prisma'
-import { getSignupTypeFromDomain } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getDefaultPackage } from '@/config/landing-content'
+import { getTenantById, resolveTenantId } from '@/config/tenant'
 import { Logger } from '@/lib/logger'
 
 // Type for Prisma transaction client
 type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+function resolveSignupTypeFromTenantDomain(domain: string | null): 'individual' | 'team' {
+  if (!domain) return 'individual'
+
+  const tenantId = resolveTenantId(domain)
+  if (!tenantId) return 'individual'
+
+  return getTenantById(tenantId).signupType
+}
 
 export interface SignupGrantsInput {
   userId: string
@@ -49,7 +58,7 @@ export async function grantSignupBenefits(input: SignupGrantsInput): Promise<Sig
   const { userId, email, firstName, lastName, domain, existingTeamId, skipNotifications } = input
 
   // Determine user type from domain
-  const userType = getSignupTypeFromDomain(domain) || 'individual'
+  const userType = resolveSignupTypeFromTenantDomain(domain)
   const planTier = userType === 'team' ? 'pro' : 'individual'
 
   Logger.info('Signup grants determining user type', { domain, userType, planTier, existingTeamId })
@@ -271,7 +280,7 @@ export function determineUserRole(domain: string | null, existingPersonWithTeam?
   if (existingPersonWithTeam?.teamId) {
     return 'team_member'
   }
-  const userType = getSignupTypeFromDomain(domain)
+  const userType = resolveSignupTypeFromTenantDomain(domain)
   return userType === 'team' ? 'team_admin' : 'user'
 }
 
@@ -279,6 +288,6 @@ export function determineUserRole(domain: string | null, existingPersonWithTeam?
  * Determine the plan tier for a new user based on domain
  */
 export function determinePlanTier(domain: string | null): 'individual' | 'pro' {
-  const userType = getSignupTypeFromDomain(domain)
+  const userType = resolveSignupTypeFromTenantDomain(domain)
   return userType === 'team' ? 'pro' : 'individual'
 }

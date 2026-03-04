@@ -1,9 +1,5 @@
 import { getStep1aShotTypeFramingConstraint } from '@/domain/style/elements/shot-type/prompt'
-
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
+import { asObject } from '../../utils/type-helpers'
 
 export function projectStep1aPromptPayload(
   canonicalPrompt: Record<string, unknown>
@@ -11,7 +7,18 @@ export function projectStep1aPromptPayload(
   const projected: Record<string, unknown> = {}
 
   const subject = asObject(canonicalPrompt.subject)
-  if (subject) projected.subject = subject
+  if (subject) {
+    const pose = asObject(subject.pose)
+    if (pose && typeof pose.detailed_instructions === 'string' && typeof pose.description === 'string') {
+      const { description: _description, ...poseWithoutDescription } = pose
+      projected.subject = {
+        ...subject,
+        pose: poseWithoutDescription,
+      }
+    } else {
+      projected.subject = subject
+    }
+  }
 
   const framing = asObject(canonicalPrompt.framing)
   if (framing) projected.framing = framing

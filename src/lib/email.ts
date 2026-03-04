@@ -3,7 +3,9 @@ import { Resend } from 'resend';
 import WaitlistWelcomeEmail from '@/emails/WaitlistWelcome';
 import TeamInviteEmail from '@/emails/TeamInvite';
 import PasswordResetEmail from '@/emails/PasswordReset';
-import { BRAND_CONFIG, getBrandContact } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { DEFAULT_TENANT_ID, getTenantById } from '@/config/tenant';
+import { getTenantFromHeaders } from '@/config/tenant-server';
 import { getEmailTranslation } from '@/lib/translations';
 import { Env } from '@/lib/env';
 import { Logger } from '@/lib/logger';
@@ -12,18 +14,29 @@ import { Logger } from '@/lib/logger';
 const resend = new Resend(Env.string('RESEND_API_KEY'));
 
 // Email configuration helpers - uses brand config for consistency
+function getBrandForRequest(requestHeaders?: Headers) {
+  if (requestHeaders) {
+    const tenant = getTenantFromHeaders(requestHeaders)
+    return getBrandByDomain(tenant.domain)
+  }
+
+  const defaultTenant = getTenantById(DEFAULT_TENANT_ID)
+  return getBrandByDomain(defaultTenant.domain)
+}
+
 function getFromEmail(requestHeaders?: Headers): string {
-  const contact = getBrandContact(requestHeaders);
-  return `${BRAND_CONFIG.name} <${contact.hello}>`;
+  const brand = getBrandForRequest(requestHeaders);
+  return `${brand.name} <${brand.contact.hello}>`;
 }
 
 function getReplyToEmail(requestHeaders?: Headers): string {
-  const contact = getBrandContact(requestHeaders);
-  return contact.support;
+  const brand = getBrandForRequest(requestHeaders);
+  return brand.contact.support;
 }
 
 function getAdminNotificationRecipient(requestHeaders?: Headers): string | null {
-  const contact = getBrandContact(requestHeaders);
+  const brand = getBrandForRequest(requestHeaders);
+  const contact = brand.contact;
   return contact.support || contact.hello || null;
 }
 
@@ -455,7 +468,7 @@ export async function sendOrderNotificationEmail({
     currency: currency.toUpperCase(),
   }).format(amountPaid);
 
-  const subject = `[${BRAND_CONFIG.name}] New ${orderTypeLabel} - ${formattedAmount}`;
+  const subject = `[${getBrandForRequest().name}] New ${orderTypeLabel} - ${formattedAmount}`;
 
   const textBody = [
     `New ${orderTypeLabel}`,
@@ -555,7 +568,7 @@ export async function sendAdminSignupNotificationEmail({
     return { success: false, error: 'ADMIN_EMAIL_NOT_CONFIGURED' };
   }
 
-  const subject = `[${BRAND_CONFIG.name}] New ${userType} signup`;
+  const subject = `[${getBrandForRequest(requestHeaders).name}] New ${userType} signup`;
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
   const textBody = [

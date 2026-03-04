@@ -92,5 +92,6 @@ export const customClothingElementConfig: ElementConfig<PhotoStyleSettings['cust
     typeof raw.customClothing === 'string'
       ? raw.customClothing
       : JSON.stringify(raw.customClothing || DEFAULT_CUSTOM_CLOTHING)
-  )
+  ),
+  mergePredefinedFromSession: () => undefined,
 }

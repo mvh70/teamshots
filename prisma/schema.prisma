@@ -53,6 +53,7 @@ model Person {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   onboardingState     String?              @default("not_started") // "not_started", "in_progress", "completed"
+  beautificationDefaults Json?
   creditTransactions  CreditTransaction[]
   generations         Generation[]
   team                Team?                @relation(fields: [teamId], references: [id])
@@ -630,4 +631,3 @@ model ZapierApiKey {
   @@index([teamId])
   @@index([token])
 }
-

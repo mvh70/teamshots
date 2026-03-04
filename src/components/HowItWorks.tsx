@@ -64,11 +64,6 @@ const VARIANT_TAB_ICONS: Partial<Record<LandingVariant, Record<number, React.Rea
     3: TAB_ICONS.mobilePhone,
     4: TAB_ICONS.downloadFolder,
   },
-  individualshots: {
-    1: TAB_ICONS.upload,
-    2: TAB_ICONS.customize,
-    3: TAB_ICONS.sparkle,
-  },
   portreya: {
     1: TAB_ICONS.upload,
     2: TAB_ICONS.customize,
@@ -88,11 +83,6 @@ const VARIANT_TAB_LABEL_KEYS: Partial<Record<LandingVariant, Record<number, stri
     2: 'tabs.inviteTeam',
     3: 'tabs.teamSelfie',
     4: 'tabs.getAssets',
-  },
-  individualshots: {
-    1: 'tabs.upload',
-    2: 'tabs.customize',
-    3: 'tabs.generate',
   },
   portreya: {
     1: 'tabs.upload',
@@ -123,7 +113,6 @@ const VARIANT_IMAGES: Partial<Record<LandingVariant, Record<number, string>>> = 
     2: '/images/how-it-works/step-1-v2.png',
     3: '/images/how-it-works/step-4-v2.png',
   },
-  individualshots: {},
   coupleshots: {},
 };
 

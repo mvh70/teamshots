@@ -10,7 +10,8 @@ import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { jsonFetcher } from '@/lib/fetcher'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
+import { buildCrossDomainRedirectUrl } from '@/lib/auth-redirect'
 
 type FlowType = 'normal' | 'guest' | 'loading'
 
@@ -18,7 +19,8 @@ export default function VerifyPage() {
   const t = useTranslations('auth.signup')
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isIndividual } = getClientBrandInfo()
+  const { isIndividualDomain } = getClientTenantInfo()
+  const isIndividual = isIndividualDomain
 
   const [otpCode, setOtpCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -33,23 +35,11 @@ export default function VerifyPage() {
   const tier = searchParams.get('tier') || ''
   const checkoutSessionId = searchParams.get('checkout_session_id') || ''
 
-  // Load pending signup fields from sessionStorage (lazy initializer)
-  // Note: This is legacy - nothing currently sets pendingSignup, but kept for backwards compatibility
-  const [pending] = useState<{ email: string; firstName: string; password: string } | null>(() => {
-    if (typeof window === 'undefined') return null
-    try {
-      const raw = window.sessionStorage.getItem('teamshots.pendingSignup')
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  })
-
   // Determine the email to use
   const effectiveEmail = useMemo(() => {
     if (flowType === 'guest') return guestEmail
-    return emailParam || pending?.email || ''
-  }, [flowType, guestEmail, emailParam, pending?.email])
+    return emailParam
+  }, [flowType, guestEmail, emailParam])
 
   // Info message derived from tier/flow and email
   const infoMessage = useMemo(() => {
@@ -95,8 +85,8 @@ export default function VerifyPage() {
   // Determine flow type and fetch guest email if needed
   useEffect(() => {
     const determineFlow = async () => {
-      // If we have a checkout_session_id and no pending signup, it's a guest checkout
-      if (checkoutSessionId && !pending) {
+      // Guest checkout verification flow
+      if (checkoutSessionId) {
         try {
           console.log('[Verify] Fetching checkout email for session:', checkoutSessionId)
           const response = await fetch(`/api/auth/checkout-email?session_id=${encodeURIComponent(checkoutSessionId)}`)
@@ -115,28 +105,35 @@ export default function VerifyPage() {
             console.error('[Verify] Failed to get checkout email:', data)
             setError('guestCheckoutError')
             setFlowType('normal') // Fall back to normal flow
-            // Send OTP for normal flow if we have an email (pending is null here)
-            if (emailParam) sendOtp(emailParam)
+            if (!emailParam) {
+              setError('emailRequired')
+              return
+            }
+            setError('restartSignup')
           }
         } catch (err) {
           console.error('[Verify] Error fetching checkout email:', err)
           setError('guestCheckoutError')
           setFlowType('normal')
-          // Send OTP for normal flow if we have an email (pending is null here)
-          if (emailParam) sendOtp(emailParam)
+          if (!emailParam) {
+            setError('emailRequired')
+            return
+          }
+          setError('restartSignup')
         }
       } else {
-        // Normal signup flow
-        console.log('[Verify] Normal signup flow - pending:', !!pending, 'checkoutSessionId:', !!checkoutSessionId)
+        // Legacy normal flow is no longer supported on this page.
         setFlowType('normal')
-        // Send OTP immediately when flow is determined
-        const normalEmail = emailParam || pending?.email
-        if (normalEmail) sendOtp(normalEmail)
+        if (!emailParam) {
+          setError('emailRequired')
+          return
+        }
+        setError('restartSignup')
       }
     }
 
     determineFlow()
-  }, [checkoutSessionId, pending, emailParam, sendOtp])
+  }, [checkoutSessionId, emailParam, sendOtp])
 
   // Countdown timer for resend
   useEffect(() => {
@@ -149,47 +146,10 @@ export default function VerifyPage() {
 
   // Handle OTP verification for normal signup
   const handleNormalVerify = async () => {
-    // Server determines userType from domain - no need to send it from client
-    const payload = {
-      email: pending?.email || emailParam,
-      password: pending?.password || '',
-      firstName: pending?.firstName || '',
-      otpCode,
+    if (!emailParam) {
+      throw new Error('emailRequired')
     }
-
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    const registerData = await res.json()
-
-    if (!res.ok) {
-      const errText = (registerData?.tKey || registerData?.message || registerData?.error || '') as string
-      if (errText.toLowerCase().includes('otp') || errText.toLowerCase().includes('expired')) {
-        throw new Error('invalidOtp')
-      } else {
-        throw new Error('errorOccurred')
-      }
-    }
-
-    if (!registerData.success) {
-      throw new Error((registerData.error as string) || 'Registration failed')
-    }
-
-    // Sign in with password
-    const signInResult = await signIn('credentials', {
-      email: payload.email,
-      password: payload.password,
-      redirect: false,
-    })
-    
-    if (signInResult?.error) {
-      router.push('/auth/signin')
-      return
-    }
-
-    await navigateToDashboard()
+    throw new Error('restartSignup')
   }
 
   // Handle OTP verification for guest checkout
@@ -259,23 +219,10 @@ export default function VerifyPage() {
     // Check if user should be redirected to their signup domain
     const signupDomain = session.user?.signupDomain
     if (signupDomain) {
-      const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
-      const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
-      
-      // Skip redirect for localhost signupDomain (legacy development users)
-      // These users can access from any domain
-      if (normalizedSignupDomain !== 'localhost') {
-        // Redirect if on different domain and signup domain is valid
-        const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-          ['teamshotspro.com', 'portreya.com'].includes(normalizedSignupDomain) &&
-          (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-        
-        if (shouldRedirect) {
-          const protocol = window.location.protocol
-          const redirectUrl = `${protocol}//${normalizedSignupDomain}/app/dashboard`
-          window.location.href = redirectUrl
-          return
-        }
+      const redirectUrl = buildCrossDomainRedirectUrl(signupDomain, '/app/dashboard')
+      if (redirectUrl) {
+        window.location.href = redirectUrl
+        return
       }
     }
 
@@ -330,8 +277,11 @@ export default function VerifyPage() {
   }
 
   const handleResendOtp = async () => {
-    const targetEmail = flowType === 'guest' ? guestEmail : (emailParam || pending?.email || '')
-    if (!targetEmail) return
+    const targetEmail = flowType === 'guest' ? guestEmail : emailParam
+    if (!targetEmail) {
+      setError('emailRequired')
+      return
+    }
     
     setIsLoading(true)
     try {

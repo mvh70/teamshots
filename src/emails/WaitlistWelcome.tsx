@@ -10,9 +10,13 @@ import {
   Section,
   Text,
 } from '@react-email/components';
-import { BRAND_CONFIG, getBrandName, getBrandLogo } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { DEFAULT_TENANT_ID, getTenantById } from '@/config/tenant';
 import { getEmailTranslation } from '@/lib/translations';
 import { Env } from '@/lib/env'
+
+const defaultTenant = getTenantById(DEFAULT_TENANT_ID)
+const defaultBrand = getBrandByDomain(defaultTenant.domain)
 
 interface WaitlistWelcomeEmailProps {
   locale?: 'en' | 'es';
@@ -32,10 +36,10 @@ export default function WaitlistWelcomeEmail({
           {/* Logo */}
           <Section style={logoSection}>
             <Img
-              src={`${baseUrl}${getBrandLogo('dark')}`}
+              src={`${baseUrl}${defaultBrand.logo.dark}`}
               width="180"
               height="40"
-              alt={getBrandName()}
+              alt={defaultBrand.name}
               style={logo}
             />
           </Section>
@@ -156,7 +160,7 @@ const stepSection = {
 };
 
 const stepNumber = {
-  backgroundColor: BRAND_CONFIG.colors.primary,
+  backgroundColor: defaultBrand.colors.primary,
   color: '#ffffff',
   fontSize: '16px',
   fontWeight: 'bold',
@@ -208,7 +212,7 @@ const ctaSection = {
 
 const ctaLink = {
   display: 'inline-block',
-  backgroundColor: BRAND_CONFIG.colors.primary,
+  backgroundColor: defaultBrand.colors.primary,
   color: '#ffffff',
   padding: '12px 24px',
   borderRadius: '8px',
@@ -217,4 +221,3 @@ const ctaLink = {
   textDecoration: 'none',
   lineHeight: '1.5',
 };
-

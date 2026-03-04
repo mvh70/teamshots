@@ -555,5 +555,6 @@ export const shotTypeElementConfig: ElementConfig<ShotTypeSettings> = {
     return predefined({ type: 'headshot' })
   },
   getDefaultUserChoice: () => userChoice(),
-  deserialize
+  deserialize,
+  mergePredefinedFromSession: () => undefined,
 }

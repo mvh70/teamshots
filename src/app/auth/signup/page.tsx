@@ -4,16 +4,16 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, signOut, getSession } from 'next-auth/react'
 import {useTranslations, useLocale} from 'next-intl'
-import { ShieldCheckIcon, ClockIcon, BanknotesIcon, SparklesIcon, CameraIcon } from '@heroicons/react/24/outline'
+import { ShieldCheckIcon, ClockIcon, SparklesIcon, CameraIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
-import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
+import { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { trackSignupStarted, trackSignupCompleted } from '@/lib/track'
 
@@ -26,14 +26,13 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
-  const [infoMessage] = useState('')
 
   const router = useRouter()
 
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {
-    const { brandName, isIndividual } = getClientBrandInfo()
-    const credits = isIndividual ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
+    const { brandName, isIndividualDomain } = getClientTenantInfo()
+    const credits = isIndividualDomain ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
     return {
       brandName,
       photoCount: Math.floor(credits / PRICING_CONFIG.credits.perGeneration)
@@ -79,7 +78,7 @@ export default function SignUpPage() {
 
   // Password validation state
   // SECURITY: Must match server-side validation in src/lib/validation.ts (8 chars min)
-  const { passwordMeetsRequirements, passwordsMatch, isValid: passwordIsValid } = usePasswordValidation(
+  const { passwordMeetsRequirements, passwordsMatch } = usePasswordValidation(
     formData.password,
     formData.confirmPassword
   )
@@ -207,7 +206,8 @@ export default function SignUpPage() {
     }
   }
 
-  const { isIndividual } = getClientBrandInfo()
+  const { isIndividualDomain } = getClientTenantInfo()
+  const isIndividual = isIndividualDomain
 
   // Portreya left panel - Precision Studio design
   const photoShotsProLeft = (
@@ -473,11 +473,6 @@ export default function SignUpPage() {
 
           {step === 2 && (
             <>
-              {infoMessage && (
-                <div className="text-sm lg:text-base text-slate-700 bg-blue-50/50 border-2 border-blue-200 rounded-xl p-5 text-center mb-2 shadow-sm">
-                  {infoMessage}
-                </div>
-              )}
               <AuthInput
                 id="otpCode"
                 name="otpCode"

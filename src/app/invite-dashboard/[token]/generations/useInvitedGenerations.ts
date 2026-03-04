@@ -17,6 +17,7 @@ interface InvitedGeneration {
     url: string
     style: string
   }>
+  acceptedPhotoKey?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   createdAt: string
   generationType: 'personal' | 'team'
@@ -94,7 +95,9 @@ export function useInvitedGenerations(token: string) {
         clearTimeout(completionRefreshTimeoutRef.current)
         completionRefreshTimeoutRef.current = null
       }
-      setIsCompletionRefreshActive(false)
+      queueMicrotask(() => {
+        setIsCompletionRefreshActive(false)
+      })
       return
     }
 
@@ -103,7 +106,9 @@ export function useInvitedGenerations(token: string) {
       if (completionRefreshTimeoutRef.current) {
         clearTimeout(completionRefreshTimeoutRef.current)
       }
-      setIsCompletionRefreshActive(true)
+      queueMicrotask(() => {
+        setIsCompletionRefreshActive(true)
+      })
 
       // Force immediate refresh to pick up generated photo keys
       if (key) {
@@ -126,16 +131,9 @@ export function useInvitedGenerations(token: string) {
     }
   }, [])
 
-  const refetch = useCallback(async () => {
-    if (key) {
-      await mutate(key)
-    }
-  }, [key])
-
   return {
     generations,
     loading: isLoading,
     error: error ? 'Failed to fetch generations' : null,
-    refetch,
   }
 }

@@ -1,4 +1,5 @@
 import { Logger } from '@/lib/logger'
+import { extensionFromMimeType } from '@/lib/image-format'
 import sharp from 'sharp'
 
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
@@ -23,6 +24,7 @@ import { getPrompt } from '../prompt-composers/getPrompt'
 import { logPrompt, logStepResult } from '../utils/logging'
 import { deepMergePromptObjects } from '../utils/prompt-merge'
 import { buildAspectRatioFormatReference } from '../utils/reference-builder'
+import { asObject } from '../utils/type-helpers'
 import type { CostTrackingHandler } from '../workflow-v3'
 import {
   getStep2BaseImageReferenceDescription,
@@ -32,6 +34,8 @@ import {
   getStep2PersonProminenceInstructions,
   getStep2QualityGuidelines,
   getStep2RealismAndNegativeGuidelines,
+  getStep2SelfieCompositeReferenceDescription,
+  type Step2RetouchingLevel,
 } from './prompts/v3-step2-prompt'
 
 export interface V3Step2Artifacts {
@@ -46,6 +50,7 @@ export interface V3Step2FinalInput {
   backgroundBuffer?: Buffer
   backgroundMimeType?: string
   styleSettings?: PhotoStyleSettings
+  selfieCompositeReference?: BaseReferenceImage
   faceCompositeReference?: BaseReferenceImage
   bodyCompositeReference?: BaseReferenceImage
   evaluatorComments?: string[]
@@ -60,16 +65,12 @@ export interface V3Step2FinalInput {
 
 export type Step2Mode = Step2BackgroundMode
 
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
-
-function extensionFromMimeType(mimeType?: string): string {
-  const normalized = (mimeType || '').toLowerCase()
-  if (normalized.includes('png')) return 'png'
-  if (normalized.includes('webp')) return 'webp'
-  return 'jpg'
+function normalizeStep2RetouchingLevel(value: unknown): Step2RetouchingLevel | undefined {
+  if (value === 'max') return 'high'
+  if (value === 'none' || value === 'light' || value === 'medium' || value === 'high') {
+    return value
+  }
+  return undefined
 }
 
 function getBackgroundType(styleSettings?: PhotoStyleSettings): string | undefined {
@@ -162,6 +163,7 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     backgroundBuffer,
     backgroundMimeType,
     styleSettings,
+    selfieCompositeReference,
     faceCompositeReference,
     bodyCompositeReference,
     evaluatorComments,
@@ -173,6 +175,17 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     onCostTracking,
     preparedAssets,
   } = input
+
+  const step2BeautificationPayload = asObject(
+    asObject(asObject(step2Artifacts.payloadOverlay)?.subject)?.beautification
+  )
+  const retouchingLevel = normalizeStep2RetouchingLevel(
+    asObject(step2BeautificationPayload?.retouching)?.level
+  )
+  const hasDedicatedSelfieComposite = Boolean(
+    selfieCompositeReference &&
+      (!faceCompositeReference || selfieCompositeReference.base64 !== faceCompositeReference.base64)
+  )
 
   const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
   const resolutionMultiplier = resolution === '4K' ? 4 : resolution === '2K' ? 2 : 1
@@ -290,8 +303,8 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
 
   const referenceImages: BaseReferenceImage[] = [
     {
-      name: `step1a-person.${extensionFromMimeType(personMimeType || 'image/jpeg')}`,
-      description: getStep2BaseImageReferenceDescription(),
+      name: `step1a-person.${extensionFromMimeType(personMimeType || 'image/jpeg', 'jpg')}`,
+      description: getStep2BaseImageReferenceDescription(retouchingLevel, hasDedicatedSelfieComposite),
       base64: personBuffer.toString('base64'),
       mimeType: personMimeType || 'image/jpeg',
     },
@@ -301,7 +314,7 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     referenceImages.push({
       name:
         preparedBackgroundAsset?.data.s3Key ||
-        `step0-background.${extensionFromMimeType(backgroundMimeType || 'image/jpeg')}`,
+        `step0-background.${extensionFromMimeType(backgroundMimeType || 'image/jpeg', 'jpg')}`,
       description: getStep2BackgroundReferenceDescription(),
       base64: backgroundBuffer.toString('base64'),
       mimeType: backgroundMimeType || 'image/jpeg',
@@ -317,8 +330,8 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     referenceImages.push({
       name:
         faceCompositeReference.name ||
-        `face-reference.${extensionFromMimeType(faceCompositeReference.mimeType)}`,
-      description: getStep2FaceReferenceDescription(),
+        `face-reference.${extensionFromMimeType(faceCompositeReference.mimeType, 'jpg')}`,
+      description: getStep2FaceReferenceDescription(retouchingLevel),
       base64: faceCompositeReference.base64,
       mimeType: faceCompositeReference.mimeType,
     })
@@ -328,10 +341,19 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     referenceImages.push({
       name:
         bodyCompositeReference.name ||
-        `body-reference.${extensionFromMimeType(bodyCompositeReference.mimeType)}`,
+        `body-reference.${extensionFromMimeType(bodyCompositeReference.mimeType, 'jpg')}`,
       description: getStep2BodyReferenceDescription(),
       base64: bodyCompositeReference.base64,
       mimeType: bodyCompositeReference.mimeType,
+    })
+  }
+
+  if (hasDedicatedSelfieComposite && selfieCompositeReference) {
+    referenceImages.push({
+      name: selfieCompositeReference.name || 'selfie-composite.jpg',
+      description: getStep2SelfieCompositeReferenceDescription(),
+      base64: selfieCompositeReference.base64,
+      mimeType: selfieCompositeReference.mimeType,
     })
   }
 
@@ -397,6 +419,49 @@ export async function executeV3Step2(input: V3Step2FinalInput): Promise<Step7Out
     } else {
       const largest = bufferMetadata.reduce((a, b) => (a.width * a.height > b.width * b.height ? a : b))
       selectedBuffer = largest.buf
+    }
+  }
+
+  // Some providers/models may return a different resolution than requested (e.g. 1K fallback).
+  // Normalize to the expected canvas size when aspect ratio is compatible so downstream
+  // dimension validation stays deterministic.
+  const selectedMetadata = await sharp(selectedBuffer).metadata()
+  const actualWidth = selectedMetadata.width
+  const actualHeight = selectedMetadata.height
+  const expectedRatio = expectedWidth / expectedHeight
+  const actualRatio =
+    actualWidth && actualHeight && actualHeight > 0 ? actualWidth / actualHeight : undefined
+  const isSameAspectRatio =
+    typeof actualRatio === 'number' && Math.abs(actualRatio - expectedRatio) <= 0.01
+
+  if (
+    actualWidth !== expectedWidth ||
+    actualHeight !== expectedHeight
+  ) {
+    if (isSameAspectRatio) {
+      Logger.warn('V3 Step 2: Normalizing output dimensions to expected size', {
+        generationId,
+        aspectRatio,
+        requestedResolution: resolution ?? '1K',
+        actualWidth,
+        actualHeight,
+        expectedWidth,
+        expectedHeight,
+      })
+
+      selectedBuffer = await sharp(selectedBuffer)
+        .resize(expectedWidth, expectedHeight, { fit: 'fill', kernel: 'lanczos3' })
+        .toBuffer()
+    } else {
+      Logger.warn('V3 Step 2: Output dimensions do not match expected size and aspect ratio differs', {
+        generationId,
+        aspectRatio,
+        requestedResolution: resolution ?? '1K',
+        actualWidth,
+        actualHeight,
+        expectedWidth,
+        expectedHeight,
+      })
     }
   }
 

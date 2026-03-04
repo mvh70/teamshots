@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 
 type AuthCardProps = {
   title?: string
@@ -10,7 +10,8 @@ type AuthCardProps = {
 }
 
 export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
-  const { isIndividual } = getClientBrandInfo()
+  const { isIndividualDomain } = getClientTenantInfo()
+  const isIndividual = isIndividualDomain
 
   if (isIndividual) {
     // Portreya: restrained, angular, warm — matches Precision Studio design

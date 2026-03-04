@@ -36,9 +36,11 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
   useEffect(() => {
     // Handle canceled state
     if (params.canceled && (!params.success || showWhenSuccessPresent)) {
-      setMessage(tPricing('checkoutCanceled', { default: 'Checkout canceled. No charges were made.' }))
-      setType('canceled')
-      setVisible(true)
+      queueMicrotask(() => {
+        setMessage(tPricing('checkoutCanceled', { default: 'Checkout canceled. No charges were made.' }))
+        setType('canceled')
+        setVisible(true)
+      })
       
       const to = window.setTimeout(() => setVisible(false), autoHideMs)
       return () => window.clearTimeout(to)
@@ -47,9 +49,11 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
     // Handle error state
     if (params.error) {
       const errorMsg = params.errorMessage || tPricing('checkoutError', { default: 'Something went wrong. Please try again.' })
-      setMessage(errorMsg)
-      setType('error')
-      setVisible(true)
+      queueMicrotask(() => {
+        setMessage(errorMsg)
+        setType('error')
+        setVisible(true)
+      })
       
       if (clearParams) {
         const newUrl = new URL(window.location.href)
@@ -94,9 +98,11 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
           msg = tDashboard('successMessages.default', { default: 'Payment completed successfully.' })
       }
 
-      setMessage(msg)
-      setType('success')
-      setVisible(true)
+      queueMicrotask(() => {
+        setMessage(msg)
+        setType('success')
+        setVisible(true)
+      })
 
       if (clearParams) {
         const newUrl = new URL(window.location.href)
@@ -150,4 +156,3 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
     </div>
   )
 }
-

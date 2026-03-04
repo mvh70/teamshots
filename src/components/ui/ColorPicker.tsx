@@ -123,11 +123,31 @@ export default function ColorPicker({
 
     const handleReposition = () => {
       if (!containerRef.current) return
+      const viewport = window.visualViewport
       const rect = containerRef.current.getBoundingClientRect()
+      const viewportTop = viewport?.offsetTop ?? 0
+      const viewportLeft = viewport?.offsetLeft ?? 0
+      const viewportWidth = viewport?.width ?? window.innerWidth
+      const viewportHeight = viewport?.height ?? window.innerHeight
+      const padding = 8
+      const minWidth = 280
+      const estimatedHeight = dropdownRef.current?.offsetHeight ?? 320
+      const maxWidth = Math.max(120, viewportWidth - padding * 2)
+      const width = Math.min(Math.max(rect.width, minWidth), maxWidth)
+      const maxLeft = viewportLeft + viewportWidth - width - padding
+      const left = Math.max(viewportLeft + padding, Math.min(rect.left, maxLeft))
+
+      const belowTop = rect.bottom + padding
+      const aboveTop = rect.top - estimatedHeight - padding
+      const maxTop = viewportTop + viewportHeight - estimatedHeight - padding
+      const minTop = viewportTop + padding
+      const prefersAbove = belowTop + estimatedHeight > viewportTop + viewportHeight - padding && aboveTop >= minTop
+      const top = Math.max(minTop, Math.min(prefersAbove ? aboveTop : belowTop, maxTop))
+
       setPortalPosition({
-        top: rect.bottom + 8,
-        left: rect.left,
-        width: Math.max(rect.width, 280)
+        top,
+        left,
+        width
       })
     }
     
@@ -137,18 +157,30 @@ export default function ColorPicker({
     // Listen to scroll events on window and all scrollable parents
     window.addEventListener('scroll', handleReposition, true)
     window.addEventListener('resize', handleReposition)
+    const viewport = window.visualViewport
+    viewport?.addEventListener('resize', handleReposition)
+    viewport?.addEventListener('scroll', handleReposition)
 
     return () => {
       window.removeEventListener('scroll', handleReposition, true)
       window.removeEventListener('resize', handleReposition)
+      viewport?.removeEventListener('resize', handleReposition)
+      viewport?.removeEventListener('scroll', handleReposition)
     }
   }, [isOpen])
+
+  // Clear input when popup closes without selection
+  const handleClose = () => {
+    setIsOpen(false)
+    // Always clear input when closing - input is just for searching/typing
+    setInputValue('')
+  }
 
   // Close on click outside or Escape key
   useEffect(() => {
     if (!isOpen) return
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: PointerEvent) => {
       const target = event.target as Node
       const clickedInsideContainer = containerRef.current?.contains(target)
       const clickedInsideDropdown = dropdownRef.current?.contains(target)
@@ -170,13 +202,13 @@ export default function ColorPicker({
     
     // Use a small delay to avoid catching the opening click
     const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('pointerdown', handleClickOutside)
       document.addEventListener('keydown', handleEscape)
     }, 0)
 
     return () => {
       clearTimeout(timeoutId)
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('pointerdown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
   }, [isOpen])
@@ -192,13 +224,6 @@ export default function ColorPicker({
     setInputValue(newValue)
     // Update parent with typed value so variations update in real-time
     onChange(newValue)
-  }
-
-  // Clear input when popup closes without selection
-  const handleClose = () => {
-    setIsOpen(false)
-    // Always clear input when closing - input is just for searching/typing
-    setInputValue('')
   }
 
   const toggleOpen = () => {

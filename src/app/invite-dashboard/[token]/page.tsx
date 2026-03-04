@@ -1,44 +1,24 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useParams } from 'next/navigation'
+import { useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { BRAND_CONFIG } from '@/config/brand'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { PhotoIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
+import FlowPageSkeleton from '@/components/generation/loading/FlowPageSkeleton'
 import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import SignUpCTA from '@/components/invite/SignUpCTA'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
-import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
-
-const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-interface InviteData {
-  email: string
-  teamName: string
-  creditsAllocated: number
-  expiresAt: string
-  hasActiveContext: boolean
-  personId: string
-  firstName: string
-  lastName?: string
-  contextId?: string
-}
-
-interface DashboardStats {
-  photosGenerated: number
-  creditsRemaining: number
-  selfiesUploaded: number
-  teamPhotosGenerated: number
-  adminName?: string | null
-  adminEmail?: string | null
-  selfiePreviewUrls?: string[]
-}
+import { useInviteStats } from '@/hooks/useInviteStats'
+import { isRecord } from '@/lib/type-guards'
+import { useInviteFlowNavigation } from '@/hooks/useInviteFlowNavigation'
+import type { InviteDashboardStats } from '@/types/invite'
+import { useSWR } from '@/lib/swr'
 
 /**
  * Invite dashboard page for invited users.
@@ -49,102 +29,41 @@ interface DashboardStats {
  * - Team info and credits
  *
  * Flow navigation is now route-based:
- * - Get Started → selfie-tips (if needs selfies) or customization-intro (if has enough)
+ * - Get Started → selfie-tips (if needs selfies) or beautification (if has enough)
  * - View generations → /generations
  * - Manage selfies → /selfies
  */
 export default function InviteDashboardPage() {
-  const params = useParams()
-  const router = useRouter()
-  const locale = useLocale()
+  const params = useParams<{ token: string }>()
   const t = useTranslations('inviteDashboard')
-  const token = params.token as string
+  const token = params?.token
+  const safeToken = token || ''
 
-  const [inviteData, setInviteData] = useState<InviteData | null>(null)
-  const [stats, setStats] = useState<DashboardStats>({
-    photosGenerated: 0,
-    creditsRemaining: 0,
-    selfiesUploaded: 0,
-    teamPhotosGenerated: 0
+  const navigation = useInviteFlowNavigation(safeToken)
+  const { stats, loading: statsLoading } = useInviteStats<InviteDashboardStats>(safeToken, {
+    initialStats: {
+      photosGenerated: 0,
+      creditsRemaining: 0,
+      selfiesUploaded: 0,
+      teamPhotosGenerated: 0,
+    },
   })
-
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [emailResent, setEmailResent] = useState(false)
-  const [recentPhotoUrls, setRecentPhotoUrls] = useState<string[]>([])
 
   const {
     clearFlow,
     hydrated
-  } = useGenerationFlowState()
+  } = useGenerationFlowState({ flowScope: safeToken })
 
   // Multi-select: load selected selfies count
-  const { selectedIds, loadSelected } = useSelfieSelection({ token })
+  const { selectedIds } = useSelfieSelection({ token: safeToken })
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const statsResponse = await fetch(`/api/team/member/stats?token=${token}`)
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        if (!isNonNullObject(statsData) || !isNonNullObject(statsData.stats)) {
-          throw new Error('Invalid stats response')
-        }
-        setStats(statsData.stats as unknown as DashboardStats)
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    }
-  }, [token])
-
-  const validateInvite = useCallback(async () => {
-    try {
-      const response = await fetch('/api/team/invites/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      })
-
+  const { data: recentPhotoUrls = [], isLoading: recentPhotosLoading } = useSWR<string[]>(
+    token ? `/api/team/member/generations?token=${safeToken}` : null,
+    async (url: string) => {
+      const response = await fetch(url, { cache: 'no-store' })
+      if (!response.ok) return []
       const data = await response.json()
-      if (!isNonNullObject(data)) {
-        throw new Error('Invalid invite response')
-      }
-
-      if (response.ok) {
-        if (!isNonNullObject(data.invite)) {
-          throw new Error('Invalid invite payload')
-        }
-        setInviteData(data.invite as unknown as InviteData)
-
-        if ((data.invite as unknown as InviteData).personId) {
-          await fetchDashboardData()
-        }
-      } else {
-        const expired = Boolean((data as { expired?: boolean }).expired)
-        const emailResent = Boolean((data as { emailResent?: boolean }).emailResent)
-        const message = (data as { message?: string }).message
-        const errorText = (data as { error?: string }).error
-
-        if (expired && emailResent) {
-          setEmailResent(true)
-          setError(message || errorText || 'Invite expired')
-        } else {
-          setError(errorText || 'Failed to validate invite')
-        }
-      }
-    } catch {
-      setError('Failed to validate invite')
-    } finally {
-      setLoading(false)
-    }
-  }, [token, fetchDashboardData])
-
-  // Fetch recent generated photos (up to last 8)
-  const fetchRecentPhotos = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/team/member/generations?token=${token}`)
-      if (!response.ok) return
-      const data = await response.json()
-      const generations = isNonNullObject(data) && Array.isArray((data as { generations?: unknown }).generations)
+      const generations = isRecord(data) && Array.isArray((data as { generations?: unknown }).generations)
         ? (data as { generations: Array<{ id: string; createdAt: string; status: 'pending' | 'processing' | 'completed' | 'failed'; generatedPhotos: Array<{ id: string; url: string }> }> }).generations
         : []
       const gens = generations
@@ -159,19 +78,14 @@ export default function InviteDashboardPage() {
         }
         if (urls.length >= 8) break
       }
-      setRecentPhotoUrls(urls)
-    } catch (err) {
-      console.error('Error fetching recent photos:', err)
-    }
-  }, [token])
 
-  useEffect(() => {
-    if (token) {
-      validateInvite()
-      fetchRecentPhotos()
-      loadSelected()
+      return urls
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
     }
-  }, [token, validateInvite, fetchRecentPhotos, loadSelected])
+  )
 
   // Preload face detection model early so it's ready when user uploads selfies
   useEffect(() => {
@@ -182,16 +96,12 @@ export default function InviteDashboardPage() {
   const handleStartFlow = useCallback(() => {
     // Clear any existing flow flags
     clearFlow()
+    navigation.startFlow(selectedIds)
+  }, [clearFlow, navigation, selectedIds])
 
-    // Check if user has enough selfies to skip selfie upload flow
-    if (selectedIds.length >= MIN_SELFIES_REQUIRED) {
-      // User has enough selfies, skip directly to customization-intro
-      router.push(`/invite-dashboard/${token}/customization-intro`)
-    } else {
-      // Not enough selfies, redirect to selfie-tips intro page
-      router.push(`/invite-dashboard/${token}/selfie-tips`)
-    }
-  }, [clearFlow, router, token, selectedIds.length])
+  if (!token) {
+    return null
+  }
 
   // Show skeleton while hydrating
   if (!hydrated) {
@@ -217,76 +127,18 @@ export default function InviteDashboardPage() {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">{t('loading')}</p>
-        </div>
-      </div>
-    )
+  if (statsLoading || recentPhotosLoading) {
+    return <FlowPageSkeleton variant="centered-spinner" loadingLabel={t('loading')} />
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center">
-            {emailResent ? (
-              <>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('expired.title')}</h1>
-                <p className="text-sm text-gray-600 mb-3">{error}</p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
-                  <p className="text-xs text-blue-800 font-medium mb-1">{t('expired.securityTitle')}</p>
-                  <p className="text-xs text-blue-700 leading-relaxed">{t('expired.securityMessage')}</p>
-                </div>
-                <p className="text-xs text-gray-500 mb-4">{t('expired.checkInbox')}</p>
-                <button
-                  onClick={() => router.push(`/${locale}`)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
-                >
-                  {t('expired.goToHomepage')}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
-                <p className="text-sm text-gray-600 mb-4">{error}</p>
-                <button
-                  onClick={() => router.push(`/${locale}`)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
-                >
-                  {t('error.goToHomepage')}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!inviteData) return null
-
-  const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
+  const photosAffordable = calculatePhotosFromCredits(stats.creditsRemaining)
 
   return (
     <div className="min-h-screen bg-gray-50">
       <InviteDashboardHeader
         token={token}
         title=""
-        teamName={inviteData.teamName}
+        teamName={stats.teamName}
         creditsRemaining={stats.creditsRemaining}
         photosAffordable={photosAffordable}
       />
@@ -340,7 +192,7 @@ export default function InviteDashboardPage() {
                 <div className="flex gap-3">
                   {stats.teamPhotosGenerated > 0 && (
                     <button
-                      onClick={() => router.push(`/invite-dashboard/${token}/generations`)}
+                      onClick={navigation.toGenerations}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
                     >
                       {t('getStarted.viewTeamPhotos', { count: stats.teamPhotosGenerated })}
@@ -350,7 +202,7 @@ export default function InviteDashboardPage() {
                     <button
                       onClick={() => {
                         clearFlow()
-                        router.push(`/invite-dashboard/${token}/selfies`)
+                        navigation.toSelfies()
                       }}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
                     >
@@ -386,7 +238,7 @@ export default function InviteDashboardPage() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg md:text-xl font-semibold text-gray-900">{t('recentPhotos.title')}</h3>
                 <button
-                  onClick={() => router.push(`/invite-dashboard/${token}/generations`)}
+                  onClick={navigation.toGenerations}
                   className="text-sm text-brand-primary hover:text-brand-primary-hover"
                 >
                   {t('recentPhotos.viewAll')}

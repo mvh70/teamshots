@@ -2,13 +2,13 @@
 
 import { useCallback, useMemo } from 'react'
 import { getPostHog } from '@/lib/posthog'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 
 export function useAnalytics() {
   // Cache brand info for the lifetime of the hook
   const brand = useMemo(() => {
     if (typeof window === 'undefined') return 'unknown'
-    return getClientBrandInfo().brandName
+    return getClientTenantInfo().brandName
   }, [])
 
   const track = useCallback((event: string, properties?: Record<string, unknown>) => {

@@ -1,21 +1,5 @@
 import { getPostHog } from '@/lib/posthog'
-import { getClientBrandInfo } from '@/config/domain'
-
-// Cache brand info to avoid repeated DOM lookups
-let cachedBrand: string | null = null
-
-/**
- * Get the current brand name for analytics tracking.
- * Caches the result since brand doesn't change during a session.
- */
-function getBrandForTracking(): string {
-  if (cachedBrand) return cachedBrand
-  if (typeof window === 'undefined') return 'unknown'
-
-  const { brandName } = getClientBrandInfo()
-  cachedBrand = brandName
-  return brandName
-}
+import { getBrandForTracking } from '@/lib/analytics'
 
 /**
  * Track a custom event in PostHog and GTM (for GA4)

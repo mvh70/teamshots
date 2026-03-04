@@ -69,6 +69,7 @@ export default function ColorWheelPicker({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showColorWheel, setShowColorWheel] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [isInputFocused, setIsInputFocused] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 320 })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -80,10 +81,13 @@ export default function ColorWheelPicker({
   const colorNameListRef = useRef<ColorName[]>([])
   const colorMapRef = useRef<Map<string, string>>(new Map())
   const colorNameDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  const blurCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hasPendingInputEditRef = useRef(false)
   const lastExternalValueRef = useRef<string>('') // Track last external value to detect changes
 
   // Initialize/update input when external value changes (not when user is typing)
   useEffect(() => {
+    if (isInputFocused) return
     if (!currentHex) return
 
     // Create a key from both hex and name to detect any external change
@@ -97,10 +101,11 @@ export default function ColorWheelPicker({
       const displayName = currentName || hexToColorName(currentHex)
       setInputValue(`${displayName} ${currentHex}`)
       lastExternalValueRef.current = externalValueKey
+      hasPendingInputEditRef.current = false
     }
     // Note: inputValue intentionally NOT in deps - we only sync from external changes,
     // not when user is actively typing
-  }, [currentName, currentHex])
+  }, [currentName, currentHex, isInputFocused])
 
   useEffect(() => {
     setIsMounted(true)
@@ -144,6 +149,9 @@ export default function ColorWheelPicker({
       if (colorNameDebounceRef.current) {
         clearTimeout(colorNameDebounceRef.current)
       }
+      if (blurCommitTimeoutRef.current) {
+        clearTimeout(blurCommitTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -160,6 +168,55 @@ export default function ColorWheelPicker({
   const stripHexCode = (text: string): string => {
     // Remove hex codes like "#FFFFFF" or "#fff" from the end of the string
     return text.replace(/\s*#[0-9a-fA-F]{3,8}\s*$/g, '').trim()
+  }
+
+  const isCompleteHexColor = (text: string): boolean => {
+    return /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(text.trim())
+  }
+
+  const commitColorFromInput = (rawInput: string, options?: { openColorWheel?: boolean }): boolean => {
+    const openColorWheel = options?.openColorWheel ?? true
+    const trimmed = rawInput.trim()
+    if (!trimmed) return false
+
+    if (trimmed.startsWith('#')) {
+      if (!isCompleteHexColor(trimmed)) return false
+      const normalized = normalizeColorToHex(trimmed)
+      onChange({ hex: normalized })
+      setInputValue(normalized)
+      hasPendingInputEditRef.current = false
+      setShowSuggestions(false)
+      if (openColorWheel) setShowColorWheel(true)
+      return true
+    }
+
+    const cleanedInput = stripHexCode(trimmed)
+    const searchTerm = cleanedInput.toLowerCase().trim()
+    if (!searchTerm) return false
+
+    const professionalMatch = PROFESSIONAL_SUGGESTION_MAP.get(searchTerm)
+    if (professionalMatch) {
+      onChange({ hex: professionalMatch.hex, name: professionalMatch.name })
+      setInputValue(`${professionalMatch.name} ${professionalMatch.hex}`)
+      hasPendingInputEditRef.current = false
+      setShowSuggestions(false)
+      if (openColorWheel) setShowColorWheel(true)
+      return true
+    }
+
+    const colorHex = colorMapRef.current.get(searchTerm)
+    if (colorHex) {
+      const colorName =
+        colorNameListRef.current.find((c) => c.name.toLowerCase() === searchTerm)?.name || cleanedInput
+      onChange({ hex: colorHex, name: colorName })
+      setInputValue(`${colorName} ${colorHex}`)
+      hasPendingInputEditRef.current = false
+      setShowSuggestions(false)
+      if (openColorWheel) setShowColorWheel(true)
+      return true
+    }
+
+    return false
   }
 
   // Filter color suggestions based on input
@@ -216,38 +273,36 @@ export default function ColorWheelPicker({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setInputValue(newValue)
-    setShowSuggestions(true)
+    hasPendingInputEditRef.current = true
+    setShowColorWheel(false)
     setSelectedIndex(-1)
 
-    // If it's a valid hex code or color name, update the color
+    // Only auto-commit complete hex values while typing.
+    // Name-based inputs commit on Enter, suggestion click, or blur.
     if (newValue.startsWith('#')) {
-      // Hex code input
-      const normalized = normalizeColorToHex(newValue)
-      if (normalized !== '#ffffff' || newValue.toLowerCase() === '#ffffff') {
+      const trimmed = newValue.trim()
+      if (isCompleteHexColor(trimmed)) {
+        const normalized = normalizeColorToHex(trimmed)
         onChange({ hex: normalized })
+        hasPendingInputEditRef.current = false
+        setShowSuggestions(false)
+      } else {
+        setShowSuggestions(false)
       }
-    } else if (newValue.trim()) {
-      // Color name lookup - strip hex code if present (e.g., "Navy Blue #003366" -> "Navy Blue")
-      const cleanedValue = stripHexCode(newValue)
-      const normalizedName = cleanedValue.toLowerCase().trim()
-      const professionalMatch = PROFESSIONAL_SUGGESTION_MAP.get(normalizedName)
-      if (professionalMatch) {
-        onChange({ hex: professionalMatch.hex, name: professionalMatch.name })
-        return
-      }
-
-      const colorHex = colorMapRef.current.get(normalizedName)
-      if (colorHex) {
-        const colorName = colorNameListRef.current.find(c => c.name.toLowerCase() === normalizedName)?.name || cleanedValue
-        onChange({ hex: colorHex, name: colorName })
-      }
+    } else {
+      setShowSuggestions(newValue.trim().length > 0)
     }
   }
 
   // Handle suggestion selection
   const handleSuggestionClick = (hex: string, name: string) => {
+    if (blurCommitTimeoutRef.current) {
+      clearTimeout(blurCommitTimeoutRef.current)
+      blurCommitTimeoutRef.current = null
+    }
     onChange({ hex, name })
     setInputValue(`${name} ${hex}`) // Show selected color name and hex
+    hasPendingInputEditRef.current = false
     setShowSuggestions(false)
     setShowColorWheel(true) // Open color wheel to allow fine-tuning
     setSelectedIndex(-1)
@@ -266,39 +321,7 @@ export default function ColorWheelPicker({
         return
       }
 
-      // If user typed a hex code, apply it and open color wheel
-      if (inputValue.trim().startsWith('#')) {
-        const normalized = normalizeColorToHex(inputValue.trim())
-        if (normalized && normalized !== '#ffffff') {
-          onChange({ hex: normalized })
-          setInputValue(normalized) // Keep the normalized hex in input
-          setShowSuggestions(false)
-          setShowColorWheel(true) // Open color wheel for fine-tuning
-        }
-        return
-      }
-
-      // If user typed a color name, try to find and apply it
-      // Strip hex code if present (e.g., "Navy Blue #003366" -> "Navy Blue")
-      const cleanedInput = stripHexCode(inputValue)
-      const searchTerm = cleanedInput.toLowerCase().trim()
-      const professionalMatch = PROFESSIONAL_SUGGESTION_MAP.get(searchTerm)
-      if (professionalMatch) {
-        onChange({ hex: professionalMatch.hex, name: professionalMatch.name })
-        setInputValue(`${professionalMatch.name} ${professionalMatch.hex}`)
-        setShowSuggestions(false)
-        setShowColorWheel(true)
-        return
-      }
-      const colorHex = colorMapRef.current.get(searchTerm)
-      if (colorHex) {
-        // Find the original color name (with proper capitalization)
-        const colorName = colorNameListRef.current.find(c => c.name.toLowerCase() === searchTerm)?.name || cleanedInput
-        onChange({ hex: colorHex, name: colorName })
-        setInputValue(`${colorName} ${colorHex}`) // Show name and hex
-        setShowSuggestions(false)
-        setShowColorWheel(true) // Open color wheel for fine-tuning
-      }
+      commitColorFromInput(inputValue, { openColorWheel: true })
       return
     }
 
@@ -350,8 +373,14 @@ export default function ColorWheelPicker({
     const handleReposition = () => {
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      const popupHeight = 280
+      const spaceBelow = viewportHeight - rect.bottom
+      const top = spaceBelow < popupHeight + 20
+        ? Math.max(8, rect.top - popupHeight - 8)
+        : rect.bottom + 8
       setPortalPosition({
-        top: rect.bottom + 8,
+        top,
         left: rect.left,
         width: Math.max(rect.width, 320),
       })
@@ -360,10 +389,14 @@ export default function ColorWheelPicker({
     handleReposition()
     window.addEventListener('scroll', handleReposition, true)
     window.addEventListener('resize', handleReposition)
+    window.visualViewport?.addEventListener('resize', handleReposition)
+    window.visualViewport?.addEventListener('scroll', handleReposition)
 
     return () => {
       window.removeEventListener('scroll', handleReposition, true)
       window.removeEventListener('resize', handleReposition)
+      window.visualViewport?.removeEventListener('resize', handleReposition)
+      window.visualViewport?.removeEventListener('scroll', handleReposition)
     }
   }, [showColorWheel, showSuggestions])
 
@@ -405,6 +438,10 @@ export default function ColorWheelPicker({
   // Handle swatch button click
   const handleSwatchClick = () => {
     if (disabled) return
+    if (blurCommitTimeoutRef.current) {
+      clearTimeout(blurCommitTimeoutRef.current)
+      blurCommitTimeoutRef.current = null
+    }
     setShowColorWheel(!showColorWheel)
     setShowSuggestions(false)
   }
@@ -426,9 +463,40 @@ export default function ColorWheelPicker({
           onChange={handleInputChange}
           onFocus={() => {
             if (!disabled) {
+              if (blurCommitTimeoutRef.current) {
+                clearTimeout(blurCommitTimeoutRef.current)
+                blurCommitTimeoutRef.current = null
+              }
+              setIsInputFocused(true)
               setShowSuggestions(true)
               setShowColorWheel(false)
             }
+          }}
+          onBlur={(e) => {
+            setIsInputFocused(false)
+
+            const nextTarget = e.relatedTarget as Node | null
+            if (
+              nextTarget &&
+              (suggestionsRef.current?.contains(nextTarget) || colorWheelRef.current?.contains(nextTarget))
+            ) {
+              return
+            }
+
+            if (blurCommitTimeoutRef.current) {
+              clearTimeout(blurCommitTimeoutRef.current)
+            }
+
+            // Commit typed name/hex once editing ends without interrupting click interactions.
+            blurCommitTimeoutRef.current = setTimeout(() => {
+              if (hasPendingInputEditRef.current) {
+                const committed = commitColorFromInput(inputValue, { openColorWheel: false })
+                if (!committed && inputValue.trim().length === 0) {
+                  hasPendingInputEditRef.current = false
+                }
+              }
+              setShowSuggestions(false)
+            }, 120)
           }}
           onKeyDown={handleKeyDown}
           disabled={disabled}

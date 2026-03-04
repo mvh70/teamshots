@@ -222,6 +222,24 @@ const nextConfig = {
             value: 'public, max-age=31536000, immutable'
           }
         ]
+      },
+      {
+        source: '/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
+      },
+      {
+        source: '/es',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400'
+          }
+        ]
       }
     ]
   },

@@ -64,4 +64,5 @@ export const industryElementConfig: ElementConfig<IndustrySettings> = {
   },
   getDefaultUserChoice: () => userChoice(),
   deserialize,
+  mergePredefinedFromSession: () => undefined,
 }

@@ -5,6 +5,7 @@ export interface StructuredEvaluation {
   proportions_realistic: 'YES' | 'NO' | 'UNCERTAIN'
   no_unauthorized_add_ons: 'YES' | 'NO' | 'UNCERTAIN'
   no_unauthorized_accessories: 'YES' | 'NO' | 'UNCERTAIN'
+  accessory_action_compliance: 'YES' | 'NO' | 'UNCERTAIN'
   no_visible_reference_labels: 'YES' | 'NO' | 'UNCERTAIN'
   wardrobe_and_colors_match: 'YES' | 'NO' | 'UNCERTAIN'
   explanations: Record<string, string>
@@ -20,7 +21,6 @@ export interface ImageEvaluationResult {
     actualHeight: number | null
     dimensionMismatch: boolean
     aspectMismatch: boolean
-    selfieDuplicate: boolean
     matchingReferenceLabel?: string | null
     uncertainCount?: number
     autoReject?: boolean

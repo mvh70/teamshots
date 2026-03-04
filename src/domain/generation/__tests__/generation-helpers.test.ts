@@ -2,12 +2,12 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     selfie: {
       findMany: jest.fn(),
-      findUnique: jest.fn(),
     },
     generation: {
       create: jest.fn(),
       delete: jest.fn(),
     },
+    $transaction: jest.fn(),
   },
   Prisma: {},
 }))
@@ -38,6 +38,18 @@ jest.mock('@/domain/services/CreditService', () => ({
   },
 }))
 
+jest.mock('@/domain/credits/credits', () => ({
+  refundCreditsForFailedGeneration: jest.fn(),
+}))
+
+jest.mock('@/lib/prisma-retry', () => ({
+  withSerializableRetry: jest.fn(async (fn: () => unknown) => fn()),
+}))
+
+import { getPricingTier } from '@/config/pricing'
+import { PRICING_CONFIG } from '@/config/pricing'
+import { getRegenerationCount } from '@/domain/pricing'
+import { refundCreditsForFailedGeneration } from '@/domain/credits/credits'
 import { prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
@@ -45,9 +57,11 @@ import { getDemographicsFromSelfieIds, hasDemographicData } from '@/domain/selfi
 import { AssetService } from '@/domain/services/AssetService'
 import { CreditService } from '@/domain/services/CreditService'
 import {
-  serializeStyleSettingsForGeneration,
-  enrichGenerationJobFromSelfies,
   createGenerationWithCreditReservation,
+  enrichGenerationJobFromSelfies,
+  getRegenerationLimitForAdmin,
+  handleEnqueueFailure,
+  serializeStyleSettingsForGeneration,
 } from '../generation-helpers'
 
 describe('generation helpers parity regressions', () => {
@@ -87,8 +101,8 @@ describe('generation helpers parity regressions', () => {
 
   it('enriches selfie job metadata used by both invite and normal routes', async () => {
     ;(prisma.selfie.findMany as jest.Mock).mockResolvedValue([
-      { id: 's1', key: 'selfies/p1/a.jpg', classification: { marker: 'face' } },
-      { id: 's2', key: 'selfies/p1/b.jpg', classification: { marker: 'body' } },
+      { id: 's1', key: 'selfies/p1/a.jpg', assetId: null, classification: { marker: 'face' } },
+      { id: 's2', key: 'selfies/p1/b.jpg', assetId: 'existing-asset', classification: { marker: 'body' } },
     ])
     ;(extractFromClassification as jest.Mock).mockImplementation(
       (classification: { marker?: string }) => ({
@@ -98,9 +112,6 @@ describe('generation helpers parity regressions', () => {
     ;(AssetService.resolveToAsset as jest.Mock)
       .mockResolvedValueOnce({ id: 'asset-a' })
       .mockResolvedValueOnce({ id: 'asset-b' })
-    ;(prisma.selfie.findUnique as jest.Mock)
-      .mockResolvedValueOnce({ assetId: null })
-      .mockResolvedValueOnce({ assetId: 'existing-asset' })
     ;(getDemographicsFromSelfieIds as jest.Mock).mockResolvedValue({
       gender: 'male',
       ageRange: '25-34',
@@ -142,9 +153,13 @@ describe('generation helpers parity regressions', () => {
     ).resolves.toEqual({})
   })
 
-  it('creates generation and rolls back when credit reservation fails', async () => {
-    ;(prisma.generation.create as jest.Mock).mockResolvedValue({ id: 'gen-rollback' })
-    ;(prisma.generation.delete as jest.Mock).mockResolvedValue(undefined)
+  it('fails generation creation when reservation fails', async () => {
+    const tx = {
+      generation: {
+        create: jest.fn(),
+      },
+    }
+    ;(prisma.$transaction as jest.Mock).mockImplementation(async (cb: (innerTx: unknown) => unknown) => cb(tx))
     ;(CreditService.reserveCreditsForGeneration as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Insufficient credits',
@@ -166,8 +181,60 @@ describe('generation helpers parity regressions', () => {
       })
     ).rejects.toThrow('Insufficient credits')
 
-    expect(prisma.generation.delete).toHaveBeenCalledWith({
-      where: { id: 'gen-rollback' },
-    })
+    expect(tx.generation.create).not.toHaveBeenCalled()
+  })
+
+  it('calculates admin regeneration limit with shared helper', () => {
+    const planTier = 'individual'
+    const planPeriod = 'small'
+    const expected = getRegenerationCount(getPricingTier(planTier, planPeriod), planPeriod)
+
+    expect(getRegenerationLimitForAdmin(planTier, planPeriod)).toBe(expected)
+  })
+
+  it('refunds and cleans up on enqueue failure for standard flow', async () => {
+    ;(refundCreditsForFailedGeneration as jest.Mock).mockResolvedValue({ id: 'refund-1' })
+    ;(prisma.generation.delete as jest.Mock).mockResolvedValue(undefined)
+
+    await expect(
+      handleEnqueueFailure({
+        generationId: 'gen-standard',
+        personId: 'person-standard',
+        credits: 10,
+        error: new Error('queue down'),
+      })
+    ).rejects.toThrow('Failed to queue generation job. Credits have been refunded.')
+
+    expect(refundCreditsForFailedGeneration).toHaveBeenCalledWith(
+      'person-standard',
+      10,
+      'Refund for queue failure (generation gen-standard)',
+      undefined,
+      undefined
+    )
+    expect(prisma.generation.delete).toHaveBeenCalledWith({ where: { id: 'gen-standard' } })
+  })
+
+  it('refunds and cleans up on enqueue failure for invite flow', async () => {
+    ;(refundCreditsForFailedGeneration as jest.Mock).mockResolvedValue({ id: 'refund-2' })
+    ;(prisma.generation.delete as jest.Mock).mockResolvedValue(undefined)
+
+    await expect(
+      handleEnqueueFailure({
+        generationId: 'gen-invite',
+        personId: 'person-invite',
+        inviteId: 'invite-1',
+        error: new Error('queue down'),
+      })
+    ).rejects.toThrow('Failed to queue generation job. Credits have been refunded.')
+
+    expect(refundCreditsForFailedGeneration).toHaveBeenCalledWith(
+      'person-invite',
+      PRICING_CONFIG.credits.perGeneration,
+      'Refund for invite queue failure (generation gen-invite)',
+      undefined,
+      'invite-1'
+    )
+    expect(prisma.generation.delete).toHaveBeenCalledWith({ where: { id: 'gen-invite' } })
   })
 })

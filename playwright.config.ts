@@ -85,6 +85,21 @@ export default defineConfig({
       testDir: './tests/e2e/teamshots',
       testMatch: '**/*.spec.ts',
     },
+    {
+      name: 'teamshots-mobile-webkit',
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'webkit',
+        baseURL: `https://teamshotspro:${E2E_PORT}`,
+        extraHTTPHeaders: {
+          'x-forwarded-host': 'teamshotspro.com',
+        },
+        actionTimeout: 15000,
+        navigationTimeout: 30000,
+      },
+      testDir: './tests/e2e/teamshots',
+      testMatch: '**/*.spec.ts',
+    },
 
     // ============================================
     // Portreya Domain (portreya.com)
@@ -105,6 +120,21 @@ export default defineConfig({
       name: 'portreya-mobile',
       use: {
         ...devices['Pixel 5'],
+        baseURL: `https://portreya:${E2E_PORT}`,
+        extraHTTPHeaders: {
+          'x-forwarded-host': 'portreya.com',
+        },
+        actionTimeout: 15000,
+        navigationTimeout: 30000,
+      },
+      testDir: './tests/e2e/portreya',
+      testMatch: '**/*.spec.ts',
+    },
+    {
+      name: 'portreya-mobile-webkit',
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'webkit',
         baseURL: `https://portreya:${E2E_PORT}`,
         extraHTTPHeaders: {
           'x-forwarded-host': 'portreya.com',

@@ -8,7 +8,7 @@ import {
   type Step0BrandingEvalScenario,
 } from '@/domain/style/elements/branding/prompt'
 import { Logger } from '@/lib/logger'
-import { detectImageFormat } from '@/lib/image-format'
+import { detectImageFormat, extensionFromMimeType } from '@/lib/image-format'
 import { hasValue } from '@/domain/style/elements/base/element-types'
 import type { PreparedAsset } from '@/domain/style/elements/composition'
 import type { PhotoStyleSettings } from '@/types/photo-style'
@@ -45,13 +45,6 @@ interface Step0ScenarioContext {
   assetKey: string
   asset: PreparedAsset
   logoIdentifier?: string
-}
-
-function extensionFromMimeType(mimeType?: string): string {
-  const normalized = (mimeType || '').toLowerCase()
-  if (normalized.includes('png')) return 'png'
-  if (normalized.includes('webp')) return 'webp'
-  return 'jpg'
 }
 
 export interface V3Step0EvalInput {
@@ -314,7 +307,7 @@ export async function executeV3Step0Eval(input: V3Step0EvalInput): Promise<V3Ste
 
   const evalImages: GeminiReferenceImage[] = [
     {
-      name: `${scenarioContext.assetKey}.${extensionFromMimeType(evalCandidate.mimeType)}`,
+      name: `${scenarioContext.assetKey}.${extensionFromMimeType(evalCandidate.mimeType, 'jpg')}`,
       mimeType: evalCandidate.mimeType,
       base64: evalCandidate.base64,
       description: getStep0BrandingEvalCandidateDescription(
@@ -324,7 +317,7 @@ export async function executeV3Step0Eval(input: V3Step0EvalInput): Promise<V3Ste
     {
       name:
         logoReference.sourceName ||
-        `logo-reference.${extensionFromMimeType(evalLogo.mimeType)}`,
+        `logo-reference.${extensionFromMimeType(evalLogo.mimeType, 'jpg')}`,
       mimeType: evalLogo.mimeType,
       base64: evalLogo.base64,
       description: getStep0BrandingEvalLogoReferenceDescription(),

@@ -4,6 +4,7 @@ import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import Image from 'next/image'
+import { Toast } from '@/components/ui'
 
 export type UploadListItem = {
   id: string
@@ -74,6 +75,7 @@ function UploadImage({
 export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerateCta = false }: UploadCardProps) {
   const t = useTranslations('generations')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const normalizedKey = item.uploadedKey && item.uploadedKey !== 'undefined' ? item.uploadedKey : null
 
   const handleDelete = async () => {
@@ -90,7 +92,7 @@ export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerat
       await onDelete(item.id)
     } catch (error) {
       console.error('Error deleting selfie:', error)
-      alert('Failed to delete selfie. Please try again.')
+      setToastMessage('Failed to delete selfie. Please try again.')
     } finally {
       setIsDeleting(false)
     }
@@ -104,6 +106,13 @@ export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerat
 
   return (
     <div className={`rounded-lg border overflow-hidden bg-white ${item.selected ? 'border-brand-secondary' : 'border-gray-200'}`}>
+      {toastMessage ? (
+        <Toast
+          message={toastMessage}
+          type="error"
+          onDismiss={() => setToastMessage(null)}
+        />
+      ) : null}
       <div className="relative aspect-square bg-gray-50 overflow-hidden">
         <button
           type="button"
@@ -203,5 +212,4 @@ export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerat
     </div>
   )
 }
-
 

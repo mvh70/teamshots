@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest'
 import { computeCriticalOverrides } from '../critical-overrides'
 
 describe('computeCriticalOverrides', () => {
@@ -88,4 +87,3 @@ describe('computeCriticalOverrides', () => {
     expect(result.backgroundDistanceFt).toBe(4)
   })
 })
-

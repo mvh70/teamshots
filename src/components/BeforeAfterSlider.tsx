@@ -81,7 +81,9 @@ export default function BeforeAfterSlider({
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
-      setHasAnimated(true);
+      queueMicrotask(() => {
+        setHasAnimated(true);
+      });
       return;
     }
 
@@ -161,7 +163,6 @@ export default function BeforeAfterSlider({
   }, [handleDrag]);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
     setIsDragging(true);
     setIsInteracting(true);
 

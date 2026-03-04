@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { constructMetadata } from '@/lib/seo';
 import { headers } from 'next/headers';
 import { routing } from '@/i18n/routing';
-import { getBrand } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import { getTranslations } from 'next-intl/server';
 import CostCalculator from './CostCalculator';
 import { CostCalculatorSchema } from './schema';
@@ -17,8 +18,9 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
@@ -59,8 +61,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function HeadshotCostCalculatorPage({ params }: Props) {
   const { locale } = await params;
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;

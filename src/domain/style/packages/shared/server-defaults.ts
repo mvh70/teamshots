@@ -31,6 +31,7 @@
  */
 
 import { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
+import { NON_VISIBLE_OVERRIDABLE_SETTING_FIELDS } from '@/domain/style/style-setting-allowlists'
 
 /**
  * Returns a value or a default if the value is undefined or has type 'user-choice'/'predefined' without custom data
@@ -81,16 +82,23 @@ export function getValueOrDefault<T>(value: T | undefined | { type?: string }, d
 export function mergeUserSettings(
   baseSettings: PhotoStyleSettings,
   userSettings: PhotoStyleSettings,
-  visibleCategories: CategoryType[]
+  visibleCategories: CategoryType[],
+  options?: {
+    nonVisibleOverridableFields?: Array<keyof PhotoStyleSettings>
+  }
 ): PhotoStyleSettings {
   const result = { ...baseSettings }
   const visibleSet = new Set(visibleCategories)
+  const nonVisibleOverridableFields = new Set<keyof PhotoStyleSettings>(
+    options?.nonVisibleOverridableFields ?? NON_VISIBLE_OVERRIDABLE_SETTING_FIELDS
+  )
   
   // Only apply user settings for visible categories
   // This mapping connects UI categories to PhotoStyleSettings fields
   const categoryFields: Partial<Record<CategoryType, keyof PhotoStyleSettings>> = {
     'background': 'background',
     'branding': 'branding',
+    'beautification': 'beautification',
     'clothing': 'clothing',
     'clothingColors': 'clothingColors',
     'customClothing': 'customClothing',
@@ -101,7 +109,7 @@ export function mergeUserSettings(
   }
   
   for (const [category, field] of Object.entries(categoryFields)) {
-    if (visibleSet.has(category as CategoryType) && field && userSettings[field]) {
+    if ((visibleSet.has(category as CategoryType) || (field && nonVisibleOverridableFields.has(field))) && field && userSettings[field]) {
       // Use getValueOrDefault to check if user setting has meaningful data
       // If it's just { type: 'user-choice' } with no colors/data, keep the base default
     // Type assertion needed because we're dynamically accessing different setting types
@@ -127,4 +135,3 @@ export function mergeUserSettings(
   
   return result
 }
-

@@ -1,13 +1,13 @@
-import { PhotoStyleSettings, CategoryType, BackgroundValue, ClothingValue, ClothingColorValue, ExpressionValue, PoseValue } from '@/types/photo-style'
+import { PhotoStyleSettings, CategoryType, BackgroundValue, ClothingValue, ClothingColorValue, PoseValue } from '@/types/photo-style'
 import type { BrandingValue } from '../../elements/branding/types'
 import type { ClientStylePackage } from '../index'
 import { deserialize as deserializeBackground } from '../../elements/background/deserializer'
 import { deserialize as brandingDeserialize } from '../../elements/branding/deserializer'
-import { deserialize as clothingDeserialize } from '../../elements/clothing/deserializer'
+import { deserialize as clothingDeserialize, normalizeClothingSettings } from '../../elements/clothing/deserializer'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
-import * as expression from '../../elements/expression'
 import { predefined, userChoice } from '../../elements/base/element-types'
+import { DEFAULT_BEAUTIFICATION_VALUE } from '../../elements/beautification/types'
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
   'background',
@@ -15,7 +15,6 @@ const VISIBLE_CATEGORIES: CategoryType[] = [
   'pose',
   'clothing',
   'clothingColors',
-  'expression'
 ]
 
 const AVAILABLE_BACKGROUNDS = [
@@ -31,19 +30,14 @@ const AVAILABLE_POSES = [
   'classic_corporate',
   'slimming_three_quarter',
   'power_cross',
+  'casual_confident',
   'candid_over_shoulder',
   'seated_engagement',
 ]
 
-const AVAILABLE_EXPRESSIONS = [
-  'genuine_smile',
-  'soft_smile',
-  'neutral_serious',
-  'laugh_joy',
-]
-
 const AVAILABLE_CLOTHING_STYLES = [
-  'business',
+  'business_professional',
+  'business_casual',
   'startup'
 ]
 
@@ -64,9 +58,10 @@ const DEFAULTS: PhotoStyleSettings = {
   pose: userChoice<PoseValue>({ type: 'slimming_three_quarter' }),
   clothing: userChoice<ClothingValue>(),
   clothingColors: userChoice<ClothingColorValue>(),
-  expression: userChoice<ExpressionValue>({ type: 'genuine_smile' }),
+  beautification: userChoice(DEFAULT_BEAUTIFICATION_VALUE),
   // Non-visible settings - predefined
   shotType: predefined({ type: 'medium-shot' as const }),
+  expression: predefined({ type: 'soft_smile' }),
   filmType: predefined({ type: 'clinical-modern' }),
   aspectRatio: '1:1' as const,
   subjectCount: '1' as const
@@ -78,30 +73,35 @@ export const headshot1: ClientStylePackage = {
   version: 1,
   visibleCategories: VISIBLE_CATEGORIES,
   compositionCategories: ['background', 'branding', 'pose'],
-  userStyleCategories: ['clothing', 'clothingColors', 'expression'],
+  userStyleCategories: ['clothing', 'clothingColors'],
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availablePoses: AVAILABLE_POSES,
-  availableExpressions: AVAILABLE_EXPRESSIONS,
+  availableExpressions: [],
   availableClothingStyles: AVAILABLE_CLOTHING_STYLES,
   defaultSettings: DEFAULTS,
   defaultPresetId: 'corporate-headshot',
   presets: {},  // No preset dependency - package is self-contained
+  metadata: {
+    capabilities: {
+      supportsBeautification: true,
+    },
+  },
   promptBuilder: () => {
     throw new Error('promptBuilder is deprecated - use server-side buildGenerationPayload instead')
   },
   extractUiSettings: (rawStyleSettings) => {
     // Extract UI settings from request for visible categories only
-    // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
+    // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose']
     // Note: shotType is NOT extracted here (not visible to users)
     // It will be applied from package defaults during server-side generation
     return {
       presetId: headshot1.defaultPresetId,
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
       branding: rawStyleSettings.branding as PhotoStyleSettings['branding'],
-      clothing: rawStyleSettings.clothing as PhotoStyleSettings['clothing'],
+      clothing: normalizeClothingSettings(rawStyleSettings.clothing),
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
-      expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
+      beautification: rawStyleSettings.beautification as PhotoStyleSettings['beautification'],
     }
   },
   persistenceAdapter: {
@@ -114,7 +114,7 @@ export const headshot1: ClientStylePackage = {
         clothing: ui.clothing,
         clothingColors: ui.clothingColors || userChoice(),
         pose: ui.pose, // Now includes nested granular settings
-        expression: ui.expression,
+        ...(ui.beautification !== undefined && { beautification: ui.beautification }),
       }
     }),
     deserialize: (raw) => {
@@ -126,14 +126,13 @@ export const headshot1: ClientStylePackage = {
         : r
 
       // Deserialize only the categories exposed to users via visibleCategories
-      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
+      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose']
       // Note: aspectRatio is derived from preset/shotType, not a direct user input
       const backgroundResult = deserializeBackground(inner)
       const brandingResult = brandingDeserialize(inner)
       const clothingResult = clothingDeserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
-      const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
       return {
         presetId: headshot1.defaultPresetId, // Always derive from package
@@ -142,7 +141,7 @@ export const headshot1: ClientStylePackage = {
         clothing: clothingResult,
         clothingColors: clothingColorsResult,
         pose: poseResult,
-        expression: expressionResult,
+        ...('beautification' in inner && { beautification: inner.beautification as PhotoStyleSettings['beautification'] }),
       }
     }
   }

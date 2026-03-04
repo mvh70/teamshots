@@ -1,6 +1,9 @@
 import { reserveCreditsForGeneration, getPersonCreditBalance, getTeamCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { UserService } from './UserService'
+import { prisma } from '@/lib/prisma'
+
+type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 
 /**
  * Consolidated credit management service
@@ -22,7 +25,8 @@ export class CreditService {
   static async validateCreditAccess(
     userId: string,
     requiredCredits: number,
-    userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>
+    userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>,
+    balancePersonId?: string
   ): Promise<{
     hasAccess: boolean
     individualBalance: number
@@ -34,7 +38,7 @@ export class CreditService {
   }> {
     // OPTIMIZATION: Use provided userContext to avoid redundant queries
     const context = userContext || await UserService.getUserContext(userId)
-    const personId = context.user.person?.id || null
+    const personId = balancePersonId || context.user.person?.id || null
     const teamId = userContext?.teamId || context.user.person?.teamId || null
 
     // NEW MODEL: Always check person balance (credits must be transferred to person first)
@@ -66,7 +70,8 @@ export class CreditService {
     userId: string,
     personId: string,
     requiredCredits: number,
-    userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>
+    userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>,
+    tx?: PrismaTransactionClient
   ): Promise<{
     success: boolean
     transactionId?: string
@@ -75,24 +80,15 @@ export class CreditService {
     teamCreditsUsed?: number
   }> {
     try {
-      // OPTIMIZATION: Use provided userContext to avoid redundant queries
-      const context = userContext || await UserService.getUserContext(userId)
-
-      // Validate access first (always checks person balance)
-      const creditCheck = await this.validateCreditAccess(userId, requiredCredits, context)
-      if (!creditCheck.hasAccess) {
-        return {
-          success: false,
-          error: 'Insufficient credits'
-        }
-      }
-
       // NEW MODEL: Always reserve from person, never pass teamId
       // Credits are transferred to person BEFORE generation (on seat assignment/invite acceptance)
       const transaction = await reserveCreditsForGeneration(
         personId,
         requiredCredits,
-        `Generation reservation`
+        `Generation reservation`,
+        undefined,
+        undefined,
+        tx
         // No teamId - always deduct from person
       )
 
@@ -111,9 +107,16 @@ export class CreditService {
         error: 'Failed to reserve credits'
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      if (errorMessage.includes('Insufficient credits')) {
+        return {
+          success: false,
+          error: 'Insufficient credits'
+        }
+      }
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
       }
     }
   }
@@ -132,7 +135,7 @@ export class CreditService {
     total: number
   }> {
     // OPTIMIZATION: Use provided userContext to avoid redundant queries
-    const context = userContext || await UserService.getUserRoles(userId)
+    const context = userContext || await UserService.getUserContext(userId)
     const teamId = userContext?.teamId || context.user.person?.teamId || null
     const personId = context.user.person?.id || null
 

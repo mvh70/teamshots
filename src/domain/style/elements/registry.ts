@@ -7,6 +7,11 @@
 
 import type { PhotoStyleSettings } from '@/types/photo-style'
 
+export interface ElementSessionMergeParams<T = unknown> {
+  currentSetting: T
+  savedValue: unknown
+}
+
 export interface ElementConfig<T = unknown> {
   /**
    * Get the default value when toggling to "predefined" mode
@@ -22,6 +27,12 @@ export interface ElementConfig<T = unknown> {
    * Deserialize from stored format (optional - not all elements need this)
    */
   deserialize?: (raw: Record<string, unknown>, defaults?: T) => T
+
+  /**
+   * Merge saved session value into a predefined (locked) setting.
+   * Return undefined when merge should not apply.
+   */
+  mergePredefinedFromSession?: (params: ElementSessionMergeParams<T>) => T | undefined
 }
 
 export type CategoryType = keyof Pick<

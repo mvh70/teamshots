@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getExtensionAuthFromHeaders, EXTENSION_SCOPES } from '@/domain/extension'
 import { handleCorsPreflightSync, addCorsHeaders } from '@/lib/cors'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export const runtime = 'nodejs'
 
@@ -77,16 +78,13 @@ export async function PATCH(
 
     // Prefer token in payload; also check query/header for robustness
     const token = payload.token || (await getInviteToken(request))
-    let hasValidToken = Boolean(token && selfie.person.inviteToken && token === selfie.person.inviteToken)
+    let hasValidToken = false
 
     // Also allow valid TeamInvite token for this person (invite dashboards use TeamInvite.token)
     if (!hasValidToken && token && selfie.person.id) {
       try {
-        const invite = await prisma.teamInvite.findFirst({
-          where: { token, usedAt: { not: null }, personId: selfie.person.id },
-          select: { id: true, personId: true }
-        })
-        if (invite && invite.personId === selfie.person.id) {
+        const inviteAccess = await resolveInviteAccess({ token })
+        if (inviteAccess.ok && inviteAccess.access.person.id === selfie.person.id) {
           hasValidToken = true
         }
       } catch (error) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -17,16 +17,15 @@ import { Lightbox } from '@/components/generations'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useGenerationDetailTourTrigger } from '@/lib/onborda/useGenerationDetailTourTrigger'
-import { useDomain } from '@/contexts/DomainContext'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function TeamGenerationsPage() {
   const tg = useTranslations('generations.team')
   const t = useTranslations('app.sidebar.generate')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
-  const { isIndividualDomain } = useDomain()
+  const { isIndividualDomain } = useTenant()
   const searchParams = useSearchParams()
-  const router = useRouter()
   const isNewGeneration = searchParams.get('new_generation') === 'true'
   const [isWaitingForNewGeneration, setIsWaitingForNewGeneration] = useState(isNewGeneration)
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
@@ -91,7 +90,6 @@ export default function TeamGenerationsPage() {
   }, [rolesLoaded, isTeamAdmin, setUserFilter])
   /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
   const { href: buyCreditsHref } = useBuyCreditsLink()
-  const [teamView] = useState<'mine' | 'team'>('mine')
   const [viewMode, setViewMode] = useState<'images' | 'folders'>('images')
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [personCounts, setPersonCounts] = useState<{ personId: string; personName: string; personUserId?: string; count: number }[]>([])
@@ -156,7 +154,7 @@ export default function TeamGenerationsPage() {
     currentUserName,
     currentPersonId,
     'team', // scope
-    teamView, // teamView
+    'mine',
     (isTeamAdmin && userFilter === 'team')
       ? selectedUserId
       : (isTeamAdmin && userFilter === 'me' && currentPersonId)
@@ -453,13 +451,6 @@ export default function TeamGenerationsPage() {
 
       </div>
 
-      {/* Team Gallery Info */}
-      {teamView === 'team' && !isTeamAdmin && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">{tg('viewOnly')}</p>
-        </div>
-      )}
-
       {/* Content */}
       {viewMode === 'folders' && !selectedPersonId ? (
         // Folder View - Show person folders with counts from API
@@ -543,6 +534,7 @@ export default function TeamGenerationsPage() {
                           key={item.id}
                           item={item}
                           currentUserId={currentUserId}
+                          disableIndividualPolling
                           onImageClick={(src) => setLightboxImage({ src, personName: group.personName })}
                         />
                       ))}

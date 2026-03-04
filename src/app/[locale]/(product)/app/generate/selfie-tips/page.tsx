@@ -4,16 +4,18 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
 import { StickyFlowPage } from '@/components/generation/layout'
-import { SwipeableContainer, FlowNavigation, FlowProgressDock } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowNavigation, FlowProgressDock, CustomizationMobileFooter } from '@/components/generation/navigation'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
-import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
+import { buildNormalStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import Header from '@/app/[locale]/(product)/app/components/Header'
 import { useOnboardingState } from '@/lib/onborda/hooks'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
+import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
+import { useHideScreen } from '@/hooks/useHideScreen'
 
 /**
  * Selfie tips intro page for logged-in users.
@@ -30,9 +32,14 @@ export default function SelfieTipsPage() {
   const tSelfieHeader = useTranslations('customization.photoStyle.mobile.selfieTips')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
-  const { markSeenSelfieTips, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META, visitedSteps } = useGenerationFlowState()
+  const {
+    markSeenSelfieTips,
+    hydrated,
+    hasCompletedBeautification,
+    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
+    visitedSteps
+  } = useGenerationFlowState({ syncBeautificationFromSession: true })
   const { context, updateContext } = useOnboardingState()
-  const [isSavingPreference, setIsSavingPreference] = useState(false)
   const hasAutoSkippedRef = useRef(false)
 
   // Get selfie count for the progress dock
@@ -41,50 +48,28 @@ export default function SelfieTipsPage() {
 
   // Check if force parameter is set (from info icon click) - always show when forced
   const forceShow = searchParams.get('force') === '1'
-  const skipSelfieTips = !forceShow && context.hiddenScreens?.includes('selfie-tips')
 
   // Build step indicator for selfie tips (before selfie selection, so step 0)
-  const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
+  const { stepperTotalDots, navCurrentIndex, navigationStepColors } = buildNormalStepIndicator(customizationStepsMeta, {
     selfieComplete: false,
+    beautificationComplete: hasCompletedBeautification,
     isDesktop: !isMobile,
-    visitedCustomizationSteps: visitedSteps
+    visitedCustomizationSteps: visitedSteps,
+    currentStep: 'selfies',
+    hideCurrentStep: true,
   })
-  const stepperTotalDots = selfieStepIndicator.totalWithLocked ?? selfieStepIndicator.total
-  // Info pages are not part of the steps, so use -1 to not highlight any step as current
-  const navCurrentIndex = -1
-  const navigationStepColors = selfieStepIndicator.lockedSteps || selfieStepIndicator.visitedEditableSteps
-    ? {
-        lockedSteps: selfieStepIndicator.lockedSteps,
-        visitedEditableSteps: selfieStepIndicator.visitedEditableSteps
-      }
-    : undefined
 
   const handleContinue = useCallback(() => {
     markSeenSelfieTips()
     router.push('/app/generate/selfie')
   }, [markSeenSelfieTips, router])
 
-  const handleDontShow = async () => {
-    if (isSavingPreference) return
-    setIsSavingPreference(true)
-    try {
-      const response = await fetch('/api/onboarding/hide-screen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ screenName: 'selfie-tips' })
-      })
-      const data = await response.json().catch(() => ({}))
-      const updatedHiddenScreens = Array.from(
-        new Set([...(context.hiddenScreens || []), ...(data.hiddenScreens || ['selfie-tips'])])
-      )
-      updateContext({ hiddenScreens: updatedHiddenScreens })
-    } catch (error) {
-      console.error('[SelfieTipsPage] Failed to persist skip preference', error)
-    } finally {
-      setIsSavingPreference(false)
-      handleContinue()
-    }
-  }
+  const { handleHideScreen: handleDontShow, isSaving: isSavingPreference } = useHideScreen('selfie-tips', {
+    context,
+    updateContext,
+    onComplete: handleContinue,
+    onErrorLogPrefix: '[SelfieTipsPage] Failed to persist skip preference',
+  })
 
   useEffect(() => {
     // Never auto-skip if force parameter is set (user explicitly clicked info icon)
@@ -122,24 +107,27 @@ export default function SelfieTipsPage() {
   return (
     <>
       {/* Progress Dock - Bottom Center (Desktop) */}
-      <FlowProgressDock
-        selfieCount={selfieCount}
-        uneditedFields={[]}
-        hasUneditedFields={false}
-        canGenerate={false}
-        hasEnoughCredits={true}
-        currentStep="tips"
-        onNavigateToSelfies={handleContinue}
-        onNavigateToCustomize={() => {
-          // Clicking on customize step always goes directly to customize page
-          router.push('/app/generate/start?skipUpload=1')
-        }}
-        onGenerate={() => {}} // Not available on this page
-        onNavigateToDashboard={() => router.push('/app/dashboard')}
-        customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={visitedSteps}
-        onDontShowAgain={handleDontShow}
-      />
+      {!isMobile && (
+        <FlowProgressDock
+          selfieCount={selfieCount}
+          hasUneditedFields={false}
+          hasEnoughCredits={true}
+          currentStep="tips"
+          onNavigateToPreviousStep={handleBack}
+          onNavigateToSelfieStep={handleContinue}
+          onNavigateToCustomize={() => {
+            if (selfieCount >= MIN_SELFIES_REQUIRED) {
+              router.push('/app/generate/beautification')
+              return
+            }
+            router.push('/app/generate/selfie')
+          }}
+          onNavigateToDashboard={() => router.push('/app/dashboard')}
+          customizationStepsMeta={customizationStepsMeta}
+          visitedEditableSteps={visitedSteps}
+          onDontShowAgain={handleDontShow}
+        />
+      )}
 
       <SwipeableContainer
         onSwipeLeft={isSwipeEnabled ? handleContinue : undefined}
@@ -174,48 +162,23 @@ export default function SelfieTipsPage() {
         <div className="md:hidden h-40" />
       </StickyFlowPage>
 
-      {/* Mobile: Sticky footer with compact navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <div className="px-4 py-4">
-          {/* Single-line navigation: ← | Don't show again | Selfies → */}
-          <div className="flex items-center justify-between">
-            {/* Back (to dashboard) */}
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="text-sm font-medium">{tSelfieHeader('prevLabel', { default: 'Dashboard' })}</span>
-            </button>
-
-            {/* Don't show again (centered) */}
-            <button
-              type="button"
-              onClick={handleDontShow}
-              disabled={isSavingPreference}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors py-2"
-            >
-              {tSelfieHeader('skip', { default: "Don't show again" })}
-            </button>
-
-            {/* Forward (to Selfies) */}
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full bg-brand-primary text-white shadow-sm hover:brightness-110 transition"
-            >
-              <span className="text-sm font-medium">{tSelfieHeader('nextLabel', { default: 'Selfies' })}</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Progress dots */}
-        <div className="px-4 pb-4">
+      <CustomizationMobileFooter
+        leftAction={{
+          label: tSelfieHeader('prevLabel', { default: 'Dashboard' }),
+          onClick: handleBack,
+        }}
+        centerAction={{
+          label: tSelfieHeader('skip', { default: "Don't show again" }),
+          onClick: handleDontShow,
+          disabled: isSavingPreference,
+        }}
+        rightAction={{
+          label: tSelfieHeader('nextLabel', { default: 'Selfies' }),
+          onClick: handleContinue,
+          tone: 'primary',
+          icon: 'chevron-right',
+        }}
+        progressContent={
           <FlowNavigation
             variant="dots-only"
             size="md"
@@ -225,10 +188,11 @@ export default function SelfieTipsPage() {
             onNext={handleContinue}
             stepColors={navigationStepColors}
           />
-        </div>
-      </div>
+        }
+      >
+        {null}
+      </CustomizationMobileFooter>
     </SwipeableContainer>
     </>
   )
 }
-

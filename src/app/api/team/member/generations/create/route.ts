@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, Prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { randomUUID } from 'crypto'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
-import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { PRICING_CONFIG } from '@/config/pricing'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
@@ -14,10 +15,11 @@ import { UserService } from '@/domain/services/UserService'
 import { SecurityLogger } from '@/lib/security-logger'
 import {
   enqueueGenerationJob,
-  determineWorkflowVersion,
   createGenerationWithCreditReservation,
   serializeStyleSettingsForGeneration,
   enrichGenerationJobFromSelfies,
+  getRegenerationLimitForAdmin,
+  handleEnqueueFailure,
 } from '@/domain/generation/generation-helpers'
 import { resolveInviteAccess } from '@/lib/invite-access'
 import {
@@ -33,7 +35,7 @@ const createSchema = z.object({
   selfieIds: z.array(z.string()).optional(),
   contextId: z.string().optional(),
   styleSettings: z.record(z.string(), z.unknown()).optional(),
-  prompt: z.string().min(1),
+  prompt: z.string().trim().min(1).optional().default('Professional headshot'),
   workflowVersion: z.enum(['v3']).optional(), // Workflow version: v3 (4-step). Defaults to 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode
 })
@@ -63,21 +65,7 @@ export async function POST(request: NextRequest) {
     const { selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)
 
     // Determine workflow version
-    const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
-
-    // Check invite's remaining credits first (invited members have their own allocation)
-    const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.inviteId)
-    if (inviteCreditsRemaining < PRICING_CONFIG.credits.perGeneration) {
-      return NextResponse.json(
-        {
-          error: 'Insufficient credits',
-          required: PRICING_CONFIG.credits.perGeneration,
-          available: inviteCreditsRemaining,
-          message: 'You don\'t have enough credits to generate photos. Please contact your team admin to request more credits.',
-        },
-        { status: 402 }
-      )
-    }
+    const finalWorkflowVersion = workflowVersion || 'v3'
 
     const [resolved, team] = await Promise.all([
       resolveSelfies({ personId: invite.person.id, selfieKeys, selfieIds }),
@@ -113,7 +101,13 @@ export async function POST(request: NextRequest) {
         type MoreSelected = typeof moreSelected[number];
         const unique = Array.from(new Set([...(selfieKeysForJob || []), ...moreSelected.map((s: MoreSelected) => s.key)]))
         if (unique.length > 1) selfieKeysForJob = unique
-      } catch {}
+      } catch (error) {
+        Logger.warn('Selfie fallback failed', {
+          inviteId: invite.inviteId,
+          personId: invite.person.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
 
     const userContext = await UserService.getUserContext(teamAdminId)
@@ -149,6 +143,8 @@ export async function POST(request: NextRequest) {
 
     const requestedContextId = contextId ?? invite.contextId ?? team.activeContextId ?? null
     const { resolvedContextId, contextStyleSettings } = await resolveGenerationContextSettings(requestedContextId)
+    // Intentionally skip free-package enforcement in invite flow.
+    // Invited users inherit admin-configured package/context behavior.
     const resolvedStyleSettings = resolveGenerationStyleSettings({
       packageId: finalPackageId,
       contextStyleSettings,
@@ -166,42 +162,54 @@ export async function POST(request: NextRequest) {
     let invitedRegenerations: number = getRegenerationCount('individual') // Fallback - use individual as default
 
     if (team.admin) {
-      const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
-      const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
-
-      // Determine team admin's PricingTier to get regeneration count
-      let adminPricingTier: PricingTier = 'individual' // Default fallback
-      if (adminPlanTier === 'individual' && adminPlanPeriod === 'large') {
-        adminPricingTier = 'vip'
-      } else if (adminPlanTier === 'pro' && adminPlanPeriod === 'seats') {
-        // Seats-based pricing uses individual regeneration count
-        adminPricingTier = 'individual'
-      } else if (adminPlanTier === 'individual' || adminPlanTier === 'pro') {
-        // Individual tier or pro tier default to individual
-        adminPricingTier = 'individual'
-      }
-
-      invitedRegenerations = getRegenerationCount(adminPricingTier)
+      const adminPlanPeriod = team.admin.planPeriod ?? null
+      const adminPlanTier = team.admin.planTier ?? null
+      invitedRegenerations = getRegenerationLimitForAdmin(adminPlanTier, adminPlanPeriod)
     }
 
-    const { generation } = await createGenerationWithCreditReservation({
-      generationData: {
-        personId: invite.person.id,
-        generatedPhotoKeys: [],
-        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
-        creditSource: 'individual', // NEW MODEL: credits always belong to person
-        creditsUsed: PRICING_CONFIG.credits.perGeneration,
-        status: 'pending',
-        contextId: resolvedContextId ?? undefined,
-        provider: 'gemini',
-        maxRegenerations: invitedRegenerations,
-        remainingRegenerations: invitedRegenerations,
-      },
-      reservationUserId: teamAdminId,
-      reservationPersonId: invite.person.id,
-      requiredCredits: PRICING_CONFIG.credits.perGeneration,
-      userContext,
-    })
+    const generationGroupId = randomUUID()
+    const isOriginal = true
+    const groupIndex = 0
+
+    let generation: Awaited<ReturnType<typeof createGenerationWithCreditReservation>>['generation']
+    try {
+      const result = await createGenerationWithCreditReservation({
+        generationData: {
+          personId: invite.person.id,
+          generatedPhotoKeys: [],
+          styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
+          creditSource: 'individual', // NEW MODEL: credits always belong to person
+          creditsUsed: PRICING_CONFIG.credits.perGeneration,
+          status: 'pending',
+          contextId: resolvedContextId ?? undefined,
+          provider: 'gemini',
+          maxRegenerations: invitedRegenerations,
+          remainingRegenerations: invitedRegenerations,
+          generationGroupId,
+          isOriginal,
+          groupIndex,
+        },
+        reservationUserId: teamAdminId,
+        reservationPersonId: invite.person.id,
+        requiredCredits: PRICING_CONFIG.credits.perGeneration,
+        userContext,
+      })
+      generation = result.generation
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Insufficient credits')) {
+        const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.inviteId)
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: PRICING_CONFIG.credits.perGeneration,
+            available: inviteCreditsRemaining,
+            message: 'You don\'t have enough credits to generate photos. Please contact your team admin to request more credits.',
+          },
+          { status: 402 }
+        )
+      }
+      throw error
+    }
 
     const enrichment = await enrichGenerationJobFromSelfies({
       generationId: generation.id,
@@ -212,20 +220,28 @@ export async function POST(request: NextRequest) {
 
     // Enqueue the generation job
     const job = await enqueueGenerationJob({
-      generationId: generation.id,
-      personId: invite.person.id,
-      userId: invite.person.userId || teamAdminId,
-      teamId: invite.teamId,
-      selfieS3Keys: selfieKeysForJob,
-      selfieAssetIds: enrichment.selfieAssetIds,
-      selfieTypeMap: enrichment.selfieTypeMap,
-      demographics: enrichment.demographics,
-      prompt,
-      workflowVersion: finalWorkflowVersion,
-      debugMode,
-      creditSource: 'individual', // NEW MODEL: credits always belong to person
-      priority: 1,
-    })
+        generationId: generation.id,
+        personId: invite.person.id,
+        userId: invite.person.userId || teamAdminId,
+        teamId: invite.teamId,
+        selfieS3Keys: selfieKeysForJob,
+        selfieAssetIds: enrichment.selfieAssetIds,
+        selfieTypeMap: enrichment.selfieTypeMap,
+        demographics: enrichment.demographics,
+        prompt,
+        workflowVersion: finalWorkflowVersion,
+        debugMode,
+        creditSource: 'individual', // NEW MODEL: credits always belong to person
+        priority: 1,
+      })
+      .catch(async (enqueueError) => {
+        return handleEnqueueFailure({
+        generationId: generation.id,
+        personId: invite.person.id,
+        inviteId: invite.inviteId,
+        error: enqueueError,
+      })
+      })
 
     Telemetry.increment('generation.create.success')
     return NextResponse.json({ success: true, generationId: generation.id, jobId: job.id, status: 'queued' })

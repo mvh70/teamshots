@@ -1,11 +1,12 @@
 'use client'
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { SelectableGrid } from '@/components/generation/selection'
-import { FlowNavigation, SwipeableContainer, FlowProgressDock } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowProgressDock, SelfieNavButtons, StandardThreeStepIndicator } from '@/components/generation/navigation'
 import { StickyFlowPage } from '@/components/generation/layout'
-import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
+import FlowPageSkeleton from '@/components/generation/loading/FlowPageSkeleton'
+import { buildNormalStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META, isCustomizationComplete } from '@/lib/customizationSteps'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
@@ -14,7 +15,6 @@ import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
 import { QRPlaceholder } from '@/components/MobileHandoff'
-import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { hasEnoughSelfies } from '@/constants/generation'
@@ -22,38 +22,43 @@ import { useTranslations } from 'next-intl'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 import { useRefreshOnClassificationComplete } from '@/hooks/useRefreshOnClassificationComplete'
+import { buildSelfieStatusBadge } from '@/components/generation/selfie/SelfieStatusBadge'
 import { mapSelfieListItemsToGridItems, type SelfieListItem } from '@/lib/selfieGridItems'
+import { useInviteGenerationFlowState } from '@/hooks/useInviteGenerationFlowState'
+import { useInviteFlowNavigation } from '@/hooks/useInviteFlowNavigation'
+import { useInviteStats } from '@/hooks/useInviteStats'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
+import type { InviteDashboardStats } from '@/types/invite'
 
-const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-interface DashboardStats {
-  creditsRemaining: number
-}
+type InviteCreditStats = Pick<InviteDashboardStats, 'creditsRemaining' | 'teamName'>
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 /**
  * Selfie management page for invited users.
  * 
- * Flow: /invite-dashboard/[token]/selfie-tips → /invite-dashboard/[token]/selfies → /invite-dashboard/[token]/customization-intro
+ * Flow: /invite-dashboard/[token]/selfie-tips → /invite-dashboard/[token]/selfies → /invite-dashboard/[token]/beautification → /invite-dashboard/[token]/customization-intro
  * 
  * Users can select existing selfies or upload new ones.
  */
 export default function SelfiesPage() {
   const params = useParams()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const token = params.token as string
+  const navigation = useInviteFlowNavigation(token)
   const uploadOnly = (searchParams?.get('mode') || '') === 'upload'
   const t = useTranslations('inviteDashboard.selfieSelection.mobile')
   const tSelectionHint = useTranslations('selfies.selectionHint')
+  const { context } = useOnboardingState()
 
   const [error, setError] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(false)
-  const [stats, setStats] = useState<DashboardStats>({ creditsRemaining: 0 })
+  const { stats } = useInviteStats<InviteCreditStats>(token, {
+    initialStats: { creditsRemaining: 0, teamName: '' },
+  })
   // Header resolves invite info internally; no local invite state needed
 
   const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useUploadSelfieEndpoints(token, 'invite')
@@ -63,9 +68,14 @@ export default function SelfiesPage() {
     setOpenStartFlow,
     setPendingGeneration,
     hydrated,
+    hasCompletedBeautification,
+    setCompletedBeautification,
     customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
     visitedSteps
-  } = useGenerationFlowState()
+  } = useInviteGenerationFlowState({
+    token,
+    syncBeautificationFromSession: true,
+  })
 
   // Selfie type status for progress overlay
   const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
@@ -79,25 +89,6 @@ export default function SelfiesPage() {
   useEffect(() => {
     preloadFaceDetectionModel()
   }, [])
-
-  // Fetch stats for credit check
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/team/member/stats?token=${token}`)
-      if (response.ok) {
-        const data = await response.json()
-        if (isNonNullObject(data) && isNonNullObject(data.stats)) {
-          setStats(data.stats as unknown as DashboardStats)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error)
-    }
-  }, [token])
-
-  useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
 
   // Multi-select: load and manage selected selfies
   const selfieManager = useSelfieManagement({
@@ -127,14 +118,14 @@ export default function SelfiesPage() {
       // Handle navigation and approval state for invited flow
       // Only navigate away if in upload-only mode
       if (uploadOnly) {
-        router.push(`/invite-dashboard/${token}`)
+        navigation.toDashboard()
         return
       }
 
       // On mobile in generation flow, auto-navigate back to dashboard
       if (isMobile && inFlow) {
         setOpenStartFlow(true)
-        router.push(`/invite-dashboard/${token}`)
+        navigation.toDashboard()
         return
       }
 
@@ -158,9 +149,11 @@ export default function SelfiesPage() {
   const {
     uploads: hookSelfies,
     selectedIds,
+    selectedSet,
     loading,
     loadSelected,
     loadUploads,
+    toggleSelect,
     handlePhotoUpload,
     handleSelfiesApproved
   } = selfieManager
@@ -202,108 +195,58 @@ export default function SelfiesPage() {
     if (canContinue) {
       setOpenStartFlow(true)
       setPendingGeneration(true)
-      // Navigate to customization intro (which then goes to dashboard)
-      router.push(`/invite-dashboard/${token}/customization-intro`)
+      setCompletedBeautification(false)
+      navigation.toBeautification()
     }
   }
   
   // Show skeleton while hydrating
   if (!hydrated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Header skeleton */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
-        </div>
-        {/* Grid skeleton */}
-        <div className="px-4 py-6">
-          <div className="grid grid-cols-2 gap-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+    return <FlowPageSkeleton variant="grid" />
   }
 
   // Check if all customization steps have been visited
   const hasEnoughCredits = stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
   // If editableSteps is 0 (admin preset everything), customization is complete
-  const isCustomizationComplete = customizationStepsMeta.editableSteps === 0 ||
-    visitedSteps.length >= customizationStepsMeta.editableSteps
-  const canGeneratePhoto = canContinue && hasEnoughCredits && isCustomizationComplete
+  const customizationComplete = isCustomizationComplete(customizationStepsMeta, visitedSteps)
 
   const handleCancelUpload = () => {
     setIsApproved(false)
   }
 
   if (loading) { // loading comes from useSelfieManagement hook
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading selfies...</p>
-        </div>
-      </div>
-    )
+    return <FlowPageSkeleton variant="centered-spinner" />
   }
 
   const handleBack = () => {
-    router.push(`/invite-dashboard/${token}/selfie-tips`)
+    if (context.hiddenScreens?.includes('selfie-tips')) {
+      navigation.toDashboard()
+      return
+    }
+    navigation.toSelfieTips()
   }
 
   // Navigation handlers for FlowProgressDock
-  const handleNavigateToSelfies = () => {
-    // Already here
-  }
-
   const handleNavigateToCustomize = () => {
     if (canContinue) {
       setOpenStartFlow(true)
       setPendingGeneration(true)
-      router.push(`/invite-dashboard/${token}/customization`)
+      setCompletedBeautification(false)
+      navigation.toBeautification()
     }
   }
 
-  const handleNavigateToSelfieTips = () => {
-    router.push(`/invite-dashboard/${token}/selfie-tips`)
-  }
-
-  const handleNavigateToCustomizationIntro = () => {
-    if (canContinue) {
-      setOpenStartFlow(true)
-      setPendingGeneration(true)
-      router.push(`/invite-dashboard/${token}/customization-intro`)
-    }
-  }
-
-  const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
+  const {
+    stepperTotalDots,
+    navCurrentIndex,
+    navigationStepColors,
+  } = buildNormalStepIndicator(customizationStepsMeta, {
     selfieComplete: canContinue,
+    beautificationComplete: hasCompletedBeautification,
     isDesktop: !isMobile,
-    visitedCustomizationSteps: visitedSteps
+    visitedCustomizationSteps: visitedSteps,
+    currentStep: 'selfies',
   })
-
-  const stepperTotalDots = selfieStepIndicator.totalWithLocked ?? selfieStepIndicator.total
-  const navCurrentIndex = selfieStepIndicator.currentAllStepsIndex ?? Math.max(0, selfieStepIndicator.current - 1)
-  // Merge selfie completion with persisted customization visited steps
-  // Mobile indices: 0 = selfie, 1+ = customization steps (shifted by 1)
-  const mergedVisitedSteps = [
-    ...(canContinue ? [0] : []),
-    ...visitedSteps.map(idx => idx + 1) // shift customization indices by 1 for selfie at index 0
-  ]
-  const navigationStepColors = selfieStepIndicator.lockedSteps || mergedVisitedSteps.length > 0
-    ? {
-        lockedSteps: selfieStepIndicator.lockedSteps,
-        visitedEditableSteps: mergedVisitedSteps
-      }
-    : undefined
-
-  // Override selfieStepIndicator's visitedEditableSteps with merged visited steps
-  const stepIndicatorWithVisited = {
-    ...selfieStepIndicator,
-    visitedEditableSteps: mergedVisitedSteps
-  }
 
   const flowHeaderConfig = {
     kicker: t('bannerTitle', { default: 'Select your selfies' }),
@@ -313,7 +256,7 @@ export default function SelfiesPage() {
     showBack: !isMobile,
     onBack: () => {
       clearFlow()
-      router.replace(`/invite-dashboard/${token}`)
+      navigation.replaceDashboard()
     },
     fullBleed: true,
     hideOnDesktop: true
@@ -324,14 +267,55 @@ export default function SelfiesPage() {
       showBackToDashboard
       token={token}
       hideTitle
+      teamName={stats.teamName}
       creditsRemaining={stats.creditsRemaining}
-      photosAffordable={Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)}
+      photosAffordable={calculatePhotosFromCredits(stats.creditsRemaining)}
       onBackClick={() => {
         clearFlow()
-        router.replace(`/invite-dashboard/${token}`)
+        navigation.replaceDashboard()
       }}
     />
   )
+
+  const selectableGridProps = {
+    items: gridItems,
+    selection: {
+      mode: 'managed' as const,
+      token,
+      onAfterChange: handleSelectionChange,
+    },
+    externalManagedSelection: { selectedSet, toggleSelect },
+    token,
+    allowDelete: true,
+    showUploadTile: !isMobile,
+    onDeleted: async () => {
+      await loadUploads()
+      await loadSelected()
+    },
+    upload: {
+      onSelfiesApproved: handleSelfiesApproved!,
+      onError: (error: string) => setError(error),
+      uploadEndpoint: handlePhotoUpload,
+      saveEndpoint: inviteSaveEndpoint,
+    },
+    qrTile: (
+      <QRPlaceholder
+        inviteToken={token}
+        size={100}
+        className="w-full h-full"
+        onSelfieUploaded={async () => {
+          await loadUploads()
+          await loadSelected()
+        }}
+      />
+    ),
+    classificationQueue,
+  }
+
+  const statusBadgeContent = buildSelfieStatusBadge({
+    readyLabel: t('badgeReady', { default: 'Ready to continue!' }),
+    selectingLabel: t('badgeSelecting', { default: 'Select {remaining} more', remaining: remainingSelfies }),
+  })
 
   return (
     <SwipeableContainer
@@ -346,119 +330,36 @@ export default function SelfiesPage() {
         maxWidth="full"
         contentClassName="px-0 py-0"
         bottomPadding="none"
-        mobileHeaderSpacerHeight={0}
+        mobileHeaderSpacerHeight={120}
       >
         {/* Mobile: unified selfie selection experience */}
-        {!uploadOnly && (
+        {!uploadOnly && isMobile && (
           <SharedMobileSelfieFlow
             canContinue={canContinue}
             selfieTypeOverlay={
               <SelfieTypeOverlay token={token} refreshKey={selfieTypeRefreshKey} />
             }
             grid={
-              <SelectableGrid
-                items={gridItems}
-                selection={{
-                  mode: 'managed',
-                  token,
-                  onAfterChange: handleSelectionChange
-                }}
-                token={token}
-                allowDelete
-                showUploadTile={!isMobile}
-                onDeleted={async () => {
-                  await loadUploads()
-                  await loadSelected()
-                }}
-                upload={{
-                  onSelfiesApproved: handleSelfiesApproved!,
-                  onError: (error) => setError(error),
-                  uploadEndpoint: handlePhotoUpload,
-                  saveEndpoint: inviteSaveEndpoint
-                }}
-                qrTile={
-                  <QRPlaceholder 
-                    inviteToken={token}
-                    size={100}
-                    className="w-full h-full"
-                    onSelfieUploaded={async () => {
-                      await loadUploads()
-                      await loadSelected()
-                    }}
-                  />
-                }
-                classificationQueue={classificationQueue}
-              />
+              <SelectableGrid {...selectableGridProps} />
             }
             navButtons={
-              <div className="flex items-center justify-between">
-                {/* Back to Dashboard */}
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span className="text-sm font-medium">{t('prevLabel', { default: 'Dashboard' })}</span>
-                </button>
-
-                {/* Forward to Customization */}
-                <button
-                  type="button"
-                  onClick={handleContinue}
-                  disabled={!canContinue}
-                  className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition ${
-                    canContinue
-                      ? 'bg-brand-primary text-white hover:brightness-110'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <span className="text-sm font-medium">{t('nextLabel', { default: 'Customization' })}</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            }
-            navigation={
-              <FlowNavigation
-                variant="dots-only"
-                size="md"
-                current={navCurrentIndex}
-                total={Math.max(1, stepperTotalDots)}
-                onPrev={handleBack}
-                onNext={handleContinue}
-                stepColors={navigationStepColors}
+              <SelfieNavButtons
+                onBack={handleBack}
+                onContinue={handleContinue}
+                canContinue={canContinue}
+                backLabel={t('prevLabel', { default: 'Dashboard' })}
+                continueLabel={t('nextLabel', { default: 'Beautification' })}
               />
             }
-            statusBadge={
-              !isApproved
-                ? {
-                    readyContent: (
-                      <>
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {t('badgeReady', { default: 'Ready to continue!' })}
-                      </>
-                    ),
-                    selectingContent: (
-                      <>
-                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        {t('badgeSelecting', { default: 'Select {remaining} more', remaining: remainingSelfies })}
-                      </>
-                    )
-                  }
-                : undefined
+            navigation={
+              <StandardThreeStepIndicator
+                currentIndex={navCurrentIndex}
+                totalSteps={Math.max(1, stepperTotalDots)}
+                visitedSteps={navigationStepColors?.visitedEditableSteps}
+                lockedSteps={navigationStepColors?.lockedSteps}
+              />
             }
+            statusBadge={!isApproved ? statusBadgeContent : undefined}
             uploadSection={
               !isApproved ? (
                 <SelfieUploadFlow
@@ -488,8 +389,8 @@ export default function SelfiesPage() {
               </div>
             )}
 
-            {!uploadOnly && (
-              <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
+            {!uploadOnly && !isMobile && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="flex p-6 items-center justify-between">
                   <div className="flex items-center gap-3">
                     <h2 className="text-lg md:text-2xl font-semibold text-gray-900">Your Selfies</h2>
@@ -512,39 +413,7 @@ export default function SelfiesPage() {
                   />
                 </div>
                 <div className="px-6 pt-2 pb-6">
-                  <SelectableGrid
-                    items={gridItems}
-                    selection={{
-                      mode: 'managed',
-                      token,
-                      onAfterChange: handleSelectionChange
-                    }}
-                    token={token}
-                    allowDelete
-                    showUploadTile={!isMobile}
-                    onDeleted={async () => {
-                      await loadUploads()
-                      await loadSelected()
-                    }}
-                    upload={{
-                      onSelfiesApproved: handleSelfiesApproved!,
-                      onError: (error) => setError(error),
-                      uploadEndpoint: handlePhotoUpload,
-                      saveEndpoint: inviteSaveEndpoint
-                    }}
-                    qrTile={
-                      <QRPlaceholder 
-                        inviteToken={token} 
-                        size={100}
-                        className="w-full h-full"
-                        onSelfieUploaded={async () => {
-                          await loadUploads()
-                          await loadSelected()
-                        }}
-                      />
-                    }
-                    classificationQueue={classificationQueue}
-                  />
+                  <SelectableGrid {...selectableGridProps} />
                 </div>
               </div>
             )}
@@ -553,20 +422,21 @@ export default function SelfiesPage() {
       </StickyFlowPage>
 
       {/* Desktop: FlowProgressDock */}
-      <FlowProgressDock
-        selfieCount={selectedCount}
-        uneditedFields={!isCustomizationComplete ? ['customization'] : []}
-        hasUneditedFields={!isCustomizationComplete}
-        canGenerate={canGeneratePhoto}
-        hasEnoughCredits={hasEnoughCredits}
-        currentStep="selfies"
-        onNavigateToSelfies={handleNavigateToSelfies}
-        onNavigateToCustomize={handleNavigateToCustomize}
-        onGenerate={handleNavigateToCustomize}
-        onNavigateToDashboard={() => router.push(`/invite-dashboard/${token}`)}
-        customizationStepsMeta={customizationStepsMeta}
-        visitedEditableSteps={visitedSteps}
-      />
+      {!isMobile && (
+        <FlowProgressDock
+          selfieCount={selectedCount}
+          hasUneditedFields={!customizationComplete}
+          hasEnoughCredits={hasEnoughCredits}
+          currentStep="selfies"
+          onNavigateToSelfieStep={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onNavigateToPreviousStep={navigation.toDashboard}
+          onNavigateToCustomize={handleNavigateToCustomize}
+          onGenerate={handleNavigateToCustomize}
+          onNavigateToDashboard={navigation.toDashboard}
+          customizationStepsMeta={customizationStepsMeta}
+          visitedEditableSteps={visitedSteps}
+        />
+      )}
     </SwipeableContainer>
   )
 }

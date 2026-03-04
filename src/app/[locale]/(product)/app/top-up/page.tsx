@@ -9,13 +9,13 @@ import { useSearchParams } from 'next/navigation'
 import TopUpCard from '@/components/pricing/TopUpCard'
 import { normalizePlanTierForUI, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
-import { useDomain } from '@/contexts/DomainContext'
+import { useTenant } from '@/contexts/TenantContext'
 
 export default function TopUpPage() {
   const t = useTranslations()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { isIndividualDomain } = useDomain()
+  const { isIndividualDomain } = useTenant()
   const [planTier, setPlanTier] = useState<UIPlanTier | null>(null)
   // Local loading/error states are not used in UI here; omit to avoid lint warnings
 
@@ -110,5 +110,4 @@ export default function TopUpPage() {
     </div>
   )
 }
-
 

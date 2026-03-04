@@ -59,9 +59,31 @@ export default function Tooltip({
       left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding))
       top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding))
 
-      setTooltipPosition({ top, left })
+      queueMicrotask(() => {
+        setTooltipPosition({ top, left })
+      })
     }
   }, [isVisible, position])
+
+  useEffect(() => {
+    if (!isVisible) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+
+      if (triggerRef.current?.contains(target) || tooltipRef.current?.contains(target)) {
+        return
+      }
+
+      setIsVisible(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [isVisible])
 
   const arrowClasses = {
     top: 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent',
@@ -79,6 +101,7 @@ export default function Tooltip({
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
+        onClick={() => setIsVisible(prev => !prev)}
       >
         {children}
       </div>

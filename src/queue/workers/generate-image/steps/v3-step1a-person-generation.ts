@@ -1,9 +1,11 @@
 import { Logger } from '@/lib/logger'
+import { extensionFromMimeType } from '@/lib/image-format'
 import { generateWithGemini } from '../gemini'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { DownloadAssetFn } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { type ReferenceImage } from '../utils/reference-builder'
+import { asObject } from '../utils/type-helpers'
 import { logPrompt, logStepResult } from '../utils/logging'
 import { AI_CONFIG, STAGE_MODEL, STAGE_RESOLUTION } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
@@ -73,14 +75,102 @@ export interface V3Step1aOutput {
   thinking?: string
 }
 
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
-
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
+function normalizeRuleKey(rule: string): string {
+  return rule
+    .trim()
+    .replace(/^[•\-*]\s*/, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+function dedupeRules(rules: string[]): string[] {
+  const seen = new Set<string>()
+  const deduped: string[] = []
+
+  for (const rule of rules) {
+    const key = normalizeRuleKey(rule)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    deduped.push(rule)
+  }
+
+  return deduped
+}
+
+function toPromptAccessoryLabel(accessoryKey: string): string {
+  const map: Record<string, string> = {
+    facialHair: 'facial hair',
+    glasses: 'glasses',
+    jewelry: 'jewelry',
+    piercings: 'piercings',
+    tattoos: 'tattoos',
+  }
+  return map[accessoryKey] || accessoryKey
+}
+
+function extractMandatoryAccessoryRemovals(projectedPrompt: Record<string, unknown>): string[] {
+  const subject = asObject(projectedPrompt.subject)
+  const beautification = asObject(subject?.beautification)
+  const accessories = asObject(beautification?.accessories)
+  if (!accessories) return []
+
+  return Object.entries(accessories)
+    .filter(([, value]) => asObject(value)?.action === 'remove')
+    .map(([key]) => toPromptAccessoryLabel(key))
+}
+
+function extractAuthorizedInherentAccessories(projectedPrompt: Record<string, unknown>): string[] {
+  const subject = asObject(projectedPrompt.subject)
+  const subjectWardrobe = asObject(subject?.wardrobe)
+  const topLevelWardrobe = asObject(projectedPrompt.wardrobe)
+  const inherent = [
+    ...asStringArray(subjectWardrobe?.inherent_accessories),
+    ...asStringArray(topLevelWardrobe?.inherent_accessories),
+  ]
+  return [...new Set(inherent.map((item) => item.toLowerCase()))]
+}
+
+function shotCanRevealBelt(shotTypeId: string): boolean {
+  return ['medium-shot', 'three-quarter', 'full-length', 'wide-shot'].includes(shotTypeId)
+}
+
+function removeConflictingAccessoryRules(
+  rules: string[],
+  mandatoryAccessoryRemovals: string[]
+): { filtered: string[]; dropped: string[] } {
+  if (mandatoryAccessoryRemovals.length === 0) {
+    return { filtered: rules, dropped: [] }
+  }
+
+  const removalTargets = mandatoryAccessoryRemovals.map((value) => value.toLowerCase())
+  const filtered: string[] = []
+  const dropped: string[] = []
+
+  for (const rule of rules) {
+    const normalized = normalizeRuleKey(rule)
+    const isPreserveAccessoriesGeneric = /preserve accessories shown in/i.test(normalized)
+
+    const targetsFacialHair =
+      removalTargets.includes('facial hair') &&
+      /(facial hair|beard|mustache|moustache)/i.test(normalized)
+
+    const isKeepOrPreserve = /\b(keep|preserve)\b/i.test(normalized)
+    const isConflictingSpecific = isKeepOrPreserve && targetsFacialHair
+
+    if (isPreserveAccessoriesGeneric || isConflictingSpecific) {
+      dropped.push(rule)
+      continue
+    }
+
+    filtered.push(rule)
+  }
+
+  return { filtered, dropped }
 }
 
 function promptHasWardrobeColorGuidance(projectedPrompt: Record<string, unknown>): boolean {
@@ -106,13 +196,6 @@ function promptHasWardrobeColorGuidance(projectedPrompt: Record<string, unknown>
     hasGarmentAnalysisPalette ||
     hasTopLevelColorFields
   )
-}
-
-function extensionFromMimeType(mimeType?: string): string {
-  const normalized = (mimeType || '').toLowerCase()
-  if (normalized.includes('png')) return 'png'
-  if (normalized.includes('webp')) return 'webp'
-  return 'jpg'
 }
 
 export function projectForStep1a(
@@ -161,7 +244,7 @@ async function prepareAllReferences({
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       const logoRef = {
-        name: preparedLogo.data.s3Key || `branding-logo.${extensionFromMimeType(preparedLogo.data.mimeType)}`,
+        name: preparedLogo.data.s3Key || `branding-logo.${extensionFromMimeType(preparedLogo.data.mimeType, 'jpg')}`,
         description: getStep1aClothingLogoReferenceDescription(),
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png',
@@ -200,7 +283,7 @@ async function prepareAllReferences({
       ...selfieComposite,
       name:
         selfieComposite.name ||
-        `selfie-composite.${extensionFromMimeType(selfieComposite.mimeType)}`,
+        `selfie-composite.${extensionFromMimeType(selfieComposite.mimeType, 'jpg')}`,
     })
   }
 
@@ -215,7 +298,7 @@ async function prepareAllReferences({
       referenceImages.push({
         name:
           overlayAsset.data.s3Key ||
-          `clothing-overlay.${extensionFromMimeType(overlayAsset.data.mimeType || 'image/png')}`,
+          `clothing-overlay.${extensionFromMimeType(overlayAsset.data.mimeType || 'image/png', 'jpg')}`,
         description: getClothingTemplateReferenceDescription(),
         base64: overlayAsset.data.base64,
         mimeType: overlayAsset.data.mimeType || 'image/png',
@@ -326,13 +409,13 @@ export async function executeV3Step1a(input: V3Step1aInput): Promise<V3Step1aOut
   if (faceComposite) {
     referenceImages.push({
       ...faceComposite,
-      name: faceComposite.name || `face-reference.${extensionFromMimeType(faceComposite.mimeType)}`,
+      name: faceComposite.name || `face-reference.${extensionFromMimeType(faceComposite.mimeType, 'jpg')}`,
     })
   }
   if (bodyComposite) {
     referenceImages.push({
       ...bodyComposite,
-      name: bodyComposite.name || `body-reference.${extensionFromMimeType(bodyComposite.mimeType)}`,
+      name: bodyComposite.name || `body-reference.${extensionFromMimeType(bodyComposite.mimeType, 'jpg')}`,
     })
   }
 
@@ -399,14 +482,55 @@ export async function executeV3Step1a(input: V3Step1aInput): Promise<V3Step1aOut
     allowAuthorizedLogosInStep1a,
   })
 
-  for (const rule of step1aArtifacts.mustFollowRules) {
+  const inherentAccessories = extractAuthorizedInherentAccessories(projectedPrompt)
+  if (inherentAccessories.includes('belt') && shotCanRevealBelt(shotTypeConfig.id)) {
+    technicalRequirements.push(
+      '- Belt visibility requirement: Because belt is an authorized inherent accessory for this waist-revealing framing, compose the subject so the waistband area is visible and the belt (strap and buckle) is clearly shown.'
+    )
+    technicalRequirements.push(
+      '- Belt styling requirement: Belt color must be fashionable and clearly distinct from the trousers color.'
+    )
+  }
+
+  const mandatoryAccessoryRemovals = extractMandatoryAccessoryRemovals(projectedPrompt)
+  if (mandatoryAccessoryRemovals.length > 0) {
+    technicalRequirements.push(
+      '- Directive precedence: Explicit accessory REMOVE actions in subject.beautification.accessories override general identity/accessory preservation guidance for those specific accessories.'
+    )
+    technicalRequirements.push(
+      `- Mandatory removals for this generation: ${mandatoryAccessoryRemovals.join(', ')}. These must be absent in the output even if visible in selfie references.`
+    )
+  }
+
+  const mustFollowWithoutConflicts = removeConflictingAccessoryRules(
+    step1aArtifacts.mustFollowRules,
+    mandatoryAccessoryRemovals
+  )
+
+  if (mustFollowWithoutConflicts.dropped.length > 0) {
+    Logger.info('V3 Step 1a: Dropped conflicting must-follow rules due to explicit accessory removals', {
+      generationId,
+      droppedRules: mustFollowWithoutConflicts.dropped,
+      mandatoryAccessoryRemovals,
+    })
+  }
+
+  for (const rule of mustFollowWithoutConflicts.filtered) {
     technicalRequirements.push(`- ${rule}`)
   }
 
-  const creativeLatitude = [
+  const technicalRequirementsDeduped = dedupeRules(technicalRequirements)
+  const technicalRequirementKeys = new Set(
+    technicalRequirementsDeduped.map((rule) => normalizeRuleKey(rule))
+  )
+
+  const creativeLatitudeRaw = [
     ...getStep1aCreativeLatitudeBase(),
     ...step1aArtifacts.freedomRules.map((rule) => `- ${rule}`),
   ]
+  const creativeLatitude = dedupeRules(
+    creativeLatitudeRaw.filter((rule) => !technicalRequirementKeys.has(normalizeRuleKey(rule)))
+  )
 
   const compositionPrompt = getPrompt([
     {
@@ -421,7 +545,7 @@ export async function executeV3Step1a(input: V3Step1aInput): Promise<V3Step1aOut
     },
     {
       title: 'Technical Requirements:',
-      lines: technicalRequirements,
+      lines: technicalRequirementsDeduped,
     },
     {
       title: 'Creative Latitude:',
@@ -532,7 +656,7 @@ export async function executeV3Step1a(input: V3Step1aInput): Promise<V3Step1aOut
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       backgroundLogoReference = {
-        name: preparedLogo.data.s3Key || `branding-logo.${extensionFromMimeType(preparedLogo.data.mimeType)}`,
+        name: preparedLogo.data.s3Key || `branding-logo.${extensionFromMimeType(preparedLogo.data.mimeType, 'jpg')}`,
         description: getStep1aBackgroundLogoReferenceDescription(styleSettings.branding.value.position),
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png',

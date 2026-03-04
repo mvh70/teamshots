@@ -89,6 +89,11 @@
       "description": "Muchos fotógrafos cobran extra por uso comercial y viajes."
     },
     "disclaimer": "Estimaciones basadas en promedios de la industria. Ajusta los supuestos según tu situación.",
+    "methodology": {
+      "title": "Cómo estimamos los precios de headshots corporativos",
+      "description": "¿Quieres ver el benchmark completo detrás de estos supuestos? En nuestra guía detallamos rangos reales del mercado, costos ocultos y escenarios por volumen de equipo.",
+      "linkText": "Ver la guía de precios de headshots corporativos"
+    },
     "faq": {
       "q1": {
         "question": "¿Cuánto cuestan los headshots profesionales por persona?",

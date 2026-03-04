@@ -6,13 +6,17 @@
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
-import type { PhotoStyleSettings } from '@/types/photo-style'
 import { Prisma } from '@/lib/prisma'
+import { PRICING_CONFIG, getPricingTier } from '@/config/pricing'
+import { refundCreditsForFailedGeneration } from '@/domain/credits/credits'
+import { getRegenerationCount } from '@/domain/pricing'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
 import { getDemographicsFromSelfieIds, hasDemographicData, type DemographicProfile } from '@/domain/selfie/selfieDemographics'
 import { AssetService } from '@/domain/services/AssetService'
 import { CreditService } from '@/domain/services/CreditService'
+import { withSerializableRetry } from '@/lib/prisma-retry'
+import type { PlanPeriod } from '@/domain/subscription/utils'
 
 export interface JobEnqueueOptions {
   generationId: string
@@ -43,6 +47,69 @@ export interface CreateGenerationWithCreditReservationOptions {
   reservationPersonId: string
   requiredCredits: number
   userContext?: Parameters<typeof CreditService.reserveCreditsForGeneration>[3]
+}
+
+interface HandleEnqueueFailureOptions {
+  generationId: string
+  personId: string
+  error: unknown
+  inviteId?: string
+  credits?: number
+}
+
+export function getRegenerationLimitForAdmin(
+  adminPlanTier: string | null,
+  adminPlanPeriod: string | null
+): number {
+  const period = adminPlanPeriod as PlanPeriod | null
+  const pricingTier = getPricingTier(adminPlanTier, period)
+  return getRegenerationCount(pricingTier, period)
+}
+
+export async function handleEnqueueFailure({
+  generationId,
+  personId,
+  error,
+  inviteId,
+  credits = PRICING_CONFIG.credits.perGeneration,
+}: HandleEnqueueFailureOptions): Promise<never> {
+  Logger.error('Failed to enqueue generation job', {
+    generationId,
+    personId,
+    inviteId,
+    error: error instanceof Error ? error.message : String(error),
+  })
+
+  try {
+    await refundCreditsForFailedGeneration(
+      personId,
+      credits,
+      inviteId
+        ? `Refund for invite queue failure (generation ${generationId})`
+        : `Refund for queue failure (generation ${generationId})`,
+      undefined,
+      inviteId
+    )
+  } catch (refundError) {
+    Logger.error('Failed to refund credits after enqueue failure', {
+      generationId,
+      personId,
+      inviteId,
+      error: refundError instanceof Error ? refundError.message : String(refundError),
+    })
+  }
+
+  try {
+    await prisma.generation.delete({ where: { id: generationId } })
+  } catch (cleanupError) {
+    Logger.error('Failed to clean up generation after enqueue failure', {
+      generationId,
+      inviteId,
+      error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+    })
+  }
+
+  throw new Error('Failed to queue generation job. Credits have been refunded.')
 }
 
 /**
@@ -112,48 +179,47 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
 export async function createGenerationWithCreditReservation(
   options: CreateGenerationWithCreditReservationOptions
 ) {
-  const generation = await prisma.generation.create({
-    data: options.generationData,
-  })
+  return withSerializableRetry(async () => {
+    return prisma.$transaction(
+      async (tx) => {
+        const reservationResult = await CreditService.reserveCreditsForGeneration(
+          options.reservationUserId,
+          options.reservationPersonId,
+          options.requiredCredits,
+          options.userContext,
+          tx
+        )
 
-  try {
-    const reservationResult = await CreditService.reserveCreditsForGeneration(
-      options.reservationUserId,
-      options.reservationPersonId,
-      options.requiredCredits,
-      options.userContext
+        if (!reservationResult.success) {
+          Logger.error('Credit reservation failed', {
+            personId: options.reservationPersonId,
+            error: reservationResult.error,
+          })
+          throw new Error(reservationResult.error || 'Credit reservation failed')
+        }
+
+        const generation = await tx.generation.create({
+          data: options.generationData,
+        })
+
+        Logger.debug('Credits reserved successfully', {
+          generationId: generation.id,
+          transactionId: reservationResult.transactionId,
+          individualCreditsUsed: reservationResult.individualCreditsUsed,
+          teamCreditsUsed: reservationResult.teamCreditsUsed,
+        })
+
+        return {
+          generation,
+          reservationResult,
+        }
+      },
+      {
+        isolationLevel: 'Serializable',
+        timeout: 10000,
+      }
     )
-
-    if (!reservationResult.success) {
-      Logger.error('Credit reservation failed', {
-        generationId: generation.id,
-        error: reservationResult.error,
-      })
-      throw new Error(reservationResult.error || 'Credit reservation failed')
-    }
-
-    Logger.debug('Credits reserved successfully', {
-      generationId: generation.id,
-      transactionId: reservationResult.transactionId,
-      individualCreditsUsed: reservationResult.individualCreditsUsed,
-      teamCreditsUsed: reservationResult.teamCreditsUsed,
-    })
-
-    return {
-      generation,
-      reservationResult,
-    }
-  } catch (creditError) {
-    try {
-      await prisma.generation.delete({ where: { id: generation.id } })
-    } catch (deleteError) {
-      Logger.warn('Failed to delete generation after credit reservation failure', {
-        generationId: generation.id,
-        error: deleteError instanceof Error ? deleteError.message : String(deleteError),
-      })
-    }
-    throw creditError
-  }
+  })
 }
 
 /**
@@ -170,7 +236,7 @@ export function serializeStyleSettingsForGeneration({
   selfieS3Keys: string[]
 }): Record<string, unknown> {
   const pkg = getPackageConfig(packageId)
-  let serializedStyleSettings = pkg.persistenceAdapter.serialize(styleSettings)
+  const serializedStyleSettings = pkg.persistenceAdapter.serialize(styleSettings)
 
   // Normalize potential UI variants after serialization
   try {
@@ -225,6 +291,7 @@ export async function enrichGenerationJobFromSelfies({
       select: {
         id: true,
         key: true,
+        assetId: true,
         classification: true,
       },
     })
@@ -244,27 +311,24 @@ export async function enrichGenerationJobFromSelfies({
       types: Object.values(selfieTypeMap),
     })
 
-    const selfieAssetIds: string[] = []
-    for (const key of selfieS3Keys) {
-      const asset = await AssetService.resolveToAsset(key, {
-        ownerType: teamId ? 'team' : 'person',
-        teamId: teamId ?? undefined,
-        personId,
-        type: 'selfie',
-      })
-      selfieAssetIds.push(asset.id)
-
-      const selfie = selfiesForJob.find((s) => s.key === key)
-      if (selfie) {
-        const selfieRecord = await prisma.selfie.findUnique({
-          where: { id: selfie.id },
-          select: { assetId: true },
+    const selfieByKey = new Map(selfiesForJob.map((selfie) => [selfie.key, selfie]))
+    const selfieAssetIds = await Promise.all(
+      selfieS3Keys.map(async (key) => {
+        const asset = await AssetService.resolveToAsset(key, {
+          ownerType: teamId ? 'team' : 'person',
+          teamId: teamId ?? undefined,
+          personId,
+          type: 'selfie',
         })
-        if (!selfieRecord?.assetId) {
+
+        const selfie = selfieByKey.get(key)
+        if (selfie && !selfie.assetId) {
           await AssetService.linkSelfieToAsset(selfie.id, asset.id)
         }
-      }
-    }
+
+        return asset.id
+      })
+    )
 
     Logger.debug('Resolved selfie assets for generation', {
       generationId,
@@ -303,120 +367,4 @@ export async function enrichGenerationJobFromSelfies({
     })
     return {}
   }
-}
-
-/**
- * Determine the final workflow version from request
- * Defaults to 'v3' (current standard version)
- */
-export function determineWorkflowVersion(
-  requestVersion?: 'v3'
-): 'v3' {
-  return requestVersion || 'v3'
-}
-
-/**
- * Resolve selfie S3 keys from various input formats
- */
-export async function resolveSelfieKeys(
-  selfieIds?: string[],
-  selfieKeys?: string[]
-): Promise<{ primaryKey: string; allKeys: string[] }> {
-  // Priority 1: Multiple selfie keys
-  if (selfieKeys && selfieKeys.length > 0) {
-    return {
-      primaryKey: selfieKeys[0],
-      allKeys: selfieKeys,
-    }
-  }
-
-  // Priority 2: Multiple selfie IDs
-  if (selfieIds && selfieIds.length > 0) {
-    const selfies = await prisma.selfie.findMany({
-      where: { id: { in: selfieIds } },
-      select: { key: true },
-    })
-
-    if (selfies.length === 0) {
-      throw new Error('No selfies found for provided IDs')
-    }
-
-    type Selfie = typeof selfies[number];
-    const keys = selfies.map((s: Selfie) => s.key)
-    return {
-      primaryKey: keys[0],
-      allKeys: keys,
-    }
-  }
-
-  throw new Error('No selfie information provided')
-}
-
-/**
- * Get primary selfie with person data
- */
-export async function getPrimarySelfie(selfieId: string) {
-  const selfie = await prisma.selfie.findUnique({
-    where: { id: selfieId },
-    include: {
-      person: {
-        select: {
-          id: true,
-          userId: true,
-          teamId: true,
-        },
-      },
-    },
-  })
-
-  if (!selfie) {
-    throw new Error('Primary selfie not found')
-  }
-
-  return selfie
-}
-
-/**
- * Validate that a person belongs to a team
- */
-export async function validatePersonTeamMembership(
-  personId: string,
-  teamId: string
-): Promise<boolean> {
-  const person = await prisma.person.findUnique({
-    where: { id: personId },
-    select: { teamId: true },
-  })
-
-  return person?.teamId === teamId
-}
-
-/**
- * Create generation record with standardized fields
- * Note: This is a minimal helper. Routes may need to add additional fields directly.
- */
-export async function createGenerationRecord(data: {
-  personId: string
-  styleSettings: PhotoStyleSettings | Record<string, unknown>
-  creditSource: 'individual' | 'team'
-  creditsUsed: number
-  contextId?: string
-  provider?: string
-  maxRegenerations?: number
-  remainingRegenerations?: number
-}) {
-  return await prisma.generation.create({
-    data: {
-      personId: data.personId,
-      generatedPhotoKeys: [],
-      styleSettings: data.styleSettings as Prisma.InputJsonValue,
-      creditSource: data.creditSource,
-      creditsUsed: data.creditsUsed,
-      status: 'pending',
-      contextId: data.contextId,
-      provider: data.provider ?? 'gemini',
-      maxRegenerations: data.maxRegenerations ?? 2,
-      remainingRegenerations: data.remainingRegenerations ?? 2,
-    },
-  })
 }

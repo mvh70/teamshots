@@ -14,19 +14,45 @@ export function buildStep3FinalEvalPrompt(params: {
   includeBrandingCriterion: boolean
   mustFollowRules: string[]
   freedomRules: string[]
+  includeBeautificationGuidance?: boolean
+  configuredAccessoryActions?: Array<{ accessory: string; action: 'keep' | 'remove' }>
 }): string {
+  const includeBeautificationGuidance = params.includeBeautificationGuidance ?? false
+  const configuredAccessoryActions = params.configuredAccessoryActions ?? []
+
   const instructions = [
     'You are evaluating the final refined image for face similarity, characteristic preservation, person prominence, and overall quality.',
     'Answer each question with ONLY: YES (criterion met), NO (criterion failed), UNCERTAIN (cannot determine)',
+    ...(configuredAccessoryActions.length > 0
+      ? [
+          '',
+          'CRITICAL ACCESSORY ACTION SCOPING:',
+          '- Evaluate face_similarity and characteristic_preservation AFTER applying configured accessory actions.',
+          '- If an accessory action is REMOVE, its absence is REQUIRED and must NOT be penalized as identity loss.',
+          '- If an accessory action is KEEP, penalize if missing or materially altered.',
+          '- EXPLICIT ACCESSORY ACTIONS:',
+          ...configuredAccessoryActions.map(
+            ({ accessory, action }) => `  - ${accessory}: ${action.toUpperCase()}`
+          ),
+        ]
+      : []),
     '',
     'Questions:',
     '',
     '1. face_similarity',
+    configuredAccessoryActions.length > 0
+      ? '   - Compare against the expected post-action appearance (after configured KEEP/REMOVE accessory actions).'
+      : null,
     '   - Does the face in the final image closely match the selfie references?',
     '   - Are specific characteristics preserved (moles, freckles, scars, eye shape)?',
     '',
     '2. characteristic_preservation',
-    '   - Are unique facial features maintained without beautification?',
+    configuredAccessoryActions.length > 0
+      ? '   - Judge preservation against the post-action target appearance, not the unedited reference appearance.'
+      : null,
+    includeBeautificationGuidance
+      ? '   - Are unique facial features maintained while respecting the selected beautification settings?'
+      : '   - Are unique facial features maintained without beautification?',
     '   - Does the person look like themselves, not an idealized version?',
     '',
     '3. person_prominence',
@@ -84,8 +110,10 @@ export function buildStep3FinalEvalPrompt(params: {
 
 export function generateStep3AdjustmentSuggestions(
   failedCriteria: string[],
-  prominenceLabel: string
+  prominenceLabel: string,
+  options?: { includeBeautificationGuidance?: boolean }
 ): string {
+  const includeBeautificationGuidance = options?.includeBeautificationGuidance ?? false
   const suggestions: string[] = []
 
   for (const criterion of failedCriteria) {
@@ -93,7 +121,11 @@ export function generateStep3AdjustmentSuggestions(
       suggestions.push('Improve face matching to selfie references')
     }
     if (criterion.includes('characteristic_preservation')) {
-      suggestions.push('Maintain unique facial features without beautification')
+      suggestions.push(
+        includeBeautificationGuidance
+          ? 'Preserve unique facial features while applying selected beautification settings'
+          : 'Maintain unique facial features without beautification'
+      )
     }
     if (criterion.includes('person_prominence')) {
       suggestions.push(`Make person larger (${prominenceLabel} of image height)`)

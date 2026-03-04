@@ -89,6 +89,11 @@
       "description": "Many photographers charge extra for commercial usage and travel."
     },
     "disclaimer": "Estimates based on industry averages. Adjust assumptions to match your situation.",
+    "methodology": {
+      "title": "How we estimate corporate headshot pricing",
+      "description": "Want the full benchmark behind these assumptions? We break down real market ranges, hidden costs, and team-volume scenarios in our in-depth analysis.",
+      "linkText": "Read the corporate headshot pricing guide"
+    },
     "faq": {
       "q1": {
         "question": "How much do professional headshots cost per person?",

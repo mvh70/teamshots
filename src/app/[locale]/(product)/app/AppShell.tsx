@@ -7,21 +7,12 @@ import { useEffect, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
+import { MOBILE_BREAKPOINT } from '@/hooks/useMobileViewport'
 
 import { AccountMode } from '@/domain/account/accountMode'
-import { SubscriptionInfo } from '@/domain/subscription/subscription'
 import type { BrandColors } from '@/config/brand'
-
-// Serialized subscription type for client-side (Date objects are ISO strings)
-type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange'> & {
-  nextRenewal?: string | null
-  nextChange?: {
-    action: 'start' | 'change' | 'cancel' | 'schedule'
-    planTier: Exclude<SubscriptionInfo['tier'], null>
-    planPeriod: Exclude<SubscriptionInfo['period'], null>
-    effectiveDate: string
-  } | null
-}
+import type { TenantId } from '@/config/tenant'
+import type { SerializedSubscription } from '@/types/subscription'
 
 type InitialRole = {
   isTeamAdmin: boolean
@@ -32,6 +23,47 @@ type InitialRole = {
   nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null
 }
 
+function getCanvasTokens(tenantId: TenantId, isIndividualDomain: boolean) {
+  if (!isIndividualDomain) {
+    return {
+      bgWhite: '#FFFFFF',
+      bgGray50: '#F9FAFB',
+      textDark: '#111827',
+      textBody: '#374151',
+      textMuted: '#6B7280',
+    }
+  }
+
+  if (tenantId === 'rightclickfit') {
+    return {
+      bgWhite: '#FAFAFF',
+      bgGray50: '#F3F4FF',
+      textDark: '#1F1B3A',
+      textBody: '#3F3A64',
+      textMuted: '#6B6790',
+    }
+  }
+
+  return {
+    bgWhite: '#FAFAF9',
+    bgGray50: '#F5F0E8',
+    textDark: '#0F172A',
+    textBody: '#334155',
+    textMuted: '#64748B',
+  }
+}
+
+function readStoredSidebarCollapsed(): boolean | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem('app.sidebarCollapsed')
+    if (stored == null) return null
+    return stored === 'true'
+  } catch {
+    return null
+  }
+}
+
 export default function AppShell({
   children,
   initialRole,
@@ -40,6 +72,7 @@ export default function AppShell({
   initialBrandName,
   initialBrandLogoLight,
   initialBrandLogoIcon,
+  tenantId = 'teamshotspro',
   isIndividualDomain = false,
   brandColors
 }: {
@@ -50,6 +83,7 @@ export default function AppShell({
   initialBrandName?: string
   initialBrandLogoLight?: string
   initialBrandLogoIcon?: string
+  tenantId?: TenantId
   isIndividualDomain?: boolean
   brandColors?: BrandColors
 }) {
@@ -57,39 +91,29 @@ export default function AppShell({
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
-  const [hydrated, setHydrated] = useState(false)
   
   // pathname includes locale prefix, so check if it contains the route pattern
   const isGenerationFlow = pathname?.includes('/app/generate') ?? false
 
-  // Hydration indicator for Playwright tests - intentional SSR pattern.
-  // This allows tests to wait for React hydration to complete before interacting.
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
+  // Hydration indicator for Playwright tests.
   useEffect(() => {
-    setHydrated(true)
-  }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
-
-  useEffect(() => {
-    if (hydrated && typeof document !== 'undefined') {
-      document.body.classList.add('hydrated')
+    if (typeof document === 'undefined') return
+    document.body.classList.add('hydrated')
+    return () => {
+      document.body.classList.remove('hydrated')
     }
-  }, [hydrated])
+  }, [])
 
   // Load sidebar collapsed state from localStorage on mount.
-  // This is an intentional client-only initialization pattern since localStorage is not
-  // available during SSR. We initialize with a default and then sync with localStorage after hydration.
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('app.sidebarCollapsed') : null
-      if (stored != null) {
-        const isCollapsed = stored === 'true'
-        setSidebarCollapsed(isCollapsed)
-      }
-    } catch {}
+    const storedCollapsed = readStoredSidebarCollapsed()
+    if (storedCollapsed == null) return
+
+    // Defer this initialization update to avoid synchronous render cascades in effect body.
+    queueMicrotask(() => {
+      setSidebarCollapsed(storedCollapsed)
+    })
   }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   // Persist sidebar collapsed state
   useEffect(() => {
@@ -106,7 +130,7 @@ export default function AppShell({
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (!sidebarCollapsed && showSidebar && window.innerWidth < 1024) {
+      if (!sidebarCollapsed && showSidebar && window.innerWidth < MOBILE_BREAKPOINT) {
         document.body.style.overflow = 'hidden'
         document.body.style.overscrollBehavior = 'none'
         // Prevent scroll on html element as well
@@ -133,7 +157,7 @@ export default function AppShell({
 
     const handleCloseSidebarForTour = () => {
       // Only close if we're on mobile and sidebar is currently open
-      if (window.innerWidth < 1024 && !sidebarCollapsed && showSidebar) {
+      if (window.innerWidth < MOBILE_BREAKPOINT && !sidebarCollapsed && showSidebar) {
         setSidebarCollapsed(true)
       }
     }
@@ -150,7 +174,7 @@ export default function AppShell({
 
     const handleOpenSidebar = () => {
       // Only open if we're on mobile and sidebar is available
-      if (window.innerWidth < 1024 && showSidebar) {
+      if (window.innerWidth < MOBILE_BREAKPOINT && showSidebar) {
         setSidebarCollapsed(false)
       }
     }
@@ -174,32 +198,33 @@ export default function AppShell({
       router.push('/app/team')
       return
     }
-  }, [status, router, initialRole?.needsTeamSetup, initialRole?.isTeamAdmin, pathname])
+  }, [status, router, isIndividualDomain, initialRole?.needsTeamSetup, initialRole?.isTeamAdmin, pathname])
 
   // Build CSS variables from brand colors - memoized to prevent unnecessary re-renders
-  const brandStyle = useMemo(() =>
-    brandColors ? {
+  const brandStyle = useMemo(() => {
+    if (!brandColors) return undefined
+
+    const canvas = getCanvasTokens(tenantId, isIndividualDomain)
+
+    return {
       '--brand-primary': brandColors.primary,
       '--brand-primary-hover': brandColors.primaryHover,
       '--brand-cta': brandColors.cta,
       '--brand-cta-hover': brandColors.ctaHover,
       '--brand-secondary': brandColors.secondary,
       '--brand-secondary-hover': brandColors.secondaryHover,
-      // Light canvas for all brands — Portreya uses warm ivory tones
-      '--bg-white': isIndividualDomain ? '#FAFAF9' : '#FFFFFF',
-      '--bg-gray-50': isIndividualDomain ? '#F5F0E8' : '#F9FAFB',
-      // Text colors — dark text on light backgrounds for all brands
-      '--text-dark': isIndividualDomain ? '#0F172A' : '#111827',
-      '--text-body': isIndividualDomain ? '#334155' : '#374151',
-      '--text-muted': isIndividualDomain ? '#64748B' : '#6B7280',
-    } as React.CSSProperties : undefined,
-    [brandColors, isIndividualDomain]
-  )
+      '--bg-white': canvas.bgWhite,
+      '--bg-gray-50': canvas.bgGray50,
+      '--text-dark': canvas.textDark,
+      '--text-body': canvas.textBody,
+      '--text-muted': canvas.textMuted,
+    } as React.CSSProperties
+  }, [brandColors, tenantId, isIndividualDomain])
 
   if (status === 'loading') {
     return (
       <div
-        data-brand={isIndividualDomain ? 'portreya' : 'teamshotspro'}
+        data-brand={tenantId}
         className="min-h-screen flex items-center justify-center"
         style={{ ...brandStyle, backgroundColor: 'var(--bg-gray-50)' }}
       >
@@ -212,7 +237,7 @@ export default function AppShell({
 
   return (
     <div
-      data-brand={isIndividualDomain ? 'portreya' : 'teamshotspro'}
+      data-brand={tenantId}
       className={`min-h-screen ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}
       style={{
         ...brandStyle,
@@ -225,14 +250,9 @@ export default function AppShell({
             {/* Hover/touch zone on left edge for mobile - shows sidebar when hovered/touched (only when sidebar is hidden) */}
             {sidebarCollapsed && (
               <div 
-                className="fixed left-0 top-0 bottom-0 w-8 z-[100] lg:hidden"
-                onMouseEnter={() => {
-                  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                    setSidebarCollapsed(false)
-                  }
-                }}
+                className="fixed left-0 top-0 bottom-0 w-4 z-[100] md:hidden"
                 onTouchStart={() => {
-                  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                  if (typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT) {
                     setSidebarCollapsed(false)
                   }
                 }}
@@ -242,7 +262,7 @@ export default function AppShell({
             {/* Backdrop overlay for mobile when sidebar is open */}
             {!sidebarCollapsed && (
               <div 
-                className="fixed inset-0 bg-black/50 z-[90] lg:hidden transition-opacity duration-300"
+                className="fixed inset-0 bg-black/50 z-[90] md:hidden transition-opacity duration-300"
                 onClick={() => setSidebarCollapsed(true)}
                 aria-hidden="true"
               />
@@ -255,25 +275,26 @@ export default function AppShell({
               initialBrandName={initialBrandName}
               initialBrandLogoLight={initialBrandLogoLight}
               initialBrandLogoIcon={initialBrandLogoIcon}
+              tenantId={tenantId}
               isIndividualDomain={isIndividualDomain}
               onToggle={() => {
                 setSidebarCollapsed(!sidebarCollapsed)
               }}
               onMenuItemClick={() => {
                 // Auto-close sidebar on mobile when menu item is clicked
-                if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT) {
                   setSidebarCollapsed(true)
                 }
               }}
               onMouseEnter={() => {
                 // Expand sidebar on hover (desktop only)
-                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth >= MOBILE_BREAKPOINT) {
                   setSidebarCollapsed(false)
                 }
               }}
               onMouseLeave={() => {
                 // Collapse sidebar when mouse leaves (desktop only)
-                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth >= MOBILE_BREAKPOINT) {
                   setSidebarCollapsed(true)
                 }
               }}
@@ -282,7 +303,7 @@ export default function AppShell({
         )}
         <div
           className={`flex-1 flex flex-col transition-all duration-300 relative z-0 bg-[var(--bg-gray-50)] ${
-            showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-20' : 'ml-0 lg:ml-64') : 'ml-0'
+            showSidebar ? (sidebarCollapsed ? 'ml-0 md:ml-20' : 'ml-0 md:ml-64') : 'ml-0'
           }`}
         >
           {!isGenerationFlow && (
@@ -305,4 +326,3 @@ export default function AppShell({
     </div>
   )
 }
-

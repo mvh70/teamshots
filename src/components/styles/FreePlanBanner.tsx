@@ -3,7 +3,7 @@
 
 import { useTranslations } from 'next-intl'
 import { SparklesIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 interface FreePlanBannerProps {
@@ -22,8 +22,8 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
 
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {
-    const { brandName, isIndividual } = getClientBrandInfo()
-    const credits = isIndividual ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
+    const { brandName, isIndividualDomain } = getClientTenantInfo()
+    const credits = isIndividualDomain ? PRICING_CONFIG.freeTrial.individual : PRICING_CONFIG.freeTrial.pro
     return {
       brandName,
       photoCount: Math.floor(credits / PRICING_CONFIG.credits.perGeneration)
@@ -101,5 +101,4 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
 }
 
 export default FreePlanBanner
-
 

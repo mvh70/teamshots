@@ -11,6 +11,7 @@ import type { ClientStylePackage } from '../types'
 import { predefined, userChoice } from '../../elements/base/element-types'
 import { AVAILABLE_INDUSTRIES } from '../../elements/industry/industry-styles'
 import type { IndustryType } from '../../elements/industry/types'
+import { DEFAULT_BEAUTIFICATION_VALUE } from '../../elements/beautification/types'
 
 // Only industry is visible - all other settings are derived from industry selection
 const VISIBLE_CATEGORIES: CategoryType[] = ['industry']
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: PhotoStyleSettings = {
   presetId: 'corporate-headshot',
   // Visible category - user selects industry
   industry: userChoice({ type: 'law-firms' }),
+  beautification: userChoice(DEFAULT_BEAUTIFICATION_VALUE),
   // Non-visible settings - package standards
   shotType: predefined({ type: 'medium-shot' }),
   filmType: predefined({ type: 'clinical-modern' }),
@@ -47,7 +49,7 @@ export const industryHeadshot: ClientStylePackage = {
   availableBackgrounds: ['office'],
   availablePoses: ['classic_corporate', 'slimming_three_quarter', 'power_cross', 'candid_over_shoulder'],
   availableExpressions: ['genuine_smile', 'soft_smile', 'neutral_serious'],
-  availableClothingStyles: ['business', 'startup'],
+  availableClothingStyles: ['business_professional', 'business_casual', 'startup'],
   defaultSettings: DEFAULT_SETTINGS,
   defaultPresetId: 'corporate-headshot',
   presets: {},  // No preset dependency - package derives all settings from industry selection
@@ -63,6 +65,7 @@ export const industryHeadshot: ClientStylePackage = {
       supportsAspectRatio: false,
       supportsPose: false,
       supportsExpression: false,
+      supportsBeautification: true,
     },
   },
 
@@ -81,6 +84,7 @@ export const industryHeadshot: ClientStylePackage = {
     return {
       presetId: industryHeadshot.defaultPresetId,
       industry: industry || userChoice({ type: 'law-firms' }),
+      beautification: rawStyleSettings.beautification as PhotoStyleSettings['beautification'],
     }
   },
 
@@ -93,6 +97,7 @@ export const industryHeadshot: ClientStylePackage = {
       settings: {
         // Industry is stored in ElementSetting format
         industry: ui.industry,
+        ...(ui.beautification !== undefined && { beautification: ui.beautification }),
       },
     }),
 
@@ -118,6 +123,7 @@ export const industryHeadshot: ClientStylePackage = {
       return {
         presetId: industryHeadshot.defaultPresetId,
         industry: industry || userChoice({ type: 'law-firms' }),
+        ...('beautification' in inner && { beautification: inner.beautification as PhotoStyleSettings['beautification'] }),
       }
     },
   },

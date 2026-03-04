@@ -8,13 +8,13 @@
  * controls its own section visibility and layout directly.
  */
 
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
+import { TEAM_DOMAIN, PORTREYA_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 import type { PackageId } from './packages'
 
 /**
  * Landing page variant identifiers - matches domain names without .com
  */
-export type LandingVariant = 'teamshotspro' | 'individualshots' | 'portreya' | 'coupleshots' | 'familyshots' | 'rightclickfit'
+export type LandingVariant = 'teamshotspro' | 'portreya' | 'coupleshots' | 'familyshots' | 'rightclickfit'
 
 /**
  * Section visibility configuration for landing pages.
@@ -62,14 +62,6 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
   [TEAM_DOMAIN]: {
     variant: 'teamshotspro',
     contentNamespace: 'landing.teamshotspro',
-    packages: {
-      available: ['headshot1', 'freepackage'],
-      default: 'headshot1',
-    },
-  },
-  [INDIVIDUAL_DOMAIN]: {
-    variant: 'individualshots',
-    contentNamespace: 'landing.individualshots',
     packages: {
       available: ['headshot1', 'freepackage'],
       default: 'headshot1',
@@ -162,13 +154,6 @@ export function getLandingConfig(domain?: string): LandingConfig {
   }
 
   return DEFAULT_LANDING_CONFIG
-}
-
-/**
- * Get landing variant name for a domain
- */
-export function getLandingVariant(domain?: string): LandingVariant {
-  return getLandingConfig(domain).variant
 }
 
 /**

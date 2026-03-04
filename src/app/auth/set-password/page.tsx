@@ -11,12 +11,12 @@ import AuthCard from '@/components/auth/AuthCard'
 import PasswordFields, { usePasswordValidation } from '@/components/auth/PasswordFields'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { getClientBrandInfo } from '@/config/domain'
+import { getClientTenantInfo } from '@/lib/tenant-client'
 
 type TokenStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'already_set'
 
 function getBrandName(): string {
-  return getClientBrandInfo().brandName
+  return getClientTenantInfo().brandName
 }
 
 export default function SetPasswordPage() {
@@ -302,4 +302,3 @@ export default function SetPasswordPage() {
     </AuthSplitLayout>
   )
 }
-

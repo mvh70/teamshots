@@ -184,4 +184,60 @@ describe('executeV3Step3', () => {
     expect(output.evaluation.status).toBe('Not Approved')
     expect(output.evaluation.suggestedAdjustments).toContain('40-60%+ of image height')
   })
+
+  it('switches characteristic-preservation guidance when beautification settings exist', async () => {
+    const refinedBuffer = await makeImageBuffer(1200, 1200)
+
+    generateTextWithGeminiMock.mockResolvedValue({
+      text: JSON.stringify({
+        face_similarity: 'YES',
+        characteristic_preservation: 'NO',
+        person_prominence: 'YES',
+        overall_quality: 'YES',
+        explanations: { characteristic_preservation: 'over-smoothed facial features' },
+      }),
+      usage: {
+        durationMs: 100,
+        inputTokens: 10,
+        outputTokens: 5,
+      },
+      providerUsed: 'vertex',
+    })
+
+    const styleSettings: PhotoStyleSettings = {
+      beautification: {
+        mode: 'user-choice',
+        value: {
+          retouching: 'medium',
+          accessories: {
+            glasses: { action: 'keep' },
+            facialHair: { action: 'remove' },
+          },
+        },
+      },
+    }
+
+    const output = await executeV3Step3({
+      refinedBuffer,
+      expectedWidth: 1200,
+      expectedHeight: 1200,
+      aspectRatio: '1:1',
+      styleSettings,
+      step3EvalArtifacts: {
+        mustFollowRules: [],
+        freedomRules: [],
+      },
+      generationId: 'gen-step3-beautification-eval',
+    })
+
+    const [promptText] = generateTextWithGeminiMock.mock.calls[0] as [string]
+    expect(promptText).toContain('while respecting the selected beautification settings')
+    expect(promptText).toContain('CRITICAL ACCESSORY ACTION SCOPING')
+    expect(promptText).toContain('facialHair: REMOVE')
+    expect(promptText).toContain('must NOT be penalized as identity loss')
+    expect(promptText).not.toContain('maintained without beautification')
+    expect(output.evaluation.suggestedAdjustments).toContain(
+      'Preserve unique facial features while applying selected beautification settings'
+    )
+  })
 })

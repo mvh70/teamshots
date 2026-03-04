@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 
@@ -44,43 +44,9 @@ export default function InviteDashboardHeader({
     }
   }
 
-  // Resolve member/team info: prefer props; otherwise fetch from invite token
-  // Intentional data fetching when props change - only fetches if props not provided
-  const [fetched, setFetched] = useState<{ memberName?: string; memberEmail?: string; teamName?: string } | null>(null)
-  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
-  useEffect(() => {
-    if (memberNameProp || memberEmailProp || teamNameProp) return
-    let isMounted = true
-    const run = async () => {
-      try {
-        const res = await fetch('/api/team/invites/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        })
-        if (!res.ok) return
-        const data = await res.json() as { invite?: { firstName?: string; lastName?: string; email?: string; teamName?: string } }
-        if (!isMounted) return
-        const first = data.invite?.firstName?.trim() || ''
-        const last = data.invite?.lastName?.trim() || ''
-        const name = [first, last].filter(Boolean).join(' ').trim() || undefined
-        setFetched({
-          memberName: name,
-          memberEmail: data.invite?.email,
-          teamName: data.invite?.teamName
-        })
-      } catch {
-        // non-blocking
-      }
-    }
-    void run()
-    return () => { isMounted = false }
-  }, [token, memberNameProp, memberEmailProp, teamNameProp])
-  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
-
-  const memberName = memberNameProp ?? fetched?.memberName
-  const memberEmail = memberEmailProp ?? fetched?.memberEmail
-  const teamName = teamNameProp ?? fetched?.teamName
+  const memberName = memberNameProp
+  const memberEmail = memberEmailProp
+  const teamName = teamNameProp
 
   const resolvedTitle = useMemo(() => {
     if (title) return title

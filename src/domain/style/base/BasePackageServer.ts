@@ -8,11 +8,13 @@ import { ClientStylePackage } from '../packages/types'
 import { mergeUserSettings } from '../packages/shared/utils'
 import { resolveShotType } from '../elements/shot-type/config'
 import { resolvePackageAspectRatio } from '../packages/shared/aspect-ratio-resolver'
+import { DEFAULT_CLOTHING_COLOR_FALLBACKS } from '../packages/shared/defaults'
 import { buildDefaultReferencePayload, buildSplitSelfieComposites } from '@/lib/generation/reference-utils'
 import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { hasValue, predefined } from '../elements/base/element-types'
 import { compositionRegistry } from '../elements/composition'
 import { ElementContext } from '../elements/base/StyleElement'
+import { NON_VISIBLE_OVERRIDABLE_SETTING_FIELDS } from '@/domain/style/style-setting-allowlists'
 import '../elements/quality/GlobalQualityElement' // Register Global Quality Element
 
 /**
@@ -208,12 +210,15 @@ export class BasePackageServer {
             presetId: userSettings.presetId || pkg.defaultPresetId || pkg.defaultSettings.presetId,
         }
 
-        // 2. Merge user settings for visible categories only
-        return mergeUserSettings(
+        // 2. Merge user settings for visible categories + explicit non-visible overridable fields
+        const effectiveSettings = mergeUserSettings(
             baseSettings,
             userSettings,
-            pkg.visibleCategories
+            pkg.visibleCategories,
+            { nonVisibleOverridableFields: NON_VISIBLE_OVERRIDABLE_SETTING_FIELDS }
         )
+
+        return effectiveSettings
     }
 
     /**
@@ -248,12 +253,7 @@ export class BasePackageServer {
         const pkgDefaults = this.packageConfig.defaultSettings.clothingColors
         const defaultColors = pkgDefaults && hasValue(pkgDefaults) ? pkgDefaults.value : undefined
 
-        const fallbackColors = {
-            topLayer: '#2C3E50',
-            baseLayer: '#F8F9FA',
-            bottom: '#1A1A2E',
-            shoes: '#2D2D2D',
-        }
+        const fallbackColors = DEFAULT_CLOTHING_COLOR_FALLBACKS
 
         const merged: ClothingColorValue = {
             ...current,

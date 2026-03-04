@@ -71,6 +71,24 @@ function getThumbnailUrl(key: string): string {
   return `/api/files/get?key=${encodeURIComponent(key)}`
 }
 
+function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
+      <span className="text-[13px] text-gray-500">{label}</span>
+      <div className="text-[13px] text-right">{children}</div>
+    </div>
+  )
+}
+
+function UserChoiceIndicator() {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-amber-600">
+      <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>User choice</span>
+    </span>
+  )
+}
+
 export default function StyleSummary({ settings, packageId }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
   const tShotType = useTranslations('customization.photoStyle.shotType')
@@ -109,22 +127,6 @@ export default function StyleSummary({ settings, packageId }: StyleSummaryProps)
   const shotTypeConfig = shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
 
   const poseType = isPoseUserChoice ? 'user-choice' : poseValue?.type
-
-  // Setting row component for consistent styling
-  const SettingRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">
-      <span className="text-[13px] text-gray-500">{label}</span>
-      <div className="text-[13px] text-right">{children}</div>
-    </div>
-  )
-
-  // User choice indicator
-  const UserChoiceIndicator = () => (
-    <span className="inline-flex items-center gap-1.5 text-amber-600">
-      <ExclamationTriangleIcon className="h-3.5 w-3.5" aria-hidden="true" />
-      <span>User choice</span>
-    </span>
-  )
 
   return (
     <div className="space-y-0">

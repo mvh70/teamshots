@@ -47,8 +47,10 @@ function useFocusReveal(threshold = 0.2) {
   useEffect(() => {
     if (!ref) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setIsVisible(true);
-      setHasAnimated(true);
+      queueMicrotask(() => {
+        setIsVisible(true);
+        setHasAnimated(true);
+      });
       return;
     }
     const observer = new IntersectionObserver(

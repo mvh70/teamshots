@@ -16,8 +16,6 @@ import {
   PaintBrushIcon,
   UserIcon,
   CameraIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   Bars3Icon,
   XMarkIcon,
   ShieldCheckIcon,
@@ -25,24 +23,15 @@ import {
   UserGroupIcon,
   CreditCardIcon
 } from '@heroicons/react/24/outline'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import {useTranslations} from 'next-intl'
 import { BRAND_CONFIG } from '@/config/brand'
-import { normalizePlanTierForUI, isFreePlan, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
+import { formatSubscriptionLabel, normalizePlanTierForUI, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
-import { SubscriptionInfo } from '@/domain/subscription/subscription'
-
-// Serialized subscription type for client-side (Date objects are ISO strings)
-type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange'> & {
-  nextRenewal?: string | null
-  nextChange?: {
-    action: 'start' | 'change' | 'cancel' | 'schedule'
-    planTier: Exclude<SubscriptionInfo['tier'], null>
-    planPeriod: Exclude<SubscriptionInfo['period'], null>
-    effectiveDate: string
-  } | null
-}
+import { MOBILE_BREAKPOINT } from '@/hooks/useMobileViewport'
+import type { TenantId } from '@/config/tenant'
+import type { SerializedSubscription } from '@/types/subscription'
 import { 
   HomeIcon as HomeIconSolid,
   UsersIcon as UsersIconSolid,
@@ -52,7 +41,6 @@ import {
   PhotoIcon as PhotoIconSolid,
 } from '@heroicons/react/24/solid'
 
-type TeamOnboardingStep = 'team_setup' | 'style_setup' | 'invite_members'
 
 /**
  * Map UIPlanTier to the simplified state type used in the sidebar
@@ -76,9 +64,6 @@ interface SidebarRoleState {
   isTeamAdmin: boolean
   isTeamMember: boolean
   needsTeamSetup: boolean
-  needsPhotoStyleSetup?: boolean
-  needsTeamInvites?: boolean
-  nextTeamOnboardingStep?: TeamOnboardingStep | null
 }
 
 interface NavigationItem {
@@ -103,17 +88,25 @@ interface SidebarProps {
   initialBrandName?: string
   initialBrandLogoLight?: string
   initialBrandLogoIcon?: string
+  tenantId?: TenantId
   /** If true, hide team-related menu items (for individual-only domains like portreya.com) */
   isIndividualDomain?: boolean
 }
 
-export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseEnter, onMouseLeave, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, isIndividualDomain = false }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseEnter, onMouseLeave, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, tenantId = 'teamshotspro', isIndividualDomain = false }: SidebarProps) {
   // Brand-aware border color
-  const sidebarBorderClass = isIndividualDomain ? 'border-[#0F172A]/8' : 'border-gray-200/60'
+  const sidebarBorderClass =
+    tenantId === 'portreya'
+      ? 'border-[#0F172A]/8'
+      : tenantId === 'rightclickfit'
+        ? 'border-[#7C3AED]/20'
+        : 'border-gray-200/60'
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
   const [menuOpen, setMenuOpen] = useState(false)
+  const userMenuTriggerRef = useRef<HTMLDivElement | null>(null)
+  const userMenuPanelRef = useRef<HTMLDivElement | null>(null)
   const [isTeamMember, setIsTeamMember] = useState(initialRole?.isTeamMember ?? false)
   const [isTeamAdmin, setIsTeamAdmin] = useState(initialRole?.isTeamAdmin ?? false)
   
@@ -121,10 +114,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
   const brandName = initialBrandName ?? BRAND_CONFIG.name
   const brandLogoLight = initialBrandLogoLight ?? BRAND_CONFIG.logo.light
   const brandLogoIcon = initialBrandLogoIcon ?? BRAND_CONFIG.logo.icon
-  const [needsTeamSetup, setNeedsTeamSetup] = useState(initialRole?.needsTeamSetup ?? false)
-  const [, setNeedsPhotoStyleSetup] = useState(initialRole?.needsPhotoStyleSetup ?? false)
-  const [, setNeedsTeamInvites] = useState(initialRole?.needsTeamInvites ?? false)
-  const [, setNextTeamOnboardingStep] = useState<TeamOnboardingStep | null>(initialRole?.nextTeamOnboardingStep ?? null)
   const [allocatedCredits, setAllocatedCredits] = useState(0)
   const [accountMode, setAccountMode] = useState<AccountMode>(initialAccountMode ?? 'individual')
   const [navReady, setNavReady] = useState(Boolean(initialRole))
@@ -144,13 +133,30 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
   /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handleClickOutside = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (userMenuTriggerRef.current?.contains(target) || userMenuPanelRef.current?.contains(target)) {
+        return
+      }
+      setMenuOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside)
+    }
+  }, [menuOpen])
 
   // Mobile drawer pattern: when sidebar is open (collapsed=false), show full content
   // Desktop: collapsed prop controls both visibility and styling
@@ -160,30 +166,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
   // Initialize subscription data from props if available
   useEffect(() => {
-    if (initialSubscription) {
-      const tierRaw = initialSubscription.tier ?? null
-      const period = (initialSubscription.period as PlanPeriod) ?? null
+    if (!initialSubscription) return
 
-      // Normalize tier for UI (checks period first to determine free plan)
-      const normalized = normalizePlanTierForUI(tierRaw, period)
+    const tierRaw = initialSubscription.tier ?? null
+    const period = (initialSubscription.period as PlanPeriod) ?? null
+    const normalized = normalizePlanTierForUI(tierRaw, period)
+
+    const label = formatSubscriptionLabel(tierRaw, period, {
+      freeLabel: t('plan.free'),
+      isIndividualDomain,
+    })
+
+    // Defer state updates outside the effect body to avoid sync setState cascades.
+    queueMicrotask(() => {
       setPlanTier(mapUITierToStateTier(normalized))
-
-      // Compute human-readable label based on tier+period (transactional pricing)
-      // On individual domains, always show individual-style labels (never "Team")
-      let label = 'Free package'
-      if (isFreePlan(period)) {
-        label = t('plan.free')
-      } else if (tierRaw === 'individual' && period === 'small') {
-        label = 'Individual'
-      } else if (tierRaw === 'pro' && period === 'seats') {
-        label = isIndividualDomain ? 'Individual' : 'Team'
-      } else {
-        // Backward compatibility: handle legacy values
-        if (tierRaw === 'individual') label = 'Individual'
-        else if (tierRaw === 'pro') label = isIndividualDomain ? 'Individual' : 'Pro'
-      }
       setPlanLabel(label)
-    }
+    })
   }, [initialSubscription, isIndividualDomain, t])
 
   // OPTIMIZATION: Only fetch account mode and team data if not provided as props
@@ -197,10 +195,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         // Use initial data directly
         setIsTeamMember(initialRole.isTeamMember)
         setIsTeamAdmin(initialRole.isTeamAdmin)
-        setNeedsTeamSetup(initialRole.needsTeamSetup)
-        setNeedsPhotoStyleSetup(initialRole.needsPhotoStyleSetup ?? false)
-        setNeedsTeamInvites(initialRole.needsTeamInvites ?? false)
-        setNextTeamOnboardingStep(initialRole.nextTeamOnboardingStep ?? null)
         setAccountMode(initialAccountMode)
         setNavReady(true)
         return
@@ -214,10 +208,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
           if (initialData.roles && initialData.onboarding) {
             setIsTeamMember(initialData.roles.isTeamMember || false)
             setIsTeamAdmin(initialData.roles.isTeamAdmin || false)
-            setNeedsTeamSetup(initialData.onboarding.needsTeamSetup || false)
-            setNeedsPhotoStyleSetup(initialData.onboarding.needsPhotoStyleSetup || false)
-            setNeedsTeamInvites(initialData.onboarding.needsTeamInvites || false)
-            setNextTeamOnboardingStep(initialData.onboarding.nextTeamOnboardingStep ?? null)
             setAccountMode(initialData.onboarding.accountMode || 'individual')
             setNavReady(true)
             return
@@ -232,7 +222,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         // Fetch account mode and team membership in parallel
         const [accountModeResult, teamData] = await Promise.all([
           fetchAccountMode(),
-          jsonFetcher<{ userRole: { isTeamMember?: boolean; isTeamAdmin?: boolean; needsTeamSetup?: boolean; needsPhotoStyleSetup?: boolean; needsTeamInvites?: boolean; nextTeamOnboardingStep?: TeamOnboardingStep | null } }>('/api/dashboard/stats').catch(() => null)
+          jsonFetcher<{ userRole: { isTeamMember?: boolean; isTeamAdmin?: boolean; needsTeamSetup?: boolean } }>('/api/dashboard/stats').catch(() => null)
         ])
 
         // Update account mode from centralized utility
@@ -244,10 +234,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         if (teamData) {
           setIsTeamMember(teamData.userRole.isTeamMember || teamData.userRole.isTeamAdmin || false)
           setIsTeamAdmin(teamData.userRole.isTeamAdmin || false)
-          setNeedsTeamSetup(teamData.userRole.needsTeamSetup || false)
-          setNeedsPhotoStyleSetup(teamData.userRole.needsPhotoStyleSetup || false)
-          setNeedsTeamInvites(teamData.userRole.needsTeamInvites || false)
-          setNextTeamOnboardingStep(teamData.userRole.nextTeamOnboardingStep ?? null)
         } else if (session?.user?.role) {
           // Fallback: Use session role, but note this doesn't account for pro subscription
           const role = session.user.role
@@ -301,8 +287,10 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
     if (session?.user?.id && isTeamAdmin) {
       void fetchTeamData()
     } else {
-      setAllocatedCredits(0)
-      setSeatInfo(null)
+      queueMicrotask(() => {
+        setAllocatedCredits(0)
+        setSeatInfo(null)
+      })
     }
   }, [session?.user?.id, isTeamAdmin])
   /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
@@ -330,23 +318,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
             const normalized = normalizePlanTierForUI(tierRaw, period)
             setPlanTier(mapUITierToStateTier(normalized))
 
-            // Compute human-readable label based on tier+period (transactional pricing)
-            let label = 'Free package'
-            if (isFreePlan(period)) {
-              label = t('plan.free')
-            } else if (tierRaw === 'individual' && period === 'small') {
-              label = 'Individual'
-            } else if (tierRaw === 'pro' && period === 'small') {
-              label = 'Pro Small'
-            } else if (tierRaw === 'pro' && period === 'large') {
-              label = 'Pro Large'
-            } else if (tierRaw === 'pro' && period === 'seats') {
-              label = isIndividualDomain ? 'Individual' : 'Team'
-      } else {
-        // Backward compatibility: handle legacy values
-        if (tierRaw === 'individual') label = 'Individual'
-        else if (tierRaw === 'pro') label = 'Pro'
-      }
+            const label = formatSubscriptionLabel(tierRaw, period, {
+              freeLabel: t('plan.free'),
+              isIndividualDomain,
+              proSmallLabel: 'Pro Small',
+              proLargeLabel: 'Pro Large',
+            })
             setPlanLabel(label)
 
             // Only fetch fresh data if stale (>5 seconds)
@@ -359,17 +336,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   const freshPeriod = data?.subscription?.period ?? null
                   const normalized = normalizePlanTierForUI(freshTier, freshPeriod)
                   setPlanTier(mapUITierToStateTier(normalized))
-                  // Update label if needed
-                  let label = 'Free package'
-                  if (isFreePlan(freshPeriod)) {
-                    label = 'Free package'
-                  } else if (freshTier === 'individual' && freshPeriod === 'small') {
-                    label = 'Individual'
-                  } else if (freshTier === 'individual' && freshPeriod === 'large') {
-                    label = 'VIP'
-                  } else if (freshTier === 'pro' && freshPeriod === 'seats') {
-                    label = 'Pro'
-                  }
+                  const label = formatSubscriptionLabel(freshTier, freshPeriod, {
+                    freeLabel: 'Free package',
+                    teamLabel: 'Pro',
+                    vipLabel: 'VIP',
+                  })
                   setPlanLabel(label)
                 })
                 .catch(() => {
@@ -392,15 +363,10 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         const normalized = normalizePlanTierForUI(tierRaw, period)
         setPlanTier(mapUITierToStateTier(normalized))
 
-        // Compute human-readable label based on tier (transactional pricing)
-        let label = 'Free package'
-        if (isFreePlan(period)) {
-          label = 'Free package'
-        } else if (tierRaw === 'individual') {
-          label = 'Individual'
-        } else if (tierRaw === 'pro') {
-          label = 'Pro'
-        }
+        const label = formatSubscriptionLabel(tierRaw, period, {
+          freeLabel: 'Free package',
+          proLabel: 'Pro',
+        })
         setPlanLabel(label)
       } catch {
         setPlanTier('free')
@@ -548,10 +514,10 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
   return (
     <div
       className={`fixed inset-y-0 left-0 z-[120] text-[var(--text-dark)] bg-[var(--bg-white)] border-r ${sidebarBorderClass} transition-all duration-300 transform shadow-sm ${
-        // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
-        (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
+        // Width: w-64 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
+        (isMobile ? (collapsed ? 'w-20' : 'w-64') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
         // Visibility: use collapsed prop (when false, sidebar is visible)
-        (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' +
+        (collapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0') + ' ' +
         // Overflow: only visible on desktop collapsed mode (for tooltips), hidden on mobile to prevent content bleeding
         (!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden')
       }`}
@@ -591,14 +557,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 ) : (
                   <XMarkIcon className="h-5 w-5 text-gray-500" />
                 )}
-                {/* Desktop chevrons - hidden but kept for potential future use */}
-                {/*
-                {effectiveCollapsed ? (
-                  <ChevronRightIcon className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
-                )}
-                */}
               </button>
               <span className={`pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium transition-all duration-200 z-[9999] shadow-lg ${
                 effectiveCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'
@@ -920,8 +878,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                   </>
                 )}
                 
-                {/* Don't render sidebar for team_member mode (invited members) */}
-                {accountMode === 'team_member' && null}
               </div>
 
                 {/* Buy Credits Button - unified structure */}
@@ -965,6 +921,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
           {session?.user && (
             <div className={`px-3 py-3 border-t ${sidebarBorderClass} relative`}>
             <div
+              ref={userMenuTriggerRef}
               className="relative group flex items-center cursor-pointer hover:bg-gray-100/80 rounded-xl p-2 -mx-1 transition-all duration-300"
               onClick={() => setMenuOpen(!menuOpen)}
               data-testid="user-menu"
@@ -1001,7 +958,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
               </span>
             </div>
             {menuOpen && (
-              <div className={`absolute rounded-xl border border-gray-200 bg-white shadow-lg z-[9999] overflow-hidden ${
+              <div ref={userMenuPanelRef} className={`absolute rounded-xl border border-gray-200 bg-white shadow-lg z-[9999] overflow-hidden ${
                 effectiveCollapsed
                   ? 'left-full ml-2 bottom-0 w-48'
                   : 'bottom-full mb-2 left-2 right-2'

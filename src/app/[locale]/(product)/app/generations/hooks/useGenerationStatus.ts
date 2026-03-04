@@ -4,7 +4,7 @@
  * Polls generation status until completion or failure using SWR
  */
 
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
 const noStoreRequestInit = {
@@ -100,8 +100,16 @@ export function useGenerationStatus({
   maxPollTime = 300000,
 }: UseGenerationStatusOptions): UseGenerationStatusReturn {
   const errorCountRef = useRef(0)
-  const pollStartTimeRef = useRef(Date.now())
+  const pollStartTimeRef = useRef<number>(0)
   const shouldStopRef = useRef(false)
+  const [stopReason, setStopReason] = useState<'errors' | 'timeout' | null>(null)
+
+  const getPollStartTime = () => {
+    if (pollStartTimeRef.current === 0) {
+      pollStartTimeRef.current = Date.now()
+    }
+    return pollStartTimeRef.current
+  }
 
   const key = enabled && generationId ? `/api/generations/${generationId}` : null
 
@@ -113,11 +121,13 @@ export function useGenerationStatus({
       dedupingInterval: 500,
       onSuccess: () => {
         errorCountRef.current = 0
+        setStopReason(null)
       },
       onError: () => {
         errorCountRef.current++
         if (errorCountRef.current >= 5) {
           shouldStopRef.current = true
+          setStopReason('errors')
         }
       },
       refreshInterval: (latestData) => {
@@ -128,8 +138,9 @@ export function useGenerationStatus({
         if (shouldStopRef.current) return 0
 
         // Stop if exceeded max poll time
-        if (Date.now() - pollStartTimeRef.current > maxPollTime) {
+        if (Date.now() - getPollStartTime() > maxPollTime) {
           shouldStopRef.current = true
+          setStopReason('timeout')
           return 0
         }
 
@@ -143,22 +154,26 @@ export function useGenerationStatus({
     errorCountRef.current = 0
     pollStartTimeRef.current = Date.now()
     shouldStopRef.current = false
+    queueMicrotask(() => {
+      setStopReason(null)
+    })
   }, [generationId])
 
   const refetch = useCallback(async () => {
     errorCountRef.current = 0
     pollStartTimeRef.current = Date.now()
     shouldStopRef.current = false
+    setStopReason(null)
     if (key) {
       await mutate(key)
     }
   }, [key])
 
   const errorMessage = swrError
-    ? (errorCountRef.current >= 5
+    ? (stopReason === 'errors'
         ? 'Multiple fetch errors - please check back later'
         : swrError instanceof Error ? swrError.message : 'Unknown error')
-    : (shouldStopRef.current && !isGenerationComplete(data)
+    : (stopReason === 'timeout' && !isGenerationComplete(data)
         ? 'Generation timeout - please check back later'
         : null)
 

@@ -16,6 +16,7 @@ const MIME_TO_EXTENSION: Record<string, string> = {
   'image/jpg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'image/bmp': 'bmp',
   'image/gif': 'gif',
   'image/tiff': 'tiff',
   'image/avif': 'avif',
@@ -28,6 +29,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
+  bmp: 'image/bmp',
   gif: 'image/gif',
   tiff: 'image/tiff',
   tif: 'image/tiff',
@@ -42,9 +44,9 @@ export function mimeTypeFromSharpFormat(format?: string): string {
   return SHARP_FORMAT_TO_MIME[format.toLowerCase()] ?? `image/${format.toLowerCase()}`
 }
 
-export function extensionFromMimeType(mimeType?: string): string {
-  if (!mimeType) return 'png'
-  return MIME_TO_EXTENSION[mimeType.toLowerCase()] ?? 'png'
+export function extensionFromMimeType(mimeType?: string, fallback: string = 'png'): string {
+  if (!mimeType) return fallback
+  return MIME_TO_EXTENSION[mimeType.toLowerCase()] ?? fallback
 }
 
 export function mimeTypeFromFileName(fileName: string): string {

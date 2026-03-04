@@ -205,154 +205,35 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
 // Default brand config (TeamShotsPro) - for backwards compatibility
 export const BRAND_CONFIG = TEAM_BRAND;
 
-// Allowed domains for security validation
-const ALLOWED_DOMAINS = [
-  'teamshotspro.com',
-  'portreya.com',
-  'rightclickfit.com',
-  'localhost',
-  '127.0.0.1',
-]
-
 /**
  * Normalize a host string to a domain.
  * Removes port numbers and www prefix, converts to lowercase.
  */
-export function normalizeDomain(host: string | null): string | null {
+function normalizeDomain(host: string | null): string | null {
   if (!host) return null
   return host.split(':')[0].replace(/^www\./, '').toLowerCase()
 }
 
 /**
- * Validate that a domain is in the allowed list.
- * Returns the domain if valid, null otherwise.
+ * Get brand configuration from a domain-like input.
+ * Accepts host values with optional port / www prefixes.
  */
-export function validateDomain(domain: string | null): string | null {
-  if (!domain) return null
-  if (ALLOWED_DOMAINS.includes(domain)) return domain
-  // Allow without .com suffix (local dev: portreya:3000 → portreya)
-  if (ALLOWED_DOMAINS.includes(`${domain}.com`)) return domain
-  // Also allow subdomains
-  if (ALLOWED_DOMAINS.some(allowed => domain.endsWith('.' + allowed))) return domain
-  return null
-}
+export function getBrandByDomain(domainOrHost?: string | null): BrandConfig {
+  const normalizedDomain = normalizeDomain(domainOrHost ?? null)
 
-/**
- * Get the current domain from request headers.
- * 
- * IMPORTANT: This function is SERVER-SIDE ONLY. Do not call from client components.
- * All brand decisions must be made on the server to prevent hydration mismatches and abuse.
- * 
- * On localhost, respects NEXT_PUBLIC_FORCE_DOMAIN env var for testing different brands.
- * 
- * @param requestHeaders - Required headers for server-side detection
- * @returns The normalized domain (without www) or null if unable to determine
- */
-function getCurrentDomain(requestHeaders?: Headers): string | null {
-  // Check for forced domain override (localhost development only)
-  const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
-
-  // Server-side detection from provided headers (REQUIRED)
-  if (requestHeaders) {
-    // Prefer x-forwarded-host to preserve original domain behind proxies.
-    // Fall back to host for local/dev environments that don't set forwarding headers.
-    const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host')
-    if (host) {
-      // Handle comma-separated values from multi-proxy chains.
-      const normalizedHost = normalizeDomain(host.split(',')[0].trim())
-
-      // On localhost, allow forced domain override
-      if ((normalizedHost === 'localhost' || normalizedHost === '127.0.0.1') && forcedDomain) {
-        // Log for debugging
-        console.log(`[Brand Detection] Localhost detected. Forcing domain: ${forcedDomain}`);
-        return normalizeDomain(forcedDomain)
-      }
-
-      // Validate domain against whitelist
-      const validatedDomain = validateDomain(normalizedHost)
-      if (validatedDomain) {
-        return validatedDomain
-      }
-
-      // Log invalid domain attempts in production for security monitoring
-      if (process.env.NODE_ENV === 'production') {
-        console.warn(`[Brand Detection] Invalid domain attempted: ${normalizedHost}`)
-      }
-    }
-  }
-
-  return null
-}
-
-/**
- * Get the complete brand configuration based on the current domain.
- * Returns Portreya config for portreya.com, TeamShotsPro config otherwise.
- * 
- * IMPORTANT: This function is SERVER-SIDE ONLY. Always pass headers.
- * All brand decisions must be made on the server to prevent hydration mismatches and abuse.
- * 
- * @param requestHeaders - Headers for server-side domain detection
- * @returns Complete brand configuration object
- */
-export function getBrand(requestHeaders?: Headers): BrandConfig {
-  const domain = getCurrentDomain(requestHeaders)
-
-  if (domain) {
+  if (normalizedDomain) {
     // Exact match
-    if (BRAND_CONFIGS[domain]) {
-      return BRAND_CONFIGS[domain]
+    if (BRAND_CONFIGS[normalizedDomain]) {
+      return BRAND_CONFIGS[normalizedDomain]
     }
     // Try matching with .com suffix (for local dev without .com in hosts file)
-    if (BRAND_CONFIGS[`${domain}.com`]) {
-      return BRAND_CONFIGS[`${domain}.com`]
+    if (BRAND_CONFIGS[`${normalizedDomain}.com`]) {
+      return BRAND_CONFIGS[`${normalizedDomain}.com`]
     }
   }
 
   // Default to TeamShotsPro
   return BRAND_CONFIGS[TEAM_DOMAIN]
-}
-
-/**
- * Get the logo path based on the current domain.
- * Returns Portreya logo for portreya.com, TeamShotsPro logo otherwise.
- * 
- * @param theme - 'light' or 'dark' variant
- * @param requestHeaders - Optional headers for server-side detection (useful in API routes)
- * @returns Path to the logo image
- */
-export function getBrandLogo(theme: 'light' | 'dark' = 'light', requestHeaders?: Headers): string {
-  return getBrand(requestHeaders).logo[theme]
-}
-
-/**
- * Get brand-specific contact emails based on the current domain.
- * Returns Portreya emails for portreya.com, TeamShotsPro emails otherwise.
- * 
- * @param requestHeaders - Optional headers for server-side detection (useful in API routes)
- * @returns Object containing brand-specific contact email addresses
- */
-export function getBrandContact(requestHeaders?: Headers): BrandContact {
-  return getBrand(requestHeaders).contact
-}
-
-/**
- * Get the brand name based on the current domain.
- * Returns "Portreya" for portreya.com, "TeamShotsPro" otherwise.
- * 
- * @param requestHeaders - Optional headers for server-side detection
- * @returns The brand name string
- */
-export function getBrandName(requestHeaders?: Headers): string {
-  return getBrand(requestHeaders).name
-}
-
-// Helper function for color access
-export function getBrandColor(type: 'primary' | 'secondary' | 'cta', hover = false, requestHeaders?: Headers): string {
-  const colors = getBrand(requestHeaders).colors;
-  if (hover) {
-    return colors[`${type}Hover` as keyof BrandColors];
-  }
-  return colors[type];
 }
 
 // Note: getBrandTypography and getBrandStyle removed - typography and style configs were unused

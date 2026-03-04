@@ -17,8 +17,12 @@ function ModalPortal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
+    queueMicrotask(() => {
+      setMounted(true)
+    })
+    return () => {
+      setMounted(false)
+    }
   }, [])
 
   if (!mounted) return null

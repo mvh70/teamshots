@@ -5,24 +5,43 @@ export interface SubjectPersonPromptInput {
   hasFaceComposite: boolean
   hasBodyComposite: boolean
   demographics?: DemographicProfile
+  hasBeautification?: boolean
+  preferSoftSmileSelfie?: boolean
 }
 
 export interface SubjectCompositionPromptInput {
   hasFaceComposite: boolean
   hasBodyComposite: boolean
+  hasBeautification?: boolean
+  preferSoftSmileSelfie?: boolean
 }
+
+const SUBJECT_GROOMING_RULE =
+  '- Groom the subject slighly for professional look. Make the subject look energectic, radiating energy and freshness, eg if there are eye bags under the eyes, make them less prominent (but keep them), make the hair groomed for photos, remove any sign of tiredness, make the person look like the best version of themselves without changing them.'
+const SUBJECT_ACCESSORY_RULE =
+  '-Preserve accessories shown in the selfies. Do NOT add accessories not shown in selfies (glasses, earrings, watches).'
 
 export const SUBJECT_IDENTITY_RULES = [
   'Use the uploaded composite images as a strict identity source.',
   '- Hyper-realistic skin texture with visible pores and natural micro-details.',
   '- Preserve authentic appearance including moles, scars, freckles.',
   '- Preserve eye, hair, and lip color, shape, and texture.',  
-  '- Groom the subject slighly for professional look. Make the subject look energectic, radiating energy and freshness, eg if there are eye bags under the eyes, make them less prominent (but keep them), make the hair groomed for photos, remove any sign of tiredness, make the person look like the best version of themselves without changing them.',
+  SUBJECT_GROOMING_RULE,
   'Build the rest of the anatomy carefully from the body references; avoid distorted hands, extra fingers, or malformed limbs.',
   '- For females, preserve chest/breast shape naturally.',
   '- For males, preserve chest shape naturally.',
-  '-Preserve accessories shown in the selfies. Do NOT add accessories not shown in selfies (glasses, earrings, watches).',
+  SUBJECT_ACCESSORY_RULE,
 ]
+
+function getSubjectIdentityRules(hasBeautification?: boolean): string[] {
+  if (!hasBeautification) {
+    return SUBJECT_IDENTITY_RULES
+  }
+
+  return SUBJECT_IDENTITY_RULES.filter(
+    (rule) => rule !== SUBJECT_GROOMING_RULE && rule !== SUBJECT_ACCESSORY_RULE
+  )
+}
 
 function buildSubjectComposites(input: SubjectPersonPromptInput): string[] {
   const composites: string[] = []
@@ -73,8 +92,11 @@ export function generateSubjectPersonPrompt(input: SubjectPersonPromptInput): {
 } {
   const composites = buildSubjectComposites(input)
   const demographicGuidance = buildDemographicGuidance(input.demographics)
+  const primarySelfieGuidance = input.preferSoftSmileSelfie
+    ? 'Select ONE selfie as primary face basis, prioritizing the selfie that most closely matches a soft smile expression. Never average or blend faces into a new person.'
+    : 'Select ONE selfie as primary face basis - never average or blend faces into a new person.'
   const identityPayload: Record<string, unknown> = {
-    source: 'Use the attached composites as a reference. Select ONE selfie as primary face basis - never average or blend faces into a new person. The result must be instantly recognizable as this specific person',
+    source: `Use the attached composites as a reference. ${primarySelfieGuidance} The result must be instantly recognizable as this specific person`,
   }
 
   
@@ -83,7 +105,7 @@ export function generateSubjectPersonPrompt(input: SubjectPersonPromptInput): {
   }
 
   // Keep these as structured subject prompt constraints in JSON payload.
-  identityPayload.hard_requirements = SUBJECT_IDENTITY_RULES
+  identityPayload.hard_requirements = getSubjectIdentityRules(input.hasBeautification)
 
   if (input.selfieCount === 0) {
     return { mustFollow: [], identityPayload, demographicGuidance }
@@ -102,11 +124,17 @@ export function generateSubjectCompositionPrompt(input: SubjectCompositionPrompt
 } {
   const identityPayload: Record<string, unknown> = {
     source: 'The subject comes from the attached step1a image.',
-    refinement_goal: 'Refine the face so that it resembles the person in the selfies.',
+    refinement_goal: input.preferSoftSmileSelfie
+      ? 'Refine facial resemblance using selfies for macro identity only (facial structure, proportions, expression), using the most soft-smile-like selfie as the expression baseline. Do not synthesize new micro skin details.'
+      : 'Refine facial resemblance using selfies for macro identity only (facial structure and proportions). Do not synthesize new micro skin details.',
     skin_quality:
-      'Make the skin hyper realistic, with visible pores, moles, and natural imperfections. Avoid the plastic skin look.',
-    grooming:
-      'Groom the subject slightly for a professional look: make them look energetic and fresh, reduce under-eye bags slightly (without removing them), groom hair for photos, remove signs of tiredness, and keep the person recognizably the same.',
+      'Preserve skin exactly as visible in STEP1A/BASE IMAGE. Do NOT add, remove, or invent pores, moles, freckles, blemishes, scars, wrinkles, or pigmentation changes. If a detail is not clearly visible in STEP1A/BASE IMAGE, do not introduce it.',
+    selfie_reference_scope:
+      'Use selfies to verify identity resemblance only; do not transfer or invent new skin marks from selfies.',
+  }
+  if (!input.hasBeautification) {
+    identityPayload.grooming =
+      'Groom the subject slightly for a professional look while keeping the person recognizably the same. Keep hair tidy if needed, but do not retouch skin or alter under-eye details.'
   }
 
   const composites: string[] = []

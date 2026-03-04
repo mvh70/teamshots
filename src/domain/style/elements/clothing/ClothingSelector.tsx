@@ -1,26 +1,57 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ClothingSettings, ClothingColorSettings, ClothingType, ClothingValue } from '@/types/photo-style'
+import { ClothingSettings, ClothingColorSettings, ClothingValue, ClothingType } from '@/types/photo-style'
 import { predefined, hasValue, userChoice } from '../base/element-types'
 import { Grid } from '@/components/ui'
-import { CLOTHING_STYLES, CLOTHING_DETAILS, getAccessoriesForClothing } from './config'
-import Image from 'next/image'
-import { useState, useEffect, useCallback } from 'react'
+import {
+  CLOTHING_STYLES,
+  getAccessoriesForClothing,
+  getDetailsByGenderForStyle,
+  getTopChoicesForUser,
+  getBottomChoicesForUser,
+  getOuterChoicesForUser,
+  getOnePieceChoicesForUser,
+  getEffectiveClothingDetail,
+  normalizeClothingValueWithChoices,
+} from './config'
+import type { ClothingMode } from './types'
+import { useEffect, useCallback, useMemo } from 'react'
 import ClothingColorPreview from '../clothing-colors/ClothingColorPreview'
 import type { ClothingColorKey } from '../clothing-colors/types'
 
 interface ClothingSelectorProps {
   value: ClothingSettings
   onChange: (settings: ClothingSettings) => void
-  clothingColors?: ClothingColorSettings // Colors from ClothingColorSelector
-  excludeColors?: ClothingColorKey[] // Which colors to exclude from preview
-  availableStyles?: string[] // Optional list of available clothing styles (filters CLOTHING_STYLES)
-  isPredefined?: boolean // If true, user can't change the settings
-  isDisabled?: boolean // If true, controls are visually greyed and inactive
-  suppressAutoSelect?: boolean // If true, don't auto-select first style on mount (for progressive activation)
+  clothingColors?: ClothingColorSettings
+  excludeColors?: ClothingColorKey[]
+  availableStyles?: string[]
+  isPredefined?: boolean
+  isDisabled?: boolean
+  suppressAutoSelect?: boolean
   className?: string
   showHeader?: boolean
+  styleLocked?: boolean
+  adminStyleOnly?: boolean
+  detectedGender?: string
+}
+
+function areValuesEqual(a?: ClothingValue, b?: ClothingValue): boolean {
+  return JSON.stringify(a || null) === JSON.stringify(b || null)
+}
+
+function toLabel(value: string): string {
+  return value
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function buildDefaultValue(style: ClothingType, mode: ClothingMode, lockScope?: 'style-only'): ClothingValue {
+  return normalizeClothingValueWithChoices({
+    style,
+    mode,
+    lockScope,
+  })
 }
 
 export default function ClothingSelector({
@@ -33,103 +64,216 @@ export default function ClothingSelector({
   isDisabled = false,
   suppressAutoSelect = false,
   className = '',
-  showHeader = false
+  showHeader = false,
+  styleLocked = false,
+  adminStyleOnly = false,
+  detectedGender,
 }: ClothingSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothing')
-  const [failedPreviewKey, setFailedPreviewKey] = useState<string | null>(null)
 
-  // Filter clothing styles based on availableStyles prop
-  const filteredClothingStyles = availableStyles
-    ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
-    : CLOTHING_STYLES
+  const filteredClothingStyles = useMemo(() => {
+    const styleFiltered = availableStyles
+      ? CLOTHING_STYLES.filter((style) => availableStyles.includes(style.value))
+      : CLOTHING_STYLES
 
-  // Extract the clothing value from the wrapper
+    // Team admin must set only broad styles (no black tie selection).
+    if (adminStyleOnly) {
+      return styleFiltered.filter((style) => style.value !== 'black-tie')
+    }
+
+    return styleFiltered
+  }, [availableStyles, adminStyleOnly])
+
   const clothingValue = hasValue(value) ? value.value : undefined
-  const fallbackStyle = filteredClothingStyles[0]?.value as ClothingType | undefined
-  const displayStyle = clothingValue?.style || fallbackStyle
-  const fallbackDetails = displayStyle ? CLOTHING_DETAILS[displayStyle]?.[0] : undefined
-  const displayDetails = clothingValue?.details || fallbackDetails
-  const displayClothingValue = displayStyle
-    ? {
-        style: displayStyle,
-        details: displayDetails,
-        accessories: clothingValue?.accessories || []
-      }
-    : undefined
-  const previewKey = displayClothingValue?.style && displayClothingValue?.details
-    ? `${displayClothingValue.style}-${displayClothingValue.details}`
-    : null
-  const imageExists = previewKey ? failedPreviewKey !== previewKey : false
+  const selectableStyles = useMemo(() => {
+    if (!styleLocked || !clothingValue?.style) return filteredClothingStyles
+    if (filteredClothingStyles.some((style) => style.value === clothingValue.style)) {
+      return filteredClothingStyles
+    }
+    const lockedStyle = CLOTHING_STYLES.find((style) => style.value === clothingValue.style)
+    return lockedStyle ? [...filteredClothingStyles, lockedStyle] : filteredClothingStyles
+  }, [clothingValue?.style, filteredClothingStyles, styleLocked])
 
-  // Helper to preserve mode when updating value
-  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const fallbackStyle = selectableStyles[0]?.value as ClothingType | undefined
+  const displayStyle = (clothingValue?.style || fallbackStyle) as ClothingType | undefined
+
+  const displayClothingValue = useMemo(() => {
+    if (!displayStyle) return undefined
+    if (!clothingValue) {
+      return adminStyleOnly
+        ? ({ style: displayStyle, lockScope: value?.mode === 'predefined' ? 'style-only' : undefined } as ClothingValue)
+        : buildDefaultValue(displayStyle, 'separate', value?.mode === 'predefined' ? 'style-only' : undefined)
+    }
+    return normalizeClothingValueWithChoices({
+      ...clothingValue,
+      style: displayStyle,
+      lockScope: value?.mode === 'predefined' ? 'style-only' : clothingValue.lockScope,
+    })
+  }, [adminStyleOnly, clothingValue, displayStyle, value?.mode])
+
+  const currentMode: ClothingMode = displayClothingValue?.mode || 'separate'
+  const topChoices = useMemo(() => displayStyle ? getTopChoicesForUser(displayStyle, detectedGender) : [], [displayStyle, detectedGender])
+  const bottomChoices = useMemo(() => displayStyle ? getBottomChoicesForUser(displayStyle, detectedGender) : [], [displayStyle, detectedGender])
+  const outerChoices = useMemo(() => displayStyle ? getOuterChoicesForUser(displayStyle, detectedGender) : [], [displayStyle, detectedGender])
+  const onePieceChoices = useMemo(() => displayStyle ? getOnePieceChoicesForUser(displayStyle, detectedGender) : [], [displayStyle, detectedGender])
+
+  const detailsByGender = useMemo(() => {
+    if (!displayStyle) {
+      return { male: [], female: [], neutral: [] }
+    }
+    return getDetailsByGenderForStyle(displayStyle)
+  }, [displayStyle])
+
+  const adminChoiceBuckets = useMemo(() => {
+    const base = [...detailsByGender.neutral, ...detailsByGender.male]
+    return {
+      choices: base,
+      extraFemaleChoices: detailsByGender.female,
+    }
+  }, [detailsByGender])
+
+  const effectiveDetail = useMemo(
+    () => getEffectiveClothingDetail(displayStyle, displayClothingValue),
+    [displayStyle, displayClothingValue]
+  )
+
   const wrapWithCurrentMode = useCallback((newValue: ClothingValue): ClothingSettings => {
-    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+    if (value?.mode === 'predefined') {
+      return predefined(newValue)
+    }
+    return userChoice(newValue)
   }, [value?.mode])
 
-  // Initialize with first available style and detail if not set
-  // This ensures the dropdown value matches what's visually displayed and shows the preview
+  // Keep the current value valid as style filters, gender, or lock mode changes.
   useEffect(() => {
-    if (!clothingValue?.style && filteredClothingStyles.length > 0 && !isPredefined && !isDisabled && !suppressAutoSelect) {
-      const defaultStyle = filteredClothingStyles[0].value as ClothingType
-      const defaultDetails = CLOTHING_DETAILS[defaultStyle]?.[0]
-      const newValue: ClothingValue = {
-        style: defaultStyle,
-        details: defaultDetails,
-        accessories: []
+    if (isDisabled) return
+    if (selectableStyles.length === 0) return
+
+    const firstStyle = selectableStyles[0].value as ClothingType
+    let nextValue: ClothingValue | undefined
+
+    if (!clothingValue?.style) {
+      if (!suppressAutoSelect) {
+        nextValue = adminStyleOnly
+          ? {
+              style: firstStyle,
+              lockScope: value?.mode === 'predefined' ? 'style-only' : undefined,
+            }
+          : buildDefaultValue(firstStyle, 'separate', value?.mode === 'predefined' ? 'style-only' : undefined)
       }
-      onChange(wrapWithCurrentMode(newValue))
-    }
-  }, [clothingValue?.style, filteredClothingStyles, isPredefined, isDisabled, suppressAutoSelect, onChange, wrapWithCurrentMode])
+    } else {
+      let nextStyle = clothingValue.style
+      const styleStillAllowed = selectableStyles.some((style) => style.value === nextStyle)
 
-  const handleStyleChange = (style: ClothingType, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
+      if (!styleStillAllowed && !styleLocked) {
+        nextStyle = firstStyle
+      }
+
+      const candidate = adminStyleOnly
+        ? {
+            style: nextStyle,
+            lockScope: value?.mode === 'predefined' ? 'style-only' : clothingValue.lockScope,
+          }
+        : normalizeClothingValueWithChoices({
+            ...clothingValue,
+            style: nextStyle,
+            lockScope: value?.mode === 'predefined' ? 'style-only' : clothingValue.lockScope,
+          })
+
+      if (!areValuesEqual(candidate as ClothingValue, clothingValue)) {
+        nextValue = candidate as ClothingValue
+      }
     }
 
-    // Set the first available detail for the new style so preview shows immediately
-    const defaultDetails = CLOTHING_DETAILS[style]?.[0]
-    const newValue: ClothingValue = {
-      style,
-      details: defaultDetails,
-      accessories: []
+    if (nextValue) {
+      onChange(wrapWithCurrentMode(nextValue))
     }
+  }, [
+    adminStyleOnly,
+    clothingValue,
+    isDisabled,
+    onChange,
+    selectableStyles,
+    styleLocked,
+    suppressAutoSelect,
+    value?.mode,
+    wrapWithCurrentMode,
+  ])
+
+  const handleStyleChange = (style: ClothingType) => {
+    if (isDisabled || styleLocked) return
+
+    const newValue: ClothingValue = adminStyleOnly
+      ? {
+          style,
+          lockScope: value?.mode === 'predefined' ? 'style-only' : undefined,
+        }
+      : buildDefaultValue(style, currentMode, value?.mode === 'predefined' ? 'style-only' : undefined)
 
     onChange(wrapWithCurrentMode(newValue))
   }
 
-  const handleDetailChange = (detail: string, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
+  const handleModeChange = (mode: ClothingMode) => {
+    if (isDisabled || adminStyleOnly || !displayStyle) return
 
-    if (!displayClothingValue?.style) return
-    onChange(wrapWithCurrentMode({
-      ...displayClothingValue,
-      details: detail,
-      accessories: displayClothingValue.accessories || []
-    }))
+    const baseValue = normalizeClothingValueWithChoices({
+      ...(displayClothingValue || { style: displayStyle }),
+      mode,
+      lockScope: value?.mode === 'predefined' ? 'style-only' : displayClothingValue?.lockScope,
+    })
+
+    const allowedAccessories = getAccessoriesForClothing(displayStyle, getEffectiveClothingDetail(displayStyle, baseValue), detectedGender)
+    const currentAccessories = Array.isArray(displayClothingValue?.accessories) ? displayClothingValue!.accessories! : []
+
+    onChange(
+      wrapWithCurrentMode({
+        ...baseValue,
+        accessories: currentAccessories.filter((accessory) => allowedAccessories.includes(accessory)),
+      })
+    )
   }
 
-  const handleAccessoryToggle = (accessory: string, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    if (isPredefined || !displayClothingValue?.style) return
+  const updateChoice = (patch: Partial<ClothingValue>) => {
+    if (isDisabled || adminStyleOnly || !displayStyle) return
 
-    const currentAccessories = displayClothingValue.accessories || []
+    const next = normalizeClothingValueWithChoices({
+      ...(displayClothingValue || { style: displayStyle }),
+      ...patch,
+      lockScope: value?.mode === 'predefined' ? 'style-only' : displayClothingValue?.lockScope,
+    })
+
+    const allowedAccessories = getAccessoriesForClothing(displayStyle, getEffectiveClothingDetail(displayStyle, next), detectedGender)
+    const currentAccessories = Array.isArray(displayClothingValue?.accessories) ? displayClothingValue!.accessories! : []
+
+    onChange(
+      wrapWithCurrentMode({
+        ...next,
+        accessories: currentAccessories.filter((accessory) => allowedAccessories.includes(accessory)),
+      })
+    )
+  }
+
+  const handleAccessoryToggle = (accessory: string) => {
+    if (isDisabled || adminStyleOnly) return
+    if (!displayStyle) return
+
+    const currentAccessories = displayClothingValue?.accessories || []
     const newAccessories = currentAccessories.includes(accessory)
       ? currentAccessories.filter((a: string) => a !== accessory)
       : [...currentAccessories, accessory]
 
-    onChange(wrapWithCurrentMode({ ...displayClothingValue, accessories: newAccessories }))
+    onChange(
+      wrapWithCurrentMode({
+        ...(displayClothingValue || { style: displayStyle }),
+        accessories: newAccessories,
+      })
+    )
   }
 
+  const styleSelectDisabled = isDisabled || styleLocked
+
   return (
-    <div className={`${className}`}>
+    <div className={className}>
       {showHeader && (
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -148,115 +292,214 @@ export default function ClothingSelector({
         </div>
       )}
 
-      {/* Clothing Style Selection - Dropdown */}
       <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t('stylesLabel', { default: 'Style' })}
+        </label>
         <select
           value={displayStyle || ''}
-          onChange={(e) => !(isPredefined || isDisabled) && handleStyleChange(e.target.value as ClothingType)}
-          disabled={isPredefined || isDisabled}
+          onChange={(e) => handleStyleChange(e.target.value as ClothingType)}
+          disabled={styleSelectDisabled}
           className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
-            (isPredefined || isDisabled) ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+            styleSelectDisabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
           }`}
         >
-          {filteredClothingStyles.map((style) => (
+          {selectableStyles.map((style) => (
             <option key={style.value} value={style.value}>
-              {style.icon} {t(`styles.${style.value}.label`)}
+              {style.icon} {t(`styles.${style.value}.label`, { default: style.value })}
             </option>
           ))}
         </select>
+        {styleLocked && !adminStyleOnly && (
+          <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            {t('styleLockedByAdmin', { default: 'Style is set by admin. You can choose outfit pieces.' })}
+          </p>
+        )}
+        {adminStyleOnly && displayStyle && (
+          <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium text-slate-700 mb-2">
+              Substyles team members can choose
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <p className="font-semibold text-slate-600 mb-1">Choices</p>
+                <p className="text-slate-700">
+                  {adminChoiceBuckets.choices.length > 0
+                    ? adminChoiceBuckets.choices.map((detail) => t(`details_options.${detail}`, { default: detail })).join(', ')
+                    : '-'}
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-600 mb-1">Additional female choices</p>
+                <p className="text-slate-700">
+                  {adminChoiceBuckets.extraFemaleChoices.length > 0
+                    ? adminChoiceBuckets.extraFemaleChoices.map((detail) => t(`details_options.${detail}`, { default: detail })).join(', ')
+                    : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Style-specific controls */}
-      {displayClothingValue?.style && (
+      {displayStyle && !adminStyleOnly && (
         <div className={`space-y-6 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-          {/* Details Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              {t('details.label', { default: 'Details' })}
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('mode.label', { default: 'Outfit Structure' })}
             </label>
-            <Grid cols={{ mobile: 2 }} gap="sm">
-              {CLOTHING_DETAILS[displayClothingValue.style]?.map((detail) => {
-                const isSelected = displayClothingValue.details === detail
-                return (
-                  <button
-                    type="button"
-                    key={detail}
-                    onClick={(e) => handleDetailChange(detail, e)}
-                    className={`p-2 text-sm rounded border transition-colors ${
-                      isSelected
-                        ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                    }`}
-                  >
-                    {t(`details_options.${detail}`)}
-                  </button>
-                )
-              })}
-            </Grid>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleModeChange('separate')}
+                className={`px-3 py-2 rounded border text-sm ${
+                  currentMode === 'separate'
+                    ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                {t('mode.separate', { default: 'Top + Bottom' })}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange('one_piece')}
+                className={`px-3 py-2 rounded border text-sm ${
+                  currentMode === 'one_piece'
+                    ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                {t('mode.onePiece', { default: 'One-piece' })}
+              </button>
+            </div>
           </div>
 
-          {/* Accessories Section */}
+          {currentMode === 'separate' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('outer.label', { default: 'Top Layer (Optional)' })}
+                </label>
+                <select
+                  value={displayClothingValue?.outerChoice || ''}
+                  onChange={(e) => updateChoice({ mode: 'separate', outerChoice: e.target.value })}
+                  disabled={isDisabled || outerChoices.length === 0}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
+                    isDisabled || outerChoices.length === 0 ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+                  }`}
+                >
+                  <option value="">{t('outer.none', { default: 'No top layer' })}</option>
+                  {outerChoices.map((choice) => (
+                    <option key={choice} value={choice}>
+                      {t(`details_options.${choice}`, { default: toLabel(choice) })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('top.label', { default: 'Base Layer' })}
+                </label>
+                <select
+                  value={displayClothingValue?.topChoice || ''}
+                  onChange={(e) => updateChoice({ mode: 'separate', topChoice: e.target.value })}
+                  disabled={isDisabled || topChoices.length === 0}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
+                    isDisabled || topChoices.length === 0 ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+                  }`}
+                >
+                  {topChoices.map((choice) => (
+                    <option key={choice} value={choice}>
+                      {t(`details_options.${choice}`, { default: toLabel(choice) })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('bottom.label', { default: 'Bottom Layer' })}
+                </label>
+                <select
+                  value={displayClothingValue?.bottomChoice || ''}
+                  onChange={(e) => updateChoice({ mode: 'separate', bottomChoice: e.target.value })}
+                  disabled={isDisabled || bottomChoices.length === 0}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
+                    isDisabled || bottomChoices.length === 0 ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+                  }`}
+                >
+                  {bottomChoices.map((choice) => (
+                    <option key={choice} value={choice}>
+                      {t(`details_options.${choice}`, { default: toLabel(choice) })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('onePiece.label', { default: 'One-piece Garment' })}
+              </label>
+              <select
+                value={displayClothingValue?.onePieceChoice || ''}
+                onChange={(e) => updateChoice({ mode: 'one_piece', onePieceChoice: e.target.value })}
+                disabled={isDisabled || onePieceChoices.length === 0}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
+                  isDisabled || onePieceChoices.length === 0 ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+                }`}
+              >
+                {onePieceChoices.map((choice) => (
+                  <option key={choice} value={choice}>
+                    {t(`details_options.${choice}`, { default: toLabel(choice) })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-medium text-gray-700">
                 {t('accessories.label', { default: 'Accessories' })}
               </label>
             </div>
-
-            {/* Accessory Selector */}
-              {!(isPredefined || isDisabled) && (
-                <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                  {getAccessoriesForClothing(displayClothingValue.style, displayClothingValue.details).map((accessory) => {
-                    const isSelected = displayClothingValue.accessories?.includes(accessory) || false
-                    return (
-                    <button
-                      type="button"
-                      key={accessory}
-                      onClick={(e) => handleAccessoryToggle(accessory, e)}
-                      className={`p-2 text-xs rounded border transition-colors flex items-center gap-1.5 ${
-                        isSelected
-                          ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                          : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                      }`}
-                    >
-                      {isSelected && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
-                      )}
-                      {accessory}
-                    </button>
-                  )
-                })}
-              </Grid>
-            )}
+            <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+              {getAccessoriesForClothing(displayStyle, effectiveDetail, detectedGender).map((accessory) => {
+                const isSelected = displayClothingValue?.accessories?.includes(accessory) || false
+                return (
+                  <button
+                    type="button"
+                    key={accessory}
+                    onClick={() => handleAccessoryToggle(accessory)}
+                    className={`p-2 text-xs rounded border transition-colors flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
+                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                    }`}
+                  >
+                    {isSelected && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                    )}
+                    {accessory}
+                  </button>
+                )
+              })}
+            </Grid>
           </div>
 
-          {/* Preview Image with Colors */}
-          {displayClothingValue.details && imageExists && displayClothingValue.style && (
-            <div className="mt-6">
-              {clothingColors && hasValue(clothingColors) ? (
-                <ClothingColorPreview
-                  colors={clothingColors.value}
-                  clothingStyle={displayClothingValue.style}
-                  clothingDetail={displayClothingValue.details}
-                  excludeColors={excludeColors}
-                />
-              ) : (
-                <Image
-                  src={`/images/clothing/${displayClothingValue.style}-${displayClothingValue.details}.png`}
-                  alt={`${t(`styles.${displayClothingValue.style}.label`)} - ${t(`details_options.${displayClothingValue.details}`)}`}
-                  width={600}
-                  height={400}
-                  className="w-full h-auto object-cover"
-                  onError={() => {
-                    if (previewKey) setFailedPreviewKey(previewKey)
-                  }}
-                />
-              )}
-            </div>
-          )}
+          <div className="mt-6">
+            <ClothingColorPreview
+              colors={clothingColors && hasValue(clothingColors) ? clothingColors.value : {}}
+              clothingStyle={displayStyle}
+              clothingDetail={effectiveDetail}
+              clothingValue={displayClothingValue}
+              excludeColors={excludeColors}
+            />
+          </div>
         </div>
       )}
-
     </div>
   )
 }

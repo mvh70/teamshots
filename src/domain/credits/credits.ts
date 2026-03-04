@@ -210,12 +210,12 @@ export async function transferCreditsFromTeamToPerson(
   personId: string,
   amount: number,
   teamInviteId?: string,
-  description?: string
+  description?: string,
+  tx?: PrismaTransactionClient
 ) {
-  // Balance check + transfer in a single Serializable transaction to prevent race conditions
-  return await prisma.$transaction(async (tx) => {
+  const runTransfer = async (client: PrismaTransactionClient) => {
     // Check team balance inside transaction for atomic read
-    const teamBalanceResult = await tx.creditTransaction.aggregate({
+    const teamBalanceResult = await client.creditTransaction.aggregate({
       where: { teamId },
       _sum: { credits: true }
     })
@@ -224,7 +224,7 @@ export async function transferCreditsFromTeamToPerson(
       throw new Error(`Insufficient team credits. Team has ${teamBalance}, trying to transfer ${amount}`)
     }
     // Debit from team pool
-    const debitTransaction = await tx.creditTransaction.create({
+    const debitTransaction = await client.creditTransaction.create({
       data: {
         credits: -amount,
         type: 'seat_assigned',
@@ -236,7 +236,7 @@ export async function transferCreditsFromTeamToPerson(
     })
 
     // Credit to person
-    const creditTransaction = await tx.creditTransaction.create({
+    const creditTransaction = await client.creditTransaction.create({
       data: {
         credits: amount,
         type: 'seat_received',
@@ -260,7 +260,14 @@ export async function transferCreditsFromTeamToPerson(
       debitTransaction,
       creditTransaction
     }
-  }, {
+  }
+
+  if (tx) {
+    return runTransfer(tx)
+  }
+
+  // Balance check + transfer in a single Serializable transaction to prevent race conditions
+  return await prisma.$transaction(async (transactionClient: PrismaTransactionClient) => runTransfer(transactionClient), {
     isolationLevel: 'Serializable',
     timeout: 10000
   })
@@ -406,19 +413,18 @@ export async function reserveCreditsForGeneration(
   amount: number = PRICING_CONFIG.credits.perGeneration,
   description?: string,
   teamId?: string,
-  teamInviteId?: string
+  teamInviteId?: string,
+  tx?: PrismaTransactionClient
 ) {
   if (!personId) {
     throw new Error('personId is required - credits belong to Person, not User')
   }
 
-  // SECURITY: Use transaction with Serializable isolation to prevent race conditions
-  // This ensures balance check + deduction happens atomically
-  return await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+  const runReservation = async (client: PrismaTransactionClient) => {
     // For team members, deduct from team AND track person usage
     if (teamId) {
       // Calculate team balance within transaction (use aggregate for atomic read)
-      const teamBalanceResult = await tx.creditTransaction.aggregate({
+      const teamBalanceResult = await client.creditTransaction.aggregate({
         where: { teamId },
         _sum: { credits: true }
       })
@@ -431,7 +437,7 @@ export async function reserveCreditsForGeneration(
       }
 
       // Create transaction that deducts from team AND tracks person usage
-      return await tx.creditTransaction.create({
+      return await client.creditTransaction.create({
         data: {
           credits: -amount,
           type: 'generation',
@@ -448,13 +454,13 @@ export async function reserveCreditsForGeneration(
     let balance: number
 
     // Person balance calculation
-    const invite = await tx.teamInvite.findFirst({
+    const invite = await client.teamInvite.findFirst({
       where: { personId }
     })
 
     if (invite) {
       // Calculate allocated credits from team invite (both legacy and new types)
-      const allocatedResult = await tx.creditTransaction.aggregate({
+      const allocatedResult = await client.creditTransaction.aggregate({
         where: {
           teamInviteId: invite.id,
           type: { in: ['invite_allocated', 'seat_received'] }
@@ -464,7 +470,7 @@ export async function reserveCreditsForGeneration(
       const totalAllocated = allocatedResult._sum.credits || 0
 
       // Calculate net usage
-      const usageTransactions = await tx.creditTransaction.findMany({
+      const usageTransactions = await client.creditTransaction.findMany({
         where: {
           personId,
           type: { in: ['generation', 'refund'] }
@@ -476,7 +482,7 @@ export async function reserveCreditsForGeneration(
 
       // Also get personal credits (like free trial) that don't have a teamId
       // These are the person's own credits, not team credits
-      const personalCredits = await tx.creditTransaction.aggregate({
+      const personalCredits = await client.creditTransaction.aggregate({
         where: {
           personId,
           teamId: null, // Only personal credits, not team credits
@@ -490,7 +496,7 @@ export async function reserveCreditsForGeneration(
       balance = Math.max(0, totalAllocated + personalBalance - netCreditsUsed)
     } else {
       // Standard balance - all credits stored under personId
-      const balanceResult = await tx.creditTransaction.aggregate({
+      const balanceResult = await client.creditTransaction.aggregate({
         where: { personId },
         _sum: { credits: true }
       })
@@ -503,7 +509,7 @@ export async function reserveCreditsForGeneration(
       throw new Error(`Insufficient credits. Available: ${balance}, Required: ${amount}`)
     }
 
-    return await tx.creditTransaction.create({
+    return await client.creditTransaction.create({
       data: {
         credits: -amount,
         type: 'generation',
@@ -513,7 +519,15 @@ export async function reserveCreditsForGeneration(
         teamInviteId: teamInviteId
       }
     })
-  }, {
+  }
+
+  if (tx) {
+    return runReservation(tx)
+  }
+
+  // SECURITY: Use transaction with Serializable isolation to prevent race conditions
+  // This ensures balance check + deduction happens atomically
+  return await prisma.$transaction(async (transactionClient: PrismaTransactionClient) => runReservation(transactionClient), {
     // Serializable isolation prevents phantom reads and ensures atomicity
     isolationLevel: 'Serializable',
     // Increase timeout for complex credit calculations
@@ -678,5 +692,4 @@ export async function getTransactionAnalytics(userId: string) {
     creditsPerDollar: calculateCreditsPerDollar(tx.credits, tx.amount || 0)
   }))
 }
-
 

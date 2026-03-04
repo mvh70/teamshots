@@ -8,6 +8,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { validateImageFileByHeader } from '@/lib/file-validation'
 import { validateMobileHandoffToken } from '@/lib/mobile-handoff'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 
 export const runtime = 'nodejs'
@@ -55,11 +56,17 @@ export async function POST(req: NextRequest) {
           })
         }
       } else if (inviteToken) {
-        const invite = await prisma.teamInvite.findFirst({
-          where: { token: inviteToken, usedAt: { not: null } },
-          include: { person: { select: { id: true, firstName: true } } }
-        })
-        person = invite?.person || null
+        const inviteAccess = await resolveInviteAccess({ token: inviteToken })
+        if (!inviteAccess.ok) {
+          return NextResponse.json(
+            { error: inviteAccess.error.message },
+            { status: inviteAccess.error.status }
+          )
+        }
+        person = {
+          id: inviteAccess.access.person.id,
+          firstName: inviteAccess.access.person.firstName
+        }
       } else {
         const session = await auth()
         if (!session?.user?.id) {
@@ -118,5 +125,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }
-
-

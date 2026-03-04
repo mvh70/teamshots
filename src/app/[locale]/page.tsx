@@ -4,8 +4,9 @@ import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import dynamic from 'next/dynamic';
 import { routing } from '@/i18n/routing';
-import { getLandingVariant, type LandingVariant } from '@/config/landing-content';
-import { getBrand } from '@/config/brand';
+import { type LandingVariant } from '@/config/landing-content';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import { LandingSchema } from './landings/LandingSchema';
 
 // Dynamic imports for landing pages
@@ -29,8 +30,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
@@ -46,7 +48,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const LANDING_COMPONENTS: Record<LandingVariant, React.ComponentType<LandingProps>> = {
   teamshotspro: TeamShotsLanding,
-  individualshots: PortreyaLanding,
   portreya: PortreyaLandingV2,
   coupleshots: PortreyaLanding,
   familyshots: PortreyaLanding,
@@ -91,13 +92,13 @@ const FAQ_ITEMS_EN: Array<{ question: string; answer: string }> = [
 
 export default async function Page({ params }: Props) {
   const { locale } = await params;
+  const tenant = await getTenant();
   const headersList = await headers();
-  const brand = getBrand(headersList);
+  const brand = getBrandByDomain(tenant.domain);
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const host = headersList.get('x-forwarded-host') || headersList.get('host') || brand.domain;
   const baseUrl = `${protocol}://${host}`;
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
-  const variant = getLandingVariant(domain);
+  const variant = tenant.landingVariant;
 
   const LandingComponent = LANDING_COMPONENTS[variant] || TeamShotsLanding;
 

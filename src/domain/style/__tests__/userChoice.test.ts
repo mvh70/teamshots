@@ -1,5 +1,6 @@
 import {
   getEditableCategories,
+  getAcceptedOnVisitKeysForPackage,
   getUneditedEditableFieldNames,
   hasUneditedEditableFields
 } from '../userChoice'
@@ -15,7 +16,7 @@ jest.mock('../packages', () => ({
         defaultSettings: {
           background: { mode: 'predefined', value: { type: 'office' } },
           branding: { mode: 'predefined', value: {} },
-          clothing: { style: 'user-choice' },
+          clothing: { mode: 'user-choice' },
           clothingColors: { mode: 'user-choice' },
           pose: { mode: 'predefined', value: { type: 'classic_corporate' } },
           expression: { mode: 'user-choice' }
@@ -29,7 +30,7 @@ jest.mock('../packages', () => ({
         userStyleCategories: ['clothing', 'clothingColors', 'expression'],
         defaultSettings: {
           background: { mode: 'predefined', value: { type: 'office' } },
-          clothing: { style: 'user-choice' },
+          clothing: { mode: 'user-choice' },
           clothingColors: { mode: 'user-choice' },
           pose: { mode: 'predefined', value: { type: 'classic_corporate' } },
           expression: { mode: 'user-choice' }
@@ -58,7 +59,7 @@ describe('getEditableCategories', () => {
   it('returns categories marked as user-choice in originalSettings', () => {
     const originalSettings = {
       background: { mode: 'user-choice' },
-      clothing: { style: 'predefined', value: 'business' },
+      clothing: { mode: 'predefined', value: { style: 'business_professional', details: 'suit' } },
       pose: { mode: 'user-choice' },
       expression: { mode: 'predefined', value: { type: 'smile' } }
     }
@@ -67,7 +68,7 @@ describe('getEditableCategories', () => {
 
     expect(result).toContain('background')
     expect(result).toContain('pose')
-    expect(result).not.toContain('clothing')
+    expect(result).toContain('clothing')
     expect(result).not.toContain('expression')
   })
 
@@ -83,7 +84,7 @@ describe('getEditableCategories', () => {
     expect(result).not.toContain('expression')
   })
 
-  it('falls back to userStyleCategories when originalSettings has no user-choice fields', () => {
+  it('returns empty editable set when originalSettings has no user-choice fields', () => {
     const originalSettings = {
       background: { mode: 'predefined', value: { type: 'office' } },
       pose: { mode: 'predefined', value: { type: 'classic' } }
@@ -91,22 +92,31 @@ describe('getEditableCategories', () => {
 
     const result = getEditableCategories(originalSettings, 'headshot1')
 
-    // Should fall back to userStyleCategories
+    // No fallback when original settings exist: admin intent is authoritative
+    expect(result.size).toBe(0)
+  })
+})
+
+describe('getAcceptedOnVisitKeysForPackage', () => {
+  it('includes visible accepted-on-visit categories outside userStyleCategories', () => {
+    const result = getAcceptedOnVisitKeysForPackage('headshot1')
+
     expect(result).toContain('clothing')
     expect(result).toContain('clothingColors')
-    expect(result).toContain('expression')
+    expect(result).toContain('pose')
+    expect(result).toContain('branding')
   })
 })
 
 describe('getUneditedEditableFieldNames', () => {
   it('returns editable fields that have not been changed', () => {
     const current = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       clothingColors: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
     const original = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       clothingColors: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
@@ -119,11 +129,11 @@ describe('getUneditedEditableFieldNames', () => {
 
   it('excludes fields that have been edited', () => {
     const current = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice', value: { type: 'genuine_smile' } } // user selected a value
     }
     const original = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice' } // no value originally
     }
 
@@ -135,7 +145,7 @@ describe('getUneditedEditableFieldNames', () => {
 
   it('uses package defaults when original is undefined', () => {
     const current = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       clothingColors: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
@@ -166,12 +176,12 @@ describe('getUneditedEditableFieldNames', () => {
   it('returns fields in visibleCategories order', () => {
     const current = {
       expression: { mode: 'user-choice' },
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       clothingColors: { mode: 'user-choice' }
     }
     const original = {
       expression: { mode: 'user-choice' },
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       clothingColors: { mode: 'user-choice' }
     }
 
@@ -190,11 +200,11 @@ describe('getUneditedEditableFieldNames', () => {
 describe('hasUneditedEditableFields', () => {
   it('returns true when there are unedited editable fields', () => {
     const current = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
     const original = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
 
@@ -205,11 +215,11 @@ describe('hasUneditedEditableFields', () => {
 
   it('returns false when all editable fields have been edited', () => {
     const current = {
-      clothing: { style: 'predefined', value: 'business' },
+      clothing: { mode: 'predefined', value: { style: 'business_professional', details: 'suit' } },
       expression: { mode: 'user-choice', value: { type: 'genuine_smile' } }
     }
     const original = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
 
@@ -220,7 +230,7 @@ describe('hasUneditedEditableFields', () => {
 
   it('handles undefined original settings', () => {
     const current = {
-      clothing: { style: 'user-choice' },
+      clothing: { mode: 'user-choice' },
       expression: { mode: 'user-choice' }
     }
 

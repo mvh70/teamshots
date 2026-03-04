@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSelfieUploads } from './useSelfieUploads'
 import { useSelfieSelection } from './useSelfieSelection'
+import { parseInviteSelfiesResponse } from '@/lib/inviteSelfies'
 
 interface UploadListItem {
   id: string
@@ -17,26 +18,11 @@ interface UploadListItem {
   backgroundQuality?: string | null
 }
 
-interface InviteLegacySelfie {
-  id: string
-  key: string
-  uploadedAt: string
-  used?: boolean
-  status?: 'pending' | 'approved' | 'rejected'
-  selfieType?: string | null
-  selfieTypeConfidence?: number | null
-  isProper?: boolean | null
-  improperReason?: string | null
-  lightingQuality?: string | null
-  backgroundQuality?: string | null
-}
-
 interface UseSelfieManagementOptions {
   // Invite flow options
   token?: string
   inviteMode?: boolean
   customUploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }>
-  customSaveEndpoint?: (key: string) => Promise<string | undefined>
 
   // Auto-selection for generation flow
   autoSelectNewUploads?: boolean
@@ -50,6 +36,8 @@ interface BaseResult {
   mode: 'individual' | 'invite'
   selectedIds: string[]
   selectedSet: Set<string>
+  selectionLoading: boolean
+  hasLoadedSelection: boolean
   loading: boolean
   error: string | null
   loadUploads: () => void
@@ -71,26 +59,6 @@ interface InviteResult extends BaseResult {
 
 export type UseSelfieManagementResult = IndividualResult | InviteResult
 
-function isUploadListItems(value: unknown): value is UploadListItem[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && 'uploadedKey' in item)
-}
-
-function toUploadListItemFromLegacy(selfie: InviteLegacySelfie): UploadListItem {
-  return {
-    id: selfie.id,
-    uploadedKey: selfie.key,
-    validated: selfie.status === 'approved',
-    createdAt: selfie.uploadedAt,
-    hasGenerations: Boolean(selfie.used),
-    selfieType: selfie.selfieType,
-    selfieTypeConfidence: selfie.selfieTypeConfidence,
-    isProper: selfie.isProper,
-    improperReason: selfie.improperReason,
-    lightingQuality: selfie.lightingQuality,
-    backgroundQuality: selfie.backgroundQuality,
-  }
-}
-
 export function useSelfieManagement(options: UseSelfieManagementOptions = {}): UseSelfieManagementResult {
   const {
     token,
@@ -104,7 +72,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
   // Always use hooks (conditionally calling them causes issues)
   // Pass enabled: false in invite mode to prevent 401 errors from session-based endpoint
   const uploadsHook = useSelfieUploads({ enabled: !inviteMode })
-  const selectionHook = useSelfieSelection({ token })
+  const selectionHook = useSelfieSelection({ token, enabled: !inviteMode })
 
   // Invite-specific state
   const [inviteUploads, setInviteUploads] = useState<UploadListItem[]>([])
@@ -136,13 +104,23 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
 
       if (response.ok) {
         const data = await response.json()
-        if (isUploadListItems(data.items)) {
-          setInviteUploads(data.items)
-        } else if (Array.isArray(data.selfies)) {
-          setInviteUploads((data.selfies as InviteLegacySelfie[]).map(toUploadListItemFromLegacy))
-        } else {
-          setInviteUploads([])
-        }
+        const parsed = parseInviteSelfiesResponse(data)
+        setInviteUploads(
+          parsed.map((selfie) => ({
+            id: selfie.id,
+            uploadedKey: selfie.key,
+            validated: selfie.validated ?? false,
+            createdAt: selfie.uploadedAt,
+            hasGenerations: selfie.used,
+            personCount: selfie.personCount,
+            selfieType: selfie.selfieType,
+            selfieTypeConfidence: selfie.selfieTypeConfidence,
+            isProper: selfie.isProper,
+            improperReason: selfie.improperReason,
+            lightingQuality: selfie.lightingQuality,
+            backgroundQuality: selfie.backgroundQuality,
+          }))
+        )
       } else {
         setInviteError('Failed to fetch selfies')
       }
@@ -295,6 +273,8 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
       uploads: inviteUploads,
       selectedIds: selectionHook.selectedIds,
       selectedSet: selectionHook.selectedSet,
+      selectionLoading: selectionHook.loading,
+      hasLoadedSelection: selectionHook.hasLoaded,
       loading: inviteLoading,
       error: inviteError,
       loadUploads: stableLoadUploads,
@@ -309,6 +289,8 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
       uploads: uploadsHook?.uploads || [],
       selectedIds: selectionHook.selectedIds,
       selectedSet: selectionHook.selectedSet,
+      selectionLoading: selectionHook.loading,
+      hasLoadedSelection: selectionHook.hasLoaded,
       loading: uploadsHook?.loading || false,
       error: uploadsHook?.error || null,
       loadUploads: stableLoadUploads,

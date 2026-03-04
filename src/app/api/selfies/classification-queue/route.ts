@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { classificationQueue } from '@/lib/classification-queue'
 import { auth } from '@/auth'
-import { prisma, Prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import { validateMobileHandoffToken } from '@/lib/mobile-handoff'
+import { needsClassificationReanalysis } from '@/domain/selfie/selfie-types'
+import { resolveInviteAccess } from '@/lib/invite-access'
 
 export const runtime = 'nodejs'
 
@@ -32,11 +34,14 @@ export async function GET(request: NextRequest) {
       personId = result.context.personId || null
     } else if (token) {
       // Invite token auth
-      const invite = await prisma.teamInvite.findFirst({
-        where: { token, usedAt: { not: null } },
-        include: { person: { select: { id: true } } },
-      })
-      personId = invite?.person?.id || null
+      const inviteAccess = await resolveInviteAccess({ token, extendExpiry: false })
+      if (!inviteAccess.ok) {
+        return NextResponse.json(
+          { error: inviteAccess.error.message, code: inviteAccess.error.code },
+          { status: inviteAccess.error.status }
+        )
+      }
+      personId = inviteAccess.access.person.id
     } else {
       // Session auth
       const session = await auth()
@@ -65,20 +70,27 @@ export async function GET(request: NextRequest) {
     // Get queue status
     const queueStatus = classificationQueue.getStatus()
 
-    // Get the user's selfies that don't have classification data yet
-    const unclassifiedSelfies = await prisma.selfie.findMany({
+    // Get the user's selfies that still need classification work:
+    // unclassified, legacy payloads, or outdated analysis metadata.
+    const selfies = await prisma.selfie.findMany({
       where: {
         personId,
-        classification: { equals: Prisma.DbNull },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        classification: true,
+      },
     })
 
-    const unclassifiedIds = unclassifiedSelfies.map(s => s.id)
+    const pendingClassificationIds = new Set(
+      selfies
+        .filter((selfie) => needsClassificationReanalysis(selfie.classification))
+        .map((selfie) => selfie.id)
+    )
 
     // Filter to only include the user's selfies in the status
-    const userActiveSelfieIds = queueStatus.activeSelfieIds.filter(id => unclassifiedIds.includes(id))
-    const userQueuedSelfieIds = queueStatus.queuedSelfieIds.filter(id => unclassifiedIds.includes(id))
+    const userActiveSelfieIds = queueStatus.activeSelfieIds.filter((id) => pendingClassificationIds.has(id))
+    const userQueuedSelfieIds = queueStatus.queuedSelfieIds.filter((id) => pendingClassificationIds.has(id))
 
     return NextResponse.json({
       activeSelfieIds: userActiveSelfieIds,

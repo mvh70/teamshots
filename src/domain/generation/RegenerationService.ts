@@ -9,16 +9,17 @@ import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
-import { enqueueGenerationJob, determineWorkflowVersion } from './generation-helpers'
+import { normalizeClothingSettings } from '@/domain/style/elements/clothing/deserializer'
+import { enqueueGenerationJob } from './generation-helpers'
 import type { DemographicProfile } from '@/domain/selfie/selfieDemographics'
 
-type Generation = Prisma.GenerationGetPayload<{}>
+type Generation = Prisma.GenerationGetPayload<Prisma.GenerationDefaultArgs>
+export const NO_REGENERATIONS_REMAINING_ERROR = 'NO_REGENERATIONS_REMAINING'
 
 export interface RegenerateOptions {
   sourceGenerationId: string
   personId: string
   userId?: string
-  creditSource: 'individual' | 'team'
   workflowVersion?: 'v3' // Workflow version to use (defaults to v3)
   debugMode?: boolean
 }
@@ -33,7 +34,7 @@ export class RegenerationService {
    * Regenerates an existing generation with preserved style settings
    */
   static async regenerate(options: RegenerateOptions): Promise<RegenerationResult> {
-    const { sourceGenerationId, personId, userId, creditSource, workflowVersion, debugMode } = options
+    const { sourceGenerationId, personId, userId, workflowVersion, debugMode } = options
 
     // Get the source generation to regenerate from
     const sourceGeneration = await prisma.generation.findFirst({
@@ -80,11 +81,6 @@ export class RegenerationService {
       }
     }
 
-    // Check if regeneration is allowed
-    if (originalGeneration.remainingRegenerations <= 0) {
-      throw new Error('No regenerations remaining for this generation')
-    }
-
     // Find the latest groupIndex in this generation group
     const latestInGroup = await prisma.generation.findFirst({
       where: { generationGroupId: sourceGeneration.generationGroupId },
@@ -107,6 +103,13 @@ export class RegenerationService {
       const pkg = getPackageConfig(packageId)
       serializedStyleSettings = pkg.persistenceAdapter.serialize(sourceGeneration.context.settings as Record<string, unknown>)
       Logger.debug('Using context settings from source generation for regeneration (fallback)')
+    }
+
+    if ('clothing' in serializedStyleSettings) {
+      serializedStyleSettings = {
+        ...serializedStyleSettings,
+        clothing: normalizeClothingSettings(serializedStyleSettings.clothing),
+      }
     }
 
     // Extract stored selfie keys (they're already in the serialized settings)
@@ -133,9 +136,23 @@ export class RegenerationService {
       }
     }
     
-    // Create new generation + decrement regeneration count atomically
-    const [generation] = await prisma.$transaction([
-      prisma.generation.create({
+    // Create new generation + decrement remaining regenerations atomically.
+    const generation = await prisma.$transaction(async (tx) => {
+      const updated = await tx.generation.updateMany({
+        where: {
+          id: originalGeneration.id,
+          remainingRegenerations: { gt: 0 }
+        },
+        data: {
+          remainingRegenerations: { decrement: 1 }
+        }
+      })
+
+      if (updated.count === 0) {
+        throw new Error(NO_REGENERATIONS_REMAINING_ERROR)
+      }
+
+      return tx.generation.create({
         data: {
           personId: personId,
           contextId: sourceGeneration.contextId,
@@ -146,17 +163,11 @@ export class RegenerationService {
           isOriginal: false,
           groupIndex: nextGroupIndex,
           creditsUsed: 0, // Regenerations don't cost credits
-          creditSource: creditSource,
+          creditSource: 'individual',
           styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
         },
-      }),
-      prisma.generation.update({
-        where: { id: originalGeneration.id },
-        data: {
-          remainingRegenerations: { decrement: 1 }
-        }
       })
-    ])
+    })
     
     // Queue the generation job
     if (!Array.isArray(storedSelfieKeys) || storedSelfieKeys.length === 0) {
@@ -183,10 +194,10 @@ export class RegenerationService {
       selfieTypeMap: jobSelfieTypeMap,
       demographics: storedDemographics,
       prompt: 'Professional headshot with same style as original',
-      workflowVersion: determineWorkflowVersion(workflowVersion),
+      workflowVersion: workflowVersion || 'v3',
       debugMode: effectiveDebugMode,
-      creditSource: creditSource,
-      priority: creditSource === 'team' ? 1 : 0,
+      creditSource: 'individual',
+      priority: 0,
     })
 
     return {

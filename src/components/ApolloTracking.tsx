@@ -3,6 +3,14 @@
 import { useSession } from "next-auth/react"
 import { useEffect } from "react"
 
+declare global {
+  interface Window {
+    zenalytics?: {
+      identify?: (id: string, traits?: Record<string, unknown>) => void
+    }
+  }
+}
+
 export function ApolloTracking() {
   const { data: session } = useSession()
 
@@ -12,10 +20,8 @@ export function ApolloTracking() {
 
     // Poll for zenalytics availability
     const checkZenalytics = setInterval(() => {
-      // @ts-ignore - zenalytics is injected globally by Apollo script
       if (typeof window !== 'undefined' && window.zenalytics && window.zenalytics.identify) {
         try {
-          // @ts-ignore
           window.zenalytics.identify(session.user.id || session.user.email, {
             email: session.user.email,
             name: session.user.name,
@@ -42,4 +48,3 @@ export function ApolloTracking() {
 
   return null
 }
-

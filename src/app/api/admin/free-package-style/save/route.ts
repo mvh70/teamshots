@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     backgroundPrompt?: string
     branding?: { mode: 'predefined' | 'user-choice'; value?: { type: 'include' | 'exclude'; logoKey?: string; logoAssetId?: string; position?: 'background' | 'clothing' | 'elements' } }
     backgroundSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'office' | 'neutral' | 'gradient' | 'custom' | 'tropical-beach' | 'busy-city'; key?: string; prompt?: string; color?: string } }
-    clothingSettings?: { mode: 'predefined' | 'user-choice'; value?: { type?: 'business' | 'startup' | 'black-tie'; style: 'business' | 'startup' | 'black-tie'; details?: string; colors?: { topLayer?: string; baseLayer?: string; bottom?: string }; accessories?: string[] } }
+    clothingSettings?: { mode: 'predefined' | 'user-choice'; value?: { style: 'business_professional' | 'business_casual' | 'startup' | 'black-tie'; details?: string; colors?: { topLayer?: string; baseLayer?: string; bottom?: string }; accessories?: string[] } }
     clothingColorsSettings?: { mode: 'predefined' | 'user-choice'; value?: { topLayer?: string; baseLayer?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'headshot' | 'medium-shot' | 'midchest' | 'full-body' } }
     expressionSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' } }
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       if (clothingSettings.mode === 'user-choice') {
         clothingSettingConverted = clothingSettings.value ? userChoice(clothingSettings.value) : userChoice()
       } else {
-        clothingSettingConverted = predefined(clothingSettings.value || { style: 'business' as ClothingType })
+        clothingSettingConverted = predefined(clothingSettings.value || { style: 'business_professional' as ClothingType, lockScope: 'style-only' as const })
       }
     } else {
       clothingSettingConverted = pkg.defaultSettings.clothing as ClothingSettings

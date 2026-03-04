@@ -44,7 +44,7 @@ class CustomEffectElement extends StyleElement {
     const { phase, settings } = context
 
     // Only contribute if custom effect is enabled in settings
-    // @ts-ignore - This is just an example
+    // @ts-expect-error - This is just an example
     if (!settings.customEffect || settings.customEffect === 'none') {
       return false
     }
@@ -57,7 +57,7 @@ class CustomEffectElement extends StyleElement {
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings } = context
 
-    // @ts-ignore - This is just an example
+    // @ts-expect-error - This is just an example
     const effect = settings.customEffect
 
     return {
@@ -79,7 +79,7 @@ class CustomEffectElement extends StyleElement {
   validate(settings: PhotoStyleSettings): string[] {
     const errors: string[] = []
 
-    // @ts-ignore - This is just an example
+    // @ts-expect-error - This is just an example
     const effect = settings.customEffect
 
     // Validate effect setting

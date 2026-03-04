@@ -4,8 +4,8 @@ import { getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { constructMetadata } from '@/lib/seo';
 import { getBaseUrl } from '@/lib/url';
-import { getBrand } from '@/config/brand';
-import { getLandingVariant } from '@/config/landing-content';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import TeamHeadshotsLP from './TeamHeadshotsLP';
 
 type Props = {
@@ -33,11 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TeamHeadshotsLandingPage() {
-  const headersList = await headers();
-  const brand = getBrand(headersList);
-  const host = headersList.get('x-forwarded-host') || headersList.get('host');
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
-  const variant = getLandingVariant(domain);
+  const tenant = await getTenant();
+  const brand = getBrandByDomain(tenant.domain);
+  const variant = tenant.landingVariant;
 
   return (
     <TeamHeadshotsLP

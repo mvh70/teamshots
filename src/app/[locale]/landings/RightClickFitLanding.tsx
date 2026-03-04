@@ -74,10 +74,14 @@ function useReveal(threshold = 0.2) {
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mq.matches);
+    queueMicrotask(() => {
+      setPrefersReducedMotion(mq.matches);
+    });
     if (mq.matches) {
-      setIsVisible(true);
-      setHasAnimated(true);
+      queueMicrotask(() => {
+        setIsVisible(true);
+        setHasAnimated(true);
+      });
       return;
     }
 

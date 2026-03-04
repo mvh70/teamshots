@@ -97,7 +97,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'soft' }),
     shotType: predefined({ type: 'medium-close-up' }),
     filmType: predefined({ type: 'clinical-modern' }),
-    clothing: predefined({ style: 'business', details: 'formal' }),
+    clothing: predefined({ style: 'business_professional', details: 'suit' }),
     aspectRatio: '4:5',
   },
   LINKEDIN_MODERN_OFFICE: {
@@ -107,7 +107,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'natural' }),
     shotType: predefined({ type: 'medium-close-up' }),
     filmType: predefined({ type: 'cinematic-drama' }),
-    clothing: predefined({ style: 'business', details: 'casual' }),
+    clothing: predefined({ style: 'business_casual', details: 'jacket' }),
     aspectRatio: '4:5',
   },
   DATING_LIFESTYLE_CAFE: {
@@ -117,7 +117,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'natural' }),
     shotType: predefined({ type: 'medium-shot' }),
     filmType: predefined({ type: 'portra-warm' }),
-    clothing: predefined({ style: 'startup', details: 'cardigan' }),
+    clothing: predefined({ style: 'business_casual', details: 'cardigan' }),
     aspectRatio: '4:5',
   },
   DATING_OUTDOOR_GOLDEN_HOUR: {
@@ -127,7 +127,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'natural' }),
     shotType: predefined({ type: 'three-quarter' }),
     filmType: predefined({ type: 'kodak-editorial' }),
-    clothing: predefined({ style: 'business', details: 'casual' }),
+    clothing: predefined({ style: 'business_casual', details: 'jacket' }),
     aspectRatio: '4:5',
   },
   CV_MINIMALIST_WHITE: {
@@ -137,7 +137,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'soft' }),
     shotType: predefined({ type: 'close-up' }),
     filmType: predefined({ type: 'clinical-modern' }),
-    clothing: predefined({ style: 'business', details: 'formal' }),
+    clothing: predefined({ style: 'business_professional', details: 'suit' }),
     aspectRatio: '1:1',
   },
   PERSONAL_BRAND_URBAN_CREATIVE: {
@@ -157,7 +157,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'studio' }),
     shotType: predefined({ type: 'three-quarter' }),
     filmType: predefined({ type: 'cinematic-drama' }),
-    clothing: predefined({ style: 'business', details: 'formal' }),
+    clothing: predefined({ style: 'business_professional', details: 'suit' }),
     aspectRatio: '4:5',
   },
   EXECUTIVE_DARK_STUDIO: {
@@ -167,7 +167,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'dramatic' }),
     shotType: predefined({ type: 'medium-close-up' }),
     filmType: predefined({ type: 'cinematic-drama' }),
-    clothing: predefined({ style: 'business', details: 'formal' }),
+    clothing: predefined({ style: 'business_professional', details: 'suit' }),
     aspectRatio: '4:5',
   },
   TEAM_PAGE_CORPORATE: {
@@ -177,7 +177,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'soft' }),
     shotType: predefined({ type: 'medium-close-up' }),
     filmType: predefined({ type: 'clinical-modern' }),
-    clothing: predefined({ style: 'business', details: 'casual' }),
+    clothing: predefined({ style: 'business_casual', details: 'jacket' }),
     aspectRatio: '1:1',
   },
   SOCIAL_MEDIA_LIFESTYLE: {
@@ -187,7 +187,7 @@ export const PRESET_SETTINGS: Record<string, Partial<PhotoStyleSettings>> = {
     lighting: predefined({ type: 'natural' }),
     shotType: predefined({ type: 'medium-shot' }),
     filmType: predefined({ type: 'portra-warm' }),
-    clothing: predefined({ style: 'startup', details: 'cardigan' }),
+    clothing: predefined({ style: 'business_casual', details: 'cardigan' }),
     aspectRatio: '4:5',
   },
 }

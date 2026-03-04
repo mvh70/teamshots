@@ -2,12 +2,14 @@ import type { BrandConfig } from '@/config/brand';
 import type { LandingVariant } from '@/config/landing-content';
 import { organizationSchema, inLanguageForLocale } from '@/lib/schema';
 
+const PRICE_VALID_UNTIL = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
 interface PricingSchemaProps {
   baseUrl: string;
   brand: BrandConfig;
   locale: string;
   variant: LandingVariant | undefined;
-  // Individual pricing (for individualshots variant)
+  // Individual pricing (for non-team variants, including Portreya)
   individualPrice?: number;
   individualPhotos?: number;
   vipPrice?: number;
@@ -35,6 +37,8 @@ export function PricingSchema({
   faqItems,
 }: PricingSchemaProps) {
   const brandName = brand.name;
+  const isTeamVariant = variant === 'teamshotspro';
+  const isRightClickFitVariant = variant === 'rightclickfit';
   const pageUrl = locale === 'en'
     ? `${baseUrl}/pricing`
     : `${baseUrl}/${locale}/pricing`;
@@ -45,10 +49,14 @@ export function PricingSchema({
     '@type': 'WebPage',
     '@id': `${pageUrl}#webpage`,
     url: pageUrl,
-    name: `${brandName} Pricing - Professional AI Headshots`,
-    description: variant === 'teamshotspro'
+    name: isRightClickFitVariant
+      ? `${brandName} Pricing - Virtual Try-On Credits`
+      : `${brandName} Pricing - Professional AI Headshots`,
+    description: isTeamVariant
       ? 'Team headshot pricing with volume discounts. Pay per team member, get 10 professional photos each. No subscriptions.'
-      : 'Simple, use-based pricing for AI headshots. No subscriptions or hidden fees. Pay only for the photos you generate.',
+      : isRightClickFitVariant
+        ? 'Simple credit packs for instant virtual try-ons. Start free and pay only when you need more outfit previews.'
+        : 'Simple, use-based pricing for AI headshots. No subscriptions or hidden fees. Pay only for the photos you generate.',
     isPartOf: {
       '@type': 'WebSite',
       '@id': `${baseUrl}#website`,
@@ -62,7 +70,7 @@ export function PricingSchema({
     },
     about: {
       '@type': 'Thing',
-      name: 'AI headshot photography pricing',
+      name: isRightClickFitVariant ? 'Virtual try-on pricing' : 'AI headshot photography pricing',
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
@@ -76,7 +84,7 @@ export function PricingSchema({
   };
 
   // Product schema for the main offering
-  const productSchema = variant === 'teamshotspro'
+  const productSchema = isTeamVariant
     ? {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -95,7 +103,7 @@ export function PricingSchema({
           lowPrice: seatsMinPrice?.toFixed(2) || '10.49',
           highPrice: seatsMaxPrice?.toFixed(2) || '29.99',
           offerCount: '6',
-          priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          priceValidUntil: PRICE_VALID_UNTIL,
           availability: 'https://schema.org/InStock',
           seller: {
             '@type': 'Organization',
@@ -108,7 +116,62 @@ export function PricingSchema({
           },
         },
       }
-    : {
+    : isRightClickFitVariant
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          '@id': `${baseUrl}#product`,
+          name: `${brandName} Virtual Try-On Credits`,
+          description: 'Credit packs for instant virtual try-ons via the RightClickFit browser extension.',
+          brand: {
+            '@type': 'Brand',
+            name: brandName,
+          },
+          category: 'Shopping Software',
+          image: `${baseUrl}${brand.ogImage}`,
+          offers: [
+            individualPrice && {
+              '@type': 'Offer',
+              name: 'Starter Credits',
+              priceCurrency: 'USD',
+              price: individualPrice.toFixed(2),
+              priceValidUntil: PRICE_VALID_UNTIL,
+              availability: 'https://schema.org/InStock',
+              description: `${individualPhotos} virtual try-on credits`,
+              seller: {
+                '@type': 'Organization',
+                name: brandName,
+              },
+            },
+            vipPrice && {
+              '@type': 'Offer',
+              name: 'Pro Credits',
+              priceCurrency: 'USD',
+              price: vipPrice.toFixed(2),
+              priceValidUntil: PRICE_VALID_UNTIL,
+              availability: 'https://schema.org/InStock',
+              description: `${vipPhotos} virtual try-on credits for heavy use`,
+              seller: {
+                '@type': 'Organization',
+                name: brandName,
+              },
+            },
+            {
+              '@type': 'Offer',
+              name: 'Free Install',
+              priceCurrency: 'USD',
+              price: '0',
+              priceValidUntil: PRICE_VALID_UNTIL,
+              availability: 'https://schema.org/InStock',
+              description: 'Install the extension and start free',
+              seller: {
+                '@type': 'Organization',
+                name: brandName,
+              },
+            },
+          ].filter(Boolean),
+        }
+      : {
         '@context': 'https://schema.org',
         '@type': 'Product',
         '@id': `${baseUrl}#product`,
@@ -126,7 +189,7 @@ export function PricingSchema({
             name: 'Personal Plan',
             priceCurrency: 'USD',
             price: individualPrice.toFixed(2),
-            priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            priceValidUntil: PRICE_VALID_UNTIL,
             availability: 'https://schema.org/InStock',
             description: `${individualPhotos} professional photos with full customization`,
             seller: {
@@ -139,7 +202,7 @@ export function PricingSchema({
             name: 'VIP Plan',
             priceCurrency: 'USD',
             price: vipPrice.toFixed(2),
-            priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            priceValidUntil: PRICE_VALID_UNTIL,
             availability: 'https://schema.org/InStock',
             description: `${vipPhotos} professional photos for power users`,
             seller: {
@@ -152,7 +215,7 @@ export function PricingSchema({
             name: 'Free Trial',
             priceCurrency: 'USD',
             price: '0',
-            priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            priceValidUntil: PRICE_VALID_UNTIL,
             availability: 'https://schema.org/InStock',
             description: 'Try before you buy - no credit card required',
             seller: {
@@ -168,19 +231,23 @@ export function PricingSchema({
     '@context': 'https://schema.org',
     '@type': 'Service',
     '@id': `${baseUrl}#service`,
-    name: `${brandName} Professional Headshot Service`,
-    description: 'AI-powered professional headshot generation service. Transform selfies into studio-quality professional photos in 60 seconds.',
+    name: isRightClickFitVariant
+      ? `${brandName} Virtual Try-On Service`
+      : `${brandName} Professional Headshot Service`,
+    description: isRightClickFitVariant
+      ? 'Browser-based virtual try-on service that lets users preview outfits instantly.'
+      : 'AI-powered professional headshot generation service. Transform selfies into studio-quality professional photos in 60 seconds.',
     provider: {
       '@type': 'Organization',
       '@id': `${baseUrl}#organization`,
       name: brandName,
     },
-    serviceType: 'AI Photo Generation',
+    serviceType: isRightClickFitVariant ? 'Virtual Try-On Software' : 'AI Photo Generation',
     areaServed: 'Worldwide',
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Headshot Packages',
-      itemListElement: variant === 'teamshotspro'
+      name: isRightClickFitVariant ? 'Virtual Try-On Credit Packs' : 'Headshot Packages',
+      itemListElement: isTeamVariant
         ? [
             {
               '@type': 'Offer',
@@ -191,6 +258,25 @@ export function PricingSchema({
               },
             },
           ]
+        : isRightClickFitVariant
+          ? [
+              {
+                '@type': 'Offer',
+                itemOffered: {
+                  '@type': 'Service',
+                  name: 'Starter Credits',
+                  description: 'Credit pack for everyday virtual outfit try-ons',
+                },
+              },
+              {
+                '@type': 'Offer',
+                itemOffered: {
+                  '@type': 'Service',
+                  name: 'Pro Credits',
+                  description: 'Larger credit pack for frequent shopping and repeated previews',
+                },
+              },
+            ]
         : [
             {
               '@type': 'Offer',

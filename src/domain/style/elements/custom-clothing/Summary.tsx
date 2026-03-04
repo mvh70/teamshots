@@ -11,14 +11,14 @@ function getThumbnailUrl(key: string): string {
 }
 
 export function CustomClothingSummary({ settings }: ElementSummaryProps<CustomClothingSettings>) {
+  const [imageError, setImageError] = React.useState(false)
+
   if (!settings) return null
 
   const customClothingKey = settings.value?.outfitS3Key || settings.value?.assetId
   const showContent = settings.mode === 'user-choice' || customClothingKey
 
   if (!showContent) return null
-
-  const [imageError, setImageError] = React.useState(false)
 
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0">

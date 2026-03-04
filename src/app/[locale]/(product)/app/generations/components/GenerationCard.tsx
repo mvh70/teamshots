@@ -2,14 +2,15 @@
 
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDate } from '@/lib/format'
-import { LoadingSpinner } from '@/components/ui'
+import { LoadingSpinner, Toast } from '@/components/ui'
 import { GenerationRating } from '@/components/feedback/GenerationRating'
 import { useGenerationStatus } from '../hooks/useGenerationStatus'
 import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirmationDialog'
 import { trackPhotoDownloaded, trackRegenerateClicked } from '@/lib/track'
+import { mutate } from '@/lib/swr'
 
 export type GenerationListItem = {
   id: string
@@ -131,7 +132,51 @@ const buildImageUrl = (key: string, retryVersion: number, token?: string) => {
   return `/api/files/get?${params.toString()}`
 }
 
-export default function GenerationCard({ item, currentUserId, token, onImageClick }: { item: GenerationListItem; currentUserId?: string; token?: string; onImageClick?: (src: string) => void }) {
+const extractKeyFromUrl = (url: string): string | null => {
+  if (!url) return null
+  try {
+    const urlObj = url.startsWith('http')
+      ? new URL(url)
+      : new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+    const key = urlObj.searchParams.get('key')
+    if (key) {
+      const decoded = decodeURIComponent(key)
+      if (decoded && decoded.length > 0) {
+        return decoded
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to parse URL, trying regex extraction:', url, error)
+  }
+
+  const match = url.match(/[?&]key=([^&]+)/)
+  if (match && match[1]) {
+    try {
+      const decoded = decodeURIComponent(match[1])
+      if (decoded && decoded.length > 0) {
+        return decoded
+      }
+    } catch (error) {
+      console.warn('Failed to decode extracted key:', match[1], error)
+    }
+  }
+
+  return null
+}
+
+export default function GenerationCard({
+  item,
+  currentUserId,
+  token,
+  onImageClick,
+  disableIndividualPolling = false,
+}: {
+  item: GenerationListItem
+  currentUserId?: string
+  token?: string
+  onImageClick?: (src: string) => void
+  disableIndividualPolling?: boolean
+}) {
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -153,7 +198,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   const initialShouldPoll = (item.status === 'pending' || item.status === 'processing') || (!item.generatedKey && !item.acceptedKey)
   const { generation: liveGeneration } = useGenerationStatus({
     generationId: item.id,
-    enabled: initialShouldPoll && !token, // Only enable for incomplete generations in non-invite flows
+    enabled: initialShouldPoll && !token && !disableIndividualPolling, // List pages already poll via useGenerations
     pollInterval: 1000, // Poll every second for incomplete generations
   })
 
@@ -162,41 +207,6 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   // when liveGeneration exists but jobStatus is null (happens when generation completes)
   const currentJobStatus = liveGeneration !== null ? liveGeneration.jobStatus : item.jobStatus
   const currentStatus = liveGeneration?.status || item.status
-
-  // Extract generated key from live generation if available
-  // The API returns generatedImageUrls as URLs, so we need to extract the key from the URL
-  const extractKeyFromUrl = (url: string): string | null => {
-    if (!url) return null
-    try {
-      // Handle both absolute and relative URLs
-      const urlObj = url.startsWith('http')
-        ? new URL(url)
-        : new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
-      const key = urlObj.searchParams.get('key')
-      if (key) {
-        const decoded = decodeURIComponent(key)
-        // Validate that we got a meaningful key (not empty)
-        if (decoded && decoded.length > 0) {
-          return decoded
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to parse URL, trying regex extraction:', url, error)
-    }
-    // If URL parsing fails, try to extract key directly from query string
-    const match = url.match(/[?&]key=([^&]+)/)
-    if (match && match[1]) {
-      try {
-        const decoded = decodeURIComponent(match[1])
-        if (decoded && decoded.length > 0) {
-          return decoded
-        }
-      } catch (e) {
-        console.warn('Failed to decode extracted key:', match[1], e)
-      }
-    }
-    return null
-  }
 
   // Get generated key from live generation or fall back to item
   // The API now returns generatedPhotoKeys directly, so we use those instead of extracting from URLs
@@ -242,24 +252,15 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   const segmentRef = useRef<{ milestone: number | null, startTime: number }>({ milestone: null, startTime: 0 })
   const generationStartRef = useRef<number | null>(null)
 
-  // Debug logging for race condition investigation
-  useEffect(() => {
-    if (currentStatus === 'completed') {
-      console.log('[GenerationCard] Completed generation state:', {
-        generationId: item.id,
-        currentStatus,
-        hasLiveGeneration: !!liveGeneration,
-        liveGeneratedImageUrls: liveGeneration?.generatedImageUrls,
-        itemGeneratedKey: item.generatedKey,
-        itemAcceptedKey: item.acceptedKey,
-        effectiveGeneratedKey,
-        effectiveAcceptedKey,
-        hasGeneratedImageUrl,
-        isWaitingForKeys,
-        jobProgress: currentJobStatus?.progress
-      })
-    }
-  }, [currentStatus, liveGeneration, item.id, item.generatedKey, item.acceptedKey, effectiveGeneratedKey, effectiveAcceptedKey, hasGeneratedImageUrl, isWaitingForKeys, currentJobStatus?.progress])
+  const refreshGenerationLists = useCallback(async () => {
+    await mutate((key) => (
+      typeof key === 'string' &&
+      (
+        key.startsWith('/api/generations/list?') ||
+        key.startsWith('/api/team/member/generations?token=')
+      )
+    ))
+  }, [])
 
   // Force re-render when keys or URLs become available to fix race condition
   // This ensures the component detects when data arrives even if polling has stopped
@@ -362,7 +363,6 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   // This handles edge cases where polling stopped but data is available
   useEffect(() => {
     if (isWaitingForKeys) {
-      console.log('[GenerationCard] Started waiting for keys, setting 5s timeout', { generationId: item.id })
       // Clear any existing timeout
       if (waitingForKeysTimeoutRef.current) {
         clearTimeout(waitingForKeysTimeoutRef.current)
@@ -376,8 +376,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
           hasLiveGeneration: !!liveGeneration,
           liveUrls: liveGeneration?.generatedImageUrls
         })
-        // Force a full page reload to get fresh data from the server
-        window.location.reload()
+        void refreshGenerationLists()
       }, 5000) // 5 seconds timeout
 
       return () => {
@@ -392,7 +391,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
         waitingForKeysTimeoutRef.current = null
       }
     }
-  }, [isWaitingForKeys, item.id, currentStatus, liveGeneration])
+  }, [isWaitingForKeys, item.id, currentStatus, liveGeneration, refreshGenerationLists])
 
   // Update pos when live generation status changes
   useEffect(() => {
@@ -507,6 +506,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
   const [showInfoPopover, setShowInfoPopover] = useState(false)
   const [infoPopoverPosition, setInfoPopoverPosition] = useState({ top: 0, left: 0 })
   const [infoPopoverPlacement, setInfoPopoverPlacement] = useState<'top' | 'bottom'>('bottom')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const infoButtonRef = useRef<HTMLButtonElement | null>(null)
   const infoPopoverRef = useRef<HTMLDivElement | null>(null)
 
@@ -579,11 +579,10 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
 
       await response.json()
 
-      // Optionally refresh the page or show success message
-      window.location.reload()
+      await refreshGenerationLists()
     } catch (error) {
       console.error('Failed to retry:', error)
-      alert(t('actions.retryFailedMessage'))
+      setToastMessage(t('actions.retryFailedMessage'))
     } finally {
       setIsRegenerating(false)
     }
@@ -622,11 +621,10 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
         throw new Error(errorData.error || 'Failed to delete generation')
       }
 
-      // Refresh the page to update the list
-      window.location.reload()
+      await refreshGenerationLists()
     } catch (error) {
       console.error('Failed to delete generation:', error)
-      alert('Failed to delete generation. Please try again.')
+      setToastMessage('Failed to delete generation. Please try again.')
       setShowDeleteDialog(false)
     } finally {
       setIsDeleting(false)
@@ -801,6 +799,13 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
     <div
       className="relative rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
     >
+      {toastMessage ? (
+        <Toast
+          message={toastMessage}
+          type="error"
+          onDismiss={() => setToastMessage(null)}
+        />
+      ) : null}
       <div
         className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
         ref={photoContainerRef}
@@ -1167,7 +1172,7 @@ export default function GenerationCard({ item, currentUserId, token, onImageClic
                       })
                     } catch (error) {
                       console.error('Download failed:', error)
-                      alert('Download failed. Please try again.')
+                      setToastMessage('Download failed. Please try again.')
                     }
                   }}
                   className="relative group text-sm text-brand-primary hover:text-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-primary-light transition-colors"

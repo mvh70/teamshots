@@ -43,12 +43,17 @@ export function useCustomizationWizard({
 
           // Check for new format first (mode property)
           if ('mode' in wrapped && wrapped.mode !== undefined) {
+            if (cat.key === 'clothing' && wrapped.mode === 'predefined') {
+              // Clothing is style-locked only: keep this step editable for substyle selection.
+              return true
+            }
             return wrapped.mode === 'user-choice'
           }
 
           // Legacy format fallback
           if (cat.key === 'clothing') {
-            return wrapped.style === 'user-choice'
+            if (wrapped.style === 'user-choice') return true
+            return typeof wrapped.style === 'string' && wrapped.style.length > 0
           }
           return wrapped.type === 'user-choice'
         })
@@ -142,4 +147,3 @@ export function useCustomizationWizard({
     isCategoryEditable: (key: CategoryType) => wasInitiallyEditable.has(key)
   }
 }
-

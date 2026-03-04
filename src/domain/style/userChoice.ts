@@ -1,5 +1,13 @@
 import { getPackageConfig } from './packages'
 
+const DEFAULT_ACCEPTED_ON_VISIT_CATEGORIES = [
+  'clothing',
+  'clothingColors',
+  'pose',
+  'expression',
+  'branding',
+] as const
+
 /**
  * Helper to check if a category setting indicates user-choice (editable).
  * Supports both new format (mode) and legacy format (type/style).
@@ -8,7 +16,12 @@ function isCategoryUserChoice(categoryKey: string, settings: Record<string, unkn
   if (!settings) return false
 
   if (categoryKey === 'clothing') {
-    return settings.style === 'user-choice' || settings.mode === 'user-choice'
+    if (settings.style === 'user-choice' || settings.mode === 'user-choice') {
+      return true
+    }
+    // Clothing is partially lockable: predefined style still allows member substyle selection.
+    const wrappedValue = settings.value as { style?: string } | undefined
+    return typeof wrappedValue?.style === 'string'
   }
 
   // Check new format (mode) first, then legacy format (type)
@@ -61,6 +74,30 @@ export function getEditableCategories(
   })
 
   return editable
+}
+
+/**
+ * Returns categories that can be marked complete once visited.
+ * This is derived from package visibility/order to keep flow behavior aligned
+ * with package configuration instead of hard-coded page lists.
+ */
+export function getAcceptedOnVisitKeysForPackage(packageId: string): string[] {
+  const pkg = getPackageConfig(packageId)
+  const visibleSet = new Set(pkg.visibleCategories || [])
+  const orderedSource =
+    (pkg.userStyleCategories && pkg.userStyleCategories.length > 0
+      ? pkg.userStyleCategories
+      : pkg.visibleCategories) || []
+
+  const preferred = orderedSource.filter((key) =>
+    (DEFAULT_ACCEPTED_ON_VISIT_CATEGORIES as readonly string[]).includes(key)
+  )
+  const fallback = DEFAULT_ACCEPTED_ON_VISIT_CATEGORIES.filter((key) => visibleSet.has(key))
+  // Include accepted categories that are visible even when they are not part of
+  // userStyleCategories (e.g. pose in headshot1/freepackage composition categories).
+  const effective = preferred.length > 0 ? [...preferred, ...fallback] : fallback
+
+  return Array.from(new Set(effective.filter((key) => visibleSet.has(key))))
 }
 
 export function hasUserDefinedFields(obj: unknown): boolean {
@@ -213,8 +250,15 @@ export function areAllCustomizableSectionsCustomized(
       // For other categories, if type/style/mode is still 'user-choice', it means not customized
       // When user selects an option, type/mode changes from 'user-choice' to 'predefined' with a value
       if (categoryKey === 'clothing') {
-        if (settings.style === 'user-choice') {
-          return false // Still 'user-choice', not customized
+        if (settings.style === 'user-choice' || settings.mode === 'user-choice') {
+          return false
+        }
+        const clothingValue = settings.value as { style?: string; details?: string } | undefined
+        if (!clothingValue?.style) {
+          return false
+        }
+        if (!clothingValue.details) {
+          return false
         }
       } else {
         // Check both mode (new format) and type (legacy format)
@@ -301,6 +345,26 @@ export function getUneditedEditableFieldNames(
       } else if (options?.includeDefaultValues && originalSettings) {
         // Treat untouched default/preset colors as unedited until explicitly accepted/changed.
         if (JSON.stringify(resolvedColors) === JSON.stringify(resolvedOriginalColors)) {
+          unedited.push(categoryKey)
+        }
+      }
+    } else if (categoryKey === 'clothing') {
+      const mode = currentSettings.mode as string | undefined
+      const currentValue = currentSettings.value as { style?: string; details?: string } | undefined
+      const originalValue = originalSettings?.value as { style?: string; details?: string } | undefined
+
+      if (mode === 'user-choice' && currentValue === undefined) {
+        unedited.push(categoryKey)
+        continue
+      }
+
+      if (!currentValue?.style || !currentValue.details) {
+        unedited.push(categoryKey)
+        continue
+      }
+
+      if (options?.includeDefaultValues && originalSettings) {
+        if (JSON.stringify(currentValue) === JSON.stringify(originalValue)) {
           unedited.push(categoryKey)
         }
       }

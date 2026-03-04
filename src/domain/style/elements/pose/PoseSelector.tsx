@@ -27,6 +27,7 @@ const POSES = getPoseUIInfo().map(pose => ({
 const POSES_WITH_IMAGES = [
   'candid_over_shoulder',
   'classic_corporate',
+  'casual_confident',
   'power_cross',
   'seated_engagement',
   'slimming_three_quarter'
@@ -161,7 +162,7 @@ export default function PoseSelector({
           <div className="mt-4" key={selectValue}>
             {hasPoseImage(selectValue) ? (
               <ImagePreview
-                src={`/images/poses/${selectValue}.png`}
+                src={`/images/poses/${selectValue}.webp`}
                 alt={t(`poses.${selectValue}.label`)}
                 width={400}
                 height={300}

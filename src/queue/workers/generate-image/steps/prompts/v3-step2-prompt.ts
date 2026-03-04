@@ -1,4 +1,5 @@
 export type Step2PromptMode = 'immutable' | 'studio' | 'environmental'
+export type Step2RetouchingLevel = 'none' | 'light' | 'medium' | 'high'
 
 export function getStep2Intro(mode: Step2PromptMode): string[] {
   return [
@@ -32,17 +33,35 @@ export function getStep2QualityGuidelines(realismAndNegativeGuidelines: string[]
     '- Maintain the photorealistic quality of the original person.',
     '- Ensure the final image looks like a single, naturally-taken photograph.',
     '- Match color temperature and tone between subject and background.',
-    '- Enhance natural skin micro-texture detail (pores and subtle tonal variation) to maximize realism while avoiding smoothing or airbrushed skin.',
+    '- Preserve existing skin micro-details from BASE IMAGE exactly; do not invent or remove pores, moles, freckles, blemishes, scars, wrinkles, or pigmentation shifts.',
     ...realismAndNegativeGuidelines,
   ]
 }
 
-export function getStep2BaseImageReferenceDescription(): string {
-  return 'BASE IMAGE - Composite this person into the target background. Subtle professional grooming (skin tone balancing, slight under-eye shadow reduction, mild micro-contrast cleanup) is allowed. Do NOT redraw, reshape, or de-age the person.'
+export function getStep2BaseImageReferenceDescription(
+  retouchingLevel?: Step2RetouchingLevel,
+  hasSelfieComposite?: boolean
+): string {
+  if (retouchingLevel && retouchingLevel !== 'none') {
+    const resemblanceRef = hasSelfieComposite
+      ? ' Use the SELFIE COMPOSITE to verify face resemblance.'
+      : ''
+    return `BASE IMAGE - Composite this person into the target background and apply retouching as specified in Element Constraints.${resemblanceRef} Keep permanent identity markers unchanged and do NOT reshape or de-age beyond what retouching rules allow.`
+  }
+
+  return 'BASE IMAGE - Composite this person into the target background with no retouching or skin grooming. Treat BASE IMAGE as source of truth for skin detail. Do NOT add, remove, or invent pores, moles, freckles, blemishes, scars, wrinkles, or pigmentation changes. Do NOT redraw, reshape, or de-age the person.'
 }
 
-export function getStep2FaceReferenceDescription(): string {
-  return 'FACE REFERENCE - Identity verification only. Confirm the composite face matches this reference. Do NOT redraw features already correct in BASE IMAGE.'
+export function getStep2SelfieCompositeReferenceDescription(): string {
+  return 'SELFIE COMPOSITE - Original selfie reference for identity resemblance verification. Compare the final result against this reference to ensure the person is recognizable. Do NOT copy background or composition from this reference.'
+}
+
+export function getStep2FaceReferenceDescription(retouchingLevel?: Step2RetouchingLevel): string {
+  if (retouchingLevel && retouchingLevel !== 'none') {
+    return 'FACE REFERENCE - Use for identity resemblance refinement. Refine the face to closely match this reference while applying retouching as specified in Element Constraints.'
+  }
+
+  return 'FACE REFERENCE - Identity verification only (macro features). Confirm the composite face matches this reference. Do NOT transfer skin texture or skin marks from FACE REFERENCE when they are not visible in BASE IMAGE.'
 }
 
 export function getStep2BodyReferenceDescription(): string {

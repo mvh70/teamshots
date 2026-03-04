@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
 import PricingCard from '@/components/pricing/PricingCard'
 import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
@@ -35,9 +36,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null =
-    variant === 'individualshots' ? 'individual' :
-    variant === 'teamshotspro' ? 'team' :
-    null;
+    variant === 'teamshotspro' ? 'team' : 'individual';
 
   // Track pricing page view with context
   useEffect(() => {
@@ -77,7 +76,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
               <p className="text-text-body mb-3">
                 {t('seats.freeTrialPrompt')}
               </p>
-              <a
+              <Link
                 href="/auth/signup"
                 className="inline-flex items-center gap-2 text-brand-primary hover:text-brand-primary-hover font-semibold transition-colors"
               >
@@ -85,7 +84,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -140,6 +139,24 @@ export default function PricingContent({ variant }: PricingContentProps) {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl lg:text-3xl font-display font-bold text-text-dark">
+              {t('seats.researchLink.title')}
+            </h2>
+            <p className="mt-3 text-text-body leading-relaxed">
+              {t('seats.researchLink.description')}
+            </p>
+            <Link
+              href="/blog/professional-headshots-cost"
+              className="mt-4 inline-flex items-center gap-2 text-brand-primary hover:text-brand-primary-hover font-semibold transition-colors"
+            >
+              {t('seats.researchLink.linkText')}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
 
         </div>
@@ -202,6 +219,137 @@ export default function PricingContent({ variant }: PricingContentProps) {
     // Always show Try It For Free last
     freePlan,
   ]
+
+  if (variant === 'rightclickfit') {
+    const rightClickPlanCopy: Record<'free' | 'individual' | 'vip', { title: string; description: string; cta: string }> = {
+      free: {
+        title: 'Extension Free',
+        description: 'Install the extension and test instant try-ons before upgrading.',
+        cta: 'Install for Free',
+      },
+      individual: {
+        title: 'Starter Credits',
+        description: 'For occasional shoppers who want fast, realistic preview credits.',
+        cta: 'Buy Starter Credits',
+      },
+      vip: {
+        title: 'Pro Credits',
+        description: 'For frequent shopping and content-heavy workflows across many outfits.',
+        cta: 'Buy Pro Credits',
+      },
+    }
+
+    const rightClickFaq: Array<{ question: string; answer: string }> = [
+      {
+        question: 'How does RightClickFit pricing work?',
+        answer: 'Install the extension for free, then buy credit packs whenever you need more virtual try-ons.',
+      },
+      {
+        question: 'Do credits expire?',
+        answer: 'No. Your purchased credits stay in your account until you use them.',
+      },
+      {
+        question: 'Can I start without a credit card?',
+        answer: 'Yes. You can create your account and test the flow for free before purchasing credits.',
+      },
+      {
+        question: 'Can I upgrade later?',
+        answer: 'Yes. Start with Starter Credits and move to Pro Credits anytime.',
+      },
+    ]
+
+    return (
+      <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
+              RightClickFit Pricing
+            </h1>
+            <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
+              Start free, then buy virtual try-on credits only when you need them.
+            </p>
+          </div>
+
+          <div className={`grid gap-8 lg:gap-6 mb-16 overflow-visible ${
+            plansToShow.length >= 5 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5' :
+            plansToShow.length === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+            plansToShow.length === 3 ? 'md:grid-cols-3' :
+            plansToShow.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
+            'md:grid-cols-1 max-w-md mx-auto'
+          }`}>
+            {plansToShow.map((plan) => {
+              const copy = rightClickPlanCopy[plan.id]
+
+              if (plan.id === 'free') {
+                return (
+                  <PricingCard
+                    key={plan.id}
+                    {...plan}
+                    titleOverride={copy.title}
+                    descriptionOverride={copy.description}
+                    ctaMode="link"
+                    href="/auth/signup"
+                    className="h-full"
+                  />
+                )
+              }
+
+              const priceId = plan.id === 'individual'
+                ? PRICING_CONFIG.individual.stripePriceId
+                : PRICING_CONFIG.vip.stripePriceId
+
+              const planTier = 'individual'
+              const planPeriod = plan.id === 'vip' ? 'large' : 'small'
+              const originalAmount = plan.id === 'individual'
+                ? PRICING_CONFIG.individual.price
+                : PRICING_CONFIG.vip.price
+
+              const isPopular = 'popular' in plan && plan.popular
+
+              return (
+                <PricingCard
+                  key={plan.id}
+                  {...plan}
+                  titleOverride={copy.title}
+                  descriptionOverride={copy.description}
+                  ctaSlot={
+                    <PlanCheckoutSection
+                      planId={plan.id}
+                      priceId={priceId}
+                      originalAmount={originalAmount}
+                      planTier={planTier}
+                      planPeriod={planPeriod}
+                      ctaText={copy.cta}
+                      isPopular={isPopular}
+                    />
+                  }
+                  className="h-full"
+                />
+              )
+            })}
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-12 text-text-dark">
+              Frequently asked questions
+            </h2>
+            <div className="space-y-6">
+              {rightClickFaq.map((item) => (
+                <div key={item.question} className="bg-bg-white rounded-2xl p-6 lg:p-8 shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
+                  <h3 className="text-lg lg:text-xl font-bold mb-3 text-text-dark font-display">
+                    {item.question}
+                  </h3>
+                  <p className="text-base lg:text-lg text-text-body leading-relaxed">
+                    {item.answer}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">

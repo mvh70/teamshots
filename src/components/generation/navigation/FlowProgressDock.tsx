@@ -14,32 +14,26 @@ interface FlowProgressDockProps {
   selfieCount: number
   /** Minimum selfies required (default: MIN_SELFIES_REQUIRED) */
   requiredSelfies?: number
-  /** Array of unedited field names for status text */
-  uneditedFields: string[]
   /** Whether there are unedited fields */
   hasUneditedFields: boolean
-  /** Whether user can generate (all requirements met) */
-  canGenerate: boolean
   /** Whether user has enough credits */
   hasEnoughCredits: boolean
   /** Current step in the flow */
-  currentStep: 'selfies' | 'customize' | 'tips' | 'intro'
-  /** Navigate to selfie selection */
-  onNavigateToSelfies: () => void
+  currentStep: 'selfies' | 'beautification' | 'customize' | 'tips' | 'intro'
+  /** Navigate to previous step in the flow */
+  onNavigateToPreviousStep: () => void
+  /** Navigate directly to selfie selection step (defaults to previous-step handler) */
+  onNavigateToSelfieStep?: () => void
+  /** @deprecated Use onNavigateToPreviousStep/onNavigateToSelfieStep */
+  onNavigateToSelfies?: () => void
   /** Navigate to customization */
   onNavigateToCustomize: () => void
   /** Trigger generation */
-  onGenerate: () => void
+  onGenerate?: () => void
   /** Whether generation is in progress */
   isGenerating?: boolean
   /** Additional CSS classes */
   className?: string
-  /** Array of hidden screen names (e.g., ['selfie-tips', 'customization-intro']) */
-  hiddenScreens?: string[]
-  /** Navigate to selfie tips info page */
-  onNavigateToSelfieTips?: () => void
-  /** Navigate to customization intro info page */
-  onNavigateToCustomizationIntro?: () => void
   /** Navigate back to dashboard */
   onNavigateToDashboard?: () => void
   /** Action to buy credits */
@@ -77,6 +71,8 @@ export default function FlowProgressDock({
   hasUneditedFields,
   hasEnoughCredits,
   currentStep,
+  onNavigateToPreviousStep,
+  onNavigateToSelfieStep,
   onNavigateToSelfies,
   onNavigateToCustomize,
   onGenerate,
@@ -92,6 +88,8 @@ export default function FlowProgressDock({
   disabledGenerateReason
 }: FlowProgressDockProps) {
   const t = useTranslations('generation.progressDock')
+  const navigateToPreviousStep = onNavigateToPreviousStep ?? onNavigateToSelfies ?? (() => undefined)
+  const navigateToSelfieStep = onNavigateToSelfieStep ?? onNavigateToSelfies ?? navigateToPreviousStep
 
   const hasEnoughSelfies = selfieCount >= requiredSelfies
 
@@ -128,6 +126,7 @@ export default function FlowProgressDock({
 
   // Navigation logic
   const isOnSelfies = currentStep === 'selfies' || currentStep === 'tips'
+  const isOnBeautification = currentStep === 'beautification'
   const isOnCustomize = currentStep === 'customize' || currentStep === 'intro'
 
   // Back button config
@@ -135,20 +134,27 @@ export default function FlowProgressDock({
     if (isOnSelfies) {
       return {
         label: t('navigation.dashboard', { default: 'Dashboard' }),
-        onClick: onNavigateToDashboard || onNavigateToSelfies,
+        onClick: onNavigateToDashboard || navigateToPreviousStep,
+        disabled: false
+      }
+    }
+    if (isOnBeautification) {
+      return {
+        label: t('navigation.selfies', { default: 'Selfies' }),
+        onClick: navigateToPreviousStep,
         disabled: false
       }
     }
     if (isOnCustomize) {
       return {
-        label: t('navigation.selfies', { default: 'Selfies' }),
-        onClick: onNavigateToSelfies,
+        label: t('navigation.beautification', { default: 'Beautification' }),
+        onClick: navigateToPreviousStep,
         disabled: false
       }
     }
     return {
       label: t('navigation.back', { default: 'Back' }),
-      onClick: onNavigateToSelfies,
+      onClick: navigateToPreviousStep,
       disabled: false
     }
   }
@@ -159,8 +165,25 @@ export default function FlowProgressDock({
     if (currentStep === 'tips') {
       return {
         label: t('navigation.selfies', { default: 'Selfies' }),
-        onClick: onNavigateToSelfies,
+        onClick: navigateToSelfieStep,
         disabled: false
+      }
+    }
+    if (currentStep === 'selfies') {
+      const canContinue = hasEnoughSelfies
+      return {
+        label: t('navigation.beautification', { default: 'Beautification' }),
+        onClick: onNavigateToCustomize,
+        disabled: !canContinue,
+        tooltip: !canContinue ? t('tooltips.needSelfies', { count: requiredSelfies }) : undefined
+      }
+    }
+    if (currentStep === 'beautification') {
+      return {
+        label: t('navigation.customize', { default: 'Customize' }),
+        onClick: onNavigateToCustomize,
+        disabled: !hasEnoughSelfies,
+        tooltip: !hasEnoughSelfies ? t('tooltips.needSelfies', { count: requiredSelfies }) : undefined
       }
     }
     // On customization-intro page, show "Customize →" button to navigate to customization
@@ -169,15 +192,6 @@ export default function FlowProgressDock({
         label: t('navigation.customize', { default: 'Customize' }),
         onClick: onNavigateToCustomize,
         disabled: false
-      }
-    }
-    if (isOnSelfies) {
-      const canContinue = hasEnoughSelfies
-      return {
-        label: t('navigation.customize', { default: 'Customize' }),
-        onClick: onNavigateToCustomize,
-        disabled: !canContinue,
-        tooltip: !canContinue ? t('tooltips.needSelfies', { count: requiredSelfies }) : undefined
       }
     }
     if (isOnCustomize) {
@@ -197,8 +211,8 @@ export default function FlowProgressDock({
         label: isGenerate
           ? t('generate.label', { default: 'Generate' })
           : t('navigation.generate', { default: 'Generate' }),
-        onClick: onGenerate,
-        disabled: !canContinue,
+        onClick: onGenerate || (() => undefined),
+        disabled: !canContinue || !onGenerate,
         tooltip: !canContinue
           ? (!isCustomizationComplete
               ? (disabledGenerateReason || t('tooltips.needCustomization'))
@@ -285,6 +299,28 @@ export default function FlowProgressDock({
       : t('selfies.addPhotos', { count: remaining })
   }
 
+  const getBeautificationSummary = (): string => {
+    if (!hasEnoughSelfies) {
+      return t('customize.locked')
+    }
+    if (isOnBeautification) {
+      return t('customize.inProgress')
+    }
+    if (isOnCustomize) {
+      return t('customize.complete')
+    }
+    return t('customize.notStarted')
+  }
+
+  const navigateToBeautificationStep = (): void => {
+    if (!hasEnoughSelfies || isOnBeautification) return
+    if (isOnCustomize) {
+      navigateToPreviousStep()
+      return
+    }
+    onNavigateToCustomize()
+  }
+
   const getGenerateSummary = (): string => {
     if (!hasEnoughSelfies) return t('generate.needPhotos')
     if (effectiveHasUneditedFields) return t('generate.needCustomization')
@@ -297,6 +333,38 @@ export default function FlowProgressDock({
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  const continueButton = (
+    <button
+      type="button"
+      onClick={handleContinueClick}
+      disabled={continueIsHardDisabled}
+      data-testid={continueConfig.isGenerate ? 'flow-dock-generate-button' : 'flow-dock-continue-button'}
+      aria-disabled={continueIsHardDisabled || undefined}
+      className={`
+        inline-flex items-center gap-1.5 rounded-full font-semibold transition-all duration-200
+        ${continueConfig.isGenerate ? 'h-8 px-3 text-xs' : 'h-9 px-4 text-sm'}
+        ${continueIsDisabled
+          ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+          : continueConfig.isGenerate
+            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md hover:shadow-lg'
+            : continueConfig.isCredits
+              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+              : 'bg-brand-primary text-white hover:brightness-110 active:brightness-95'
+        }
+      `}
+    >
+      {isGenerating ? (
+        <SmallLoadingSpinner className="border-white/30 border-t-white text-white" />
+      ) : continueConfig.isGenerate ? (
+        <SparklesIcon className="h-3.5 w-3.5" strokeWidth={2} />
+      ) : null}
+      <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
+      {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
+        <ChevronRightIcon className="h-4 w-4" strokeWidth={2.5} />
+      )}
+    </button>
+  )
 
   const dockContent = (
     <div
@@ -315,6 +383,7 @@ export default function FlowProgressDock({
             type="button"
             onClick={backConfig.onClick}
             disabled={backConfig.disabled}
+            data-testid="flow-dock-back-button"
             className={`
               inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-all duration-200
               ${backConfig.disabled
@@ -328,98 +397,58 @@ export default function FlowProgressDock({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex h-9 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3">
-              {renderCompactDots()}
-              <span className="truncate text-xs font-semibold text-gray-700">
-                {editableStepsCount > 0
-                  ? t('customize.stepProgress', {
-                    current: visitedEditableCount,
-                    total: editableStepsCount,
-                    default: `Step ${visitedEditableCount} of ${editableStepsCount}`
-                  })
-                  : getCustomizeStatusText()}
-              </span>
-              {warningText && (
-                <Tooltip content={warningText} position="top">
-                  <span
-                    data-testid="customization-status-banner"
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 cursor-help"
+            {isOnCustomize ? (
+              <div className="flex h-9 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3">
+                {renderCompactDots()}
+                <span className="truncate text-xs font-semibold text-gray-700">
+                  {editableStepsCount > 0
+                    ? t('customize.stepProgress', {
+                      current: visitedEditableCount,
+                      total: editableStepsCount,
+                      default: `Step ${visitedEditableCount} of ${editableStepsCount}`
+                    })
+                    : getCustomizeStatusText()}
+                </span>
+                {warningText && (
+                  <Tooltip content={warningText} position="top">
+                    <span
+                      data-testid="customization-status-banner"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 cursor-help"
+                    >
+                      <ExclamationTriangleIcon className="h-3 w-3" />
+                    </span>
+                  </Tooltip>
+                )}
+                {onDontShowAgain && (
+                  <button
+                    type="button"
+                    onClick={onDontShowAgain}
+                    className="ml-1 shrink-0 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600"
                   >
-                    <ExclamationTriangleIcon className="h-3 w-3" />
-                  </span>
-                </Tooltip>
-              )}
-              {onDontShowAgain && (
-                <button
-                  type="button"
-                  onClick={onDontShowAgain}
-                  className="ml-1 shrink-0 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600"
-                >
-                  {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
-                </button>
-              )}
-            </div>
+                    {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex h-9 items-center justify-center rounded-xl border border-gray-200 bg-gray-50/80 px-3">
+                {onDontShowAgain && (
+                  <button
+                    type="button"
+                    onClick={onDontShowAgain}
+                    className="shrink-0 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600"
+                  >
+                    {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {continueConfig.tooltip ? (
             <Tooltip content={continueConfig.tooltip} position="top">
-              <button
-                type="button"
-                onClick={handleContinueClick}
-                disabled={continueIsHardDisabled}
-                aria-disabled={continueIsHardDisabled || undefined}
-                className={`
-                  inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-all duration-200
-                  ${continueIsDisabled
-                    ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                    : continueConfig.isGenerate
-                      ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-                      : continueConfig.isCredits
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-                        : 'bg-brand-primary text-white hover:brightness-110 active:brightness-95'
-                  }
-                `}
-              >
-                {isGenerating ? (
-                  <SmallLoadingSpinner className="border-white/30 border-t-white text-white" />
-                ) : continueConfig.isGenerate ? (
-                  <SparklesIcon className="h-4 w-4" strokeWidth={2} />
-                ) : null}
-                <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
-                {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
-                  <ChevronRightIcon className="h-4 w-4" strokeWidth={2.5} />
-                )}
-              </button>
+              {continueButton}
             </Tooltip>
-          ) : (
-            <button
-              type="button"
-              onClick={handleContinueClick}
-              disabled={continueIsHardDisabled}
-              aria-disabled={continueIsHardDisabled || undefined}
-              className={`
-                inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-all duration-200
-                ${continueIsDisabled
-                  ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                  : continueConfig.isGenerate
-                    ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-                    : continueConfig.isCredits
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-                      : 'bg-brand-primary text-white hover:brightness-110 active:brightness-95'
-                }
-              `}
-            >
-              {isGenerating ? (
-                <SmallLoadingSpinner className="border-white/30 border-t-white text-white" />
-              ) : continueConfig.isGenerate ? (
-                <SparklesIcon className="h-4 w-4" strokeWidth={2} />
-              ) : null}
-              <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
-              {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
-                <ChevronRightIcon className="h-4 w-4" strokeWidth={2.5} />
-              )}
-            </button>
-          )}
+          ) : continueButton}
 
           <button
             type="button"
@@ -447,28 +476,98 @@ export default function FlowProgressDock({
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-stretch gap-1.5">
               <button
                 type="button"
-                onClick={onNavigateToSelfies}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
+                onClick={navigateToSelfieStep}
+                data-testid="flow-dock-detail-step-selfies"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('selfies.label')}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 bg-white text-[9px] font-bold text-gray-600">
+                    1
+                  </span>
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('selfies.label')}</p>
+                </div>
                 <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getSelfiesSummary()}</p>
               </button>
+
+              <div
+                data-testid="flow-dock-detail-arrow-1"
+                className="inline-flex shrink-0 items-center justify-center text-gray-400"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </div>
+
+              <button
+                type="button"
+                onClick={navigateToBeautificationStep}
+                disabled={!hasEnoughSelfies || isOnBeautification}
+                data-testid="flow-dock-detail-step-beautification"
+                className={`
+                  min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors
+                  ${!hasEnoughSelfies || isOnBeautification
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-50'
+                    : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 bg-white text-[9px] font-bold text-gray-600">
+                    2
+                  </span>
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                    {t('navigation.beautification', { default: 'Beautification' })}
+                  </p>
+                </div>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getBeautificationSummary()}</p>
+              </button>
+
+              <div
+                data-testid="flow-dock-detail-arrow-2"
+                className="inline-flex shrink-0 items-center justify-center text-gray-400"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </div>
 
               <button
                 type="button"
                 onClick={onNavigateToCustomize}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
+                disabled={!hasEnoughSelfies}
+                data-testid="flow-dock-detail-step-customize"
+                className={`
+                  min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors
+                  ${!hasEnoughSelfies
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-50'
+                    : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                  }
+                `}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('customize.label')}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 bg-white text-[9px] font-bold text-gray-600">
+                    3
+                  </span>
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('customize.label')}</p>
+                </div>
                 <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getCustomizeStatusText()}</p>
               </button>
 
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{t('generate.label')}</p>
-                <p className="mt-0.5 truncate text-[11px] font-medium text-gray-700">{getGenerateSummary()}</p>
+              <div
+                data-testid="flow-dock-detail-arrow-3"
+                className="inline-flex shrink-0 items-center justify-center text-gray-400"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </div>
+
+              <div
+                data-testid="flow-dock-detail-finish"
+                className="w-[132px] shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-left"
+              >
+                <div className="flex items-center gap-1">
+                  <SparklesIcon className="h-3 w-3 text-gray-500" />
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{t('generate.label')}</p>
+                </div>
+                <p className="mt-0.5 truncate text-[10px] font-medium text-gray-700">{getGenerateSummary()}</p>
               </div>
             </div>
           </div>

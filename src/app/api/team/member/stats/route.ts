@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
       creditsRemaining,
       selfiesUploaded: selfiesCount,
       teamPhotosGenerated: teamPhotosCount,
+      teamName: invite.team.name,
       adminName,
       adminEmail,
       selfiePreviewUrls

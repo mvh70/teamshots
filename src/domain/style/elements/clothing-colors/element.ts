@@ -10,6 +10,7 @@ import { getColorHex, getColorDisplay, type ColorValue } from './types'
 import { hasValue } from '../base/element-types'
 import type { ShotTypeValue } from '@/types/photo-style'
 import { autoRegisterElement } from '../composition/registry'
+import { getEffectiveClothingDetail, getEffectiveClothingMode } from '../clothing/config'
 
 export class ClothingColorsElement extends StyleElement {
   readonly id = 'clothing-colors'
@@ -97,19 +98,12 @@ export class ClothingColorsElement extends StyleElement {
     const isBottomVisible = this.isBottomVisible(shotType)
     const mayPartiallyShowBottom = this.mayPartiallyShowBottom(shotType)
 
-    // Determine garment structure
-    const clothing = settings.clothing
-    const detail = clothing?.value?.details?.toLowerCase() || ''
-
-    // Check if this is a single-layer garment (polo, hoodie, t-shirt, dress, gown, jumpsuit)
-    // These garments are worn alone without a visible base layer underneath
-    // NOTE: button-down is NOT included because it's worn open with a t-shirt base layer
-    const isSingleLayer = detail.includes('polo') ||
-                         detail.includes('hoodie') ||
-                         detail.includes('t-shirt') ||
-                         detail.includes('dress') ||
-                         detail.includes('gown') ||
-                         detail.includes('jumpsuit')
+    // Determine garment structure from explicit clothing slots.
+    const clothing = settings.clothing?.value
+    const detail = getEffectiveClothingDetail(clothing?.style, clothing) || 'garment'
+    const mode = getEffectiveClothingMode(clothing)
+    const hasOuterLayer = !!clothing?.outerChoice
+    const isSingleLayer = mode === 'one_piece' || !hasOuterLayer
 
     if (isSingleLayer) {
       // Single-layer garments: the garment itself is the top layer

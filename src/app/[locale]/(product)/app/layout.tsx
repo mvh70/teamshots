@@ -1,18 +1,17 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { headers } from 'next/headers'
 import { auth } from '@/auth'
 import AppShell from './AppShell'
 import { UserService } from '@/domain/services/UserService'
 import { CreditsProvider } from '@/contexts/CreditsContext'
-import { DomainProvider } from '@/contexts/DomainContext'
+import { TenantProvider } from '@/contexts/TenantContext'
 import { getAccountMode } from '@/domain/account/accountMode.server'
 import { CreditService } from '@/domain/services/CreditService'
 import { getTeamOnboardingState } from '@/domain/team/onboarding'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
-import { getBrand, normalizeDomain } from '@/config/brand'
-import { getLandingVariant } from '@/config/landing-content'
+import { getBrandByDomain } from '@/config/brand'
+import { getTenant } from '@/config/tenant-server'
 
 // Force dynamic rendering to ensure brand detection is fresh on each request
 export const dynamic = 'force-dynamic'
@@ -51,9 +50,6 @@ export default async function AppLayout({
   // Note: Team setup redirect is handled by the dashboard page, not the layout
   // This avoids redirect loops since layouts don't have access to current pathname
 
-  // Get headers for brand detection
-  const headersList = await headers()
-
   const initialRole = {
     isTeamAdmin: userContext?.roles.isTeamAdmin ?? false,
     isTeamMember: userContext?.roles.isTeamMember ?? false,
@@ -63,16 +59,9 @@ export default async function AppLayout({
     nextTeamOnboardingStep: teamOnboarding.nextStep
   }
 
-  // Get brand config from server-side headers
-  // headersList already fetched above
-  const brand = getBrand(headersList)
-  
-  // Determine if this is an individual-only domain (no team features)
-  // Only teamshotspro has team features - all other domains are individual-only
-  const host = headersList.get('host')
-  const domain = normalizeDomain(host) ?? undefined
-  const variant = getLandingVariant(domain)
-  const isIndividualDomain = variant !== 'teamshotspro'
+  const tenant = await getTenant()
+  const brand = getBrandByDomain(tenant.domain)
+  const isIndividualDomain = !tenant.hasTeamFeatures
 
   // OPTIMIZATION: Serialize subscription for client-side (convert Date objects to ISO strings)
   // Pass subscription to Sidebar to avoid redundant API calls
@@ -87,7 +76,7 @@ export default async function AppLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <DomainProvider isIndividualDomain={isIndividualDomain} brandName={brand.name}>
+      <TenantProvider tenantId={tenant.id} brandName={brand.name} hasTeamFeatures={tenant.hasTeamFeatures}>
         <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team, person: creditBalances.person } : undefined}>
           <OnboardingProvider>
             <OnbordaProvider>
@@ -98,6 +87,7 @@ export default async function AppLayout({
                 initialBrandName={brand.name}
                 initialBrandLogoLight={brand.logo.light}
                 initialBrandLogoIcon={brand.logo.icon}
+                tenantId={tenant.id}
                 isIndividualDomain={isIndividualDomain}
                 brandColors={brand.colors}
               >
@@ -106,7 +96,7 @@ export default async function AppLayout({
             </OnbordaProvider>
           </OnboardingProvider>
         </CreditsProvider>
-      </DomainProvider>
+      </TenantProvider>
     </NextIntlClientProvider>
   )
 }

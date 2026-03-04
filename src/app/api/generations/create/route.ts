@@ -25,10 +25,8 @@ export async function OPTIONS(req: NextRequest) {
   return response || new NextResponse(null, { status: 204 })
 }
 import { prisma } from '@/lib/prisma'
-import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG, type PricingTier, getPricingTier } from '@/config/pricing'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
-import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -41,7 +39,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
-import { RegenerationService } from '@/domain/generation'
+import { RegenerationService, NO_REGENERATIONS_REMAINING_ERROR } from '@/domain/generation'
 import { deriveGenerationType } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 import {
@@ -52,10 +50,11 @@ import {
 } from '@/domain/generation/create-validation'
 import {
   enqueueGenerationJob,
-  determineWorkflowVersion,
   createGenerationWithCreditReservation,
   serializeStyleSettingsForGeneration,
   enrichGenerationJobFromSelfies,
+  getRegenerationLimitForAdmin,
+  handleEnqueueFailure,
 } from '@/domain/generation/generation-helpers'
 
 
@@ -78,9 +77,9 @@ const createGenerationSchema = z.object({
     expression: z.any().optional(),
     pose: z.any().optional(),
     lighting: z.any().optional(),
-  }).optional(),
+    beautification: z.any().optional(),
+  }).passthrough().optional(),
   prompt: z.string().min(1, 'Prompt is required'),
-  isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
   workflowVersion: z.enum(['v3']).optional(), // Workflow version: v3 (4-step). Defaults to 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode (logs prompts, saves intermediate files)
@@ -146,19 +145,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
 
-    const { selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
+    const { selfieIds, selfieKeys, contextId, styleSettings, prompt, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
+    const isRegeneration = typeof originalGenerationId === 'string' && originalGenerationId.length > 0
 
     // Determine workflow version
-    const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
+    const finalWorkflowVersion = workflowVersion || 'v3'
 
     // Determine requested selfies (multiple preferred)
     const requestedIds = selfieIds || []
     const requestedKeys = selfieKeys || []
 
     // Handle regeneration early - no selfies needed, get person from original generation
-    if (isRegeneration && originalGenerationId) {
+    if (isRegeneration) {
       const originalGeneration = await prisma.generation.findFirst({
-        where: { id: originalGenerationId },
+        where: { id: originalGenerationId! },
         select: {
           personId: true,
           person: {
@@ -195,17 +195,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
       }
 
-      // Get user context and determine credit source
+      // Get user context for redirect/account mode metadata
       const userContext = await UserService.getUserContext(session.user.id)
-      const creditSourceInfo = await CreditService.determineCreditSource(userContext)
-      const enforcedCreditSource = creditSourceInfo.creditSource
 
       try {
         const result = await RegenerationService.regenerate({
-          sourceGenerationId: originalGenerationId,
+          sourceGenerationId: originalGenerationId!,
           personId: originalGeneration.personId,
           userId: session.user.id,
-          creditSource: enforcedCreditSource,
           workflowVersion: finalWorkflowVersion
         })
 
@@ -235,6 +232,12 @@ export async function POST(request: NextRequest) {
         Logger.error('Session-based regeneration error', {
           error: error instanceof Error ? error.message : String(error)
         })
+        if (error instanceof Error && error.message === NO_REGENERATIONS_REMAINING_ERROR) {
+          return NextResponse.json(
+            { error: 'No regenerations remaining for this generation' },
+            { status: 409 }
+          )
+        }
         return NextResponse.json(
           { error: error instanceof Error ? error.message : 'Failed to start regeneration' },
           { status: 500 }
@@ -299,28 +302,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Selfies not found' }, { status: 404 })
     }
 
-    // Server-side fallback: if only one selfie resolved but the user has multiple selected selfies,
-    // merge them in so multi-selfie generations work even if client payload missed IDs
-    // Skip this fallback for extension requests - extensions explicitly control which selfies to use
-    if (selfies.length === 1 && authSource !== 'extension') {
-      try {
-        const moreSelected = await prisma.selfie.findMany({
-          where: { personId: selfies[0].personId, selected: true },
-          select: { id: true, key: true, classification: true }
-        })
-        if (moreSelected.length > 1) {
-          const existingIds = new Set(selfies.map((s: { id: string }) => s.id))
-          const additionalSelfies = moreSelected
-            .filter((s) => !existingIds.has(s.id))
-            .map((s) => {
-              const c = extractFromClassification(s.classification)
-              return { id: s.id, key: s.key, selfieType: c.selfieType, personId: selfies[0].personId, person: selfies[0].person }
-            })
-          selfies.push(...additionalSelfies)
-        }
-      } catch { }
-    }
-
     // Enforce same person and ownership/team authorization
     type SelfieType = typeof selfies[number];
     const firstPersonId = selfies[0].personId
@@ -352,6 +333,42 @@ export async function POST(request: NextRequest) {
     if (!isOwner && !isSameTeam) {
       await SecurityLogger.logSuspiciousActivity(session.user.id, 'unauthorized_generation_attempt', { selfiePersonId: firstPersonId })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Server-side fallback: if only one selfie resolved but the user has multiple selected selfies,
+    // merge them in so multi-selfie generations work even if client payload missed IDs.
+    // Skip this fallback for extension requests - extensions explicitly control which selfies to use.
+    if (selfies.length === 1 && authSource !== 'extension') {
+      try {
+        const authFilter = isOwner
+          ? { person: { userId: session.user.id } }
+          : { person: { teamId: userPerson.teamId! } }
+
+        const moreSelected = await prisma.selfie.findMany({
+          where: {
+            personId: selfies[0].personId,
+            selected: true,
+            ...authFilter
+          },
+          select: { id: true, key: true, classification: true }
+        })
+        if (moreSelected.length > 1) {
+          const existingIds = new Set(selfies.map((s: { id: string }) => s.id))
+          const additionalSelfies = moreSelected
+            .filter((s) => !existingIds.has(s.id))
+            .map((s) => {
+              const c = extractFromClassification(s.classification)
+              return { id: s.id, key: s.key, selfieType: c.selfieType, personId: selfies[0].personId, person: selfies[0].person }
+            })
+          selfies.push(...additionalSelfies)
+        }
+      } catch (error) {
+        Logger.warn('Selfie fallback failed', {
+          userId: session.user.id,
+          personId: selfies[0].personId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
 
     // Multi-selfie recommendation: enforce minimum of 2 if multiple provided
@@ -398,21 +415,7 @@ export async function POST(request: NextRequest) {
 
     // Free package is always accessible to everyone (no ownership check needed)
     if (requestedPackageId !== 'freepackage') {
-      // For team generations, check if team admin owns the package
-      // For personal generations, check if user owns the package
-      let userIdToCheck = session.user.id
-      if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
-        // Team member using team credits - check team admin's package ownership
-        // Fetch team to get adminId
-        const team = await prisma.team.findUnique({
-          where: { id: ownerPerson.teamId },
-          select: { adminId: true }
-        })
-        if (team?.adminId) {
-          userIdToCheck = team.adminId
-        }
-      }
-
+      const userIdToCheck = session.user.id
       const hasPackage = await hasPackageAccess(userIdToCheck, requestedPackageId)
 
       if (!hasPackage) {
@@ -428,51 +431,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let { resolvedContextId, contextStyleSettings } = await resolveGenerationContextSettings(contextId)
+    const { resolvedContextId: initialResolvedContextId, contextStyleSettings } = await resolveGenerationContextSettings(contextId)
+    let resolvedContextId = initialResolvedContextId
 
-
-    // Check credits using CreditService
-    if (!isRegeneration) {
-      const canAfford = await CreditService.canAffordOperation(
-        session.user.id,
-        PRICING_CONFIG.credits.perGeneration,
-        userContext
-      )
-
-      if (!canAfford) {
-        // Get detailed credit information for error message
-        const creditSummary = await CreditService.getCreditBalanceSummary(session.user.id, userContext)
-
-        if (enforcedCreditSource === 'individual') {
-          return NextResponse.json(
-            {
-              error: 'Insufficient individual credits',
-              required: PRICING_CONFIG.credits.perGeneration,
-              available: creditSummary.individual,
-              message: 'Please purchase a subscription or credit package to generate photos',
-              redirectTo: '/en/app/settings?purchase=required'
-            },
-            { status: 402 }
-          )
-        } else {
-          // Team credits insufficient
-          const personAllocation = await getPersonCreditBalance(primarySelfie.personId)
-          return NextResponse.json(
-            {
-              error: 'Insufficient team credits',
-              required: PRICING_CONFIG.credits.perGeneration,
-              available: creditSummary.team,
-              personAllocation,
-              message: personAllocation > 0
-                ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.'
-                : 'The team has insufficient credits. Contact your team admin.',
-              redirectTo: '/en/app'
-            },
-            { status: 402 }
-          )
-        }
-      }
-    }
 
     // Determine regeneration limits for new generations
     // Note: Regenerations are handled early with RegenerationService and return immediately
@@ -495,47 +456,18 @@ export async function POST(request: NextRequest) {
       })
 
       if (team?.admin) {
-        const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod as PlanPeriod | null
-        const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier as PlanTier | null
-
-        // Determine team admin's PricingTier from tier+period to get regeneration count
-        const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
-        maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
+        const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+        const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier ?? null
+        maxRegenerations = getRegenerationLimitForAdmin(adminPlanTier, adminPlanPeriod)
       } else {
         // Fallback if team admin not found - use individual as default
         maxRegenerations = getRegenerationCount('individual')
       }
-    } else if (session.user.id) {
-      // Check user's subscription to determine plan
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id }
-      })
-      const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
-      const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
-
-      let pricingTier: PricingTier = 'free' // Default fallback
-
-      if (userPlanTier === 'individual') {
-        // Individual user - check period for VIP vs regular
-        if (userPlanPeriod === 'large') {
-          pricingTier = 'vip'
-        } else {
-          pricingTier = 'individual'
-        }
-      }
-      // Pro tier with seats-based pricing
-      else if (userPlanTier === 'pro' && userPlanPeriod === 'seats') {
-        pricingTier = 'individual' // Use individual regenerations for seats
-      }
-      // Default for other pro tiers
-      else if (userPlanTier === 'pro') {
-        pricingTier = 'individual'
-      }
-
-      maxRegenerations = getRegenerationCount(pricingTier)
     } else {
-      // No user session - default to free
-      maxRegenerations = getRegenerationCount('free')
+      const userPlanTier = userContext.subscription?.tier ?? null
+      const userPlanPeriod = userContext.subscription?.period ?? null
+      const pricingTier: PricingTier = getPricingTier(userPlanTier, userPlanPeriod)
+      maxRegenerations = getRegenerationCount(pricingTier, userPlanPeriod)
     }
 
     // Handle generation grouping (for new generations only)
@@ -577,30 +509,9 @@ export async function POST(request: NextRequest) {
       } else if (packageId === 'freepackage') {
         let shouldEnforceFreeStyle = false
 
-        // Check if user is on free plan
-        if (session.user.id) {
-          const userBasic = await prisma.user.findUnique({ where: { id: session.user.id } })
-          const basicPlanPeriod = (userBasic as unknown as { planPeriod?: string | null })?.planPeriod
-          if (basicPlanPeriod === 'free') {
-            shouldEnforceFreeStyle = true
-          }
-        }
-
-        // If using team credits, also check if team admin is on free plan
-        if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
-          const team = await prisma.team.findUnique({
-            where: { id: ownerPerson.teamId },
-            include: {
-              admin: true
-            }
-          })
-
-          if (team?.admin) {
-            const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
-            if (adminPlanPeriod === 'free') {
-              shouldEnforceFreeStyle = true
-            }
-          }
+        // Check if user is on free plan (reuse already-fetched user context)
+        if (userContext.subscription?.period === 'free') {
+          shouldEnforceFreeStyle = true
         }
 
         if (shouldEnforceFreeStyle) {
@@ -636,32 +547,52 @@ export async function POST(request: NextRequest) {
       selfieS3Keys,
     })
 
-    const { generation } = await createGenerationWithCreditReservation({
-      generationData: {
-        personId: primarySelfie.personId,
-        contextId: resolvedContextId,
-        generatedPhotoKeys: [], // Will be populated by worker
-        // generationType removed - now derived from person.teamId (single source of truth)
-        creditSource: enforcedCreditSource,
-        status: 'pending',
-        creditsUsed: PRICING_CONFIG.credits.perGeneration, // New generations cost credits
-        provider: 'gemini',
-        maxRegenerations,
-        remainingRegenerations: maxRegenerations,
-        generationGroupId,
-        isOriginal,
-        groupIndex,
-        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
-      },
-      reservationUserId: session.user.id,
-      reservationPersonId: primarySelfie.personId,
-      requiredCredits: PRICING_CONFIG.credits.perGeneration,
-      userContext,
-    })
+    let generation: Awaited<ReturnType<typeof createGenerationWithCreditReservation>>['generation']
+    try {
+      const result = await createGenerationWithCreditReservation({
+        generationData: {
+          personId: primarySelfie.personId,
+          contextId: resolvedContextId,
+          generatedPhotoKeys: [], // Will be populated by worker
+          // generationType removed - now derived from person.teamId (single source of truth)
+          creditSource: enforcedCreditSource,
+          status: 'pending',
+          creditsUsed: PRICING_CONFIG.credits.perGeneration, // New generations cost credits
+          provider: 'gemini',
+          maxRegenerations,
+          remainingRegenerations: maxRegenerations,
+          generationGroupId,
+          isOriginal,
+          groupIndex,
+          styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
+        },
+        reservationUserId: session.user.id,
+        reservationPersonId: primarySelfie.personId,
+        requiredCredits: PRICING_CONFIG.credits.perGeneration,
+        userContext,
+      })
+      generation = result.generation
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Insufficient credits')) {
+        const creditSummary = await CreditService.getCreditBalanceSummary(session.user.id, userContext)
+        return NextResponse.json(
+          {
+            error: 'Insufficient individual credits',
+            required: PRICING_CONFIG.credits.perGeneration,
+            available: creditSummary.individual,
+            message: 'Please purchase a subscription or credit package to generate photos',
+            redirectTo: '/app/settings?purchase=required'
+          },
+          { status: 402 }
+        )
+      }
+      throw error
+    }
 
     // Use the selected selfie keys for the job
     // Note: Regenerations are handled early with RegenerationService
     const jobSelfieS3Keys = selfieS3Keys
+    const safeStopAfterStep = process.env.NODE_ENV !== 'production' ? stopAfterStep : undefined
 
     const enrichment = await enrichGenerationJobFromSelfies({
       generationId: generation.id,
@@ -671,21 +602,28 @@ export async function POST(request: NextRequest) {
     })
 
     const job = await enqueueGenerationJob({
-      generationId: generation.id,
-      personId: primarySelfie.personId,
-      userId: primarySelfie.person.userId || undefined,
-      teamId: ownerPerson.teamId ?? undefined,
-      selfieS3Keys: jobSelfieS3Keys,
-      selfieAssetIds: enrichment.selfieAssetIds,
-      selfieTypeMap: enrichment.selfieTypeMap,
-      demographics: enrichment.demographics,
-      prompt,
-      workflowVersion: finalWorkflowVersion,
-      debugMode,
-      stopAfterStep,
-      creditSource: enforcedCreditSource,
-      priority: derivedGenerationType === 'team' ? 1 : 0,
-    })
+        generationId: generation.id,
+        personId: primarySelfie.personId,
+        userId: primarySelfie.person.userId || undefined,
+        teamId: ownerPerson.teamId ?? undefined,
+        selfieS3Keys: jobSelfieS3Keys,
+        selfieAssetIds: enrichment.selfieAssetIds,
+        selfieTypeMap: enrichment.selfieTypeMap,
+        demographics: enrichment.demographics,
+        prompt,
+        workflowVersion: finalWorkflowVersion,
+        debugMode,
+        stopAfterStep: safeStopAfterStep,
+        creditSource: enforcedCreditSource,
+        priority: derivedGenerationType === 'team' ? 1 : 0,
+      })
+      .catch(async (enqueueError) => {
+        return handleEnqueueFailure({
+        generationId: generation.id,
+        personId: primarySelfie.personId,
+        error: enqueueError,
+      })
+      })
 
     Telemetry.increment('generation.create.success')
     Telemetry.increment(`generation.create.success.${authSource}`)

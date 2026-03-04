@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
       where: { id: targetPerson.id },
       data: { 
         teamId: null,
+        inviteToken: null,
         // Keep the person record but unlink from team
       }
     })

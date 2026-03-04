@@ -15,7 +15,6 @@ import {
 import {useTranslations} from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
-import dynamic from 'next/dynamic'
 import { useRouter } from '@/i18n/routing'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
@@ -27,9 +26,8 @@ import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { trackSignupCompleted } from '@/lib/track'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
-import { useDomain } from '@/contexts/DomainContext'
-
-const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
+import { useTenant } from '@/contexts/TenantContext'
+import { Toast } from '@/components/ui'
 
 interface DashboardStats {
   photosGenerated: number
@@ -101,15 +99,12 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true)
   const [resending, setResending] = useState<string | null>(null)
-  const [showSuccessMessage, setShowSuccessMessage] = useState(() => 
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('success') === 'true'
-  )
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const urlCleanedRef = useRef(false)
-  const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // Use server-authoritative brand name from DomainContext
-  const { brandName, isIndividualDomain } = useDomain()
+  const { brandName, isIndividualDomain } = useTenant()
 
   // Compute success message from URL params (derived during render, not in effect)
   const successMessage = useMemo(() => {
@@ -130,6 +125,12 @@ export default function DashboardPage() {
         return t('successMessages.default')
     }
   }, [searchParams, t])
+
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      setShowSuccessMessage(true)
+    }
+  }, [searchParams])
 
   // Onboarding state
   const { context: onboardingContext, updateContext: updateOnboardingContext } = useOnboardingState()
@@ -250,8 +251,7 @@ export default function DashboardPage() {
       router.push('/app/generate/start');
     } catch (error) {
       console.error('Failed to mark onboarding as complete:', error);
-      // Show user-facing error (you can style this better or use a toast library)
-      alert('Failed to save onboarding completion. Please try again.');
+      setToastMessage('Failed to save onboarding completion. Please try again.')
       // Do NOT set hasCompletedMainOnboarding(true) on error
     }
   }, [session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track, updateOnboardingContext, resetFlow, router])
@@ -393,13 +393,6 @@ export default function DashboardPage() {
     setMounted(true)
   }, [])
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
-
-  const handleSelfiesApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
-    // Redirect to generation start with the first approved selfie
-    if (results.length > 0) {
-      router.push(`/app/generate/start?key=${encodeURIComponent(results[0].key)}`)
-    }
-  }, [router])
 
   // On individual domains, suppress team roles for display purposes
   // The user may actually be a team admin, but Portreya treats everyone as individual
@@ -648,19 +641,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Selfie Upload Flow */}
-      {showUploadFlow && (
-        <SelfieUploadFlow
-          onSelfiesApproved={handleSelfiesApproved}
-          onCancel={() => setShowUploadFlow(false)}
-          onError={(error) => {
-            console.error('Selfie upload error:', error)
-            alert(error)
-          }}
+      {toastMessage ? (
+        <Toast
+          message={toastMessage}
+          type="error"
+          onDismiss={() => setToastMessage(null)}
         />
-      )}
+      ) : null}
 
-      {!showUploadFlow && !shouldShowOnboarding && mounted && (
+      {!shouldShowOnboarding && mounted && (
         <>
           {/* Welcome Section */}
           <div
@@ -703,7 +692,15 @@ export default function DashboardPage() {
                     teamMembers: stats.teamMembers
                   })
                 )
-              ) : displayPermissions.isRegularUser || !displayPermissions.isTeamAdmin ? (  // Treat regular and default as individual
+              ) : displayPermissions.isTeamMember ? (
+                stats.photosGenerated === 0 ? (
+                  t('welcome.subtitle.teamNoPhotos')
+                ) : (
+                  t('welcome.subtitle.teamWithPhotos', {
+                    count: stats.photosGenerated
+                  })
+                )
+              ) : displayPermissions.isRegularUser ? (
                 stats.photosGenerated === 0 ? (
                   isFreePlan ? (
                     t('welcome.subtitle.individualNoPhotosFree')
@@ -712,14 +709,6 @@ export default function DashboardPage() {
                   )
                 ) : (
                   t('welcome.subtitle.individualWithPhotos', {
-                    count: stats.photosGenerated
-                  })
-                )
-              ) : displayPermissions.isTeamMember ? (
-                stats.photosGenerated === 0 ? (
-                  t('welcome.subtitle.teamNoPhotos')
-                ) : (
-                  t('welcome.subtitle.teamWithPhotos', {
                     count: stats.photosGenerated
                   })
                 )
@@ -805,7 +794,9 @@ export default function DashboardPage() {
                         <div className="ml-4 flex-1 min-w-0">
                           <p className="text-sm font-semibold text-text-muted mb-3">{stat.name}</p>
                           <div className="flex items-baseline gap-2 mb-2">
-                            <p className="text-xl md:text-2xl font-bold text-text-dark leading-none tracking-tight">Free Package</p>
+                            <p className="text-xl md:text-2xl font-bold text-text-dark leading-none tracking-tight">
+                              {t('stats.freePackage')}
+                            </p>
                           </div>
                           <button
                             onClick={() => router.push('/app/upgrade')}
@@ -1014,6 +1005,7 @@ export default function DashboardPage() {
                     resetFlow()
                     router.push('/app/generate/start')
                   }}
+                  data-testid="dashboard-generate-photos-btn"
                   className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-cta/30 rounded-xl hover:border-brand-cta hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] transition-all duration-200 bg-gradient-to-br from-brand-cta/5 to-transparent group min-h-[160px]"
                 >
                   <div className="w-14 h-14 bg-brand-cta rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">

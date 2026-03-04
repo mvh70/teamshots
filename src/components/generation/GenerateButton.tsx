@@ -11,6 +11,7 @@ interface GenerateButtonProps {
   size?: 'sm' | 'md' | 'lg'
   disabledReason?: string
   integrateInPopover?: boolean
+  testId?: string
 }
 
 export default function GenerateButton({
@@ -21,7 +22,8 @@ export default function GenerateButton({
   className = '',
   size = 'md',
   disabledReason,
-  integrateInPopover = false
+  integrateInPopover = false,
+  testId = 'generate-button',
 }: GenerateButtonProps) {
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -64,6 +66,7 @@ export default function GenerateButton({
       disabled={false} // Don't disable - handle click manually for tooltip
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      data-testid={testId}
       className={`w-full ${sizeClasses[size]} rounded-xl transition-all duration-200 ${
         isEnabled
           ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 hover:scale-105 active:scale-95'
@@ -129,4 +132,3 @@ export default function GenerateButton({
     </div>
   )
 }
-

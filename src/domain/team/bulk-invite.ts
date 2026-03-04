@@ -76,6 +76,7 @@ export interface BulkInviteResult {
     email: string
     firstName: string
     token: string
+    creditsAllocated: number
     inviteLink: string
   }>
 }
@@ -364,6 +365,7 @@ export async function createBulkInvites(
         email: invite.email,
         firstName: invite.firstName,
         token: invite.token,
+        creditsAllocated: invite.creditsAllocated,
         inviteLink: `${baseUrl}/invite/${invite.token}`
       })
     }

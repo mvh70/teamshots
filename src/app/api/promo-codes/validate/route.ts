@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { validatePromoCode, type PurchaseType } from '@/domain/pricing/promo-codes'
-import { getBrand } from '@/config/brand'
+import { getTenantFromRequest } from '@/config/tenant-server'
+import { Logger } from '@/lib/logger'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -12,6 +13,20 @@ const validateSchema = z.object({
   amount: z.number().positive(),
   seats: z.number().int().positive().optional(),
 })
+
+function isAbortLikeError(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code ?? '')
+    : ''
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+
+  return (
+    code === 'ECONNRESET' ||
+    message.includes('aborted') ||
+    message.includes('operation was aborted') ||
+    message.includes('unexpected end of json input')
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,9 +43,8 @@ export async function POST(request: NextRequest) {
 
     const { code, type, amount, seats } = parseResult.data
 
-    // Get domain from request headers
-    const brand = getBrand(request.headers)
-    const domain = brand.domain
+    const tenant = getTenantFromRequest(request)
+    const domain = tenant.domain
 
     // Get user session (optional - for checking if user already used the code)
     const session = await auth()
@@ -63,7 +77,18 @@ export async function POST(request: NextRequest) {
       stripePromoCodeId: result.promoCode?.stripePromoCodeId,
     })
   } catch (error) {
-    console.error('Error validating promo code:', error)
+    if (isAbortLikeError(error)) {
+      Logger.warn('Promo validation request aborted by client', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return NextResponse.json(
+        { valid: false, error: 'Request aborted' },
+        { status: 400 }
+      )
+    }
+    Logger.error('Error validating promo code', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { valid: false, error: 'Failed to validate promo code' },
       { status: 500 }

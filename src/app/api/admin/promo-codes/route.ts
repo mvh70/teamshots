@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { RESTRICTED_DOMAINS } from '@/config/domain'
+import { TENANTS } from '@/config/tenant'
 import Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -57,8 +57,10 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Get available domains for filter dropdown
-    const availableDomains = [...RESTRICTED_DOMAINS]
+    // Keep admin filters focused on execution-critical tenants.
+    const availableDomains = Object.values(TENANTS)
+      .filter((tenant) => tenant.isExecutionCritical)
+      .map((tenant) => tenant.domain)
 
     return NextResponse.json({
       promoCodes: promoCodes.map(code => ({

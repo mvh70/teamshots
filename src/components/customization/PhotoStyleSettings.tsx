@@ -61,6 +61,8 @@ const PresetSelector = dynamic(() => import('@/domain/style/elements/preset/Pres
   loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
 })
 import { getPackageConfig } from '@/domain/style/packages'
+import { getSettingMode } from '@/domain/style/setting-mode'
+import { DEFAULT_CLOTHING_COLOR_FALLBACKS } from '@/domain/style/packages/shared/defaults'
 import { getUneditedEditableFieldNames } from '@/domain/style/userChoice'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 
@@ -103,9 +105,7 @@ const LockedSectionsTeaser = React.memo(function LockedSectionsTeaser({
     </div>
   )
 })
-import { resolveShotType } from '@/domain/style/elements/shot-type/config'
-import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
-import { getWardrobeExclusions } from '@/domain/style/elements/clothing/prompt'
+import { resolveExcludedClothingColors } from '@/domain/style/elements/clothing/layer-visibility'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { CardGrid, Tooltip, ErrorBoundary } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
@@ -116,6 +116,7 @@ import { getElements } from '@/domain/style/elements'
 import type { ElementMetadata as CategoryConfig } from '@/domain/style/elements'
 import { getElementConfig, type CategoryType as RegistryCategoryType } from '@/domain/style/elements/registry'
 import '@/domain/style/elements/init-registry' // Initialize element registry
+import { getEffectiveClothingDetail } from '@/domain/style/elements/clothing/config'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -148,6 +149,9 @@ interface PhotoStyleSettingsProps {
   acceptedOnVisitKeys?: string[]
   /** Visited category keys from parent flow state */
   visitedStepKeys?: Set<string>
+  detectedGender?: 'male' | 'female' | 'unknown'
+  /** Pre-computed unedited fields from useCustomizationCompletion hook (single source of truth for completion state) */
+  uneditedFields?: string[]
 }
 
 export type MobileStep = {
@@ -194,7 +198,9 @@ export default function PhotoStyleSettings({
   enableDesktopProgressiveActivation = false,
   onCategoryVisit,
   acceptedOnVisitKeys = [],
-  visitedStepKeys
+  visitedStepKeys,
+  detectedGender = 'unknown',
+  uneditedFields: uneditedFieldsProp
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -231,15 +237,16 @@ export default function PhotoStyleSettings({
   }, [pkg])
 
   const effectivePackageId = packageId || 'headshot1'
-  const uneditedFieldKeys = React.useMemo(() => {
-    if (showToggles) return []
+  const fallbackUneditedFieldKeys = React.useMemo(() => {
+    if (uneditedFieldsProp || showToggles) return []
     return getUneditedEditableFieldNames(
       value as Record<string, unknown>,
       originalContextSettings as Record<string, unknown> | undefined,
       effectivePackageId,
       { includeDefaultValues: true }
     )
-  }, [showToggles, value, originalContextSettings, effectivePackageId])
+  }, [uneditedFieldsProp, showToggles, value, originalContextSettings, effectivePackageId])
+  const uneditedFieldKeys = uneditedFieldsProp ?? fallbackUneditedFieldKeys
   const uneditedFieldSet = React.useMemo(() => new Set(uneditedFieldKeys), [uneditedFieldKeys])
   const acceptedOnVisitSet = React.useMemo(() => new Set(acceptedOnVisitKeys), [acceptedOnVisitKeys])
 
@@ -413,28 +420,6 @@ export default function PhotoStyleSettings({
   const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
   const [activeMobileStep, setActiveMobileStep] = React.useState(0)
 
-  function isUserChoiceSetting(category: CategoryType, settings: unknown) {
-    if (!settings) return false
-
-    // CustomClothing uses a different pattern (type field directly, not wrapped)
-    if (category === 'customClothing') {
-      return (settings as { type?: string }).type === 'user-choice'
-    }
-
-    // All other categories use the ElementSetting wrapper pattern
-    // Check for new format first (mode property)
-    const wrapped = settings as { mode?: string; type?: string; style?: string }
-    if ('mode' in wrapped && wrapped.mode !== undefined) {
-      return wrapped.mode === 'user-choice'
-    }
-
-    // Legacy format fallback
-    if (category === 'clothing') {
-      return wrapped.style === 'user-choice'
-    }
-    return wrapped.type === 'user-choice'
-  }
-
   // Get persisted visited steps from flow state
   const { visitedSteps: persistedVisitedSteps, setVisitedSteps: setPersistentVisitedSteps } = useGenerationFlowState()
 
@@ -450,13 +435,7 @@ export default function PhotoStyleSettings({
     const defaultColors = defaults && hasValue(defaults) ? defaults.value : undefined
     const currentColors = current && hasValue(current) ? current.value : undefined
 
-    // Fallback colors - used when colors are missing
-    const fallbackColors = {
-      topLayer: '#2C3E50', // Dark charcoal - professional jacket/blazer
-      baseLayer: '#F8F9FA', // Light gray/off-white - shirt
-      bottom: '#1A1A2E', // Dark navy - trousers
-      shoes: '#2D2D2D' // Dark gray - dress shoes
-    }
+    const fallbackColors = DEFAULT_CLOTHING_COLOR_FALLBACKS
 
     // Helper to normalize a color value to hex format
     // Handles: hex strings, color name strings ("Dark red"), and ColorValue objects
@@ -535,35 +514,30 @@ export default function PhotoStyleSettings({
 
   // Compute which clothing color pickers to hide based on shot type and clothing style
   const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
-    const exclusions = new Set<ClothingColorKey>()
-
-    // Get exclusions from shot type (check value first, then package defaults)
     const shotTypeValue = hasValue(value.shotType)
       ? value.shotType.value.type
       : hasValue(packageDefaults.shotType)
         ? packageDefaults.shotType.value.type
         : undefined
-    if (shotTypeValue) {
-      const shotTypeConfig = resolveShotType(shotTypeValue)
-      if (shotTypeConfig.excludeClothingColors) {
-        shotTypeConfig.excludeClothingColors.forEach(c => exclusions.add(c))
-      }
-    }
-
-    // Get exclusions from clothing style + detail (check value first, then package defaults)
     const clothingStyle = value.clothing?.value?.style || packageDefaults.clothing?.value?.style
-    if (clothingStyle) {
-      const knownStyle = clothingStyle as KnownClothingStyle
-      const clothingDetail = value.clothing?.value?.details || packageDefaults.clothing?.value?.details
-      const wardrobeExclusions = getWardrobeExclusions(knownStyle, clothingDetail)
-      wardrobeExclusions.forEach(c => exclusions.add(c))
-    }
+    const clothingValue = value.clothing?.value || packageDefaults.clothing?.value
+    const clothingDetail = getEffectiveClothingDetail(clothingStyle, clothingValue)
 
-    return Array.from(exclusions)
-  }, [value.shotType, value.clothing?.value?.style, value.clothing?.value?.details, packageDefaults])
+    return resolveExcludedClothingColors({
+      shotType: shotTypeValue,
+      clothingStyle,
+      clothingDetail,
+      clothingValue,
+    })
+  }, [value.shotType, value.clothing?.value, packageDefaults])
 
   // Track last synced outfit colors to avoid infinite loops
   const lastSyncedOutfitColorsRef = React.useRef<string | null>(null)
+  const latestSettingsRef = React.useRef(value)
+
+  React.useEffect(() => {
+    latestSettingsRef.current = value
+  }, [value])
 
   // Auto-sync outfit colors to clothing colors when outfit analysis completes
   React.useEffect(() => {
@@ -592,7 +566,7 @@ export default function PhotoStyleSettings({
       // Mark these colors as synced
       lastSyncedOutfitColorsRef.current = outfitColorSignature
 
-      const newSettings = { ...value }
+      const newSettings = { ...latestSettingsRef.current }
       // Preserve the existing mode (predefined/user-choice), only default to user-choice if not set
       const existingMode = newSettings.clothingColors?.mode || 'user-choice'
       newSettings.clothingColors = existingMode === 'predefined'
@@ -600,7 +574,7 @@ export default function PhotoStyleSettings({
         : userChoice(newClothingColors)
       onChange(newSettings)
     }
-  }, [value.customClothing?.value?.colors, value, onChange]) // Re-run when outfit colors change
+  }, [value.customClothing?.value?.colors, onChange]) // Re-run when outfit colors change
 
   // Auto-reveal locked sections after user customizes editable sections (Context B only)
   React.useEffect(() => {
@@ -610,7 +584,7 @@ export default function PhotoStyleSettings({
       const categorySettings = (value as Record<string, unknown>)[cat.key]
       if (!categorySettings) return true
       // Use the helper function which handles both new and legacy formats
-      return isUserChoiceSetting(cat.key, categorySettings)
+      return getSettingMode(cat.key, categorySettings) === 'user-choice'
     })
 
     if (editable.length === 0) return // No editable sections
@@ -731,77 +705,73 @@ export default function PhotoStyleSettings({
   }
 
   const handleCategorySettingsChange = (category: CategoryType, settings: unknown) => {
-    // When showToggles is true (admin setting style), allow all changes
-    // Don't allow changes if in readonly mode and the category is predefined
-    // Allow changes to user-choice fields even when readonlyPredefined is true
-    if (!showToggles && readonlyPredefined && isCategoryPredefined(category)) {
+    const isLockedPredefinedCategory = !showToggles && readonlyPredefined && isCategoryPredefined(category)
+    if (isLockedPredefinedCategory && category !== 'clothing') {
       return
+    }
+
+    let nextCategorySettings = settings
+    if (category === 'clothing' && isLockedPredefinedCategory) {
+      const currentClothing = value.clothing
+      const incomingClothing = settings as PhotoStyleSettingsType['clothing'] | undefined
+
+      if (!currentClothing || !hasValue(currentClothing) || !incomingClothing || !hasValue(incomingClothing)) {
+        return
+      }
+
+      const lockedStyle = currentClothing.value.style
+      nextCategorySettings = predefined({
+        ...incomingClothing.value,
+        style: lockedStyle,
+        lockScope: 'style-only' as const,
+      })
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newSettings: any = { ...value }
-    newSettings[category] = settings
+    newSettings[category] = nextCategorySettings
 
     if (category === 'shotType') {
-      syncAspectRatioWithShotType(newSettings, settings as ShotTypeSettings)
+      syncAspectRatioWithShotType(newSettings, nextCategorySettings as ShotTypeSettings)
     }
 
+    // Treat explicit field changes as a visit so accepted-on-visit steps remain complete
+    // even when users switch back to the original/default value.
+    onCategoryVisit?.(category)
     onChange(newSettings)
-  }
-
-  const isPredefinedSetting = (category: CategoryType, settings: unknown) => {
-    if (!settings) return false
-
-    // CustomClothing uses a different pattern (type field directly, not wrapped)
-    if (category === 'customClothing') {
-      return (settings as { type?: string }).type === 'predefined'
-    }
-
-    // All other categories use the ElementSetting wrapper pattern
-    // Check for new format first (mode property)
-    const wrapped = settings as { mode?: string; type?: string; style?: string }
-    if ('mode' in wrapped && wrapped.mode !== undefined) {
-      return wrapped.mode === 'predefined'
-    }
-
-    // Legacy format fallback
-    if (category === 'clothing') {
-      return wrapped.style !== 'user-choice'
-    }
-    return wrapped.type !== 'user-choice'
   }
 
   const isCategoryPredefined = (category: CategoryType) => {
     const categorySettings = (value as Record<string, unknown>)[category]
 
     // If the current value is explicitly user-choice, treat it as not predefined
-    if (isUserChoiceSetting(category, categorySettings)) {
+    if (getSettingMode(category, categorySettings) === 'user-choice') {
       return false
     }
 
     // Admin mode should always reflect the current value
     if (showToggles) {
-      return isPredefinedSetting(category, categorySettings)
+      return getSettingMode(category, categorySettings) === 'predefined'
     }
 
     // When users can override predefined values, rely on their current selection
     if (!readonlyPredefined) {
-      return isPredefinedSetting(category, categorySettings)
+      return getSettingMode(category, categorySettings) === 'predefined'
     }
 
     // If predefined fields are readonly, use the original context to know which were locked
     if (originalContextSettings) {
       const originalSettings = (originalContextSettings as Record<string, unknown>)[category]
-      return isPredefinedSetting(category, originalSettings)
+      return getSettingMode(category, originalSettings) === 'predefined'
     }
 
-    return isPredefinedSetting(category, categorySettings)
+    return getSettingMode(category, categorySettings) === 'predefined'
   }
 
   const getCategoryStatus = (category: CategoryType) => {
     const categorySettings = (value as Record<string, unknown>)[category]
     if (!categorySettings) return 'not-set'
-    return isUserChoiceSetting(category, categorySettings) ? 'user-choice' : 'predefined'
+    return getSettingMode(category, categorySettings) === 'user-choice' ? 'user-choice' : 'predefined'
   }
 
   const renderCategoryCard = (category: CategoryConfig) => {
@@ -809,8 +779,11 @@ export default function PhotoStyleSettings({
     const status = getCategoryStatus(category.key)
     const isPredefined = isCategoryPredefined(category.key)
     const isUserChoice = status === 'user-choice'
-    // When showToggles is true (admin setting style), nothing is locked
-    const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined
+    const isAdminUserChoice = showToggles && isUserChoice
+    const isStyleOnlyClothingLock = !showToggles && readonlyPredefined && isPredefined && category.key === 'clothing'
+    const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined && category.key !== 'clothing'
+    const isCategoryInputsDisabled =
+      (!showToggles && readonlyPredefined && isPredefined && !isStyleOnlyClothingLock) || isAdminUserChoice
     const hasValueSet = !uneditedFieldSet.has(category.key) ||
       (acceptedOnVisitSet.has(category.key) && Boolean(visitedStepKeys?.has(category.key)))
     const isIncomplete = !hasValueSet
@@ -838,8 +811,6 @@ export default function PhotoStyleSettings({
       isHighlightedField &&
       hasValueSet &&
       Boolean(nextIncompleteEditableKey)
-    const userChoiceCardClass = 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-
     return (
       <div key={category.key} className="relative">
       {/* "TAB or click next customization" hint — right edge, vertically centered */}
@@ -898,20 +869,10 @@ export default function PhotoStyleSettings({
           }
           setManualActiveFieldKey(category.key)
         } : undefined}
-        className={`w-full h-full max-w-full overflow-hidden transition-all duration-300 ease-out ${isPredefined
-          ? 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-          : isUserChoice
-            ? userChoiceCardClass
-            : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
-          } ${isLockedByPreset ? 'opacity-75' : ''} ${isHighlightedField ? 'ring-2 ring-brand-primary shadow-lg' : ''} ${isInactiveIncomplete ? 'opacity-35 shadow-none border-gray-200/60 hover:opacity-60' : ''} ${canActivateCard ? 'cursor-pointer' : ''}`}
+        className={`w-full h-full max-w-full overflow-hidden transition-all duration-300 ease-out rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5 ${isLockedByPreset ? 'opacity-75' : ''} ${isHighlightedField ? 'ring-2 ring-brand-primary shadow-lg' : ''} ${isInactiveIncomplete ? 'opacity-35 shadow-none border-gray-200/60 hover:opacity-60' : ''} ${canActivateCard ? 'cursor-pointer' : ''}`}
       >
         {/* Category Header */}
-        <div
-          className={`${isPredefined
-            ? 'p-3 md:p-4 border-b border-gray-200/80'
-            : 'p-3 md:p-4 border-b border-gray-200/80'
-            }`}
-        >
+        <div className="p-3 md:p-4 border-b border-gray-200/80">
           <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Left side: Icon, title, and current value */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -930,8 +891,7 @@ export default function PhotoStyleSettings({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className={`text-base md:text-lg font-bold ${isUserChoice ? 'text-gray-900' : 'text-gray-900'
-                    }`}>
+                  <h3 className="text-base md:text-lg font-bold text-gray-900">
                     {t(`categories.${category.key}.title`, { default: category.label })}
                   </h3>
                   {/* Status badge - for locked items */}
@@ -1011,16 +971,18 @@ export default function PhotoStyleSettings({
             </div>
           }
         >
-          <div className={`${isPredefined
-            ? 'p-3 md:p-5'
-            : 'p-3 md:p-5'
-            }`}>
+          <div className={`p-3 md:p-5 ${isAdminUserChoice ? 'opacity-50 pointer-events-none' : ''}`}>
+            {isAdminUserChoice && (
+              <p className="mb-3 text-xs text-gray-600">
+                Team members will choose this setting.
+              </p>
+            )}
             {category.key === 'background' && (
               <BackgroundSelector
                 value={value.background || userChoice()}
                 onChange={(settings) => handleCategorySettingsChange('background', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
                 availableBackgrounds={pkg.availableBackgrounds}
                 showHeader={false}
                 token={token}
@@ -1034,8 +996,11 @@ export default function PhotoStyleSettings({
                 clothingColors={resolvedClothingColors}
                 excludeColors={excludedClothingColors}
                 availableStyles={pkg.availableClothingStyles}
-                isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isPredefined={isPredefined}
+                styleLocked={isStyleOnlyClothingLock}
+                adminStyleOnly={showToggles}
+                isDisabled={isCategoryInputsDisabled}
+                detectedGender={detectedGender}
                 // In user customization flow, a clothing choice must be explicit (no implicit auto-accept).
                 suppressAutoSelect={!showToggles || desktopProgressiveActivationEnabled}
               />
@@ -1045,7 +1010,7 @@ export default function PhotoStyleSettings({
               <ClothingColorSelector
                 value={value.clothingColors || userChoice()}
                 onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
                 showPredefinedBadge={isPredefined}
                 showHeader={false}
@@ -1059,7 +1024,7 @@ export default function PhotoStyleSettings({
               <CustomClothingSelector
                 value={value.customClothing || { mode: 'predefined', value: undefined }}
                 onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
-                disabled={!showToggles && readonlyPredefined && isPredefined}
+                disabled={isCategoryInputsDisabled}
                 mode={showToggles ? 'admin' : 'user'}
                 token={token}
               />
@@ -1070,7 +1035,7 @@ export default function PhotoStyleSettings({
                 value={value.shotType || userChoice()}
                 onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
               />
             )}
 
@@ -1080,7 +1045,7 @@ export default function PhotoStyleSettings({
                   value={value.branding || userChoice()}
                   onChange={(settings) => handleCategorySettingsChange('branding', settings)}
                   isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                  isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                  isDisabled={isCategoryInputsDisabled}
                   token={token}
                 />
               </>
@@ -1091,7 +1056,7 @@ export default function PhotoStyleSettings({
                 value={value.expression || userChoice()}
                 onChange={(settings) => handleCategorySettingsChange('expression', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
                 availableExpressions={pkg.availableExpressions}
               />
             )}
@@ -1102,7 +1067,7 @@ export default function PhotoStyleSettings({
                 onChange={(settings) => handleCategorySettingsChange('preset', settings)}
                 availablePresets={pkg.presets}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
               />
             )}
 
@@ -1111,7 +1076,7 @@ export default function PhotoStyleSettings({
                 value={value.pose || { mode: 'user-choice', value: undefined }}
                 onChange={(settings) => handleCategorySettingsChange('pose', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
                 availablePoses={pkg.availablePoses}
               />
             )}
@@ -1121,7 +1086,7 @@ export default function PhotoStyleSettings({
                 value={value.industry || { mode: 'user-choice', value: undefined }}
                 onChange={(settings) => handleCategorySettingsChange('industry', settings)}
                 isPredefined={!showToggles && readonlyPredefined && isPredefined}
-                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={isCategoryInputsDisabled}
               />
             )}
 
@@ -1163,12 +1128,7 @@ export default function PhotoStyleSettings({
     allCategories
   })
 
-  const editableCategoryKeys = React.useMemo(
-    () => currentEditableCategories.map((category) => category.key),
-    [currentEditableCategories]
-  )
-
-  const lockedSectionsVisible = true
+  const editableCategoryKeys = currentEditableCategories.map((category) => category.key)
 
   const totalMobileSteps = mobileSteps.length
   const currentMobileStep = mobileSteps[activeMobileStep]
@@ -1207,8 +1167,9 @@ export default function PhotoStyleSettings({
     })
   }, [currentMobileStep, allNumberedSteps])
 
-  // Track visited editable steps - mark as visited when user navigates to them
+  // Track visited editable steps - mark as visited when user navigates to them (mobile only).
   React.useEffect(() => {
+    if (!isMobileViewport) return
     if (currentAllStepsIndex >= 0 && currentMobileStep?.type === 'editable') {
       setVisitedEditableSteps(prev => {
         if (prev.has(currentAllStepsIndex)) return prev
@@ -1217,13 +1178,14 @@ export default function PhotoStyleSettings({
         return next
       })
     }
-  }, [currentAllStepsIndex, currentMobileStep?.type])
+  }, [currentAllStepsIndex, currentMobileStep?.type, isMobileViewport])
 
-  // Persist visited steps to session storage whenever they change
-  // Only persist actually visited steps, not steps with pre-configured values
+  // Persist visited steps to session storage only for mobile flows.
+  // Desktop uses explicit category visits/field changes from the parent flow.
   React.useEffect(() => {
+    if (!isMobileViewport) return
     setPersistentVisitedSteps(Array.from(visitedEditableSteps))
-  }, [visitedEditableSteps, setPersistentVisitedSteps])
+  }, [visitedEditableSteps, setPersistentVisitedSteps, isMobileViewport])
 
   // Get the current step's position in editable steps (1-indexed), or 0 if not a numbered step
   // When on a locked step, show the last editable step number we completed
@@ -1335,20 +1297,14 @@ export default function PhotoStyleSettings({
     visitedEditableSteps
   ])
 
-  // Map step indicator index (0=selfie, 1+=customization) to mobileSteps index
+  // Map step indicator index (0=selfie, 1=beautification, 2+=customization) to mobileSteps index
   const mapStepIndicatorIndexToMobileStep = React.useCallback((indicatorIndex: number): number | null => {
-    if (indicatorIndex === 0) {
-      // Index 0 is selfie - find it in mobileSteps (could be in mobileExtraSteps)
-      const selfieIndex = mobileSteps.findIndex(step =>
-        step.type === 'custom' && (
-          step.custom?.id === 'selfie-selection' ||
-          step.custom?.id === 'selfie'
-        )
-      )
-      return selfieIndex >= 0 ? selfieIndex : null
+    if (indicatorIndex <= 1) {
+      // Selfie and beautification are route-level steps outside this component.
+      return null
     }
-    // Index 1+ maps to customization steps (indicatorIndex - 1 in allNumberedSteps)
-    const numberedStepIndex = indicatorIndex - 1
+    // Index 2+ maps to customization steps
+    const numberedStepIndex = indicatorIndex - 2
     if (numberedStepIndex < 0 || numberedStepIndex >= allNumberedSteps.length) {
       return null
     }
@@ -1534,14 +1490,6 @@ export default function PhotoStyleSettings({
               </div>
             )}
 
-            {!lockedSectionsVisible && currentLockedCategories.length > 0 && (
-              <LockedSectionsTeaser
-                showToggles={showToggles}
-                lockedCount={currentLockedCategories.length}
-                hasCustomizedEditable={hasCustomizedEditable}
-                t={t}
-              />
-            )}
           </div>
         ) : (
           <div className="space-y-8">
@@ -1579,37 +1527,35 @@ export default function PhotoStyleSettings({
                   />
                 )}
 
-                {lockedSectionsVisible && (
-                  <div className="space-y-6">
-                    {/* Team Presets Header - prominent section divider */}
-                    <div className="relative mt-8 pt-8 border-t-2 border-gray-200">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                          <LockClosedIcon className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                            {t('sections.preset', { default: 'Team presets' })}
-                          </h2>
-                          <p className="text-sm text-gray-500">
-                            {t('sections.presetDesc', { default: 'These are fixed for your team' })}
-                          </p>
-                        </div>
+                <div className="space-y-6">
+                  {/* Team Presets Header - prominent section divider */}
+                  <div className="relative mt-8 pt-8 border-t-2 border-gray-200">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                        <LockClosedIcon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                          {t('sections.preset', { default: 'Team presets' })}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                          {t('sections.presetDesc', { default: 'These are fixed for your team' })}
+                        </p>
                       </div>
                     </div>
-                    <CardGrid gap="lg">
-                      {currentLockedCategories.map((cat, idx) => (
-                        <div
-                          key={cat.key}
-                          className="animate-fade-in"
-                          style={{ animationDelay: `${idx * 100}ms` }}
-                        >
-                          {renderCategoryCard(cat)}
-                        </div>
-                      ))}
-                    </CardGrid>
                   </div>
-                )}
+                  <CardGrid gap="lg">
+                    {currentLockedCategories.map((cat, idx) => (
+                      <div
+                        key={cat.key}
+                        className="animate-fade-in"
+                        style={{ animationDelay: `${idx * 100}ms` }}
+                      >
+                        {renderCategoryCard(cat)}
+                      </div>
+                    ))}
+                  </CardGrid>
+                </div>
               </>
             )}
           </div>

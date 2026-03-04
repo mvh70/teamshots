@@ -2,7 +2,6 @@
 
 // Layout components
 export { 
-  FlowLayout, 
   FlowHeader, 
   FlowFooter, 
   SwipeHint, 
@@ -28,4 +27,3 @@ export { default as SharedMobileSelfieFlow } from './selfie/SharedMobileSelfieFl
 export { default as IntroScreenContent } from './IntroScreenContent'
 export { default as SelfieTipsContent } from './SelfieTipsContent'
 export { default as CustomizationIntroContent } from './CustomizationIntroContent'
-

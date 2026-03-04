@@ -26,10 +26,10 @@ export default function BlogCTA({
 }: BlogCTAProps) {
   // Sample headshot images for visual interest
   const sampleImages = [
-    '/images/expressions/genuine_smile.png',
-    '/images/expressions/soft_smile.png',
-    '/images/expressions/neutral_serious.png',
-    '/images/expressions/laugh_joy.png',
+    '/images/expressions/genuine_smile.webp',
+    '/images/expressions/soft_smile.webp',
+    '/images/expressions/neutral_serious.webp',
+    '/images/expressions/laugh_joy.webp',
   ]
 
   return (

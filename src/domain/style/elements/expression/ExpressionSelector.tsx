@@ -113,7 +113,7 @@ export default function ExpressionSelector({
         {selectValue && hasExpressionImage(selectValue) && (
           <div className="mt-4">
             <ImagePreview
-              src={`/images/expressions/${selectValue}.png`}
+              src={`/images/expressions/${selectValue}.webp`}
               alt={t(`expressions.${selectValue}.label`)}
               width={400}
               height={300}

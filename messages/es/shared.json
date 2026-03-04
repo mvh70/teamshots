@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "Fotos Profesionales de Equipo en 60 Segundos",
-    "description": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación. Retratos profesionales con IA para todo tu equipo."
+    "title": "Headshots Profesionales de Equipo en 60 Segundos",
+    "description": "Headshots profesionales de equipo con IA a partir de cualquier selfie en 60 segundos. Fotos consistentes y alineadas con tu marca. Sin fotógrafo."
   },
   "common": {
     "processingImage": "Procesando imagen...",
@@ -35,7 +35,7 @@
     "getStarted": "Empezar Gratis"
   },
   "blog": {
-    "title": "Blog",
+    "title": "Blog de Headshots con IA",
     "description": "Consejos, guías e ideas sobre headshots con IA, marca profesional y fotos de equipo.",
     "cta": {
       "heading": "¿Listo para obtener tus headshots profesionales?",
@@ -438,6 +438,11 @@
       "bookDemo": "Agendar Demo para Precios Personalizados",
       "freeTrialPrompt": "¿No estás listo para comprometerte? Prueba 3 fotos gratis primero.",
       "tryFreeLink": "Comenzar prueba gratis — sin tarjeta de crédito",
+      "researchLink": {
+        "title": "¿Necesitas benchmarks del mercado antes de decidir?",
+        "description": "Revisa nuestro análisis completo de precios de headshots corporativos, con comparativas on-site vs estudio, patrones por volumen y costos ocultos a nivel de equipo.",
+        "linkText": "Ver el benchmark de precios de headshots corporativos"
+      },
       "pricingBreakdown": {
         "title": "Cómo funciona el precio",
         "description": "Paga menos por persona a medida que crece tu equipo. Los primeros puestos cuestan más, los adicionales son progresivamente más baratos.",
@@ -565,7 +570,10 @@
       "otpHelp": "Código caduca en 10 min",
       "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo.",
       "invalidOtp": "Código de verificación inválido o caducado. Por favor intenta de nuevo.",
-      "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo."
+      "accountExists": "Ya existe una cuenta con este correo. Por favor inicia sesión.",
+      "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
+      "emailRequired": "Se requiere el correo electrónico para verificar tu cuenta.",
+      "restartSignup": "Este flujo de verificación ya no está disponible. Vuelve al registro y solicita un nuevo código."
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",
@@ -824,6 +832,7 @@
         "teamMembers": "Miembros del Equipo",
         "photosGenerated": "Fotos Generadas",
         "activeTemplates": "Estilos de Foto Activos",
+        "freePackage": "Paquete gratuito",
         "unlockPhotoStyles": "Desbloquear estilos de foto",
         "photosUsed": "Fotos Usadas",
         "photos": "Créditos de foto",
@@ -1701,6 +1710,7 @@
         "back": "Atrás",
         "dashboard": "Panel",
         "selfies": "Selfies",
+        "beautification": "Embellecimiento",
         "customize": "Personalizar",
         "generate": "Generar",
         "dontShowAgain": "No mostrar de nuevo",
@@ -1853,11 +1863,52 @@
       "footer": "¿No hiciste esta compra? Qué raro. Contáctanos y lo resolvemos."
     }
   },
+  "beautification": {
+    "title": "Embellecimiento",
+    "subtitle": "Configura tu nivel de retoque preferido y elige si deseas mantener o eliminar los accesorios detectados.",
+    "retouching": {
+      "title": "Nivel de retoque",
+      "levels": {
+        "none": {
+          "label": "Ninguno",
+          "description": "Sin edición. Mantiene textura, imperfecciones, ojeras y cabellos sueltos tal cual."
+        },
+        "light": {
+          "label": "Ligero",
+          "description": "Limpieza de imperfecciones temporales + suavizado muy leve de ojeras. Conserva poros y textura."
+        },
+        "medium": {
+          "label": "Medio",
+          "description": "Añade equilibrio de tono de piel, reducción moderada de ojeras y limpieza menor de cabellos sueltos."
+        },
+        "high": {
+          "label": "Alto",
+          "description": "Pulido intenso con mayor limpieza/suavizado de piel y corrección de ojeras, manteniendo la identidad."
+        }
+      }
+    },
+    "accessories": {
+      "title": "Accesorios",
+      "empty": "No se detectaron accesorios en los selfies seleccionados.",
+      "labels": {
+        "glasses": "Gafas",
+        "facialHair": "Vello facial",
+        "jewelry": "Joyería",
+        "piercings": "Piercings",
+        "tattoos": "Tatuajes"
+      },
+      "actions": {
+        "keep": "Mantener",
+        "remove": "Eliminar"
+      }
+    }
+  },
   "customization": {
     "photoStyle": {
       "legend": {
         "editableChip": "Editable",
         "lockedChip": "Preestablecido por admin del equipo",
+        "styleLockedChip": "Estilo definido por admin",
         "presetChip": "Preset activo",
         "needsSelection": "Elige uno"
       },
@@ -1909,8 +1960,12 @@
           "locked": "Este icono significa que el administrador de tu equipo fijó estos, y no se pueden cambiar.",
           "skip": "No volver a mostrar",
           "continueButton": "Continuar para personalizar",
-          "prevLabel": "Selfies",
+          "prevLabel": "Embellecimiento",
           "nextLabel": "Personalizar"
+        },
+        "beautification": {
+          "title": "Embellecimiento",
+          "subtitle": "Preferencias de retoque y accesorios"
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
@@ -2066,18 +2121,42 @@
       },
       "clothing": {
         "title": "Estilo de Ropa",
-        "subtitle": "Elige estilo de ropa y accesorios",
+        "subtitle": "Elige estilo de ropa, subestilo y accesorios",
         "predefined": "Predefinido",
+        "stylesLabel": "Estilo",
+        "styleLockedByAdmin": "El estilo lo definió el admin. Puedes elegir un subestilo.",
+        "mode": {
+          "label": "Estructura del outfit",
+          "separate": "Parte superior + inferior",
+          "onePiece": "Una sola prenda"
+        },
+        "top": {
+          "label": "Capa base"
+        },
+        "bottom": {
+          "label": "Capa inferior"
+        },
+        "outer": {
+          "label": "Capa superior (opcional)",
+          "none": "Sin capa superior"
+        },
+        "onePiece": {
+          "label": "Prenda de una pieza"
+        },
         "details": {
-          "label": "Detalles"
+          "label": "Subestilo"
         },
         "accessories": {
           "label": "Accesorios"
         },
         "styles": {
-          "business": {
-            "label": "Negocios",
-            "description": "Vestimenta profesional"
+          "business_professional": {
+            "label": "Formal",
+            "description": "Negocios profesional"
+          },
+          "business_casual": {
+            "label": "Casual",
+            "description": "Negocios casual"
           },
           "startup": {
             "label": "Startup",
@@ -2091,13 +2170,31 @@
         "details_options": {
           "formal": "Formal",
           "casual": "Casual",
+          "suit": "Traje",
+          "jacket": "Chaqueta",
+          "pantsuit": "Traje de pantalón",
+          "blouse": "Blusa",
+          "cardigan": "Cárdigan",
           "t-shirt": "Camiseta",
           "hoodie": "Sudadera",
           "polo": "Polo",
           "button-down": "Camisa",
+          "jumpsuit": "Mono",
           "tuxedo": "Esmoquin",
-          "suit": "Traje",
-          "dress": "Vestido"
+          "dress": "Vestido",
+          "gown": "Vestido de gala",
+          "dress-shirt": "Camisa de vestir",
+          "silk-blouse": "Blusa de seda",
+          "trousers": "Pantalón de vestir",
+          "chinos": "Pantalón chino",
+          "jeans": "Jeans",
+          "pencil-skirt": "Falda lápiz",
+          "formal-skirt": "Falda formal",
+          "dress-pants": "Pantalón de etiqueta",
+          "suit-jacket": "Chaqueta de traje",
+          "tuxedo-jacket": "Chaqueta de esmoquin",
+          "robe": "Bata",
+          "skirt": "Falda"
         }
       },
       "clothingColors": {
@@ -2107,7 +2204,7 @@
         "outerLayer": "Capa superior",
         "outerLayerDesc": "Blazer, chaqueta, cárdigan, camisa abotonada, sudadera, polo",
         "topLayer": "Capa superior",
-        "topLayerDesc": "La prenda exterior visible: chaqueta, blazer, sudadera, polo, camiseta, vestido",
+        "topLayerDesc": "La prenda exterior visible: chaqueta, sudadera, polo, camiseta, vestido",
         "baseLayer": "Capa base",
         "baseLayerDesc": "Camisa o camiseta debajo de la capa superior",
         "shirtBlouse": "Capa base",
@@ -2240,6 +2337,7 @@
         "subtitle": "Elige una pose corporal y posicionamiento",
         "predefined": "Predefinido",
         "selectPlaceholder": "Elige tu pose",
+        "noPreview": "No hay imagen de vista previa disponible para esta pose",
         "poses": {
           "classic_corporate": {
             "label": "Corporativo Clásico",
@@ -2895,7 +2993,17 @@
   },
   "inviteDashboard": {
     "loading": "Cargando panel...",
+    "loadingGenerations": "Cargando generaciones...",
     "newGeneration": "Nueva generación",
+    "yourGenerations": "Tus generaciones",
+    "allTime": "Todo el tiempo",
+    "last7Days": "Últimos 7 días",
+    "last30Days": "Últimos 30 días",
+    "allPhotoStyles": "Todos los estilos de foto",
+    "noMatchingGenerations": "Ninguna generación coincide con tus filtros.",
+    "noGenerationsYet": "Aún no hay generaciones",
+    "noGenerationsYetDescription": "Sube una selfie y genera tus primeras fotos del equipo.",
+    "generatePhotos": "Generar fotos",
     "insufficientCredits": {
       "title": "Créditos insuficientes",
       "messageWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",
@@ -2921,7 +3029,8 @@
       "customizePhoto": "Por favor, personaliza la configuración de tu foto antes de generar",
       "insufficientCreditsWithEmail": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo en {adminEmail} para solicitar más créditos.",
       "insufficientCreditsGeneric": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo para solicitar más créditos.",
-      "generationFailed": "Error al iniciar la generación. Por favor, intenta de nuevo."
+      "generationFailed": "Error al iniciar la generación. Por favor, intenta de nuevo.",
+      "uploadFailed": "La subida falló. Inténtalo de nuevo."
     },
     "common": {
       "continue": "Continuar",
@@ -2951,19 +3060,20 @@
       },
       "mobile": {
         "bannerTitle": "Selecciona tus selfies",
-        "bannerMessage": "Elige al menos 2 selfies y desliza a la derecha cuando estés listo para personalizar.",
-        "cta": "Desliza a la derecha al terminar",
+        "bannerMessage": "Elige al menos 2 selfies y continúa a embellecimiento.",
+        "cta": "Continúa al terminar",
         "badgeSelecting": "Faltan {remaining}",
-        "badgeReady": "Listo para personalizar",
-        "hint": "¿Necesitas ajustar tus selfies? Hazlo aquí y luego desliza a la derecha para continuar.",
+        "badgeReady": "Listo para embellecimiento",
+        "hint": "¿Necesitas ajustar tus selfies? Hazlo aquí y luego continúa.",
         "prevLabel": "Panel",
-        "nextLabel": "Personalización",
+        "nextLabel": "Embellecimiento",
         "actions": {
           "camera": "Usar cámara",
           "upload": "Subir foto"
         },
         "navigation": {
           "selfies": "Selfies",
+          "beautification": "Embellecimiento",
           "back": "Atrás",
           "previous": "Anterior",
           "next": "Siguiente",

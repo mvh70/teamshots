@@ -2,9 +2,8 @@ import createMiddleware from 'next-intl/middleware';
 import { routing } from '@/i18n/routing';
 import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/auth'
-import { ALLOWED_DOMAINS } from '@/lib/url'
-import { getRequestDomain } from '@/lib/domain'
 import { TEAM_DOMAIN } from '@/config/domain'
+import { DEFAULT_TENANT_ID, TENANT_ALLOWED_DOMAINS, getTenantById, resolveTenantId } from '@/config/tenant'
 
 const PROTECTED_PATH_PREFIXES = ['/app']
 const ADMIN_PATH_PREFIXES = ['/app/admin']
@@ -56,12 +55,12 @@ function getCanonicalHostForDomain(domain: string): string {
 
 function resolveAllowedDomain(host: string): string | null {
   const normalized = host.replace(/^www\./, '')
-  if ((ALLOWED_DOMAINS as readonly string[]).includes(normalized)) {
+  if ((TENANT_ALLOWED_DOMAINS as readonly string[]).includes(normalized)) {
     return normalized
   }
 
   const withCom = `${normalized}.com`
-  if ((ALLOWED_DOMAINS as readonly string[]).includes(withCom)) {
+  if ((TENANT_ALLOWED_DOMAINS as readonly string[]).includes(withCom)) {
     return withCom
   }
 
@@ -227,11 +226,32 @@ function addSecurityHeaders(response: NextResponse) {
   return response
 }
 
+/**
+ * Forward additional request headers upstream while preserving the existing
+ * response returned by middleware composition (e.g. next-intl).
+ */
+function attachUpstreamRequestHeaders(response: NextResponse, requestHeaders: Headers): NextResponse {
+  const forwardingResponse = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
+  for (const [key, value] of forwardingResponse.headers.entries()) {
+    if (key === 'x-middleware-override-headers' || key.startsWith('x-middleware-request-')) {
+      response.headers.set(key, value)
+    }
+  }
+
+  return response
+}
+
 // Wrap the intl middleware
 const intlMiddleware = createMiddleware({
   locales: routing.locales,
   defaultLocale: routing.defaultLocale,
-  localePrefix: routing.localePrefix
+  localePrefix: routing.localePrefix,
+  alternateLinks: false
 })
 
 export async function proxy(request: NextRequest) {
@@ -289,7 +309,12 @@ export async function proxy(request: NextRequest) {
       // should be redirected there if they try to access via teamshotspro.com
       const signupDomain = session.user.signupDomain
       if (signupDomain) {
-        const currentDomain = getRequestDomain(request)
+        const currentTenantId = resolveTenantId(
+          request.headers.get('x-forwarded-host') ||
+          request.headers.get('host') ||
+          request.nextUrl.hostname
+        )
+        const currentDomain = currentTenantId ? getTenantById(currentTenantId).domain : null
         const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
         
         // Skip redirect for localhost signupDomain (legacy development users)
@@ -302,7 +327,7 @@ export async function proxy(request: NextRequest) {
           // Skip redirect in development unless explicitly testing cross-domain
           const shouldRedirect = currentDomain && 
             currentDomain !== normalizedSignupDomain && 
-            (ALLOWED_DOMAINS as readonly string[]).includes(normalizedSignupDomain) &&
+            (TENANT_ALLOWED_DOMAINS as readonly string[]).includes(normalizedSignupDomain) &&
             (process.env.NODE_ENV === 'production' || process.env.ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
           
           if (shouldRedirect) {
@@ -318,7 +343,18 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    const response = intlMiddleware(request)
+    const tenantId = resolveTenantId(
+      request.headers.get('x-forwarded-host') ||
+      request.headers.get('host') ||
+      request.nextUrl.hostname
+    ) ?? DEFAULT_TENANT_ID
+    const upstreamRequestHeaders = new Headers(request.headers)
+    upstreamRequestHeaders.set('x-tenant-id', tenantId)
+
+    const response = attachUpstreamRequestHeaders(
+      intlMiddleware(request),
+      upstreamRequestHeaders
+    )
 
     return addSecurityHeaders(response)
   } catch (error) {

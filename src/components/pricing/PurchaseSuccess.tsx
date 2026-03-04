@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, usePathname } from '@/i18n/routing'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -21,23 +21,16 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
-  const [planType, setPlanType] = useState<'individual' | 'vip' | 'topUp' | 'seats' | null>(null)
+  const planType = useMemo<'individual' | 'vip' | 'topUp' | 'seats' | null>(() => {
+    const successType = searchParams.get('type')
+    if (successType === 'individual_success') return 'individual'
+    if (successType === 'vip_success') return 'vip'
+    if (successType === 'top_up_success') return 'topUp'
+    if (successType === 'seats_success') return 'seats'
+    return null
+  }, [searchParams])
   const [isNavigating, setIsNavigating] = useState(false)
   const hasTrackedRef = useRef(false)
-
-  useEffect(() => {
-    const successType = searchParams.get('type')
-    // Map success types from checkout to plan types
-    if (successType === 'individual_success') {
-      setPlanType('individual')
-    } else if (successType === 'vip_success') {
-      setPlanType('vip')
-    } else if (successType === 'top_up_success') {
-      setPlanType('topUp')
-    } else if (successType === 'seats_success') {
-      setPlanType('seats')
-    }
-  }, [searchParams])
 
   // Track payment completion (conversion from free to paid)
   useEffect(() => {

@@ -2,21 +2,21 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { constructMetadata } from '@/lib/seo';
-import { getLandingVariant } from '@/config/landing-content';
-import { getBrand } from '@/config/brand';
+import { getBrandByDomain } from '@/config/brand';
+import { getTenant } from '@/config/tenant-server';
 import { BLOG_POSTS } from '@/config/blog';
 import { BlogContent } from '@/components/blog';
-import { getBlogPostsForVariant } from '@/lib/cms';
+import { getBlogPostsForBrand } from '@/lib/cms';
 import { BlogIndexSchema } from './schema';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blog' });
+  const tenant = await getTenant();
   const headersList = await headers();
   const host = headersList.get('x-forwarded-host') || headersList.get('host');
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  // Fallback to teamshotspro if host missing (unlikely in prod) but good for safety
-  const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com';
+  const baseUrl = host ? `${protocol}://${host}` : `https://${tenant.domain}`;
 
   return constructMetadata({
     baseUrl,
@@ -37,28 +37,25 @@ type BlogPageProps = {
  * Falls back to static config for posts not yet in CMS.
  */
 export default async function BlogPage({ searchParams }: BlogPageProps) {
+  const tenant = await getTenant();
   const headersList = await headers();
   const host = headersList.get('x-forwarded-host') || headersList.get('host');
   const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
-  const variant = getLandingVariant(domain);
+  const variant = tenant.landingVariant;
   const locale = await getLocale();
-  const baseUrl = host ? `${protocol}://${host}` : 'https://teamshotspro.com';
+  const baseUrl = host ? `${protocol}://${host}` : `https://${tenant.domain}`;
 
-  // Only TeamShotsPro and IndividualShots have blogs
-  if (variant !== 'teamshotspro' && variant !== 'individualshots') {
+  if (!tenant.features.blog) {
     notFound();
   }
 
   const t = await getTranslations('blog');
 
-  // Get brand name from brand config
-  const brand = getBrand(headersList);
-  const brandName = brand.name;
+  const brand = getBrandByDomain(tenant.domain);
 
   // Get posts from CMS database (primary source)
   // Pass locale to filter out untranslated posts for Spanish
-  const cmsPosts = getBlogPostsForVariant(variant, locale);
+  const cmsPosts = getBlogPostsForBrand(tenant.cmsBrandId, variant, locale);
   const cmsSlugSet = new Set(cmsPosts.map((p) => p.slug));
 
   // Get static config posts not in CMS (fallback)

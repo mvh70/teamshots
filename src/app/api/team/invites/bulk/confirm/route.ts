@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine context to use (same logic as single invite)
-    const rawAdminPlanPeriod = (team?.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+    const rawAdminPlanPeriod = team.admin?.planPeriod ?? null
     const adminPlanPeriod = rawAdminPlanPeriod === 'month' ? 'monthly' : rawAdminPlanPeriod === 'year' ? 'annual' : rawAdminPlanPeriod
     const isAdminOnFreePlan = adminPlanPeriod === 'free' || !adminPlanPeriod
 
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
             email: invite.email,
             teamName: team.name || 'Team',
             inviteLink: invite.inviteLink,
-            creditsAllocated: 10, // Fixed allocation
+            creditsAllocated: invite.creditsAllocated,
             firstName: invite.firstName,
             inviterFirstName,
             locale: user.locale as 'en' | 'es' || 'en'

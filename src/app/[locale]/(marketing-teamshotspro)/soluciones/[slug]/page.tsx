@@ -4,9 +4,9 @@ import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getSolutionBySlug } from '@/config/solutions'
 import { getEnglishSolutionSlug, SPANISH_SOLUTION_SLUGS } from '@/config/spanish-slugs'
-import { getLandingVariant } from '@/config/landing-content'
 import { getBaseUrl } from '@/lib/url'
-import { getBrand } from '@/config/brand'
+import { getBrandByDomain } from '@/config/brand'
+import { getTenant } from '@/config/tenant-server'
 import {
   IndustryHero,
   IndustryPainPoints,
@@ -40,6 +40,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params
+  const tenant = await getTenant()
   const headersList = await headers()
 
   // This route is only for Spanish - redirect English to /solutions
@@ -56,6 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const baseUrl = getBaseUrl(headersList)
   const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
+  const brand = getBrandByDomain(tenant.domain)
 
   const seoTitle = t('seo.title')
   const seoDescription = t('seo.description')
@@ -83,13 +85,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: seoTitle,
       description: seoDescription,
       url: canonical,
-      siteName: 'TeamShotsPro',
+      siteName: brand.name,
       images: [
         {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${solution.label} AI Headshots - TeamShotsPro`,
+          alt: `${solution.label} AI Headshots - ${brand.name}`,
         },
       ],
     },
@@ -113,6 +115,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SolucionesPage({ params }: Props) {
   const { locale, slug } = await params
+  const tenant = await getTenant()
   const headersList = await headers()
 
   // This route is only for Spanish - redirect English to /solutions
@@ -129,10 +132,7 @@ export default async function SolucionesPage({ params }: Props) {
   if (!englishSlug) notFound()
 
   // TeamShotsPro-only pages (B2B verticals)
-  const host = headersList.get('x-forwarded-host') || headersList.get('host')
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
-  const variant = getLandingVariant(domain)
-  if (variant !== 'teamshotspro') {
+  if (tenant.id !== 'teamshotspro') {
     notFound()
   }
 
@@ -141,7 +141,7 @@ export default async function SolucionesPage({ params }: Props) {
 
   // Get translations for schema data
   const baseUrl = getBaseUrl(headersList)
-  const brand = getBrand(headersList)
+  const brand = getBrandByDomain(tenant.domain)
   const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
 
   // Extract data for schema

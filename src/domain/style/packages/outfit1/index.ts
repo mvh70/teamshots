@@ -10,6 +10,7 @@ import * as expression from '../../elements/expression'
 import * as shotType from '../../elements/shot-type'
 import { predefined, userChoice, isUserChoice, hasValue } from '../../elements/base/element-types'
 import type { ClothingColorValue } from '../../elements/clothing-colors/types'
+import { DEFAULT_BEAUTIFICATION_VALUE } from '../../elements/beautification/types'
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
   'background',
@@ -66,6 +67,7 @@ const DEFAULTS: PhotoStyleSettings = {
     value: undefined
   },
   clothingColors: userChoice<ClothingColorValue>(),
+  beautification: userChoice(DEFAULT_BEAUTIFICATION_VALUE),
   shotType: predefined({ type: 'medium-close-up' as const }),
   filmType: predefined({ type: 'kodak-editorial' }),
   // Non-visible settings - package standards
@@ -86,6 +88,11 @@ export const outfit1: ClientStylePackage = {
   defaultSettings: DEFAULTS,
   defaultPresetId: 'corporate-headshot',
   presets: {},  // No preset dependency - package is self-contained
+  metadata: {
+    capabilities: {
+      supportsBeautification: true,
+    },
+  },
   promptBuilder: () => {
     throw new Error('promptBuilder is deprecated - use server-side buildGenerationPayload instead')
   },
@@ -100,6 +107,7 @@ export const outfit1: ClientStylePackage = {
       pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
       shotType: rawStyleSettings.shotType as PhotoStyleSettings['shotType'],
+      beautification: rawStyleSettings.beautification as PhotoStyleSettings['beautification'],
     }
   },
   persistenceAdapter: {
@@ -116,6 +124,7 @@ export const outfit1: ClientStylePackage = {
         pose: ui.pose,
         expression: ui.expression,
         shotType: ui.shotType,
+        ...(ui.beautification !== undefined && { beautification: ui.beautification }),
       }
     }),
     deserialize: (raw) => {
@@ -172,6 +181,7 @@ export const outfit1: ClientStylePackage = {
         pose: poseResult,
         expression: expressionResult,
         shotType: shotTypeResult,
+        ...('beautification' in inner && { beautification: inner.beautification as PhotoStyleSettings['beautification'] }),
       }
     }
   }

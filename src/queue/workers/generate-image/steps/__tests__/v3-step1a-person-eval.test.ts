@@ -31,6 +31,7 @@ describe('executeV3Step1aEval', () => {
         proportions_realistic: 'YES',
         no_unauthorized_add_ons: 'YES',
         no_unauthorized_accessories: 'YES',
+        accessory_action_compliance: 'YES',
         no_visible_reference_labels: 'YES',
         wardrobe_and_colors_match: 'YES',
         explanations: {
@@ -70,6 +71,11 @@ describe('executeV3Step1aEval', () => {
           demographic_guidance: {
             gender: 'female',
           },
+          beautification: {
+            accessories: {
+              facialHair: { action: 'remove' },
+            },
+          },
           wardrobe: {
             inherent_accessories: ['belt'],
           },
@@ -103,7 +109,13 @@ describe('executeV3Step1aEval', () => {
       'BODY REFERENCE is ONLY for body proportions/form (including natural breast/chest shape)'
     )
     expect(promptText).toContain('CLOTHING-LEVEL ACCESSORIES AUTHORIZED: belt')
+    expect(promptText).toContain(
+      'Belt is REQUIRED for this waist-revealing shot. The waistband area must show a visible belt (strap and buckle), and belt color must be clearly distinct from trouser color.'
+    )
     expect(promptText).toContain('Accessories visible in FACE REFERENCE are authorized')
+    expect(promptText).toContain('accessory_action_compliance')
+    expect(promptText).toContain('EXPLICIT ACCESSORY ACTIONS TO ENFORCE')
+    expect(promptText).toContain('facialHair: REMOVE')
     expect(promptText).toContain('wardrobe_and_colors_match')
     expect(promptText).toContain('subject.wardrobe in the prompt JSON as the source of truth')
     expect(promptText).not.toContain('N/A (not applicable)')
@@ -125,6 +137,7 @@ describe('executeV3Step1aEval', () => {
         proportions_realistic: 'YES',
         no_unauthorized_add_ons: 'YES',
         no_unauthorized_accessories: 'YES',
+        accessory_action_compliance: 'YES',
         no_visible_reference_labels: 'YES',
         wardrobe_and_colors_match: 'NO',
         explanations: {
@@ -162,5 +175,54 @@ describe('executeV3Step1aEval', () => {
 
     expect(output.evaluation.status).toBe('Not Approved')
     expect(output.evaluation.reason).toContain('wardrobe_and_colors_match: NO')
+  })
+
+  it('rejects when configured accessory action is violated', async () => {
+    generateTextWithGeminiMock.mockResolvedValueOnce({
+      text: JSON.stringify({
+        is_fully_generated: 'YES',
+        identity_preserved: 'YES',
+        proportions_realistic: 'YES',
+        no_unauthorized_add_ons: 'YES',
+        no_unauthorized_accessories: 'YES',
+        accessory_action_compliance: 'NO',
+        no_visible_reference_labels: 'YES',
+        wardrobe_and_colors_match: 'YES',
+        explanations: {
+          accessory_action_compliance: 'facialHair is set to remove, but beard remains visible.',
+        },
+      }),
+      usage: {
+        durationMs: 95,
+        inputTokens: 9,
+        outputTokens: 6,
+      },
+      providerUsed: 'vertex',
+    })
+
+    const candidate = await makeImageBuffer(1024, 1024)
+    const output = await executeV3Step1aEval({
+      imageBuffer: candidate,
+      selfieReferences: [],
+      expectedWidth: 1024,
+      expectedHeight: 1024,
+      aspectRatioConfig: { id: '1:1', width: 1024, height: 1024 },
+      generationPrompt: JSON.stringify({
+        subject: {
+          beautification: {
+            accessories: {
+              facialHair: { action: 'remove' },
+            },
+          },
+        },
+        framing: {
+          shot_type: 'medium-shot',
+        },
+      }),
+      generationId: 'gen-step1a-eval-accessory-action-fail',
+    })
+
+    expect(output.evaluation.status).toBe('Not Approved')
+    expect(output.evaluation.reason).toContain('accessory_action_compliance: NO')
   })
 })

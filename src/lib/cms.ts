@@ -121,21 +121,6 @@ export function getPublishedSolutions(brandId: string): CMSBlogPost[] {
 }
 
 /**
- * Map landing variant to CMS brand ID
- */
-export function variantToBrandId(variant: LandingVariant): string {
-  const mapping: Record<LandingVariant, string> = {
-    teamshotspro: 'teamshotspro',
-    individualshots: 'portreya',
-    portreya: 'portreya',
-    coupleshots: 'duo-snaps',
-    familyshots: 'kin-frame',
-    rightclickfit: 'rightclick-fit',
-  }
-  return mapping[variant] || 'teamshotspro'
-}
-
-/**
  * Get all published content slugs for sitemap generation
  */
 export function getAllPublishedSlugs(brandId: string): {
@@ -294,12 +279,16 @@ export function cmsToBlogPost(cmsPost: CMSBlogPost, variant: LandingVariant): Bl
 }
 
 /**
- * Get published blog posts as BlogPost array for a variant
- * @param variant - The landing variant (brand)
+ * Get published blog posts as BlogPost array for a tenant brand.
+ * @param brandId - CMS brand ID from tenant config
+ * @param variant - Landing variant used for allowedVariants/author labeling
  * @param locale - Optional locale to filter by translation availability
  */
-export function getBlogPostsForVariant(variant: LandingVariant, locale?: string): BlogPost[] {
-  const brandId = variantToBrandId(variant)
+export function getBlogPostsForBrand(
+  brandId: string,
+  variant: LandingVariant,
+  locale?: string
+): BlogPost[] {
   let cmsPosts = getPublishedBlogPosts(brandId)
 
   // If Spanish locale, filter to only posts with published/approved Spanish translations

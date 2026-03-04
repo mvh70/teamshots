@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-import { RegenerationService } from '@/domain/generation'
+import { RegenerationService, NO_REGENERATIONS_REMAINING_ERROR } from '@/domain/generation'
 import { resolveInviteAccess } from '@/lib/invite-access'
 
 /**
@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
     const result = await RegenerationService.regenerate({
       sourceGenerationId: generationId,
       personId: person.id,
-      userId: person.userId || undefined,
-      creditSource: 'team'
+      userId: person.userId || undefined
     })
 
     Logger.info('Team regeneration completed', { 
@@ -63,6 +62,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     Logger.error('Team regeneration error', { error: error instanceof Error ? error.message : String(error) })
+    if (error instanceof Error && error.message === NO_REGENERATIONS_REMAINING_ERROR) {
+      return NextResponse.json(
+        { error: 'No regenerations remaining for this generation' },
+        { status: 409 }
+      )
+    }
     return NextResponse.json(
       { error: 'Failed to start regeneration' },
       { status: 500 }

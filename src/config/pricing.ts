@@ -150,7 +150,7 @@ export const PRICING_CONFIG = {
 } as const;
 
 // Pricing tier type (maps to pricing config keys)
-export type PricingTier = 'free' | 'individual' | 'vip';
+export type PricingTier = 'free' | 'seats' | 'individual' | 'vip';
 
 // Import types from subscription utils
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
@@ -164,7 +164,7 @@ import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 export function getPricingConfigKey(
   tier: PlanTier | string | null,
   period: PlanPeriod | string | null | undefined
-): 'individual' | null {
+): 'individual' | 'vip' | 'seats' | null {
   // Free plans don't map to a pricing config key
   if (!period || period === 'free' || period === 'tryOnce' || period === 'try_once') {
     return null
@@ -174,9 +174,21 @@ export function getPricingConfigKey(
   if (tier === 'individual' && period === 'small') {
     return 'individual'
   }
+  if (tier === 'individual' && period === 'large') {
+    return 'vip'
+  }
+  if (tier === 'pro' && period === 'seats') {
+    return 'seats'
+  }
+  // Backward compatibility: legacy pro periods map to individual behavior.
+  if (tier === 'pro' && (period === 'small' || period === 'large')) {
+    return 'individual'
+  }
 
   // Backward compatibility: handle legacy period values
   if (period === 'individual') return 'individual'
+  if (period === 'vip') return 'vip'
+  if (period === 'seats') return 'seats'
 
   return null
 }
@@ -193,6 +205,8 @@ export function getPricingTier(
 ): PricingTier {
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return 'individual'
+  if (configKey === 'vip') return 'vip'
+  if (configKey === 'seats') return 'seats'
   return 'free'
 }
 
@@ -217,6 +231,7 @@ export function getCreditsForPlan(
   // Map tier+period to credits
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return PRICING_CONFIG.individual.credits
+  if (configKey === 'vip') return PRICING_CONFIG.vip.credits
 
   return 0
 }
@@ -239,6 +254,8 @@ export function getRegenerationsForPlan(
   // Map tier+period to regenerations
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return PRICING_CONFIG.regenerations.individual
+  if (configKey === 'vip') return PRICING_CONFIG.regenerations.vip
+  if (configKey === 'seats') return PRICING_CONFIG.regenerations.seats
 
   return PRICING_CONFIG.regenerations.free
 }

@@ -14,7 +14,20 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { classificationQueue } from '@/lib/classification-queue'
 import { toSelfieClassification } from './selfie-types'
-import type { SelfieType, ClassificationResult, QualityRating, Gender, AgeCategory, Ethnicity } from './selfie-types'
+import type {
+  SelfieType,
+  ClassificationResult,
+  QualityRating,
+  Gender,
+  AgeCategory,
+  Ethnicity,
+  AccessoryDetections,
+  GlassesType,
+  FacialHairType,
+  JewelryType,
+  PiercingType,
+  TattooArea,
+} from './selfie-types'
 
 export interface ClassificationInput {
   imageBase64: string
@@ -23,13 +36,18 @@ export interface ClassificationInput {
 
 const CLASSIFICATION_PROMPT = `You are analyzing a selfie photo to classify its type and quality for AI headshot generation.
 
-STEP 1: Count the TOTAL number of people/faces visible in the ENTIRE image.
-CRITICAL: Count EVERY person you can see anywhere in the image. This includes:
-- People in the background
-- People in different sections if the image has multiple photos/panels
-- Same person appearing multiple times counts as multiple
-- Even small or partially visible faces count
-DO NOT pick one area to analyze - scan the ENTIRE image and count ALL people.
+STEP 1: Identify the PRIMARY SUBJECT and count relevant people.
+- Look for ONE clear main subject who is the focus of the photo (largest face, sharpest focus, centered)
+- Count ONLY prominent people who could be confused as the subject:
+  - People in the foreground at similar scale as the subject
+  - People in a group photo where multiple people are equally prominent
+  - Same person appearing multiple times (e.g. collage/split image) counts as multiple
+- Do NOT count incidental background people:
+  - Small, blurry, or out-of-focus figures in the background
+  - Passers-by on the street or in a crowd behind the subject
+  - People who are clearly not the focus of the photo
+- Set person_count to the number of PROMINENT people (the subject + any equally prominent others)
+- If there is one clear main subject with only incidental background figures, person_count = 1
 
 STEP 2: If exactly 1 person total, classify the photo into ONE of these categories:
 
@@ -108,6 +126,19 @@ c) ETHNICITY - Estimate the apparent ethnicity:
 - value: "caucasian", "black", "east_asian", "south_asian", "southeast_asian", "hispanic", "middle_eastern", "mixed", "other", or "unknown"
 - confidence: 0.0 to 1.0
 
+STEP 6: Assess ACCESSORIES (for single-person photos only):
+
+Return an optional "accessories" object with confident detections only.
+- confidence scores are required for each detected accessory group
+- if unsure, omit the group or set detected=false with low confidence
+
+Allowed values:
+- glasses.type: "prescription" | "sunglasses" | "reading" | "none"
+- facial_hair.type: "beard" | "mustache" | "stubble" | "goatee" | "none"
+- jewelry.types[]: "earrings" | "necklace" | "nose_ring" | "lip_ring"
+- piercings.types[]: "nose" | "lip" | "eyebrow" | "septum"
+- tattoos.areas[]: "face" | "neck" | "behind_ear"
+
 IMPORTANT: Return ONLY valid JSON in this exact format:
 
 Example with all fields and confidence:
@@ -158,9 +189,12 @@ Rules:
 - age_category_confidence: 0.0 to 1.0 (required when age_category is not "unknown")
 - ethnicity: must be "caucasian", "black", "east_asian", "south_asian", "southeast_asian", "hispanic", "middle_eastern", "mixed", "other", or "unknown"
 - ethnicity_confidence: 0.0 to 1.0 (required when ethnicity is not "unknown")
+- accessories is optional; when present, each nested object must include detected:boolean and confidence:number
 - KEY DISTINCTION for body shots: Can you see the full ROUNDED SHAPE of both shoulders (not cut off flat at frame edge)? → partial_body. Are shoulders cropped/cut off by the frame edge? → front_view/side_view
 - KEY DISTINCTION for angles: Is the head/face rotated MORE than 45 degrees to the side? → side_view. Is head rotation 45 degrees or less? → front_view
-- If person_count is 0 or more than 1, set selfie_type to "unknown", confidence to 0, and skip lighting/background/demographic assessment`
+- person_count reflects PROMINENT people only (ignore small/blurry background figures)
+- If person_count is 0 or more than 1, set selfie_type to "unknown", confidence to 0, and skip lighting/background/demographic assessment
+- A photo with ONE clear main subject and small background figures should have person_count = 1 and be classified normally`
 
 /**
  * Classify a selfie image using Gemini vision API.
@@ -337,6 +371,7 @@ function parseClassificationResponse(text: string): ClassificationResult {
       ageCategoryConfidence,
       ethnicity,
       ethnicityConfidence,
+      accessories: parseAccessories(parsed.accessories),
     }
   } catch (error) {
     Logger.warn('Failed to parse classification JSON', {
@@ -583,6 +618,175 @@ function normalizeEthnicity(value: unknown): Ethnicity | undefined {
     default:
       return undefined
   }
+}
+
+function normalizeStringArray<T extends string>(
+  input: unknown,
+  normalizeItem: (value: unknown) => T | undefined
+): T[] {
+  if (!Array.isArray(input)) return []
+  const values = input
+    .map(normalizeItem)
+    .filter((value): value is T => value !== undefined)
+  return [...new Set(values)]
+}
+
+function normalizeGlassesType(value: unknown): GlassesType | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+  switch (normalized) {
+    case 'prescription':
+      return 'prescription'
+    case 'sunglasses':
+      return 'sunglasses'
+    case 'reading':
+    case 'reading_glasses':
+      return 'reading'
+    case 'none':
+      return 'none'
+    default:
+      return undefined
+  }
+}
+
+function normalizeFacialHairType(value: unknown): FacialHairType | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+  switch (normalized) {
+    case 'beard':
+      return 'beard'
+    case 'mustache':
+    case 'moustache':
+      return 'mustache'
+    case 'stubble':
+      return 'stubble'
+    case 'goatee':
+      return 'goatee'
+    case 'none':
+      return 'none'
+    default:
+      return undefined
+  }
+}
+
+function normalizeJewelryType(value: unknown): JewelryType | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+  switch (normalized) {
+    case 'earring':
+    case 'earrings':
+      return 'earrings'
+    case 'necklace':
+      return 'necklace'
+    case 'nose_ring':
+      return 'nose_ring'
+    case 'lip_ring':
+      return 'lip_ring'
+    default:
+      return undefined
+  }
+}
+
+function normalizePiercingType(value: unknown): PiercingType | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+  switch (normalized) {
+    case 'nose':
+      return 'nose'
+    case 'lip':
+      return 'lip'
+    case 'eyebrow':
+      return 'eyebrow'
+    case 'septum':
+      return 'septum'
+    default:
+      return undefined
+  }
+}
+
+function normalizeTattooArea(value: unknown): TattooArea | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase().replace(/[\s-]/g, '_')
+  switch (normalized) {
+    case 'face':
+      return 'face'
+    case 'neck':
+      return 'neck'
+    case 'behind_ear':
+      return 'behind_ear'
+    default:
+      return undefined
+  }
+}
+
+function parseAccessoryFlag(raw: unknown): { detected: boolean; confidence: number } | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const obj = raw as Record<string, unknown>
+  const confidence = normalizeConfidence(obj.confidence)
+  const detected = Boolean(obj.detected)
+  return { detected, confidence }
+}
+
+function parseAccessories(raw: unknown): AccessoryDetections | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const accessories = raw as Record<string, unknown>
+  const result: AccessoryDetections = {}
+
+  const glassesFlag = parseAccessoryFlag(accessories.glasses)
+  if (glassesFlag) {
+    const glasses = accessories.glasses as Record<string, unknown>
+    result.glasses = {
+      detected: glassesFlag.detected,
+      type: normalizeGlassesType(glasses.type) ?? 'none',
+      confidence: glassesFlag.confidence,
+    }
+  }
+
+  const facialHairFlag = parseAccessoryFlag(accessories.facial_hair)
+  if (facialHairFlag) {
+    const facialHair = accessories.facial_hair as Record<string, unknown>
+    result.facial_hair = {
+      detected: facialHairFlag.detected,
+      type: normalizeFacialHairType(facialHair.type) ?? 'none',
+      confidence: facialHairFlag.confidence,
+    }
+  }
+
+  const jewelryFlag = parseAccessoryFlag(accessories.jewelry)
+  if (jewelryFlag) {
+    const jewelry = accessories.jewelry as Record<string, unknown>
+    result.jewelry = {
+      detected: jewelryFlag.detected,
+      types: normalizeStringArray(jewelry.types, normalizeJewelryType),
+      confidence: jewelryFlag.confidence,
+    }
+  }
+
+  const piercingsFlag = parseAccessoryFlag(accessories.piercings)
+  if (piercingsFlag) {
+    const piercings = accessories.piercings as Record<string, unknown>
+    result.piercings = {
+      detected: piercingsFlag.detected,
+      types: normalizeStringArray(piercings.types, normalizePiercingType),
+      confidence: piercingsFlag.confidence,
+    }
+  }
+
+  const tattoosFlag = parseAccessoryFlag(accessories.tattoos)
+  if (tattoosFlag) {
+    const tattoos = accessories.tattoos as Record<string, unknown>
+    result.tattoos = {
+      detected: tattoosFlag.detected,
+      areas: normalizeStringArray(tattoos.areas, normalizeTattooArea),
+      confidence: tattoosFlag.confidence,
+    }
+  }
+
+  if (Object.keys(result).length === 0) {
+    return undefined
+  }
+
+  return result
 }
 
 /**

@@ -13,7 +13,9 @@ export function useScrollThreshold(threshold = 60, forceActive = false) {
 
   useEffect(() => {
     if (!isActive) {
-      setIsScrolled(true) // Default to "scrolled" (visible) if not active
+      queueMicrotask(() => {
+        setIsScrolled(true) // Default to "scrolled" (visible) if not active
+      })
       return
     }
 
@@ -31,4 +33,3 @@ export function useScrollThreshold(threshold = 60, forceActive = false) {
 
   return isScrolled
 }
-

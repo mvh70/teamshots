@@ -14,6 +14,12 @@ import type { BackgroundSettings, BackgroundType, BackgroundValue } from '../dom
 import type { CustomClothingSettings } from '../domain/style/elements/custom-clothing/types'
 import type { IndustrySettings, IndustryType, IndustryValue } from '../domain/style/elements/industry/types'
 import type { FilmTypeSettings, FilmType, FilmTypeValue } from '../domain/style/elements/rendering/film-type/types'
+import type {
+  BeautificationSettings,
+  BeautificationValue,
+  RetouchingLevel,
+  AccessoryAction,
+} from '../domain/style/elements/beautification/types'
 
 export { PoseSettings, PoseType, PoseValue }
 export { ClothingSettings, ClothingType, ClothingValue }
@@ -28,6 +34,7 @@ export { BackgroundSettings, BackgroundType, BackgroundValue }
 export { CustomClothingSettings }
 export { IndustrySettings, IndustryType, IndustryValue }
 export { FilmTypeSettings, FilmType, FilmTypeValue }
+export { BeautificationSettings, BeautificationValue, RetouchingLevel, AccessoryAction }
 
 export interface StyleSettings {
   type: 'preset' | 'user-choice'
@@ -73,6 +80,7 @@ export interface PhotoStyleSettings {
   customPrompt?: string
   industry?: IndustrySettings
   filmType?: FilmTypeSettings
+  beautification?: BeautificationSettings
   preset?: {
     mode: 'predefined' | 'user-choice'
     value?: { presetId: string }
@@ -95,6 +103,7 @@ export type CategoryType =
   | 'industry'
   | 'filmType'
   | 'preset'
+  | 'beautification'
 
 export interface CategoryToggle {
   category: CategoryType

@@ -43,6 +43,7 @@ import {
 } from './generate-image/s3-utils'
 import type { V3WorkflowState, PersistedImageReference } from '@/types/workflow'
 import { getWorkflowState, setWorkflowState } from './generate-image/utils/workflow-state'
+import { cleanupProgressTracker } from './generate-image/utils/retry-handler'
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
@@ -362,19 +363,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         selfieKeys: providedKeys
       })
 
-      let basePrompt: string
-      let referenceImages =
-        [] as {
-          description?: string
-          base64: string
-          mimeType: string
-        }[]
-      let aspectRatioFromPayload: string
-      let aspectRatioDescription: string
-      let v3SelfieComposite: { base64: string; mimeType: string; description?: string } | undefined
-      let v3FaceComposite: { base64: string; mimeType: string; description?: string } | undefined
-      let v3BodyComposite: { base64: string; mimeType: string; description?: string } | undefined
-
       const generationPayload = await stylePackage.buildGenerationPayload({
         generationId,
         personId,
@@ -390,13 +378,16 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         },
       })
 
-      basePrompt = generationPayload.prompt
-      referenceImages = generationPayload.referenceImages
-      aspectRatioFromPayload = generationPayload.aspectRatio
-      aspectRatioDescription = generationPayload.aspectRatioDescription
-      v3SelfieComposite = generationPayload.selfieComposite
-      v3FaceComposite = generationPayload.faceComposite
-      v3BodyComposite = generationPayload.bodyComposite
+      const {
+        prompt: basePrompt,
+        referenceImages,
+        aspectRatio: aspectRatioFromPayload,
+        aspectRatioDescription,
+        selfieComposite: payloadSelfieComposite,
+        faceComposite: v3FaceComposite,
+        bodyComposite: v3BodyComposite,
+      } = generationPayload
+      let v3SelfieComposite = payloadSelfieComposite
 
       if (!v3SelfieComposite && !v3FaceComposite && !v3BodyComposite) {
         const inferredSelfieComposite = inferSelfieCompositeFromReferences(referenceImages)
@@ -441,6 +432,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           generationId,
           personId,
           teamId,
+          packageId,
           selfieReferences: v3SelfieReferences,
           selfieAssetIds,
           demographics, // Aggregated demographics from selfies
@@ -598,7 +590,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       Telemetry.increment('generation.worker.error')
       // Extract comprehensive error details
-      let errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
       const errorDetails: Record<string, unknown> = {
         message: errorMessage,
         name: error instanceof Error ? error.name : 'Unknown',
@@ -852,6 +844,10 @@ Error Message: ${finalErrorMessage}`,
         throw new UnrecoverableError(error instanceof Error ? error.message : String(error))
       }
       throw error
+    } finally {
+      if (job.id !== undefined && job.id !== null) {
+        cleanupProgressTracker(String(job.id))
+      }
     }
   },
   {
@@ -924,9 +920,6 @@ async function notifyEvaluationFailure({
       const { actualWidth, actualHeight } = evaluation.details
       message += `Detected dimensions: ${actualWidth ?? 'unknown'}x${actualHeight ?? 'unknown'
         }px\n`
-      if (evaluation.details.selfieDuplicate) {
-        message += `Flagged duplicate of reference ${evaluation.details.matchingReferenceLabel ?? 'unknown'}.\n`
-      }
       message += '\n'
     })
 

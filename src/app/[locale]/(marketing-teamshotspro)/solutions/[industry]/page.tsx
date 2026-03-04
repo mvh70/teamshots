@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getLandingVariant } from '@/config/landing-content'
 import { getSolutionBySlug, SOLUTIONS } from '@/config/solutions'
 import { getSpanishSolutionSlug } from '@/config/spanish-slugs'
 import { getBaseUrl } from '@/lib/url'
-import { getBrand } from '@/config/brand'
+import { getBrandByDomain } from '@/config/brand'
+import { getTenant } from '@/config/tenant-server'
 import {
   IndustryHero,
   IndustryPainPoints,
@@ -40,8 +40,9 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, industry } = await params
+  const tenant = await getTenant()
   const headersList = await headers()
-  const brand = getBrand(headersList)
+  const brand = getBrandByDomain(tenant.domain)
 
   const solution = getSolutionBySlug(industry)
   if (!solution) notFound()
@@ -98,6 +99,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SolutionIndustryPage({ params }: Props) {
   const { locale, industry } = await params
+  const tenant = await getTenant()
   const headersList = await headers()
 
   // Redirect Spanish users to /soluciones with Spanish slug
@@ -110,10 +112,7 @@ export default async function SolutionIndustryPage({ params }: Props) {
   }
 
   // TeamShotsPro-only pages (B2B verticals)
-  const host = headersList.get('x-forwarded-host') || headersList.get('host')
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
-  const variant = getLandingVariant(domain)
-  if (variant !== 'teamshotspro') {
+  if (tenant.id !== 'teamshotspro') {
     notFound()
   }
 
@@ -122,7 +121,7 @@ export default async function SolutionIndustryPage({ params }: Props) {
 
   // Get translations for schema data
   const baseUrl = getBaseUrl(headersList)
-  const brand = getBrand(headersList)
+  const brand = getBrandByDomain(tenant.domain)
   const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
 
   // Extract data for schema

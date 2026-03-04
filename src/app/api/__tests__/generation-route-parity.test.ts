@@ -108,10 +108,13 @@ jest.mock('@/domain/generation/utils', () => ({
 
 jest.mock('@/domain/generation/generation-helpers', () => ({
   enqueueGenerationJob: jest.fn(),
-  determineWorkflowVersion: jest.fn((version?: 'v3') => version || 'v3'),
   createGenerationWithCreditReservation: jest.fn(),
   serializeStyleSettingsForGeneration: jest.fn(),
   enrichGenerationJobFromSelfies: jest.fn(),
+  getRegenerationLimitForAdmin: jest.fn(() => 2),
+  handleEnqueueFailure: jest.fn(async () => {
+    throw new Error('Failed to queue generation job. Credits have been refunded.')
+  }),
 }))
 
 jest.mock('@/domain/generation/selfieResolver', () => ({
@@ -159,10 +162,15 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
+import { RegenerationService } from '@/domain/generation'
+import { getPricingTier } from '@/config/pricing'
+import { getRegenerationCount } from '@/domain/pricing'
 import {
   createGenerationWithCreditReservation,
   enrichGenerationJobFromSelfies,
   enqueueGenerationJob,
+  getRegenerationLimitForAdmin,
+  handleEnqueueFailure,
   serializeStyleSettingsForGeneration,
 } from '@/domain/generation/generation-helpers'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
@@ -196,10 +204,17 @@ describe('generation route parity', () => {
       reason: 'test',
     })
     ;(CreditService.canAffordOperation as jest.Mock).mockResolvedValue(true)
+    ;(CreditService.getCreditBalanceSummary as jest.Mock).mockResolvedValue({
+      individual: 100,
+      team: 0,
+      person: 100,
+      total: 100,
+    })
     ;(UserService.getUserContext as jest.Mock).mockResolvedValue({
       roles: { isTeamAdmin: false },
       teamId: 'team-1',
       user: { person: { id: 'person-user', teamId: 'team-1' } },
+      subscription: { tier: 'individual', period: 'small' },
     })
 
     ;(getPackageConfig as jest.Mock).mockReturnValue({
@@ -226,8 +241,7 @@ describe('generation route parity', () => {
       selfieS3Keys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
     })
     ;(createGenerationWithCreditReservation as jest.Mock)
-      .mockResolvedValueOnce({ generation: { id: 'gen-normal' } })
-      .mockResolvedValueOnce({ generation: { id: 'gen-invite' } })
+      .mockResolvedValue({ generation: { id: 'gen-default' } })
     ;(enrichGenerationJobFromSelfies as jest.Mock).mockResolvedValue({
       selfieAssetIds: ['asset-a', 'asset-b'],
       selfieTypeMap: {
@@ -240,8 +254,11 @@ describe('generation route parity', () => {
       },
     })
     ;(enqueueGenerationJob as jest.Mock)
-      .mockResolvedValueOnce({ id: 'job-normal' })
-      .mockResolvedValueOnce({ id: 'job-invite' })
+      .mockResolvedValue({ id: 'job-default' })
+    ;(getRegenerationLimitForAdmin as jest.Mock).mockReturnValue(2)
+    ;(handleEnqueueFailure as jest.Mock).mockImplementation(async () => {
+      throw new Error('Failed to queue generation job. Credits have been refunded.')
+    })
 
     ;(prisma.selfie.findMany as jest.Mock).mockResolvedValue([
       {
@@ -376,6 +393,103 @@ describe('generation route parity', () => {
     expect(invitePayload.demographics).toEqual(normalPayload.demographics)
   })
 
+  it('uses fallback prompt for invite generation when prompt is omitted', async () => {
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(200)
+
+    expect(enqueueGenerationJob).toHaveBeenCalledTimes(1)
+    const invitePayload = (enqueueGenerationJob as jest.Mock).mock.calls[0][0]
+    expect(invitePayload.prompt).toBe('Professional headshot')
+  })
+
+  it('accepts beautification style settings in normal generation create', async () => {
+    const normalRequest = {
+      url: 'http://localhost/api/generations/create',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: {
+          packageId: 'freepackage',
+          beautification: {
+            mode: 'user-choice',
+            value: { retouching: 'medium' },
+          },
+        },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await normalGenerationPost(normalRequest as never)
+    expect(response.status).toBe(200)
+    expect(serializeStyleSettingsForGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        styleSettings: expect.objectContaining({
+          beautification: expect.objectContaining({
+            mode: 'user-choice',
+          }),
+        }),
+      })
+    )
+  })
+
+  it('accepts beautification style settings in invite generation create', async () => {
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: {
+          packageId: 'freepackage',
+          beautification: {
+            mode: 'user-choice',
+            value: { retouching: 'light' },
+          },
+        },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(200)
+    expect(serializeStyleSettingsForGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        styleSettings: expect.objectContaining({
+          beautification: expect.objectContaining({
+            mode: 'user-choice',
+          }),
+        }),
+      })
+    )
+  })
+
+  it('rejects disallowed style categories in normal generation create', async () => {
+    const normalRequest = {
+      url: 'http://localhost/api/generations/create',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg'],
+        styleSettings: {
+          packageId: 'freepackage',
+          forbiddenCategory: { mode: 'user-choice', value: 'x' },
+        },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await normalGenerationPost(normalRequest as never)
+    expect(response.status).toBe(400)
+    expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
+  })
+
   it('rejects invite generation create when invite is expired or missing', async () => {
     ;(prisma.teamInvite.findFirst as jest.Mock).mockResolvedValueOnce(null)
 
@@ -457,5 +571,169 @@ describe('generation route parity', () => {
     const response = await inviteGenerationPost(inviteRequest as never)
     expect(response.status).toBe(403)
     expect(createGenerationWithCreditReservation).not.toHaveBeenCalled()
+  })
+
+  it('ignores client isRegeneration flag when originalGenerationId is missing', async () => {
+    const normalRequest = {
+      url: 'http://localhost/api/generations/create',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+        isRegeneration: true,
+      }),
+    }
+
+    const response = await normalGenerationPost(normalRequest as never)
+    expect(response.status).toBe(200)
+    expect(RegenerationService.regenerate).not.toHaveBeenCalled()
+    expect(createGenerationWithCreditReservation).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses pricing helpers for normal route regeneration count mapping', async () => {
+    ;(UserService.getUserContext as jest.Mock).mockResolvedValueOnce({
+      roles: { isTeamAdmin: false },
+      teamId: 'team-1',
+      user: { person: { id: 'person-user', teamId: 'team-1' } },
+      subscription: { tier: 'individual', period: 'large' },
+    })
+    ;(prisma.person.findUnique as jest.Mock).mockImplementation(({ where }: { where: { id?: string; userId?: string } }) => {
+      if (where.id) {
+        return Promise.resolve({
+          userId: 'user-1',
+          teamId: 'team-1',
+          inviteToken: null,
+          team: { adminId: 'admin-1' },
+        })
+      }
+      if (where.userId) {
+        return Promise.resolve({
+          id: 'person-user',
+          teamId: 'team-1',
+        })
+      }
+      return Promise.resolve(null)
+    })
+    ;(getPricingTier as jest.Mock).mockReturnValueOnce('vip')
+    ;(getRegenerationCount as jest.Mock).mockReturnValueOnce(3)
+
+    const normalRequest = {
+      url: 'http://localhost/api/generations/create',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await normalGenerationPost(normalRequest as never)
+    expect(response.status).toBe(200)
+    expect(getPricingTier).toHaveBeenCalledWith('individual', 'large')
+    expect(getRegenerationCount).toHaveBeenCalledWith('vip', 'large')
+    expect(createGenerationWithCreditReservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        generationData: expect.objectContaining({
+          maxRegenerations: 3,
+          remainingRegenerations: 3,
+        }),
+      })
+    )
+  })
+
+  it('uses pricing helpers for invite route regeneration count mapping', async () => {
+    ;(prisma.team.findUnique as jest.Mock).mockResolvedValueOnce({
+      adminId: 'admin-1',
+      activeContextId: null,
+      admin: {
+        planPeriod: 'seats',
+        planTier: 'pro',
+      },
+    })
+    ;(getRegenerationLimitForAdmin as jest.Mock).mockReturnValueOnce(2)
+
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    expect(response.status).toBe(200)
+    expect(getRegenerationLimitForAdmin).toHaveBeenCalledWith('pro', 'seats')
+    expect(createGenerationWithCreditReservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        generationData: expect.objectContaining({
+          maxRegenerations: 2,
+          remainingRegenerations: 2,
+        }),
+      })
+    )
+  })
+
+  it('returns 402 with credit summary when normal route reservation fails', async () => {
+    ;(createGenerationWithCreditReservation as jest.Mock).mockRejectedValueOnce(
+      new Error('Insufficient credits')
+    )
+    ;(CreditService.getCreditBalanceSummary as jest.Mock).mockResolvedValueOnce({
+      individual: 4,
+      team: 0,
+      person: 4,
+      total: 4,
+    })
+
+    const normalRequest = {
+      url: 'http://localhost/api/generations/create',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await normalGenerationPost(normalRequest as never)
+    const payload = await response.json()
+    expect(response.status).toBe(402)
+    expect(payload).toEqual(
+      expect.objectContaining({
+        error: 'Insufficient individual credits',
+        required: 10,
+        available: 4,
+      })
+    )
+  })
+
+  it('returns 402 when invite route reservation fails with insufficient credits', async () => {
+    ;(createGenerationWithCreditReservation as jest.Mock).mockRejectedValueOnce(
+      new Error('Insufficient credits')
+    )
+    ;(getTeamInviteRemainingCredits as jest.Mock).mockResolvedValueOnce(3)
+
+    const inviteRequest = {
+      url: 'http://localhost/api/team/member/generations/create?token=invite-token',
+      headers: { get: jest.fn(() => null) },
+      json: async () => ({
+        selfieKeys: ['selfies/p1/a.jpg', 'selfies/p1/b.jpg'],
+        styleSettings: { packageId: 'freepackage' },
+        prompt: 'Professional headshot',
+      }),
+    }
+
+    const response = await inviteGenerationPost(inviteRequest as never)
+    const payload = await response.json()
+    expect(response.status).toBe(402)
+    expect(payload).toEqual(
+      expect.objectContaining({
+        error: 'Insufficient credits',
+        required: 10,
+        available: 3,
+      })
+    )
   })
 })

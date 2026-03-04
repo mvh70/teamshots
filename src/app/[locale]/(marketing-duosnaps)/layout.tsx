@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import { getLandingVariant } from '@/config/landing-content';
+import { getTenantFromHeaders } from '@/config/tenant-server';
 
 export default async function CoupleShotsMarketingLayout({
   children,
@@ -8,12 +8,10 @@ export default async function CoupleShotsMarketingLayout({
   children: React.ReactNode;
 }) {
   const headersList = await headers();
-  const host = headersList.get('x-forwarded-host') || headersList.get('host');
-  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
-  const variant = getLandingVariant(domain);
+  const tenant = getTenantFromHeaders(headersList);
 
   // Domain gate: only allow CoupleShots domain
-  if (variant !== 'coupleshots') {
+  if (tenant.id !== 'coupleshots') {
     notFound();
   }
 
