@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Keep description under 160 chars for optimal SERP display
   const description = variant === 'teamshotspro'
-    ? `Team headshots from $${PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat}/person. Volume discounts to $${PRICING_CONFIG.seats.graduatedTiers[0].pricePerSeat}/person. 10 photos each. No subscription.`
+    ? `TeamShotsPro pricing: AI team headshots from $${PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat}/photo. Free trial included. Compare Individual and Pro plans for teams of any size.`
     : variant === 'rightclickfit'
       ? `Virtual try-on credits from $${PRICING_CONFIG.individual.price}. Preview outfits instantly with RightClickFit and buy only what you need.`
       : `Professional AI headshots from $${PRICING_CONFIG.individual.price}. ${calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)} photos. No subscription, no hidden fees.`;
