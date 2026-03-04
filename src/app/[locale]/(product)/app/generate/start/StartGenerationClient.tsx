@@ -302,10 +302,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   // Track if we've loaded saved settings to avoid overwriting user changes
   const hasLoadedSavedSettingsRef = React.useRef(false)
+  const hadSavedStyleSettingsOnEntryRef = React.useRef(false)
   const hydratedRef = React.useRef(hydrated)
   hydratedRef.current = hydrated
   const prevStyleSettingsRef = React.useRef(photoStyleSettings)
   const latestPhotoStyleSettingsRef = React.useRef(photoStyleSettings)
+  const prunedAcceptedVisitKeysRef = React.useRef(new Set<string>())
 
   // Helper function to merge saved colors into settings
   // IMPORTANT: Only merges saved colors when clothingColors mode is 'user-choice'
@@ -367,6 +369,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   ) => {
     const current = latestPhotoStyleSettingsRef.current
     const updated = typeof newSettings === 'function' ? newSettings(current) : newSettings
+    // Avoid re-saving unchanged snapshots. This prevents re-populating sessionStorage
+    // immediately after users clear saved settings and re-enter this route.
+    if (Object.is(updated, current)) {
+      return
+    }
 
     latestPhotoStyleSettingsRef.current = updated
     setPhotoStyleSettingsRaw(updated)
@@ -384,6 +391,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   useEffect(() => {
     latestPhotoStyleSettingsRef.current = photoStyleSettings
   }, [photoStyleSettings])
+
+  useEffect(() => {
+    hadSavedStyleSettingsOnEntryRef.current = Boolean(loadStyleSettings())
+  }, [])
 
   // Mark as ready for saving after hydration (regardless of skipUpload)
   // This ensures saves work in all flows
@@ -685,6 +696,19 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setValue: setAcceptedVisitedStepKeys,
     loaded: acceptedVisitedLoaded,
   } = usePersistedStringSet(acceptedVisitStorageKey)
+
+  useEffect(() => {
+    if (!hydrated || !acceptedVisitedLoaded) return
+    if (prunedAcceptedVisitKeysRef.current.has(acceptedVisitStorageKey)) return
+
+    prunedAcceptedVisitKeysRef.current.add(acceptedVisitStorageKey)
+
+    // If there was no saved style snapshot when entering this page, stale accepted-step
+    // markers should not make reset/default values appear as already chosen.
+    if (hadSavedStyleSettingsOnEntryRef.current) return
+
+    setAcceptedVisitedStepKeys((prev) => (prev.size === 0 ? prev : new Set()))
+  }, [hydrated, acceptedVisitedLoaded, acceptedVisitStorageKey, setAcceptedVisitedStepKeys])
 
   const completionState = useCustomizationCompletion({
     photoStyleSettings,
@@ -1010,6 +1034,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     visitedStepKeys: acceptedVisitedStepKeys,
     detectedGender,
     uneditedFields,
+    onGenerateAction: onProceed,
   }
 
   return (

@@ -34,6 +34,7 @@ interface StyleSettingsSectionProps {
   visitedStepKeys?: Parameters<typeof PhotoStyleSettings>[0]['visitedStepKeys']
   detectedGender?: Parameters<typeof PhotoStyleSettings>[0]['detectedGender']
   uneditedFields?: Parameters<typeof PhotoStyleSettings>[0]['uneditedFields']
+  onGenerateAction?: Parameters<typeof PhotoStyleSettings>[0]['onGenerateAction']
 }
 
 export default function StyleSettingsSection({
@@ -63,7 +64,8 @@ export default function StyleSettingsSection({
   acceptedOnVisitKeys,
   visitedStepKeys,
   detectedGender,
-  uneditedFields
+  uneditedFields,
+  onGenerateAction
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -95,6 +97,7 @@ export default function StyleSettingsSection({
         visitedStepKeys={visitedStepKeys}
         detectedGender={detectedGender}
         uneditedFields={uneditedFields}
+        onGenerateAction={onGenerateAction}
       />
     </>
   )

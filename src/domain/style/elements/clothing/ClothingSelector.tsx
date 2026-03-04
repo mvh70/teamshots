@@ -147,6 +147,10 @@ export default function ClothingSelector({
   // Keep the current value valid as style filters, gender, or lock mode changes.
   useEffect(() => {
     if (isDisabled) return
+    // In style-locked user flow, avoid mount-time auto-normalization writes.
+    // Those writes are interpreted as user visits upstream and incorrectly mark
+    // the card as completed before the user picks a substyle/detail.
+    if (styleLocked && !adminStyleOnly) return
     if (selectableStyles.length === 0) return
 
     const firstStyle = selectableStyles[0].value as ClothingType
@@ -312,7 +316,7 @@ export default function ClothingSelector({
         </select>
         {styleLocked && !adminStyleOnly && (
           <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-            {t('styleLockedByAdmin', { default: 'Style is set by admin. You can choose outfit pieces.' })}
+            {t('styleLockedByAdmin', { default: 'Main style is fixed. You can still choose outfit pieces below.' })}
           </p>
         )}
         {adminStyleOnly && displayStyle && (

@@ -39,13 +39,18 @@ export function useCustomizationWizard({
           const categorySettings = (initialSettings as Record<string, unknown>)[cat.key]
           if (!categorySettings) return false
 
-          const wrapped = categorySettings as { mode?: string; type?: string; style?: string }
+          const wrapped = categorySettings as {
+            mode?: string
+            type?: string
+            style?: string
+            value?: { lockScope?: string }
+          }
 
           // Check for new format first (mode property)
           if ('mode' in wrapped && wrapped.mode !== undefined) {
             if (cat.key === 'clothing' && wrapped.mode === 'predefined') {
-              // Clothing is style-locked only: keep this step editable for substyle selection.
-              return true
+              // Clothing is editable only for partial locks (style fixed, substyle user-editable).
+              return wrapped.value?.lockScope === 'style-only'
             }
             return wrapped.mode === 'user-choice'
           }

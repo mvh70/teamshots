@@ -152,6 +152,8 @@ interface PhotoStyleSettingsProps {
   detectedGender?: 'male' | 'female' | 'unknown'
   /** Pre-computed unedited fields from useCustomizationCompletion hook (single source of truth for completion state) */
   uneditedFields?: string[]
+  /** Action for desktop progressive activation when final step is complete */
+  onGenerateAction?: () => void | Promise<void>
 }
 
 export type MobileStep = {
@@ -200,7 +202,8 @@ export default function PhotoStyleSettings({
   acceptedOnVisitKeys = [],
   visitedStepKeys,
   detectedGender = 'unknown',
-  uneditedFields: uneditedFieldsProp
+  uneditedFields: uneditedFieldsProp,
+  onGenerateAction
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -710,12 +713,20 @@ export default function PhotoStyleSettings({
 
     onChange((prev) => {
       const isLockedPredefinedCategory = !showToggles && readonlyPredefined && isCategoryPredefined(category, prev)
+      const isStyleOnlyLockedClothing =
+        category === 'clothing' &&
+        isLockedPredefinedCategory &&
+        isClothingStyleOnlyLocked(prev)
+
       if (isLockedPredefinedCategory && category !== 'clothing') {
+        return prev
+      }
+      if (isLockedPredefinedCategory && category === 'clothing' && !isStyleOnlyLockedClothing) {
         return prev
       }
 
       let nextCategorySettings = settings
-      if (category === 'clothing' && isLockedPredefinedCategory) {
+      if (category === 'clothing' && isStyleOnlyLockedClothing) {
         const currentClothing = prev.clothing
         const incomingClothing = settings as PhotoStyleSettingsType['clothing'] | undefined
 
@@ -741,6 +752,22 @@ export default function PhotoStyleSettings({
 
       return newSettings
     })
+  }
+
+  const isClothingStyleOnlyLocked = (
+    sourceSettings: PhotoStyleSettingsType = value
+  ) => {
+    const source =
+      !showToggles && readonlyPredefined && originalContextSettings
+        ? originalContextSettings
+        : sourceSettings
+
+    const clothing = source?.clothing
+    if (!clothing || clothing.mode !== 'predefined' || !hasValue(clothing)) {
+      return false
+    }
+
+    return clothing.value.lockScope === 'style-only'
   }
 
   const isCategoryPredefined = (
@@ -785,47 +812,73 @@ export default function PhotoStyleSettings({
     const isPredefined = isCategoryPredefined(category.key)
     const isUserChoice = status === 'user-choice'
     const isAdminUserChoice = showToggles && isUserChoice
-    const isStyleOnlyClothingLock = !showToggles && readonlyPredefined && isPredefined && category.key === 'clothing'
-    const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined && category.key !== 'clothing'
+    const isStyleOnlyClothingLock =
+      !showToggles &&
+      readonlyPredefined &&
+      isPredefined &&
+      category.key === 'clothing' &&
+      isClothingStyleOnlyLocked()
+    const isLockedByPreset =
+      !showToggles &&
+      readonlyPredefined &&
+      isPredefined &&
+      (category.key !== 'clothing' || !isStyleOnlyClothingLock)
+    const usesLockedVisualState = isLockedByPreset || isStyleOnlyClothingLock
+    const showsEditableProgress = !showToggles && (isUserChoice || isStyleOnlyClothingLock)
     const isCategoryInputsDisabled =
       (!showToggles && readonlyPredefined && isPredefined && !isStyleOnlyClothingLock) || isAdminUserChoice
     const hasValueSet = !uneditedFieldSet.has(category.key) ||
       (acceptedOnVisitSet.has(category.key) && Boolean(visitedStepKeys?.has(category.key)))
     const isIncomplete = !hasValueSet
-    const highlightedFieldKey = desktopProgressiveActivationEnabled ? (clickedFieldKey ?? activeFieldKey) : null
-    const isHighlightedField = desktopProgressiveActivationEnabled && highlightedFieldKey === category.key
+    const isDesktopProgressiveMode = desktopProgressiveActivationEnabled && !isMobileViewport
+    const highlightedFieldKey = isDesktopProgressiveMode ? (clickedFieldKey ?? activeFieldKey) : null
+    const isHighlightedField = isDesktopProgressiveMode && highlightedFieldKey === category.key
     const isHighlightedIncomplete = isHighlightedField && isIncomplete
-    const isInactiveIncomplete = desktopProgressiveActivationEnabled &&
+    const isInactiveIncomplete = isDesktopProgressiveMode &&
       highlightedFieldKey !== null &&
       isIncomplete &&
       highlightedFieldKey !== category.key
-    const canActivateCard = desktopProgressiveActivationEnabled
+    const canActivateCard = isDesktopProgressiveMode
     const currentEditableIndex = editableCategoryKeys.indexOf(category.key)
+    const isCategoryPending = (key: string) => {
+      const acceptedOnVisit = acceptedOnVisitSet.has(key) && Boolean(visitedStepKeys?.has(key))
+      return uneditedFieldSet.has(key) && !acceptedOnVisit
+    }
     const nextIncompleteEditableKey = currentEditableIndex >= 0
       ? (
         editableCategoryKeys
           .slice(currentEditableIndex + 1)
-          .find((key) => {
-            const acceptedOnVisit = acceptedOnVisitSet.has(key) && Boolean(visitedStepKeys?.has(key))
-            return uneditedFieldSet.has(key) && !acceptedOnVisit
-          }) ?? null
+          .find((key) => isCategoryPending(key)) ?? null
       )
       : null
+    const hasPendingEditableCategories = editableCategoryKeys.some((key) => isCategoryPending(key))
+    const isLastEditableCategory =
+      currentEditableIndex >= 0 && currentEditableIndex === editableCategoryKeys.length - 1
+    const showGenerateHint =
+      isDesktopProgressiveMode &&
+      isHighlightedField &&
+      isLastEditableCategory &&
+      !hasPendingEditableCategories &&
+      Boolean(onGenerateAction)
     const showContinueHint =
-      desktopProgressiveActivationEnabled &&
+      isDesktopProgressiveMode &&
       isHighlightedField &&
       hasValueSet &&
       Boolean(nextIncompleteEditableKey)
     return (
       <div key={category.key} className="relative">
       {/* "TAB or click next customization" hint — right edge, vertically centered */}
-      {showContinueHint && (
+      {(showContinueHint || showGenerateHint) && (
         <button
           type="button"
-          data-testid={`continue-hint-${category.key}`}
-          className="hidden md:flex absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 z-10 items-center cursor-pointer"
+          data-testid={`${showGenerateHint ? 'generate-hint' : 'continue-hint'}-${category.key}`}
+          className="hidden md:flex absolute top-20 right-0 translate-x-1/2 z-20 items-center cursor-pointer"
           onClick={(e) => {
             e.stopPropagation()
+            if (showGenerateHint) {
+              void onGenerateAction?.()
+              return
+            }
             if (!nextIncompleteEditableKey) return
             // Navigate to the next incomplete editable customization.
             const nextKey = nextIncompleteEditableKey
@@ -836,7 +889,6 @@ export default function PhotoStyleSettings({
                 branding: { mode: 'user-choice' as const, value: { type: 'exclude' as const } }
               }))
             }
-            onCategoryVisit?.(nextKey)
             setClickedFieldKey(nextKey)
             setManualActiveFieldKey(nextKey)
             const target = getVisibleCardElement(nextKey)
@@ -849,9 +901,17 @@ export default function PhotoStyleSettings({
             }
           }}
         >
-          <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur border border-gray-200 shadow-md rounded-2xl px-3 py-1.5 text-xs text-gray-500 font-medium hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 transition-colors">
-            <span className="animate-slide-right">→</span>
-            <span className="text-center leading-tight">TAB or click<br/>next customization</span>
+          <div className="flex items-center gap-2 bg-gradient-to-r from-brand-primary to-brand-secondary border border-white/30 shadow-xl rounded-2xl px-3.5 py-2 text-xs text-white font-semibold hover:brightness-105 transition-all">
+            <span className={`${showGenerateHint ? '' : 'animate-slide-right'} text-sm`}>
+              {showGenerateHint ? '⚡' : '→'}
+            </span>
+            <span className="text-center leading-tight">
+              {showGenerateHint ? (
+                <>Generate</>
+              ) : (
+                <>TAB or click<br/>next customization</>
+              )}
+            </span>
           </div>
         </button>
       )}
@@ -876,7 +936,7 @@ export default function PhotoStyleSettings({
           }
           setManualActiveFieldKey(category.key)
         } : undefined}
-        className={`w-full h-full max-w-full overflow-hidden transition-all duration-300 ease-out rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5 ${isLockedByPreset ? 'opacity-75' : ''} ${isHighlightedField ? 'ring-2 ring-brand-primary shadow-lg' : ''} ${isInactiveIncomplete ? 'opacity-35 shadow-none border-gray-200/60 hover:opacity-60' : ''} ${canActivateCard ? 'cursor-pointer' : ''}`}
+        className={`w-full h-full max-w-full overflow-hidden transition-all duration-300 ease-out rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5 ${usesLockedVisualState ? 'opacity-75' : ''} ${isHighlightedField ? 'ring-2 ring-brand-primary shadow-lg' : ''} ${isInactiveIncomplete ? 'opacity-15 shadow-none border-gray-200/40 saturate-50 hover:opacity-25' : ''} ${canActivateCard ? 'cursor-pointer' : ''}`}
       >
         {/* Category Header */}
         <div className="p-3 md:p-4 border-b border-gray-200/80">
@@ -885,13 +945,13 @@ export default function PhotoStyleSettings({
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className={`p-2 rounded-lg flex-shrink-0 ${isUserChoice
                 ? 'bg-brand-primary/10'
-                : isLockedByPreset
+                : usesLockedVisualState
                   ? 'bg-red-50'
                   : 'bg-gray-50'
                 }`}>
                 <Icon className={`h-5 w-5 md:h-5 md:w-5 flex-shrink-0 ${isUserChoice
                   ? 'text-brand-primary'
-                  : isLockedByPreset
+                  : usesLockedVisualState
                     ? 'text-red-600'
                     : 'text-gray-600'
                   }`} />
@@ -909,7 +969,7 @@ export default function PhotoStyleSettings({
                     </span>
                   )}
                   {/* Completion indicator - for editable (user-choice) items */}
-                  {!showToggles && isUserChoice && (
+                  {showsEditableProgress && (
                     hasValueSet ? (
                       // Completed: solid green checkmark badge
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 shadow-sm flex-shrink-0 transition-all duration-200">

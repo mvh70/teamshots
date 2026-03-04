@@ -2115,7 +2115,7 @@
         "subtitle": "Choose clothing style, substyle and accessories",
         "predefined": "Predefined",
         "stylesLabel": "Style",
-        "styleLockedByAdmin": "Style is set by admin. You can choose a substyle.",
+        "styleLockedByAdmin": "Main style is fixed. You can still choose outfit pieces below.",
         "mode": {
           "label": "Outfit structure",
           "separate": "Top + Bottom",

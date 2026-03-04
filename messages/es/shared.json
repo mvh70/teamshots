@@ -2124,7 +2124,7 @@
         "subtitle": "Elige estilo de ropa, subestilo y accesorios",
         "predefined": "Predefinido",
         "stylesLabel": "Estilo",
-        "styleLockedByAdmin": "El estilo lo definió el admin. Puedes elegir un subestilo.",
+        "styleLockedByAdmin": "El estilo principal está fijado. Aún puedes elegir las piezas del atuendo abajo.",
         "mode": {
           "label": "Estructura del outfit",
           "separate": "Parte superior + inferior",
