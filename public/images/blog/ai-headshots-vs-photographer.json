@@ -1,0 +1,32 @@
+{
+  "prompt": "Medium shot capturing a genuine peak emotional moment: An East Asian male professional in his late 40s, wearing a sharp royal blue blazer, leans back against a concrete pillar on a sunlit rooftop terrace. He has just reviewed a document held loosely in one hand, but now his head is thrown back in a candid moment of triumphant relief, laughter bubbling up, eyes crinkled shut. The stress of budget planning has evaporated. Behind him, out of focus, lush dark green ornamental grasses frame the modern architecture. A bright blue notebook sits on the ledge nearby. The image captures the specific feeling of solving a massive logistical headache. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+  "analysis": {
+    "prompt": "Medium shot capturing a genuine peak emotional moment: An East Asian male professional in his late 40s, wearing a sharp royal blue blazer, leans back against a concrete pillar on a sunlit rooftop terrace. He has just reviewed a document held loosely in one hand, but now his head is thrown back in a candid moment of triumphant relief, laughter bubbling up, eyes crinkled shut. The stress of budget planning has evaporated. Behind him, out of focus, lush dark green ornamental grasses frame the modern architecture. A bright blue notebook sits on the ledge nearby. The image captures the specific feeling of solving a massive logistical headache. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+    "altText": "East Asian male executive laughing in relief on a rooftop terrace, holding a budget report, symbolizing ROI success.",
+    "creativeDirectionName": "decisive-moment",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "late-40s",
+        "descriptor": "in their late 40s"
+      },
+      "ethnicity": {
+        "label": "east-asian",
+        "descriptor": "East Asian"
+      }
+    }
+  },
+  "altText": "East Asian male executive laughing in relief on a rooftop terrace, holding a budget report, symbolizing ROI success.",
+  "generatedAt": "2026-03-05T09:44:21.429Z",
+  "model": "gemini-3-pro-image-preview",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "professional",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "prompt": "Extreme close-up macro shot. Tan-skinned female hands delicately holding a sleek, brushed metal hardware security key, moments before inserting it into a laptop side port. The focus is razor-sharp on the fingertips and the texture of the key, symbolizing the 'physical' reality of digital safety and access control. The subject wears a deep indigo wool blazer sleeve (Primary #2563eb). The background is creamy bokeh with hints of deep forest green foliage (Secondary #1e40af) and a small pop of burnt orange from a notebook spine (Accent #3b82f6). The atmosphere is quiet, precise, and secure, focusing entirely on the craft of data protection. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
+  "analysis": {
+    "prompt": "Extreme close-up macro shot. Tan-skinned female hands delicately holding a sleek, brushed metal hardware security key, moments before inserting it into a laptop side port. The focus is razor-sharp on the fingertips and the texture of the key, symbolizing the 'physical' reality of digital safety and access control. The subject wears a deep indigo wool blazer sleeve (Primary #2563eb). The background is creamy bokeh with hints of deep forest green foliage (Secondary #1e40af) and a small pop of burnt orange from a notebook spine (Accent #3b82f6). The atmosphere is quiet, precise, and secure, focusing entirely on the craft of data protection. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
+    "altText": "Macro shot of female hands holding a hardware security key, illustrating AI headshot data privacy and secure access control.",
+    "creativeDirectionName": "hands-at-work",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "late-40s",
+        "descriptor": "in their late 40s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "altText": "Macro shot of female hands holding a hardware security key, illustrating AI headshot data privacy and secure access control.",
+  "generatedAt": "2026-03-05T09:46:19.287Z",
+  "model": "gemini-3-pro-image-preview",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "professional",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}
