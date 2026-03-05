@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "Headshots de IA para equipos en 60 segundos",
+    "description": "Convierte cualquier selfie en un headshot profesional de equipo con IA en 60 segundos. Fotos consistentes y alineadas a tu marca para todo tu equipo."
+  },
   "costCalculator": {
     "meta": {
       "title": "Calculadora de Costos de Headshots - Compara IA vs Fotografía Tradicional",
@@ -225,7 +229,7 @@
   "landing": {
     "teamshotspro": {
       "hero": {
-        "titleLine1": "Retratos profesionales",
+        "titleLine1": "Retratos profesionales con IA",
         "titleLine2": "para tu equipo",
         "titleHighlightTime": "en 60 segundos",
         "subtitle": "Define tu estilo de marca y genera retratos profesionales para cada miembro. Calidad consistente en toda la empresa.",

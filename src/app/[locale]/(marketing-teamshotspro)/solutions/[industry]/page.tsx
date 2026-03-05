@@ -38,6 +38,14 @@ export function generateStaticParams() {
   }))
 }
 
+function normalizeSeoTitle(seoTitle: string, brandName: string): string {
+  const escapedBrand = brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return seoTitle
+    .replace(new RegExp(`\\s*\\|\\s*${escapedBrand}\\s*$`, 'i'), '')
+    .replace(new RegExp(`\\s*-\\s*${escapedBrand}\\s*$`, 'i'), '')
+    .trim()
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, industry } = await params
   const tenant = await getTenant()
@@ -50,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = getBaseUrl(headersList)
   const t = await getTranslations({ locale, namespace: `solutions.${solution.slug}` })
 
-  const seoTitle = t('seo.title')
+  const seoTitle = normalizeSeoTitle(t('seo.title'), brand.name)
   const seoDescription = t('seo.description')
   const canonical = `${baseUrl}/solutions/${solution.slug}`
   const spanishSlug = getSpanishSolutionSlug(industry)

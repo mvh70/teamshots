@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "AI Team Headshots in 60 Seconds",
+    "description": "Turn any selfie into a studio-quality AI team headshot in 60 seconds. Consistent, on-brand photos for your entire team."
+  },
   "costCalculator": {
     "meta": {
       "title": "Headshot Cost Calculator - Compare AI vs Traditional Photography",
@@ -225,7 +229,7 @@
   "landing": {
     "teamshotspro": {
       "hero": {
-        "titleLine1": "Professional headshots",
+        "titleLine1": "Professional AI headshots",
         "titleLine2": "for your whole team",
         "titleHighlightTime": "in 60 seconds",
         "subtitle": "Set your brand style and generate professional headshots for every team member. Consistent quality across your entire company.",
