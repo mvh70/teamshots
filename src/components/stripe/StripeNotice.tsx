@@ -61,7 +61,7 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
         newUrl.searchParams.delete('message')
         // Use relative URL to avoid port issues from reverse proxy
         const cleanUrl = newUrl.pathname + (newUrl.search || '')
-        window.history.replaceState({}, '', cleanUrl)
+        window.history.replaceState(null, '', cleanUrl)
       }
       
       const to = window.setTimeout(() => setVisible(false), autoHideMs)
@@ -112,7 +112,7 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
         newUrl.searchParams.delete('period')
         // Use relative URL to avoid port issues from reverse proxy
         const cleanUrl = newUrl.pathname + (newUrl.search || '')
-        window.history.replaceState({}, '', cleanUrl)
+        window.history.replaceState(null, '', cleanUrl)
       }
 
       const to = window.setTimeout(() => setVisible(false), autoHideMs)

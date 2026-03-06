@@ -174,7 +174,7 @@ export default function DashboardPage() {
       // Clean up the URL param to prevent duplicate tracking on refresh
       const url = new URL(window.location.href)
       url.searchParams.delete('newSignup')
-      window.history.replaceState({}, '', url.toString())
+      window.history.replaceState(null, '', url.toString())
     }
   }, [searchParams, session?.user?.id, session?.user?.isNewGoogleSignup])
 
@@ -285,7 +285,7 @@ export default function DashboardPage() {
     newUrl.searchParams.delete('type')
     // Use relative URL to avoid port issues from reverse proxy
     const cleanUrl = newUrl.pathname + (newUrl.search || '')
-    window.history.replaceState({}, '', cleanUrl)
+    window.history.replaceState(null, '', cleanUrl)
     
     // Hide message after 5 seconds
     const timer = setTimeout(() => {

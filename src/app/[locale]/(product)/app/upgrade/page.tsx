@@ -50,7 +50,7 @@ export default function UpgradePage() {
       // Clean up the URL param to prevent duplicate tracking on refresh
       const url = new URL(window.location.href)
       url.searchParams.delete('newSignup')
-      window.history.replaceState({}, '', url.toString())
+      window.history.replaceState(null, '', url.toString())
     }
   }, [searchParams, session?.user?.id, session?.user?.isNewGoogleSignup])
 
@@ -175,7 +175,7 @@ export default function UpgradePage() {
       newUrl.searchParams.delete('type')
       newUrl.searchParams.delete('tier')
       newUrl.searchParams.delete('period')
-      window.history.replaceState({}, '', newUrl.toString())
+      window.history.replaceState(null, '', newUrl.toString())
     }
   }, [isSuccess, successType])
 
@@ -291,4 +291,3 @@ export default function UpgradePage() {
     </div>
   )
 }
-
