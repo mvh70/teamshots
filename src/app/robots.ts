@@ -32,6 +32,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/upload/',               // Upload pages (private)
         '/upload-selfie/',        // Mobile upload pages (private)
         '/_next/static/media/',   // Static font/media assets (not indexable pages)
+        '/favicon.ico',           // Favicon (not an indexable page)
       ],
     },
     sitemap: `${cleanBaseUrl}/sitemap.xml`,

@@ -4,6 +4,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/auth'
 import { TEAM_DOMAIN } from '@/config/domain'
 import { DEFAULT_TENANT_ID, TENANT_ALLOWED_DOMAINS, getTenantById, resolveTenantId } from '@/config/tenant'
+import { shouldBypassLocaleDetection } from '@/lib/locale-routing'
 
 const PROTECTED_PATH_PREFIXES = ['/app']
 const ADMIN_PATH_PREFIXES = ['/app/admin']
@@ -350,6 +351,17 @@ export async function proxy(request: NextRequest) {
     ) ?? DEFAULT_TENANT_ID
     const upstreamRequestHeaders = new Headers(request.headers)
     upstreamRequestHeaders.set('x-tenant-id', tenantId)
+
+    if (shouldBypassLocaleDetection(request.nextUrl.pathname)) {
+      const rewriteUrl = new URL(request.url)
+      rewriteUrl.pathname = `/en${request.nextUrl.pathname}`
+      const response = attachUpstreamRequestHeaders(
+        NextResponse.rewrite(rewriteUrl),
+        upstreamRequestHeaders
+      )
+
+      return addSecurityHeaders(response)
+    }
 
     const response = attachUpstreamRequestHeaders(
       intlMiddleware(request),
