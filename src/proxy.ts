@@ -238,8 +238,21 @@ function attachUpstreamRequestHeaders(response: NextResponse, requestHeaders: He
     },
   })
 
+  // Merge x-middleware-override-headers from both responses so that
+  // headers set by intlMiddleware (e.g. locale) are not lost when we
+  // add our own upstream headers (e.g. x-tenant-id).
+  const existingOverrides = response.headers.get('x-middleware-override-headers') ?? ''
+  const newOverrides = forwardingResponse.headers.get('x-middleware-override-headers') ?? ''
+  const mergedOverrides = [...new Set(
+    [...existingOverrides.split(','), ...newOverrides.split(',')]
+      .map(h => h.trim())
+      .filter(Boolean)
+  )].join(',')
+
   for (const [key, value] of forwardingResponse.headers.entries()) {
-    if (key === 'x-middleware-override-headers' || key.startsWith('x-middleware-request-')) {
+    if (key === 'x-middleware-override-headers') {
+      response.headers.set(key, mergedOverrides)
+    } else if (key.startsWith('x-middleware-request-')) {
       response.headers.set(key, value)
     }
   }
