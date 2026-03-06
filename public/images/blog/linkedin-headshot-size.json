@@ -1,30 +1,47 @@
 {
-  "prompt": "Bird's-eye view abstract composition representing the 'circle-in-square' crop tension. A deep indigo blue blueprint grid serves as the base (representing the upload dimensions). In the center, a heavy, crystal-clear circular optical lens rests, perfectly magnifying the grid lines beneath it to represent the 'safe zone'. Outside the circle, the grid lines are slightly blurred or shadowed. A bright burnt orange drafting pencil sits diagonally in the corner, contrasting with the cool blue and purple tones. Minimalist, geometric, graphic design style. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+  "prompt": "Macro close-up: A luminous, electric blue (#3b82f6) digital crop grid overlay intersects precisely over the sharp, high-resolution eye of an East Asian female professional displayed on a glossy retina screen. The focus is razor-thin on the iris and the 'safe zone' guide lines, visualizing the tension between the square image and the circular crop. Extreme detail reveals the faint RGB sub-pixels of the display, emphasizing the need for 800x800 clarity. The background dissolves into a deep indigo (#1e40af) abstract bokeh, with a hint of a royal blue (#2563eb) device edge in the periphery. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
   "analysis": {
-    "prompt": "Bird's-eye view abstract composition representing the 'circle-in-square' crop tension. A deep indigo blue blueprint grid serves as the base (representing the upload dimensions). In the center, a heavy, crystal-clear circular optical lens rests, perfectly magnifying the grid lines beneath it to represent the 'safe zone'. Outside the circle, the grid lines are slightly blurred or shadowed. A bright burnt orange drafting pencil sits diagonally in the corner, contrasting with the cool blue and purple tones. Minimalist, geometric, graphic design style. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
-    "altText": "Abstract geometric photography showing a circular optical lens on a blue grid blueprint, symbolizing LinkedIn circular profile cropping.",
-    "creativeDirectionName": "visual-metaphor",
+    "prompt": "Macro close-up: A luminous, electric blue (#3b82f6) digital crop grid overlay intersects precisely over the sharp, high-resolution eye of an East Asian female professional displayed on a glossy retina screen. The focus is razor-thin on the iris and the 'safe zone' guide lines, visualizing the tension between the square image and the circular crop. Extreme detail reveals the faint RGB sub-pixels of the display, emphasizing the need for 800x800 clarity. The background dissolves into a deep indigo (#1e40af) abstract bokeh, with a hint of a royal blue (#2563eb) device edge in the periphery. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
+    "altText": "Extreme macro of a digital crop grid over a woman's eye on a screen, illustrating LinkedIn headshot safe zones and dimensions.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "detail-obsession",
+    "photoStyleName": "kodak-editorial",
     "selectedDemographics": {
       "gender": {
-        "label": "male",
-        "descriptor": "male"
+        "label": "female",
+        "descriptor": "female"
       },
       "age": {
-        "label": "late-40s",
-        "descriptor": "in their late 40s"
+        "label": "mid-30s",
+        "descriptor": "in their mid 30s"
       },
       "ethnicity": {
-        "label": "hispanic",
-        "descriptor": "Latino/Latina with tan skin"
+        "label": "east-asian",
+        "descriptor": "East Asian"
       }
     }
   },
-  "altText": "Abstract geometric photography showing a circular optical lens on a blue grid blueprint, symbolizing LinkedIn circular profile cropping.",
-  "generatedAt": "2026-03-05T09:45:24.425Z",
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "detail-obsession",
+  "photoStyle": "kodak-editorial",
+  "altText": "Extreme macro of a digital crop grid over a woman's eye on a screen, illustrating LinkedIn headshot safe zones and dimensions.",
+  "generatedAt": "2026-03-06T13:12:23.953Z",
   "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.379746835443038,
+    "similarSlug": "are-ai-headshots-safe",
+    "similarDirection": "hands-at-work",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "c3cf51d2-4054-40e0-b123-d124545b5892",
+  "targetVersionStatus": "published",
   "seoOptimized": true,
   "researchBacked": {
-    "imageStyle": "professional",
+    "imageStyle": "kodak-editorial",
     "scrollStoppingOptimizations": true,
     "highContrast": true,
     "textOverlaySpace": true

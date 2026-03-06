@@ -1,0 +1,49 @@
+{
+  "prompt": "Low angle, heavy Dutch tilt capturing high-velocity movement: A tan-skinned Latina professional in her late 40s strides briskly down a geometric concrete staircase, captured mid-turn. She wears a sharp, structured royal blue (#2563eb) trench coat that flares out behind her, emphasizing speed and the 'rollout' of a new standard. In her hand, she tightly grips a bright blue (#3b82f6) folder, the 'template' ready for distribution. Her gaze is sharp, looking ahead toward a destination off-frame. The background is a blur of dark blue (#1e40af) railings and abstract architectural lines, creating a sense of urgency and transformation. Kinetic energy, freeze-frame action. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+  "analysis": {
+    "prompt": "Low angle, heavy Dutch tilt capturing high-velocity movement: A tan-skinned Latina professional in her late 40s strides briskly down a geometric concrete staircase, captured mid-turn. She wears a sharp, structured royal blue (#2563eb) trench coat that flares out behind her, emphasizing speed and the 'rollout' of a new standard. In her hand, she tightly grips a bright blue (#3b82f6) folder, the 'template' ready for distribution. Her gaze is sharp, looking ahead toward a destination off-frame. The background is a blur of dark blue (#1e40af) railings and abstract architectural lines, creating a sense of urgency and transformation. Kinetic energy, freeze-frame action. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+    "altText": "Latina professional in blue coat descending stairs rapidly holding a document folder, representing the rollout of corporate guidelines.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "dynamic-tension",
+    "photoStyleName": "clinical-modern",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "late-40s",
+        "descriptor": "in their late 40s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "dynamic-tension",
+  "photoStyle": "clinical-modern",
+  "altText": "Latina professional in blue coat descending stairs rapidly holding a document folder, representing the rollout of corporate guidelines.",
+  "generatedAt": "2026-03-06T13:18:31.651Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.175,
+    "similarSlug": "linkedin-headshot-size",
+    "similarDirection": "detail-obsession",
+    "similarStyle": "kodak-editorial"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "33bb3d1f-4f74-4ab7-8ebf-c15de2f0993f",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "clinical-modern",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

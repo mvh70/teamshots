@@ -1,0 +1,49 @@
+{
+  "prompt": "Vertical split diptych composition illustrating 'The Bad Crop' vs 'The Safe Zone.' LEFT SIDE: A jagged, claustrophobic composition where a Latina professional (tan skin, late 40s) is awkwardly obscured by heavy shadows and a physical frame cutting off her forehead, bathed in murky navy blue tones (#1e40af). The texture is intentionally soft and low-res to symbolize incorrect dimensions. RIGHT SIDE: The same woman stands confidently in a pristine, high-contrast studio space, perfectly centered inside a floating, glowing primary purple (#2563eb) circular light element that represents the LinkedIn crop. Her expression is calm, lighting is crisp, and there is ample negative space around her, wearing a sharp blazer. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+  "analysis": {
+    "prompt": "Vertical split diptych composition illustrating 'The Bad Crop' vs 'The Safe Zone.' LEFT SIDE: A jagged, claustrophobic composition where a Latina professional (tan skin, late 40s) is awkwardly obscured by heavy shadows and a physical frame cutting off her forehead, bathed in murky navy blue tones (#1e40af). The texture is intentionally soft and low-res to symbolize incorrect dimensions. RIGHT SIDE: The same woman stands confidently in a pristine, high-contrast studio space, perfectly centered inside a floating, glowing primary purple (#2563eb) circular light element that represents the LinkedIn crop. Her expression is calm, lighting is crisp, and there is ample negative space around her, wearing a sharp blazer. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+    "altText": "Split screen comparing a poorly cropped, blurry headshot against a perfectly framed Latina professional inside a glowing purple circular guide.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "contrast-diptych",
+    "photoStyleName": "cinematic-drama",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "late-40s",
+        "descriptor": "in their late 40s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "contrast-diptych",
+  "photoStyle": "cinematic-drama",
+  "altText": "Split screen comparing a poorly cropped, blurry headshot against a perfectly framed Latina professional inside a glowing purple circular guide.",
+  "generatedAt": "2026-03-06T12:14:57.921Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.2553191489361702,
+    "similarSlug": "remote-team-headshots",
+    "similarDirection": "unknown",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "c3cf51d2-4054-40e0-b123-d124545b5892",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "cinematic-drama",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

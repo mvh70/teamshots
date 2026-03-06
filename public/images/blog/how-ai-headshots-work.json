@@ -1,0 +1,49 @@
+{
+  "prompt": "Bird's eye view conceptual composition on a textured drafting table representing the AI generation process. In the center, a single portrait is being 'constructed': the left half is a complex wireframe mesh made of glowing primary blue (#2563eb) geometric lines, symbolizing facial analysis. The right half seamlessly morphs into a photorealistic, high-quality headshot of a Latino male professional in his 30s. Surrounding the center are scattered tools of creation: a dark blue (#1e40af) pencil, azure (#3b82f6) color swatches, and a magnifying glass distorting a fragment of the image. The lighting is dramatic and focused, highlighting the transition from digital wireframe to human reality. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+  "analysis": {
+    "prompt": "Bird's eye view conceptual composition on a textured drafting table representing the AI generation process. In the center, a single portrait is being 'constructed': the left half is a complex wireframe mesh made of glowing primary blue (#2563eb) geometric lines, symbolizing facial analysis. The right half seamlessly morphs into a photorealistic, high-quality headshot of a Latino male professional in his 30s. Surrounding the center are scattered tools of creation: a dark blue (#1e40af) pencil, azure (#3b82f6) color swatches, and a magnifying glass distorting a fragment of the image. The lighting is dramatic and focused, highlighting the transition from digital wireframe to human reality. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+    "altText": "Conceptual art showing a wireframe digital mesh transforming into a realistic photo of a Latino man, representing AI headshot generation.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "visual-metaphor",
+    "photoStyleName": "portra-warm",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "mid-30s",
+        "descriptor": "in their mid 30s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "visual-metaphor",
+  "photoStyle": "portra-warm",
+  "altText": "Conceptual art showing a wireframe digital mesh transforming into a realistic photo of a Latino man, representing AI headshot generation.",
+  "generatedAt": "2026-03-06T13:15:47.132Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.2962962962962963,
+    "similarSlug": "when-to-update-team-headshots",
+    "similarDirection": "unexpected-location",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "37ca9a4c-0a62-49b7-bb10-82d485d77bcb",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "portra-warm",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "prompt": "Macro detail shot: Extreme close-up on the texture of a premium navy blue wool blazer lapel resting against a crisp white shirt collar. The weave of the fabric is hyper-sharp to emphasize the importance of material choice. An East Asian male hand enters the frame, fingers adjusting the lapel, blurring slightly into the foreground to suggest preparation. A hint of a bright royal blue pocket square creates a deliberate pop of brand-aligned accent color. The background is a creamy wash of soft grey and deep blue bokeh, completely isolating the clothing detail to symbolize the 'Power Tier' color psychology. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+  "analysis": {
+    "prompt": "Macro detail shot: Extreme close-up on the texture of a premium navy blue wool blazer lapel resting against a crisp white shirt collar. The weave of the fabric is hyper-sharp to emphasize the importance of material choice. An East Asian male hand enters the frame, fingers adjusting the lapel, blurring slightly into the foreground to suggest preparation. A hint of a bright royal blue pocket square creates a deliberate pop of brand-aligned accent color. The background is a creamy wash of soft grey and deep blue bokeh, completely isolating the clothing detail to symbolize the 'Power Tier' color psychology. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+    "altText": "Macro close-up of navy blue suit fabric texture and hand adjusting lapel for professional headshot styling",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "detail-obsession",
+    "photoStyleName": "fuji-documentary",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "mid-30s",
+        "descriptor": "in their mid 30s"
+      },
+      "ethnicity": {
+        "label": "east-asian",
+        "descriptor": "East Asian"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "detail-obsession",
+  "photoStyle": "fuji-documentary",
+  "altText": "Macro close-up of navy blue suit fabric texture and hand adjusting lapel for professional headshot styling",
+  "generatedAt": "2026-03-06T13:11:12.802Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.2553191489361702,
+    "similarSlug": "remote-team-headshots",
+    "similarDirection": "unknown",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "a4a47891-b559-4902-b1cb-db7becc2eff2",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "fuji-documentary",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

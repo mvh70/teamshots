@@ -1,0 +1,49 @@
+{
+  "prompt": "Extreme close-up. Tanned male hands with mature texture carefully aligning a physical print of a professional headshot onto a dark mahogany surface. The photo is being placed into a perfect grid of other identical-style portraits, symbolizing rigorous consistency and order. The subject wears a dark navy suit sleeve with a deep indigo cufflink (#2563eb). A bright blue legal folder edge (#3b82f6) is visible in soft focus in the foreground. Intimate focus on the fingertips and the paper texture, highlighting the precision of the arrangement. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+  "analysis": {
+    "prompt": "Extreme close-up. Tanned male hands with mature texture carefully aligning a physical print of a professional headshot onto a dark mahogany surface. The photo is being placed into a perfect grid of other identical-style portraits, symbolizing rigorous consistency and order. The subject wears a dark navy suit sleeve with a deep indigo cufflink (#2563eb). A bright blue legal folder edge (#3b82f6) is visible in soft focus in the foreground. Intimate focus on the fingertips and the paper texture, highlighting the precision of the arrangement. Kodak Portra 800 warmth with beautiful skin tones and gentle grain, shot on Canon R5, 50mm lens, f/1.8, intimate portrait quality, late afternoon glow, lifestyle photography for Kinfolk",
+    "altText": "Close-up of hands arranging a grid of matching professional attorney headshots on a desk to demonstrate visual consistency",
+    "imageType": "hero",
+    "peoplePresent": "none",
+    "creativeDirectionName": "hands-at-work",
+    "photoStyleName": "portra-warm",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "early-50s",
+        "descriptor": "in their early 50s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "none",
+  "creativeDirection": "hands-at-work",
+  "photoStyle": "portra-warm",
+  "altText": "Close-up of hands arranging a grid of matching professional attorney headshots on a desk to demonstrate visual consistency",
+  "generatedAt": "2026-03-06T13:20:56.575Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.33766233766233766,
+    "similarSlug": "how-ai-headshots-work",
+    "similarDirection": "visual-metaphor",
+    "similarStyle": "portra-warm"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "8675b5b1-2b90-47ce-9985-7178f23adebb",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "portra-warm",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

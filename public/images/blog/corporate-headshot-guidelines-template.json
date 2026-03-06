@@ -1,0 +1,49 @@
+{
+  "prompt": "Low-angle shot on the concrete steps of a brutalist modern art museum or architectural landmark. An East Asian male professional in his early 50s, projecting sophisticated authority, sits casually on the steps. He is reviewing a large, unfolded physical 'visual standard' blueprint document—not a screen. He wears a structured indigo blue blazer (#2563eb) and dark trousers. Beside him rests a vibrant emerald green (#1e40af) tote bag and a bright blue (#3b82f6) notebook. The background features strong geometric concrete lines and glass, symbolizing structure and consistency. The lighting is late afternoon golden hour, casting long dramatic shadows. A moment of strategic planning outside the office walls. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+  "analysis": {
+    "prompt": "Low-angle shot on the concrete steps of a brutalist modern art museum or architectural landmark. An East Asian male professional in his early 50s, projecting sophisticated authority, sits casually on the steps. He is reviewing a large, unfolded physical 'visual standard' blueprint document—not a screen. He wears a structured indigo blue blazer (#2563eb) and dark trousers. Beside him rests a vibrant emerald green (#1e40af) tote bag and a bright blue (#3b82f6) notebook. The background features strong geometric concrete lines and glass, symbolizing structure and consistency. The lighting is late afternoon golden hour, casting long dramatic shadows. A moment of strategic planning outside the office walls. Fujifilm Pro 400H film aesthetic with lifted shadows and creamy highlights, shot on Leica M11, 35mm lens, f/4, documentary authenticity, soft natural window light, photojournalism for Fast Company",
+    "altText": "East Asian male professional reviewing corporate headshot guidelines on the steps of a modern architectural landmark.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "unexpected-location",
+    "photoStyleName": "fuji-documentary",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "early-50s",
+        "descriptor": "in their early 50s"
+      },
+      "ethnicity": {
+        "label": "east-asian",
+        "descriptor": "East Asian"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "unexpected-location",
+  "photoStyle": "fuji-documentary",
+  "altText": "East Asian male professional reviewing corporate headshot guidelines on the steps of a modern architectural landmark.",
+  "generatedAt": "2026-03-06T13:19:27.057Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.2857142857142857,
+    "similarSlug": "what-to-wear-professional-headshots",
+    "similarDirection": "detail-obsession",
+    "similarStyle": "fuji-documentary"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "33bb3d1f-4f74-4ab7-8ebf-c15de2f0993f",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "fuji-documentary",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

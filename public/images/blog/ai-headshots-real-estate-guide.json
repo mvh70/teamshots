@@ -1,0 +1,49 @@
+{
+  "prompt": "Medium shot, eye level. A dark-skinned African American female real estate broker in her early 50s, wearing a sharp royal blue (#2563eb) blazer, stands on the sun-drenched front steps of a luxury property. She clutches a glossy 'Just Listed' flyer to her chest with both hands, eyes closed, head tilted back in a genuine moment of overwhelming relief and satisfaction—the marketing launch is finally perfect. Warm golden hour sunlight catches the texture of her skin and the joy in her expression. Lush deep green landscaping (#1e40af) surrounds the porch, blurring softly in the background. A bright blue (#3b82f6) open house sign is partially visible in the foreground. The energy is victorious, candid, and emotional. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
+  "analysis": {
+    "prompt": "Medium shot, eye level. A dark-skinned African American female real estate broker in her early 50s, wearing a sharp royal blue (#2563eb) blazer, stands on the sun-drenched front steps of a luxury property. She clutches a glossy 'Just Listed' flyer to her chest with both hands, eyes closed, head tilted back in a genuine moment of overwhelming relief and satisfaction—the marketing launch is finally perfect. Warm golden hour sunlight catches the texture of her skin and the joy in her expression. Lush deep green landscaping (#1e40af) surrounds the porch, blurring softly in the background. A bright blue (#3b82f6) open house sign is partially visible in the foreground. The energy is victorious, candid, and emotional. Vibrant Kodak Ektar 100 colors with punchy saturation, shot on Hasselblad X2D 100C, 85mm lens, f/2.8, natural skin texture, golden hour warmth, editorial photography for Vogue Business",
+    "altText": "African American real estate broker on luxury porch celebrating a win, clutching marketing flyer with eyes closed in relief.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "decisive-moment",
+    "photoStyleName": "kodak-editorial",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "early-50s",
+        "descriptor": "in their early 50s"
+      },
+      "ethnicity": {
+        "label": "black",
+        "descriptor": "dark-skinned African American"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "decisive-moment",
+  "photoStyle": "kodak-editorial",
+  "altText": "African American real estate broker on luxury porch celebrating a win, clutching marketing flyer with eyes closed in relief.",
+  "generatedAt": "2026-03-06T13:20:12.741Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.3023255813953488,
+    "similarSlug": "are-ai-headshots-safe",
+    "similarDirection": "hands-at-work",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "721f8719-69fd-44ed-99f6-8778fb631df4",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "kodak-editorial",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "prompt": "Dutch tilt, low angle action shot: A Latina financial director in her early 50s with tan skin strides purposefully through a sleek, glass-walled architectural corridor. She wears a sharp royal blue blazer (#2563eb) over a crisp white shirt. She is captured mid-turn, gesturing forward with urgency, as if leading a deployment across branches. The background is a kinetic blur of motion, symbolizing the rapid rollout of consistency across offices. Deep navy (#1e40af) shadows contrast with bright accent blue (#3b82f6) light trails reflecting off the glass surfaces. Her expression is focused and commanding, embodying the transition from fragmented legacy systems to unified standards. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+  "analysis": {
+    "prompt": "Dutch tilt, low angle action shot: A Latina financial director in her early 50s with tan skin strides purposefully through a sleek, glass-walled architectural corridor. She wears a sharp royal blue blazer (#2563eb) over a crisp white shirt. She is captured mid-turn, gesturing forward with urgency, as if leading a deployment across branches. The background is a kinetic blur of motion, symbolizing the rapid rollout of consistency across offices. Deep navy (#1e40af) shadows contrast with bright accent blue (#3b82f6) light trails reflecting off the glass surfaces. Her expression is focused and commanding, embodying the transition from fragmented legacy systems to unified standards. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+    "altText": "Latina financial executive in blue blazer striding confidently through a modern glass corridor, representing speed and consistency in corporate operations.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "dynamic-tension",
+    "photoStyleName": "clinical-modern",
+    "selectedDemographics": {
+      "gender": {
+        "label": "female",
+        "descriptor": "female"
+      },
+      "age": {
+        "label": "early-50s",
+        "descriptor": "in their early 50s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "dynamic-tension",
+  "photoStyle": "clinical-modern",
+  "altText": "Latina financial executive in blue blazer striding confidently through a modern glass corridor, representing speed and consistency in corporate operations.",
+  "generatedAt": "2026-03-06T13:22:33.702Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.18518518518518517,
+    "similarSlug": "what-to-wear-professional-headshots",
+    "similarDirection": "detail-obsession",
+    "similarStyle": "fuji-documentary"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "1bce2c04-b40a-4894-943c-8cf752989d49",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "clinical-modern",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "prompt": "Split frame composition showing the transition from fragmented chaos to unified order. LEFT SIDE: A textured cork wall covered in a disorganized mess of mismatched photographs—different sizes, bad lighting, crooked frames, and sepia tones representing the 'old way.' RIGHT SIDE: A sleek, high-tech sapphire blue (#2563eb) glass interface displaying a perfectly aligned grid of consistent, high-definition headshots. CENTER SUBJECT: A Latino male professional in his early 50s with tan skin, dressed in a structured navy blazer (#1e40af) with a light blue pocket square (#3b82f6). He stands at the dividing line, his body facing the clean future while he looks back slightly at the mess, physically sliding a glowing digital panel into place to complete the perfect grid. Comparative lighting: warm, dusty tungsten on the left vs. crisp, clean, cool LED light on the right. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+  "analysis": {
+    "prompt": "Split frame composition showing the transition from fragmented chaos to unified order. LEFT SIDE: A textured cork wall covered in a disorganized mess of mismatched photographs—different sizes, bad lighting, crooked frames, and sepia tones representing the 'old way.' RIGHT SIDE: A sleek, high-tech sapphire blue (#2563eb) glass interface displaying a perfectly aligned grid of consistent, high-definition headshots. CENTER SUBJECT: A Latino male professional in his early 50s with tan skin, dressed in a structured navy blazer (#1e40af) with a light blue pocket square (#3b82f6). He stands at the dividing line, his body facing the clean future while he looks back slightly at the mess, physically sliding a glowing digital panel into place to complete the perfect grid. Comparative lighting: warm, dusty tungsten on the left vs. crisp, clean, cool LED light on the right. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+    "altText": "Split screen concept: Latino male financial director comparing a messy wall of photos against a sleek, perfectly aligned digital grid of AI headshots.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "contrast-diptych",
+    "photoStyleName": "cinematic-drama",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "early-50s",
+        "descriptor": "in their early 50s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "contrast-diptych",
+  "photoStyle": "cinematic-drama",
+  "altText": "Split screen concept: Latino male financial director comparing a messy wall of photos against a sleek, perfectly aligned digital grid of AI headshots.",
+  "generatedAt": "2026-03-06T13:21:45.193Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.3191489361702128,
+    "similarSlug": "headshot-background-ideas",
+    "similarDirection": "environmental-story",
+    "similarStyle": "cinematic-drama"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "1bce2c04-b40a-4894-943c-8cf752989d49",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "cinematic-drama",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

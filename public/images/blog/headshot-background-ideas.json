@@ -1,0 +1,49 @@
+{
+  "prompt": "Wide shot, environmental narrative: A vast, cavernous industrial studio space dominated by raw concrete, exposed ductwork, and deep shadows. In the center, a striking visual metaphor: a single, pristine seamless paper backdrop in vibrant royal blue (#2563eb) stands as an island of order. Standing small in the frame against this blue square is a Latino male professional, mid-30s with tan skin, wearing a sharp charcoal blazer with a bright azure pocket square (#3b82f6). The surrounding environment represents the 'noise' to avoid—shadowy clutter and unfinished textures—while the illuminated blue square represents the 'signal' of a professional background. Large leafy plants (#1e40af) in the foreground naturally frame the wide composition. The scale emphasizes the isolation of the subject against the chosen background. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+  "analysis": {
+    "prompt": "Wide shot, environmental narrative: A vast, cavernous industrial studio space dominated by raw concrete, exposed ductwork, and deep shadows. In the center, a striking visual metaphor: a single, pristine seamless paper backdrop in vibrant royal blue (#2563eb) stands as an island of order. Standing small in the frame against this blue square is a Latino male professional, mid-30s with tan skin, wearing a sharp charcoal blazer with a bright azure pocket square (#3b82f6). The surrounding environment represents the 'noise' to avoid—shadowy clutter and unfinished textures—while the illuminated blue square represents the 'signal' of a professional background. Large leafy plants (#1e40af) in the foreground naturally frame the wide composition. The scale emphasizes the isolation of the subject against the chosen background. Cinematic color grading with deep shadows and selective highlights, shot on RED Komodo 6K, anamorphic 40mm lens, f/2.8, dramatic rim lighting, film still quality for A24",
+    "altText": "Wide cinematic shot of a Latino male professional standing against a clean blue backdrop inside a vast industrial space, symbolizing choosing the right headshot background.",
+    "imageType": "hero",
+    "peoplePresent": "person",
+    "creativeDirectionName": "environmental-story",
+    "photoStyleName": "cinematic-drama",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "mid-30s",
+        "descriptor": "in their mid 30s"
+      },
+      "ethnicity": {
+        "label": "hispanic",
+        "descriptor": "Latino/Latina with tan skin"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "person",
+  "creativeDirection": "environmental-story",
+  "photoStyle": "cinematic-drama",
+  "altText": "Wide cinematic shot of a Latino male professional standing against a clean blue backdrop inside a vast industrial space, symbolizing choosing the right headshot background.",
+  "generatedAt": "2026-03-06T13:16:46.773Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.39759036144578314,
+    "similarSlug": "small-business-team-headshots",
+    "similarDirection": "environmental-story",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "46ca033d-fb22-425f-8592-350a799fc02a",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "cinematic-drama",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}

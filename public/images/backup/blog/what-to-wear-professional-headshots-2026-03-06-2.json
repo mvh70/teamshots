@@ -1,0 +1,49 @@
+{
+  "prompt": "Extreme close-up macro shot: The texture of a premium navy blue wool blazer lapel, sharp focus on the individual threads of the fabric weave. An East Asian male hand enters the frame, fingers adjusting the lapel edge with precision. A sliver of a crisp white dress shirt is visible underneath. In the pocket, a hint of a royal blue silk pocket square adds a monochromatic layer. The background is a creamy, out-of-focus wash of deep indigo and slate. The image screams texture and preparation, capturing the micro-moment of ensuring an outfit is perfect before the shutter clicks. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+  "analysis": {
+    "prompt": "Extreme close-up macro shot: The texture of a premium navy blue wool blazer lapel, sharp focus on the individual threads of the fabric weave. An East Asian male hand enters the frame, fingers adjusting the lapel edge with precision. A sliver of a crisp white dress shirt is visible underneath. In the pocket, a hint of a royal blue silk pocket square adds a monochromatic layer. The background is a creamy, out-of-focus wash of deep indigo and slate. The image screams texture and preparation, capturing the micro-moment of ensuring an outfit is perfect before the shutter clicks. Clean digital clarity with precise color accuracy, shot on Phase One IQ4, 80mm lens, f/8, crisp detail throughout, diffused studio light, commercial photography for Bloomberg Businessweek",
+    "altText": "Macro close-up of navy blue suit fabric texture and hand adjusting lapel for professional headshot styling.",
+    "imageType": "hero",
+    "peoplePresent": "none",
+    "creativeDirectionName": "detail-obsession",
+    "photoStyleName": "clinical-modern",
+    "selectedDemographics": {
+      "gender": {
+        "label": "male",
+        "descriptor": "male"
+      },
+      "age": {
+        "label": "mid-30s",
+        "descriptor": "in their mid 30s"
+      },
+      "ethnicity": {
+        "label": "east-asian",
+        "descriptor": "East Asian"
+      }
+    }
+  },
+  "imageType": "hero",
+  "peoplePresent": "none",
+  "creativeDirection": "detail-obsession",
+  "photoStyle": "clinical-modern",
+  "altText": "Macro close-up of navy blue suit fabric texture and hand adjusting lapel for professional headshot styling.",
+  "generatedAt": "2026-03-06T12:17:14.302Z",
+  "model": "gemini-3-pro-image-preview",
+  "similarityCheck": {
+    "tooSimilar": false,
+    "maxSimilarity": 0.189873417721519,
+    "similarSlug": "are-ai-headshots-safe",
+    "similarDirection": "hands-at-work",
+    "similarStyle": "professional"
+  },
+  "contentSource": "cms",
+  "targetVersionId": "a4a47891-b559-4902-b1cb-db7becc2eff2",
+  "targetVersionStatus": "published",
+  "seoOptimized": true,
+  "researchBacked": {
+    "imageStyle": "clinical-modern",
+    "scrollStoppingOptimizations": true,
+    "highContrast": true,
+    "textOverlaySpace": true
+  }
+}
