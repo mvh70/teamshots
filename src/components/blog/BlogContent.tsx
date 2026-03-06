@@ -55,7 +55,7 @@ export default function BlogContent({
     const nextUrl = `${url.pathname}${url.search}`
     const currentUrl = `${window.location.pathname}${window.location.search}`
     if (nextUrl !== currentUrl) {
-      window.history.replaceState({}, '', nextUrl)
+      window.history.replaceState(null, '', nextUrl)
     }
   }, [searchQuery])
 
