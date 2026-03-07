@@ -111,6 +111,18 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
                 <img src="https://launchigniter.com/api/badge/teamshotspro?theme=light" alt="Featured on LaunchIgniter" width={150} height={39} />
               </a>
               <a
+                href="https://fazier.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-fit"
+              >
+                <img
+                  src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=light"
+                  width={120}
+                  alt="Fazier badge"
+                />
+              </a>
+              <a
                 href="https://launch-list.org/product/teamshotspro"
                 target="_blank"
                 rel="noopener noreferrer"
