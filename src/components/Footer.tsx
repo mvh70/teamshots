@@ -106,9 +106,21 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
           </div>
 
           {variant === 'teamshotspro' && (
-            <div className="mb-8 flex justify-center">
+            <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
               <a href="https://launchigniter.com/product/teamshotspro?ref=badge-teamshotspro" target="_blank" rel="noopener noreferrer">
                 <img src="https://launchigniter.com/api/badge/teamshotspro?theme=light" alt="Featured on LaunchIgniter" width={150} height={39} />
+              </a>
+              <a
+                href="https://launch-list.org/product/teamshotspro"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-fit"
+              >
+                <img
+                  className="h-[50px] w-auto"
+                  src="https://launch-list.org/badges/svg/launch_list_badge_launching_soon.svg"
+                  alt="Launch List Badge"
+                />
               </a>
             </div>
           )}
